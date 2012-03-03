@@ -9,13 +9,18 @@ from copy import copy
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 from debugger.topology_generator import *
+from pox.lib.ioworker.io_worker import RecocoIOLoop
 
 class topology_generator_test(unittest.TestCase):
+  _io_loop = RecocoIOLoop()
+  _io_ctor = _io_loop.create_worker_for_socket
+  _io_dtor = _io_loop.remove_worker
+  
   def test_create_switch(self):
-    s = create_switch(switch_id=1, num_ports=3)
+    s = create_switch(1, 3, self._io_ctor, self._io_dtor)
     self.assertEqual(len(s.ports), 3)
     self.assertEqual(s.dpid, 1)
-    s2 = create_switch(switch_id=2, num_ports=3)
+    s2 = create_switch(2, 3, self._io_ctor, self._io_dtor)
     self.assertNotEqual(s2.ports[1].hw_addr, s.ports[1].hw_addr)
 
   def test_create_meshes(self):
@@ -24,7 +29,7 @@ class topology_generator_test(unittest.TestCase):
       self._test_create_mesh(i)
 
   def _test_create_mesh(self, size):
-    (panel, switches) = create_mesh(size)
+    (panel, switches) = create_mesh(size, self._io_ctor, self._io_dtor)
     self.assertEqual(len(switches), size)
     self.assertEqual([sw for sw in switches if len(sw.ports) == size-1 ], switches)
 
@@ -48,8 +53,12 @@ class topology_generator_test(unittest.TestCase):
     self.assertEqual(sw_ports, other_sw_ports)
 
 class FullyMeshedPanelTest(unittest.TestCase):
+  _io_loop = RecocoIOLoop()
+  _io_ctor = _io_loop.create_worker_for_socket
+  _io_dtor = _io_loop.remove_worker
+  
   def setUp(self):
-    self.switches = [ create_switch(switch_id, 2) for switch_id in range(1, 4) ]
+    self.switches = [ create_switch(switch_id, 2, self._io_ctor, self._io_dtor) for switch_id in range(1, 4) ]
     self.m = FullyMeshedPanel(self.switches)
 
   def test_connected_ports(self):
