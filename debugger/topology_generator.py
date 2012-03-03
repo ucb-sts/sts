@@ -47,7 +47,7 @@ class Cycler():
     self._current_index %= len(self._list)
     return element
 
-def create_switch(io_worker_constructor, io_worker_destructor, switch_id, num_ports):
+def create_switch(switch_id, num_ports, io_worker_constructor, io_worker_destructor):
   ports = []
   for port_no in range(1, num_ports+1):
     port = ofp_phy_port( port_no=port_no,
@@ -65,7 +65,7 @@ def create_mesh(num_switches, io_worker_constructor, io_worker_destructor):
   ports_per_switch = num_switches - 1
 
   # Initialize switches
-  switches = [ create_switch(io_worker_constructor, io_worker_destructor, switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
+  switches = [ create_switch(switch_id, ports_per_switch, io_worker_constructor, io_worker_destructor) for switch_id in range(1, num_switches+1) ]
 
   # grab a fully meshed patch panel to wire up these guys
   patch_panel = FullyMeshedPanel(switches)
