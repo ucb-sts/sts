@@ -12,7 +12,7 @@ import socket
 
 from pox.lib.util import assert_type, makePinger
 from pox.lib.recoco import Select, Task
-from pox.lib.ioworker import IOWorker
+from pox.lib.ioworker.io_worker import IOWorker
 
 log = logging.getLogger()
 
