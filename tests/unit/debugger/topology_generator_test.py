@@ -3,11 +3,12 @@
 import unittest
 import sys
 import os.path
+import itertools
 from copy import copy
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
-from .debugger.topology_generator import *
+from debugger.topology_generator import *
 
 class topology_generator_test(unittest.TestCase):
   def test_create_switch(self):
