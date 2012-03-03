@@ -30,12 +30,11 @@ class FuzzSwitchImpl (SwitchImpl):
   """
   def __init__ (self, io_worker_constructor, io_worker_destructor, dpid, name=None, ports=4, miss_send_len=128,
                 n_buffers=100, n_tables=1, capabilities=None):
-    SwitchImpl.__init__(self, dpid, name=None, ports=4, miss_send_len=128,
-      n_buffers=100, n_tables=1, capabilities=None)
-    self.failed = False
+    SwitchImpl.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
     self.io_worker_constructor = io_worker_constructor
     self.io_worker_destructor = io_worker_destructor
-
+    self.failed = False
+    
   def _handle_ConnectionUp(self, event):
     self._setConnection(event.connection, event.ofp)
 
