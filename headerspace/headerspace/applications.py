@@ -157,6 +157,10 @@ def compute_omega(NTF, TTF, edge_ports, reverse_map, test_packet = None):
         next_hp = NTF.T(p_node["hdr"],p_node["port"])
         for (next_h,next_ps) in next_hp:
           for next_p in next_ps:
+            # TODO: do I necessarily want to invoke the topology transfer function right off the bat?
+            # TODO: how are packet drops represented?
+            #       I believe that is represented as a null header space... Do I need to
+            #       worry about that? Or do NTF/TTF take care of that for me?
             linked = TTF.T(next_h,next_p)
             for (linked_h,linked_ports) in linked:
               for linked_p in linked_ports:
@@ -170,15 +174,11 @@ def compute_omega(NTF, TTF, edge_ports, reverse_map, test_packet = None):
                 new_p_node["hs_history"].append(p_node["hdr"])
                 #print new_p_node
                   
-                # TODO: perhaps this check needs to come before computing TTF?
+                # TODO: This definitely doesn't properly handle dropped packets...
                 if next_p in edge_ports:
                   # We've reached our final destination!
                   # ASSUMPTION: no edge port will send it back out into the network...
               
-                  # TODO: the other possibility for final destination is a dropped packet...
-                  #       I believe that is represented as a null header space... Do I need to
-                  #       worry about that? Or do NTF/TTF take care of that for me?
-               
                   # use the inverse T trick to get original headerspace which led us here
                   original_headers = find_loop_original_header(NTF,TTF,new_p_node)
                   for original_header in original_headers:
