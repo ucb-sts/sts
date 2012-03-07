@@ -3,9 +3,9 @@ Created on Jun 20, 2011
 
 @author: peymankazemian
 '''
-from pox.lib.headerspace.headerspace.hs import *
-from pox.lib.headerspace.headerspace.tf import *
-from pox.lib.headerspace.config_parser.helper import *
+from headerspace.headerspace.hs import *
+from headerspace.headerspace.tf import *
+from headerspace.config_parser.helper import *
 
 def convert(ipsi,ipei):
   ips = ipsi

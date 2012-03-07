@@ -3,8 +3,8 @@ Created on Jan 27, 2011
 
 @author: peyman kazemian
 '''
-from pox.lib.headerspace.headerspace.hs import *
-from pox.lib.headerspace.headerspace.tf import *
+from headerspace.headerspace.hs import *
+from headerspace.headerspace.tf import *
 
 # What is a p_node?
 # A hash apparently:

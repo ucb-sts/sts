@@ -1,5 +1,5 @@
 from cisco_router_parser import ciscoRouter
-from pox.lib.headerspace.headerspace.tf import *
+from headerspace.headerspace.tf import *
 
 if __name__ == '__main__':
   cs = ciscoRouter(1)

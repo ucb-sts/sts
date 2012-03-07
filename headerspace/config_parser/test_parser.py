@@ -3,9 +3,9 @@ Created on Jul 5, 2011
 
 @author: peymankazemian
 '''
-from pox.lib.headerspace.headerspace.tf import *
-from pox.lib.headerspace.headerspace.hs import *
-from pox.lib.headerspace.config_parser.cisco_router_parser import ciscoRouter,dotted_ip_to_int
+from headerspace.headerspace.tf import *
+from headerspace.headerspace.hs import *
+from headerspace.config_parser.cisco_router_parser import ciscoRouter,dotted_ip_to_int
 from time import time, clock
 
 if __name__ == '__main__':

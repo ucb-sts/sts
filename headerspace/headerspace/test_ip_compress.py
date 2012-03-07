@@ -3,8 +3,8 @@ Created on Jul 27, 2011
 
 @author: peymankazemian
 '''
-from pox.lib.headerspace.config_parser.helper import *
-from pox.lib.headerspace.headerspace.hs import *
+from headerspace.config_parser.helper import *
+from headerspace.headerspace.hs import *
 ip0 = (0x80000000,1,"eth0")
 ip1 = (0x02030400,24,"eth0")
 ip2 = (0x02030500,24,"eth0")
