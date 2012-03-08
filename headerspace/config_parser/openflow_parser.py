@@ -94,7 +94,7 @@ def optimize_forwarding_table(self):
   '''
   print "=== DONE forwarding table compression ==="
   
-def ofp_match_to_ports(ofp_match, all_port_nos):
+def ofp_match_to_input_ports(ofp_match, all_port_nos):
   in_ports = []
   if (ofp_match.wildcards & OFPFW_IN_PORT) or (ofp_match.wildcards & OFPFW_ALL):
     in_ports = all_port_nos 
@@ -114,56 +114,93 @@ def ofp_match_to_hsa_match(ofp_match):
   for field_name in ofp_match_data.keys() - ['in_port']:
     flag = ofp_match_data[field_name][1]
     set_hsa_field_match(ofp_match, hsa_match, field_name, flag)  
-    
+  
+# Returns (mask, rewrite) 
 def ofp_actions_to_hsa_rewrite(ofp_actions):
-  hsa_match = byte_array_get_all_x(hs_format["length"]*2)
+  # Bits set to one are not touched
+  mask = byte_array_get_all_one(hs_format["length"]*2)
+  # Bits set to one are rewritten
+  rewrite = byte_array_get_all_zero(hs_format["length"]*2)
   
-    def set_vlan_id(action, packet):
-      if not isinstance(packet, vlan): packet = vlan(packet)
-      packet.id = action.vlan_id
-    def set_vlan_pcp(action, packet):
-      if not isinstance(packet, vlan): packet = vlan(packet)
-      packet.pcp = action.vlan_pcp
-    def strip_vlan(action, packet):
-      if not isinstance(packet, vlan): packet = vlan(packet)
-      packet.pcp = action.vlan_pcp
-    def set_dl_src(action, packet):
-      packet.src = action.dl_addr
-    def set_dl_dst(action, packet):
-      packet.dst = action.dl_addr
-    def set_nw_src(action, packet):
-      if(isinstance(packet, ipv4)):
-        packet.nw_src = action.nw_addr
-    def set_nw_dst(action, packet):
-      if(isinstance(packet, ipv4)):
-        packet.nw_dst = action.nw_addr
-    def set_nw_tos(action, packet):
-      if(isinstance(packet, ipv4)):
-        packet.tos = action.nw_tos
-    def set_tp_src(action, packet):
-      if(isinstance(packet, udp) or isinstance(packet, tcp)):
-        packet.srcport = action.tp_port
-    def set_tp_dst(action, packet):
-      if(isinstance(packet, udp) or isinstance(packet, tcp)):
-        packet.dstport = action.tp_port
+  def set_vlan_id(action):
+    set_field(mask, "vlan", 0)
+    set_field(rewrite, "vlan", action.vlan_id)
+  def set_vlan_pcp(action):
+    set_field(mask, "vlan_pcp", 0)
+    set_field(rewrite, "vlan_pcp", action.vlan_pcp)
+  def strip_vlan(action):
+    # TODO: Is this a bug in switch_impl? Two pcps...
+    set_field(mask, "vlan", 0)
+    set_field(rewrite, "vlan", 0)
+  def set_dl_src(action):
+    set_field(mask, "dl_src", 0)
+    set_field(rewrite, "dl_src", action.dl_addr)
+  def set_dl_dst(action):
+    set_field(mask, "dl_dst", 0)
+    set_field(rewrite, "dl_dst", action.dl_addr)
+  def set_nw_src(action):
+    set_field(mask, "nw_src", 0)
+    set_field(rewrite, "nw_src", action.nw_addr)
+  def set_nw_dst(action):
+    set_field(mask, "nw_dst", 0)
+    set_field(rewrite, "nw_dst", action.nw_addr)
+  def set_nw_tos(action):
+    set_field(mask, "nw_tos", 0)
+    set_field(rewrite, "nw_tos", action.nw_tos)
+  def set_tp_src(action):
+    set_field(mask, "tp_src", 0)
+    set_field(rewrite, "tp_src", action.tp_port)
+  def set_tp_dst(action):
+    set_field(mask, "tp_dst", 0)
+    set_field(rewrite, "tp_dst", action.tp_port)
 
-    handler_map = {
-        OFPAT_SET_VLAN_VID: set_vlan_id,
-        OFPAT_SET_VLAN_PCP: set_vlan_pcp,
-        OFPAT_STRIP_VLAN: strip_vlan,
-        OFPAT_SET_DL_SRC: set_dl_src,
-        OFPAT_SET_DL_DST: set_dl_dst,
-        OFPAT_SET_NW_SRC: set_nw_src,
-        OFPAT_SET_NW_DST: set_nw_dst,
-        OFPAT_SET_NW_TOS: set_nw_tos,
-        OFPAT_SET_TP_SRC: set_tp_src,
-        OFPAT_SET_TP_DST: set_tp_dst,
-    }
-    for action in actions:
-      if(action.type not in handler_map):
-        raise NotImplementedError("Unknown action type: %x " % type)
-      handler_map[action.type](action, packet)
+  handler_map = {
+    OFPAT_SET_VLAN_VID: set_vlan_id,
+    OFPAT_SET_VLAN_PCP: set_vlan_pcp,
+    OFPAT_STRIP_VLAN: strip_vlan,
+    OFPAT_SET_DL_SRC: set_dl_src,
+    OFPAT_SET_DL_DST: set_dl_dst,
+    OFPAT_SET_NW_SRC: set_nw_src,
+    OFPAT_SET_NW_DST: set_nw_dst,
+    OFPAT_SET_NW_TOS: set_nw_tos,
+    OFPAT_SET_TP_SRC: set_tp_src,
+    OFPAT_SET_TP_DST: set_tp_dst,
+  }
   
+  for action in ofp_actions:
+    handler_map[action.type](action)
+    
+  return (mask, rewrite) 
+
+def ofp_actions_to_output_ports(ofp_actions, all_port_nos, in_port):
+  global out_port_nos
+  output_port_nos = []
+  
+  def output_packet(action):
+    out_port = action.port
+    if out_port < OFPP_MAX:
+      output_port_nos.append(out_port)
+    elif out_port == OFPP_IN_PORT:
+      output_port_nos.append(in_port)
+    elif out_port == OFPP_FLOOD or out_port == OFPP_ALL:
+      for port_no in all_port_nos:
+        if port_no != in_port:
+          output_port_nos.append(out_port)
+    elif out_port == OFPP_CONTROLLER:
+      return
+    else:
+      raise("Unsupported virtual output port: %x" % out_port)
+      
+  handler_map = {
+    OFPAT_OUTPUT: output_packet,
+    OFPAT_ENQUEUE: output_packet,
+  }
+    
+  for action in ofp_actions:
+    handler_map[action.type](action)
+ 
+  return output_port_nos
+   
 def generate_transfer_function(tf, software_switch):
   '''
   The rules will be added to transfer function tf passed to the function.
@@ -176,12 +213,21 @@ def generate_transfer_function(tf, software_switch):
     # TODO: For now, we're assuming completely non-overlapping entries. Need to 
     #       deal with priorities properly!
     ofp_match = flow_entry.match
-    hsa_match = ofp_match_to_hsa_match(ofp_match)
-    port_nos = ofp_match_to_ports(ofp_match, all_port_nos)
+    ofp_actions = flow_entry.actions
     
-    # DROP RULE: self_rule = TF.create_standard_rule(in_port,match,[],None,None,file_name,lines)
- 
-    # TODO: finish me
+    hsa_match = ofp_match_to_hsa_match(ofp_match)
+    input_port_nos = ofp_match_to_input_ports(ofp_match, all_port_nos)
+    (mask, rewrite) = ofp_actions_to_hsa_rewrite(ofp_actions)
+    output_port_nos = set()
+    for input_port_no in input_port_nos:
+      output_port_nos = output_port_nos.union(ofp_actions_to_output_ports(ofp_actions, all_port_nos, input_port_no))
+
+    if len(output_port_nos)  == 0:
+      self_rule = TF.create_standard_rule(input_port_nos,hsa_match,[],None,None)
+      tf.add_fwd_rule(self_rule)
+    else:
+      tf_rule = TF.create_standard_rule(input_port_nos, ofp_match, output_port_nos, mask, rewrite)
+      tf.add_rewrite_rule(tf_rule)
          
   print "=== Successfully Generated Transfer function ==="
   #print tf
