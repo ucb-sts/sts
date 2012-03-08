@@ -112,10 +112,16 @@ def ofp_match_to_hsa_match(ofp_match):
       return # keep the bits wildcarded
     set_field(hsa_match, field_name, ofp_match.__dict__[field_name])
     
-  for field_name in ofp_match_data.keys() - ['in_port']:
+  for field_name in ofp_match_data.keys() - ['in_port', 'nw_src', 'nw_dst']:
     flag = ofp_match_data[field_name][1]
     set_hsa_field_match(ofp_match, hsa_match, field_name, flag)  
   
+  for field_name in ['nw_src', 'nw_dst']:
+    (addr, mask_bits_from_left) = getattr(ofp_match, "get_%s"%field_name)()
+    if addr:
+      # if addr, not all wildcard bits set
+      set_field(hsa_match, field_name, addr, right_mask=32-mask_bits_from_left)
+    
 # Returns (mask, rewrite) 
 def ofp_actions_to_hsa_rewrite(ofp_actions):
   # Bits set to one are not touched
