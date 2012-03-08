@@ -47,6 +47,7 @@ def HS_FORMAT():
 global hs_format
 hs_format = HS_FORMAT()
   
+# TODOC: wtf does wc stand for?
 def wc_to_parsed_string(byte_arr):
   out_string = ""
   for field in fields:
