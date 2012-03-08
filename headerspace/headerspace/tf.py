@@ -172,7 +172,7 @@ class TF(object):
     return rule
 
   @staticmethod
-  def create_standard_rule(in_ports, match, out_ports, mask, rewrite,file_name,lines):
+  def create_standard_rule(in_ports, match, out_ports, mask, rewrite,file_name="",lines=[]):
     '''
     Create a rule using input arguments. Use None if an input is not applicable.
     '''
@@ -186,7 +186,7 @@ class TF(object):
     else:
       rule["match"] = None
 
-    if  mask.__class__ == str:
+    if mask.__class__ == str:
       rule["mask"] = hs_string_to_byte_array(mask)
     elif mask.__class__ == bytearray:
       rule["mask"] = bytearray(mask)
