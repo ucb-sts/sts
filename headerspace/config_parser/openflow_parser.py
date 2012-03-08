@@ -68,9 +68,9 @@ def set_field(arr, field, value, right_mask=0):
   @right_mask: number of bits, from right that should be ignored when written to field.
   e.g. to have a /24 ip address, set mask to 8.
   '''
-  b_array = int_to_byte_array(value,8*hs_format["%s_len"%field])
-  start_pos = 2*hs_format["%s_pos"%field]
-  for i in range(2*hs_format["%s_len"%field]):
+  b_array = int_to_byte_array(value,8*hs_format[field].length)
+  start_pos = 2*hs_format[field].position
+  for i in range(2*hs_format[field].length):
     if right_mask <= 4*i:
       arr[start_pos + i] = b_array[i]
     elif (right_mask > 4*i and right_mask < 4*i + 4):
