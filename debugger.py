@@ -7,6 +7,7 @@ from pox.lib.ioworker.io_worker import RecocoIOLoop
 from debugger.experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
 
+import signal
 import sys
 import string
 import subprocess
@@ -38,9 +39,26 @@ else:
 if hasattr(config, 'controllers'):
   controllers = config.controllers(args.controller_args)
 else:
-  controllers = [Controller(args.controller_args)] 
+  controllers = [Controller(args.controller_args)]
 
 child_processes = []
+scheduler = None
+def kill_children(signal, frame):
+  global child_processes
+  global scheduler
+
+  print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
+  print >> sys.stderr, "Killing child controllers..."
+  for child in child_processes:
+    # SIGTERM for now
+    child.terminate()
+  print >> sys.stderr, "Stopping Recoco Scheduler..."
+  if scheduler:
+      scheduler.quit()
+  sys.exit(0)
+
+signal.signal(signal.SIGINT, kill_children)
+signal.signal(signal.SIGTERM, kill_children)
 
 # Boot the controllers
 for c in controllers:
@@ -64,7 +82,7 @@ create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socke
                                                    io_loop.remove_worker,
                                                    num_switches=1)
   
-scheduler = Scheduler()
+scheduler = Scheduler(daemon=True)
 scheduler.schedule(io_loop)
 
 # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
