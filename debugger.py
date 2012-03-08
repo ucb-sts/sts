@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
 from debugger.debugger import FuzzTester
+from debugger.deferred_io import DeferredIOWorker
 import debugger.topology_generator as default_topology
-from pox.lib.ioworker.io_worker import RecocoIOLoop 
+from pox.lib.ioworker.io_worker import RecocoIOLoop
 from experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
 
@@ -56,8 +57,10 @@ io_loop = RecocoIOLoop()
 #else:
 #  switches = []
 # HACK
+create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket))
+
 (panel, switch_impls) = default_topology.populate(controllers,
-                                                   io_loop.create_deferred_worker_for_socket,
+                                                   create_worker,
                                                    io_loop.remove_worker,
                                                    num_switches=1)
   
