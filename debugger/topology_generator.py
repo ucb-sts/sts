@@ -68,7 +68,7 @@ def create_mesh(num_switches, io_worker_constructor, io_worker_destructor):
   switches = [ create_switch(switch_id, ports_per_switch, io_worker_constructor, io_worker_destructor) for switch_id in range(1, num_switches+1) ]
 
   # grab a fully meshed patch panel to wire up these guys
-  patch_panel = FullyMeshedPanel(switches)
+  patch_panel = FullyMeshedPanel(PatchPanel(switches))
 
   return (patch_panel, switches)
 
@@ -127,15 +127,22 @@ class PatchPanel(object):
     """ return (switch: SwitchImpl, port: ofp_phy_port) connected to this switch """
     raise SystemError("Please implement forward_packet")
 
-class FullyMeshedPanel(PatchPanel):
+class FullyMeshedPanel(object):
   """ A fully meshed patch panel. Connects every pair of switches. Ports are
       in ascending order of the dpid of connected switch, while skipping the self-connections.
       I.e., for (dpid, portno):
       (0, 0) <-> (1,0)
       (2, 1) <-> (1,1)
   """
+  def __init__(self, patch_panel):
+    self.patch_panel = patch_panel
+    
+  def forward_packet(self, switch, packet, port):
+    ''' delegate '''
+    self.patch_panel.forward_packet(switch, packet, port)
+  
   def connected_port(self, switch, port):
-    switch_no = self.switch_index_by_dpid[switch.dpid]
+    switch_no = self.patch_panel.switch_index_by_dpid[switch.dpid]
     port_no   = port.port_no - 1
 
     # when converting between switch and port, compensate for the skipped self port
