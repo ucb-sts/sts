@@ -26,9 +26,12 @@ class DeferredIOWorker(object):
   '''
   def __init__(self, io_worker):
     self.io_worker = io_worker
+    self.io_worker.set_receive_handler(self.io_worker_receive_handler)
     # Thread-safe read and write queues of indefinite length
     self.receive_queue = Queue.Queue()
     self.send_queue = Queue.Queue()
+    # Read buffer that we present to clients
+    self.receive_buf = ""
 
   def permit_send(self):
     '''
@@ -51,29 +54,42 @@ class DeferredIOWorker(object):
     return not self.send_queue.empty()
 
   def permit_receive(self):
+    '''
+    deque()s the first element of the read queue, and notifies the client
+    that there is data to be read.
+    
+    raises an exception if the read queue is empty
+    '''
     data = self.receive_queue.get()
-    self.io_worker.push_receive_data(data)
+    self.receive_buf += data
+    self.client_receive_handler(self)
 
-  def push_receive_data(self, new_data):
-    ''' called from the Select loop '''
-    self.receive_queue.put(new_data)
+  def set_receive_handler(self, block):
+    ''' Called by client '''
+    self.client_receive_handler = block
+    
+  def peek_receive_buf(self):
+    return self.receive_buf
 
+  def consume_receive_buf(self, l):
+    ''' called from the client to consume receive buffer '''
+    assert(len(self.receive_buf) >= l)
+    self.receive_buf = self.receive_buf[l:]
+    
+  def io_worker_receive_handler(self, io_worker):
+    ''' called from io_worker (after the Select loop pushes onto io_worker) '''
+    # Consume everything immediately
+    message = io_worker.peek_receive_buf()
+    io_worker.consume_receive_buf(len(message))
+    self.receive_queue.put(message)
+      
   def has_pending_receives(self):
     ''' called by the "arbitrator" in charge of deferal '''
     return not self.receive_queue.empty()
-
+  
   # Delegation functions.
   # TODO: is there a more pythonic way to implement delegation?
-
-  @property
-  def ready_to_send(self):
-    ''' Called by Select loop to see if we're actually ready to send '''
-    # We only push write data onto the worker after we've permitted it.
-    return self.io_worker.ready_to_send
-
-  def set_receive_handler(self, block):
-    self.io_worker.set_receive_handler(block)
-
+  
   def fileno(self):
     return self.io_worker.fileno()
 
@@ -84,12 +100,15 @@ class DeferredIOWorker(object):
   def socket(self):
     return self.io_worker.socket
 
-  def peek_receive_buf(self):
-    return self.io_worker.peek_receive_buf()
-
-  def consume_receive_buf(self, l):
-    """ called from the client to consume receive buffer """
-    return self.io_worker.consume_receive_buf(l)
-
   def consume_send_buf(self, l):
     return self.io_worker.consume_send_buf(l)
+
+  @property
+  def ready_to_send(self):
+    ''' Called by Select loop to see if we're actually ready to send '''
+    # We only push write data onto the worker after we've permitted it.
+    return self.io_worker.ready_to_send
+  
+  def push_receive_data(self, data):
+    ''' not strictly necessary (only called by Select loop, which calls the io_worker anyway) '''
+    self.io_worker.push_receive_data(data) 
