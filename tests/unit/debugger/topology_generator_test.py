@@ -59,7 +59,7 @@ class FullyMeshedPanelTest(unittest.TestCase):
   
   def setUp(self):
     self.switches = [ create_switch(switch_id, 2, self._io_ctor, self._io_dtor) for switch_id in range(1, 4) ]
-    self.m = FullyMeshedPanel(self.switches)
+    self.m = FullyMeshedPanel(PatchPanel(self.switches))
 
   def test_connected_ports(self):
     m = self.m

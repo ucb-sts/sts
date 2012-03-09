@@ -141,6 +141,10 @@ class FullyMeshedPanel(object):
     ''' delegate '''
     self.patch_panel.forward_packet(switch, packet, port)
   
+  @property
+  def switches(self):
+    return self.patch_panel.switches
+  
   def connected_port(self, switch, port):
     switch_no = self.patch_panel.switch_index_by_dpid[switch.dpid]
     port_no   = port.port_no - 1
