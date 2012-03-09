@@ -80,7 +80,7 @@ create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socke
 (panel, switch_impls) = default_topology.populate(controllers,
                                                    create_worker,
                                                    io_loop.remove_worker,
-                                                   num_switches=1)
+                                                   num_switches=2)
   
 scheduler = Scheduler(daemon=True)
 scheduler.schedule(io_loop)
