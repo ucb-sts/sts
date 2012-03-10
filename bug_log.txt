@@ -1,0 +1,28 @@
+Just from fuzzing (seed = 0):
+
+--------------
+Forwarding dataplane event
+DEBUG:FuzzSwitchImpl(1):Send PacketIn SoftSwitch(1)
+DEBUG:FuzzSwitchImpl(1):Asked to send message ofp_packet_in
+  header:
+    version: 1
+    type:    10 (OFPT_PACKET_IN)
+    length:  8
+    xid:     17
+  buffer_id: 8
+  _total_len: 0
+  in_port: 1
+  reason: 0
+  data: EH�{@O�$ΐ�7PingPingPingPingPingPingPingPingPingPingPingPing, but not connected
+---------------
+Crashing switch_impl SwitchImpl(dpid=2, num_ports=1)
+Round 88 completed.
+2012-03-10 13:49:37,615 - openflow.topology - WARNING - Switch 00-00-00-00-00-02 disconnected, but... it's wasn't 
+connected!
+--------------
+Round 43 completed.
+2012-03-10 13:49:33,054 - openflow.discovery - INFO - link detected: 00-00-00-00-00-02.1 -> 00-00-00-00-00-01.1
+DEBUG:debugger:Giving permission for control plane receive for SwitchImpl(dpid=1, num_ports=1)
+DEBUG:FuzzSwitchImpl(1):Packet out
+INFO:packet:warning eth packet data too short to parse header: data len 0
+-------------
