@@ -243,6 +243,7 @@ class FuzzTester (EventMixin):
           self.failed_switches.remove(switch_impl)
 
     def sever_links():
+      # TODO: model administratively down links? (OFPPC_PORT_DOWN)
       cut_this_round = set()
       for link in self.live_links:
         if self.random.random() < self.link_failure_rate:
