@@ -71,8 +71,8 @@ class FuzzTester (EventMixin):
   it will inject intelligently chosen mock events (and observe
   their responses?)
   """
-  def __init__(self, child_processes):
-    self.child_processes = child_processes
+  def __init__(self, interactive=True):
+    self.interactive = interactive
     self.running = False
     self.panel = None
     self.switch_impls = []
@@ -141,12 +141,16 @@ class FuzzTester (EventMixin):
       self.logical_time += 1
       self.trigger_events()
       msg.event("Round %d completed." % self.logical_time)
-      # TODO: print out the state of the network at each timestep? Take a
-      # verbose flag..
-      self.invariant_check_prompt()
-      answer = msg.raw_input('Continue to next round? [Yn]').strip()
-      if answer != '' and answer.lower() != 'y':
-        self.stop()
+
+      if self.interactive:
+        # TODO: print out the state of the network at each timestep? Take a
+        # verbose flag..
+        self.invariant_check_prompt()
+        answer = msg.raw_input('Continue to next round? [Yn]').strip()
+        if answer != '' and answer.lower() != 'y':
+          self.stop()
+      else:
+        thread.sleep(0.100)
 
   def stop(self):
     self.running = False
