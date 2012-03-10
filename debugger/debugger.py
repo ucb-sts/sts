@@ -83,8 +83,8 @@ class FuzzTester (EventMixin):
     self.control_channel_failure_rate = 0.0
     self.control_channel_recovery_rate = 0.0
     self.controlplane_delay_rate = 0.5
-    self.dataplane_drop_rate = 0.5
-    self.dataplane_delay_rate = 0.5
+    self.dataplane_drop_rate = 0.01
+    self.dataplane_delay_rate = 0.05
     self.traffic_generation_rate = 0.05
 
     # Logical time (round #) for the simulation execution
