@@ -18,7 +18,7 @@ of switches. For example, with N = 3:
 TODO: should this topology include Hosts as well?
 '''
 
-from debugger_entities import FuzzSwitchImpl
+from debugger_entities import FuzzSwitchImpl, Link
 from pox.openflow.switch_impl import ofp_phy_port, EthAddr, SwitchDpPacketOut
 from pox.lib.util import connect_socket_with_backoff
 from pox.lib.revent import EventMixin
@@ -193,3 +193,16 @@ class FullyMeshedLinks(object):
 
     other_switch = self.switches[other_switch_no]
     return (other_switch, other_switch.ports[other_port_no+1])
+  
+  def get_all_links(self):
+    ''' Return a list of all directed Link objects in the mesh '''
+    # memoize the result 
+    if hasattr(self, "all_links"):
+      return self.all_links
+    self.all_links = [] 
+    for switch in self.switches:
+      for port in switch.ports.values():
+        (other_switch, other_port) =  self.get_connected_port(switch, port)
+        self.all_links.append(Link(switch, port, other_switch, other_port))
+    return self.all_links
+    
