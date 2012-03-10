@@ -17,7 +17,6 @@ from pox.openflow.switch_impl import SwitchImpl
 class topology_generator_test(unittest.TestCase):
   _io_loop = RecocoIOLoop()
   _io_ctor = _io_loop.create_worker_for_socket
-  _io_dtor = _io_loop.remove_worker
   
   def test_create_switch(self):
     s = create_switch(1, 3)
@@ -59,7 +58,6 @@ class topology_generator_test(unittest.TestCase):
 class FullyMeshedLinkTest(unittest.TestCase):
   _io_loop = RecocoIOLoop()
   _io_ctor = _io_loop.create_worker_for_socket
-  _io_dtor = _io_loop.remove_worker
   
   def setUp(self):
     self.switches = [ create_switch(switch_id, 2) for switch_id in range(1, 4) ]
@@ -82,7 +80,6 @@ class FullyMeshedLinkTest(unittest.TestCase):
 class BufferedPanelTest(unittest.TestCase):
   _io_loop = RecocoIOLoop()
   _io_ctor = _io_loop.create_worker_for_socket
-  _io_dtor = _io_loop.remove_worker
   
   def setUp(self):
     class MockSwitch(SwitchImpl):
