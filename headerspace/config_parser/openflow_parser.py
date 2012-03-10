@@ -239,3 +239,12 @@ def generate_transfer_function(tf, software_switch):
   print "=== Successfully Generated Transfer function ==="
   #print tf
   return 0
+
+
+def get_uniq_port_id(switch, port):
+  ''' HSA assumes uniquely labeled ports '''
+  # DPID's are unique
+  dpid = switch.dpid
+  port_no = port.port_no
+  # port_no's are 16 bits long
+  return (dpid << 16) + port_no
