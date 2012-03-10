@@ -276,7 +276,7 @@ class FuzzTester (EventMixin):
   def fuzz_traffic(self):
     # randomly generate messages from switches
     # TODO: future feature: trace-driven packet generation
-    for switch_impl in self.live_switches():
+    for switch_impl in self.live_switches:
       if self.random.random() < self.traffic_generation_rate:
         # FIXME do something smarter here than just generate packet ins
         msg.event("injecting a random packet")
