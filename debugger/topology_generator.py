@@ -108,9 +108,9 @@ def populate(controller_config_list, io_worker_constructor, num_switches=3):
   to the controllers, and return 
   (PatchPanel, switches, controller_sockets)
   '''
-  (panel, switches) = create_mesh(num_switches)
+  (panel, switches, links) = create_mesh(num_switches)
   connect_to_controllers(controller_config_list, io_worker_constructor, switches)
-  return (panel, switches)
+  return (panel, switches, links)
 
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.

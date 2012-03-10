@@ -32,7 +32,7 @@ class topology_generator_test(unittest.TestCase):
       self._test_create_mesh(i)
 
   def _test_create_mesh(self, size):
-    (panel, switches) = create_mesh(size)
+    (panel, switches, links) = create_mesh(size)
     self.assertEqual(len(switches), size)
     self.assertEqual([sw for sw in switches if len(sw.ports) == size-1 ], switches)
 
