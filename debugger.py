@@ -134,20 +134,20 @@ try:
     child_processes.append(child)
 
   io_loop = RecocoIOLoop()
+  
+  scheduler = Scheduler(daemon=True)
+  scheduler.schedule(io_loop)
 
   #if hasattr(config, 'switches'):
   #  switches = config.switches()
   #else:
   #  switches = []
   # HACK
-  create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket))
+  create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket), scheduler.callLater)
 
   (panel, switch_impls, links) = default_topology.populate(controllers,
                                                            create_worker,
                                                            num_switches=2)
-
-  scheduler = Scheduler(daemon=True)
-  scheduler.schedule(io_loop)
 
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
   debugger = FuzzTester(interactive=args.interactive, random_seed = args.random_seed,

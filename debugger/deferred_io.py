@@ -24,9 +24,10 @@ class DeferredIOWorker(object):
   Then there are separate methods for actually sending the messages via
   the wrapped io_worker
   '''
-  def __init__(self, io_worker):
+  def __init__(self, io_worker, call_later):
     self.io_worker = io_worker
     self.io_worker.set_receive_handler(self.io_worker_receive_handler)
+    self.call_later = call_later
     # Thread-safe read and write queues of indefinite length
     self.receive_queue = Queue.Queue()
     self.send_queue = Queue.Queue()
@@ -42,8 +43,7 @@ class DeferredIOWorker(object):
     '''
     message = self.send_queue.get()
     # TODO: will recoco guarentee in-order delivery of a sequence of these send requests?
-    # TODO: do I need to ensure thread-safety? We're crossing thread boundaries here...
-    self.io_worker.send(message)
+    self.call_later(lambda: self.io_worker.send(message))
 
   def send(self, data):
     """ send data from the client side. fire and forget. """
@@ -77,10 +77,11 @@ class DeferredIOWorker(object):
     self.receive_buf = self.receive_buf[l:]
     
   def io_worker_receive_handler(self, io_worker):
-    ''' called from io_worker (after the Select loop pushes onto io_worker) '''
+    ''' called from io_worker (recoco thread, after the Select loop pushes onto io_worker) '''
     # Consume everything immediately
     message = io_worker.peek_receive_buf()
     io_worker.consume_receive_buf(len(message))
+    # thread-safe queue
     self.receive_queue.put(message)
       
   def has_pending_receives(self):
@@ -91,14 +92,17 @@ class DeferredIOWorker(object):
   # TODO: is there a more pythonic way to implement delegation?
   
   def fileno(self):
+    # thread safety shoudn't matter here
     return self.io_worker.fileno()
 
   def close(self):
-    return self.io_worker.close()
+    self.call_later(self.io_worker.close)
 
   @property
   def socket(self):
+    # TODO: does thread-safety matter here? Suppose the client changes an option on the socket.
     return self.io_worker.socket
 
   def consume_send_buf(self, l):
+    # TODO: does thread-safety matter here? We want this to be a synchronous method...
     return self.io_worker.consume_send_buf(l)
