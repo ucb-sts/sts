@@ -80,6 +80,8 @@ class FuzzTester (EventMixin):
     self.controlplane_delay_rate = 0.5
     self.dataplane_drop_rate = 0.01
     self.dataplane_delay_rate = 0.05
+    self.link_failure_rate = 0.01
+    self.link_recovery_rate = 0.25
     self.traffic_generation_rate = 0.05
 
     # Logical time (round #) for the simulation execution
@@ -131,7 +133,7 @@ class FuzzTester (EventMixin):
     log.debug("Starting fuzz loop")
     self.panel = panel
     self.switch_impls = switch_impls
-    self.links = links
+    self.dataplane_links = links
     self.loop(steps)
 
   def loop(self, steps=None):
@@ -169,6 +171,15 @@ class FuzzTester (EventMixin):
   def live_switches(self):
     """ Return the switch_impls which are currently up """
     return filter(lambda switch_impl : not switch_impl.failed, self.all_switches())
+  
+  def all_links(self):
+    return self.dataplane_links
+  
+  def cut_links(self):
+    return self.cut_links
+  
+  def live_links(self):
+    return self.all_links() - self.cut_links()
 
   # ============================================ #
   #      Methods to trigger events               #
@@ -241,12 +252,26 @@ class FuzzTester (EventMixin):
           self.failed_switches.remove(switch_impl)
 
     def cut_links():
-      pass
+      cut_this_round = set()
+      for link in self.live_links():
+        if self.random.random() < self.link_failure_rate:
+          msg.event("Cutting link %s" % str(link))
+          self.cut_links.add(link)
+          cut_this_round.add(link)
+      return cut_this_round
+
+    def repair_links(cut_this_round):
+      for link in self.cut_links():
+        if link in crashed_this_round:
+          continue
+        if self.random.random() < self.link_recovery_rate:
+          msg.event("Restoring link %s" % str(link))
+          self.cut_links.remove(link)
 
     crashed_this_round = crash_switches()
     restart_switches(crashed_this_round)
-    cut_links()
-    repair_links()
+    cut_this_round = cut_links()
+    repair_links(cut_this_round)
   
   def check_control_channel_crashes(self):
     pass
