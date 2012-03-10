@@ -177,7 +177,6 @@ class FuzzTester (EventMixin):
     self.check_dataplane()
     self.check_controlplane()
     self.check_switch_crashes()
-    self.check_control_channel_crashes()
     self.check_timeouts()
     self.fuzz_traffic()
 
