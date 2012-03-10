@@ -6,6 +6,7 @@ Created on Jun 20, 2011
 from headerspace.headerspace.hs import *
 from headerspace.headerspace.tf import *
 from headerspace.config_parser.helper import *
+import os
 
 def convert(ipsi,ipei):
   ips = ipsi
@@ -52,6 +53,8 @@ def test_tf_simple():
   ans = mtf.T_inv(hs, 5)
   for h in ans:
     print "at port %s:\n%s"%(h[1],h[0])
+
+  os.remove("qq.txt")
 
 if __name__ == '__main__':
   test_tf_simple()
