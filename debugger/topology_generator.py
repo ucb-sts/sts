@@ -159,8 +159,12 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     self.buffered_dp_out_events.remove(event)
     
   def drop_dp_event(self, event):
-    ''' Given a SwitchDpPacketOut event, remove it from our buffer, and do not forward ''' 
+    '''
+    Given a SwitchDpPacketOut event, remove it from our buffer, and do not forward.
+    Return the dropped event.
+    ''' 
     self.buffered_dp_out_events.remove(event)
+    return event
     
   def get_buffered_dp_events(self):
     ''' Return a set of all buffered SwitchDpPacketOut events ''' 
