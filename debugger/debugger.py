@@ -161,14 +161,9 @@ class FuzzTester (EventMixin):
   #     Bookkeeping methods                      #
   # ============================================ #
   @property
-  def crashed_switches(self):
-    """ Return the switch_impls which are currently down """
-    return filter(lambda switch_impl : switch_impl.failed, self.switch_impls)
-
-  @property
   def live_switches(self):
     """ Return the switch_impls which are currently up """
-    return filter(lambda switch_impl : not switch_impl.failed, self.switch_impls)
+    return self.switch_impls - self.failed_switches
   
   @property
   def live_links(self):
