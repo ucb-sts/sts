@@ -21,6 +21,7 @@ TODO: should this topology include Hosts as well?
 from debugger_entities import FuzzSwitchImpl
 from pox.openflow.switch_impl import ofp_phy_port, EthAddr, SwitchDpPacketOut
 from pox.lib.util import connect_socket_with_backoff
+from pox.lib.revent import EventMixin
 import socket
 import time
 import errno
@@ -66,9 +67,9 @@ def create_mesh(num_switches, io_worker_constructor, io_worker_destructor):
 
   # Initialize switches
   switches = [ create_switch(switch_id, ports_per_switch, io_worker_constructor, io_worker_destructor) for switch_id in range(1, num_switches+1) ]
-
+  
   # grab a fully meshed patch panel to wire up these guys
-  patch_panel = FullyMeshedPanel(PatchPanel(switches))
+  patch_panel = PatchPanel(switches, FullyMeshedLinks(switches).get_connected_port)
 
   return (patch_panel, switches)
 
@@ -106,50 +107,46 @@ def populate(controller_config_list, io_worker_constructor, io_worker_destructor
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
       Listens to the SwitchDPPacketOut event on the switches.
-      Implement connected_port in subclasses to define the concrete wiring.
   """
-  def __init__(self, switches):
+  def __init__(self, switches, connected_port_mapping):
+    '''
+    Constructor.
+     - switches: a list of the switches in the network
+     - connected_port_mapping: a function which takes (switch_no, port_no, dpid2switch),
+                               and returns the adjacent (switch, port) or None
+    '''
     self.switches = sorted(switches, key=lambda(sw): sw.dpid)
-    self.switch_index_by_dpid = {}
+    self.get_connected_port = connected_port_mapping
     def handle_SwitchDpPacketOut(event):
       self.forward_packet(event.switch, event.packet, event.port)
-
     for i, s in enumerate(self.switches):
       s.addListener(SwitchDpPacketOut, handle_SwitchDpPacketOut)
-      self.switch_index_by_dpid[s.dpid] = i
-
+  
   def forward_packet(self, switch, packet, port):
-    (switch, port) = self.connected_port(switch, port)
+    ''' Forward the packet out the given port '''
+    (switch, port) = self.get_connected_port(switch, port)
     if switch:
       switch.process_packet(packet, port.port_no)
 
-  def connected_port(self, switch, port):
-    """ return (switch: SwitchImpl, port: ofp_phy_port) connected to this switch """
-    raise SystemError("Please implement forward_packet")
 
-class FullyMeshedPanel(object):
-  """ A fully meshed patch panel. Connects every pair of switches. Ports are
+     
+class FullyMeshedLinks(object):
+  """ A factory method for creating a fully meshed network. Connects every pair of switches. Ports are
       in ascending order of the dpid of connected switch, while skipping the self-connections.
       I.e., for (dpid, portno):
       (0, 0) <-> (1,0)
       (2, 1) <-> (1,1)
   """
-  def __init__(self, patch_panel):
-    self.patch_panel = patch_panel
+  def __init__(self, switches):
+    self.switches = sorted(switches, key=lambda(sw): sw.dpid)
+    self.switch_index_by_dpid = {}
+    for i, s in enumerate(switches):
+      self.switch_index_by_dpid[s.dpid] = i
     
-  def forward_packet(self, switch, packet, port):
-    ''' delegate '''
-    self.patch_panel.forward_packet(switch, packet, port)
-  
-  @property
-  def switches(self):
-    return self.patch_panel.switches
-  
-  def connected_port(self, switch, port):
-    switch_no = self.patch_panel.switch_index_by_dpid[switch.dpid]
-    port_no   = port.port_no - 1
-
+  def get_connected_port(self, switch, port):
+    switch_no = self.switch_index_by_dpid[switch.dpid]
     # when converting between switch and port, compensate for the skipped self port
+    port_no = port.port_no - 1
     other_switch_no = port_no if port_no < switch_no else port_no + 1
     other_port_no = switch_no if switch_no < other_switch_no else switch_no - 1
 

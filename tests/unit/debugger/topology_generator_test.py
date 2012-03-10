@@ -42,7 +42,8 @@ class topology_generator_test(unittest.TestCase):
 
     for switch in switches:
       for port_no, port in switch.ports.iteritems():
-        (other_switch, other_port) = panel.connected_port(switch, port)
+        # TODO: abuse of dynamic types... get_connected_port is a field
+        (other_switch, other_port) = panel.get_connected_port(switch, port)
         self.assertTrue( (switch, other_switch) in sw_pairs, "Switches %s, %s connected twice" % (switch, other_switch))
         sw_pairs.remove( (switch, other_switch) )
         other_sw_ports.append( (other_switch, other_port) )
@@ -59,7 +60,9 @@ class FullyMeshedPanelTest(unittest.TestCase):
   
   def setUp(self):
     self.switches = [ create_switch(switch_id, 2, self._io_ctor, self._io_dtor) for switch_id in range(1, 4) ]
-    self.m = FullyMeshedPanel(PatchPanel(self.switches))
+    self.links = FullyMeshedLinks(self.switches)
+    self.get_connected_port = self.links.get_connected_port
+    self.m = PatchPanel(self.switches, self.get_connected_port)
 
   def test_connected_ports(self):
     m = self.m
@@ -69,8 +72,8 @@ class FullyMeshedPanelTest(unittest.TestCase):
       a_port = a_switch.ports[a[1]]
       b_switch = self.switches[b[0]-1]
       b_port = b_switch.ports[b[1]]
-      self.assertEqual(m.connected_port(a_switch, a_port), (b_switch, b_port))
-      self.assertEqual(m.connected_port(b_switch, b_port), (a_switch, a_port))
+      self.assertEqual(self.get_connected_port(a_switch, a_port), (b_switch, b_port))
+      self.assertEqual(self.get_connected_port(b_switch, b_port), (a_switch, a_port))
 
     check_pair( (1,1), (2,1))
     check_pair( (1,2), (3,1))
