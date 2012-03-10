@@ -182,8 +182,9 @@ class FullyMeshedLinks(object):
     self.switch_index_by_dpid = {}
     for i, s in enumerate(switches):
       self.switch_index_by_dpid[s.dpid] = i
-    
+      
   def get_connected_port(self, switch, port):
+    ''' Given a switch and a port, return a tuple (switch, port) that is directly connected to the port '''
     switch_no = self.switch_index_by_dpid[switch.dpid]
     # when converting between switch and port, compensate for the skipped self port
     port_no = port.port_no - 1
