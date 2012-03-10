@@ -56,13 +56,6 @@ class msg():
     print msg.BEGIN + msg.B_RED + msg.BEGIN + msg.WHITE + message + msg.END
 
 class FuzzTester (EventMixin):
-  # TODO: future feature: split this into Manager superclass and
-  # simulator, emulator subclasses. Use vector clocks to take
-  # consistent snapshots of emulated network
-  
-  # TODO: do we need to define more event types? e.g., packet delivered,
-  # controller crashed, etc...
-  
   """
   This is part of a testing framework for controller applications. It
   acts as a replacement for pox.topology.
@@ -89,8 +82,6 @@ class FuzzTester (EventMixin):
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
-    # TODO: take a timestep parameter for how long
-    # each logical timestep should last?
 
     self.dropped_dp_events = set()
     self.failed_switches = set()
