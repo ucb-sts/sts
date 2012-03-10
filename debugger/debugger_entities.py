@@ -96,10 +96,3 @@ class Link():
     self.start_port = start_port
     self.end_switch_impl = end_switch_impl
     self.end_port = end_port
-
-class Message (object):
-  """ So we can track a message throughout the network """
-  def __init__(self, msg):
-    self.in_transit = False
-    self.delayed_rounds = 0
-    self.msg = msg
