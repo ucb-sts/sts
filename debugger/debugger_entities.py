@@ -105,6 +105,9 @@ class Link():
            self.end_switch_impl == other.end_switch_impl and
            self.end_port == other.end_port)
   
+  def __hash__(self):
+    return (self.start_switch_impl.__hash__() +  self.start_port.__hash__() + 
+           self.end_switch_impl.__hash__() +  self.end_port.__hash__())
     
   def __repr__(self):
     return "(%d:%d) -> (%d:%d)" % (self.start_switch_impl.dpid, self.start_port.port_no, 
