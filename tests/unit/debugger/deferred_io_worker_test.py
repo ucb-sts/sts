@@ -17,19 +17,23 @@ from debugger.deferred_io import DeferredIOWorker
 from nose.tools import eq_
 
 class DeferredIOWorkerTest(unittest.TestCase):
+  @staticmethod
+  def call_later(func):
+      # call now!
+      func()
+      
   def test_not_sent_until_permitted(self):
-    i = DeferredIOWorker(IOWorker())
+    i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
     i.send("foo")
     self.assertFalse(i.io_worker.ready_to_send)
     self.assertFalse(i.send_queue.empty())
     i.permit_send()
-    self.assertTrue(i.io_worker.ready_to_send)
     self.assertTrue(i.send_queue.empty())
     i.consume_send_buf(3)
     self.assertFalse(i.io_worker.ready_to_send)
 
   def test_not_received_until_permitted(self):
-    i = DeferredIOWorker(IOWorker())
+    i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
     self.data = None
     def d(worker):
       self.data = worker.peek_receive_buf()
@@ -44,7 +48,7 @@ class DeferredIOWorkerTest(unittest.TestCase):
     self.assertEqual(self.data, "barhepp")
 
   def test_receive_consume(self):
-    i = DeferredIOWorker(IOWorker())
+    i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
     self.data = None
     def consume(worker):
       self.data = worker.peek_receive_buf()
