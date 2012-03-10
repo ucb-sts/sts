@@ -183,7 +183,7 @@ class FuzzTester (EventMixin):
 
   def check_dataplane(self):
     ''' Decide whether to delay, drop, or deliver packets '''
-    for dp_event in self.panel.get_buffered_dp_events():
+    for dp_event in set(self.panel.get_buffered_dp_events()):
       if self.random.random() < self.dataplane_delay_rate:
         msg.event("Delaying dataplane event")
         # (Monkey patch on a delay counter)
