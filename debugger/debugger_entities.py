@@ -97,6 +97,15 @@ class Link():
     self.end_switch_impl = end_switch_impl
     self.end_port = end_port
     
+  def __eq__(self, other):
+    if not type(other) == Link:
+      return False
+    return (self.start_switch_impl == other.start_switch_impl and
+           self.start_port == other.start_port and
+           self.end_switch_impl == other.end_switch_impl and
+           self.end_port == other.end_port)
+  
+    
   def __repr__(self):
     return "(%d:%d) -> (%d:%d)" % (self.start_switch_impl.dpid, self.start_port.port_no, 
                                    self.end_switch_impl.dpid, self.end_port.port_no)
