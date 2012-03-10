@@ -96,3 +96,7 @@ class Link():
     self.start_port = start_port
     self.end_switch_impl = end_switch_impl
     self.end_port = end_port
+    
+  def __repr__(self):
+    return "(%d:%d) -> (%d:%d)" % (self.start_switch_impl.dpid, self.start_port.port_no, 
+                                   self.end_switch_impl.dpid, self.end_port.port_no)
