@@ -11,6 +11,7 @@ import signal
 import sys
 import string
 import subprocess
+import time
 import argparse
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -20,18 +21,26 @@ logging.basicConfig(level=logging.DEBUG)
 #   controllers(command_line_args=[]) => returns a list of pox.debugger.experiment_config_info.ControllerInfo objects
 #   switches()                        => returns a list of pox.debugger.experiment_config_info.Switch objects
 
-# TODO: merge with Mininet
+description = """
+Run a debugger experiment.
+Example usage:
+
+$ %s ./pox/pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__
+""" % (sys.argv[0])
+
+
+
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-             description="Run a debugger experiment.\n"+
-                "Note: must precede controller args with --\n"+
-                "Example usage:\n"+
-                "$ %s -- ./pox/pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__" % (sys.argv[0]) )
-parser.add_argument("--config_file", help='optional experiment config file to load')
-parser.add_argument('controller_args', metavar='controller arg', nargs='*',
+             description=description)
+parser.add_argument("-n", "--non-interactive", help='run debugger non-interactively',
+                    action="store_false", dest="interactive", default=True)
+parser.add_argument("-c", "--config", help='optional experiment config file to load')
+parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
                    help='arguments to pass to the controller(s)')
+#parser.disable_interspersed_args()
 args = parser.parse_args()
-  
-if args.config_file:
+
+if args.config:
   config = __import__(args.config_file)
 else:
   config = object()
@@ -43,48 +52,92 @@ else:
 
 child_processes = []
 scheduler = None
-def kill_children(signal, frame):
+def kill_children(kill=None):
   global child_processes
   global scheduler
 
-  print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
-  print >> sys.stderr, "Killing child controllers..."
+  if kill == None:
+    if hasattr(kill_children,"already_run"):
+      kill = True
+    else:
+      kill = False
+      kill_children.already_run = True
+
+  if len(child_processes) == 0:
+    return
+
+  print >> sys.stderr, "%s child controllers..." % ("Killing" if kill else "Terminating"),
   for child in child_processes:
-    # SIGTERM for now
-    child.terminate()
-  print >> sys.stderr, "Stopping Recoco Scheduler..."
-  if scheduler:
-      scheduler.quit()
+    if kill:
+      child.kill()
+    else:
+      child.terminate()
+
+  start_time = time.time()
+  last_dot = start_time
+  while True:
+    for child in child_processes:
+      if child.poll() != None:
+        child_processes.remove(child)
+    if len(child_processes) == 0:
+      break
+    time.sleep(0.1)
+    now = time.time()
+    if (now - last_dot) > 1:
+      sys.stderr.write(".")
+      last_dot = now
+    if (now - start_time) > 5:
+      if kill:
+        break
+      else:
+        sys.stderr.write(' FAILED (timeout)!\n')
+        return kill_children(kill=True)
+  sys.stderr.write(' OK\n')
+
+def kill_scheduler():
+  if scheduler and not scheduler._hasQuit:
+    sys.stderr.write("Stopping Recoco Scheduler...")
+    scheduler.quit()
+    sys.stderr.write(" OK\n")
+
+def handle_int(signal, frame):
+  print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
+  kill_children()
+  kill_scheduler()
   sys.exit(0)
 
-signal.signal(signal.SIGINT, kill_children)
-signal.signal(signal.SIGTERM, kill_children)
+signal.signal(signal.SIGINT, handle_int)
+signal.signal(signal.SIGTERM, handle_int)
 
-# Boot the controllers
-for c in controllers:
-  command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
-                      map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
-  print command_line_args
-  child = subprocess.Popen(command_line_args)
-  child_processes.append(child)
-  
-io_loop = RecocoIOLoop()
+try:
+  # Boot the controllers
+  for c in controllers:
+    command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
+                        map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
+    print command_line_args
+    child = subprocess.Popen(command_line_args)
+    child_processes.append(child)
 
-#if hasattr(config, 'switches'):
-#  switches = config.switches()
-#else:
-#  switches = []
-# HACK
-create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket))
+  io_loop = RecocoIOLoop()
 
-(panel, switch_impls) = default_topology.populate(controllers,
-                                                   create_worker,
-                                                   io_loop.remove_worker,
-                                                   num_switches=2)
-  
-scheduler = Scheduler(daemon=True)
-scheduler.schedule(io_loop)
+  #if hasattr(config, 'switches'):
+  #  switches = config.switches()
+  #else:
+  #  switches = []
+  # HACK
+  create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket))
 
-# TODO: allow user to configure the fuzzer parameters, e.g. drop rate
-debugger = FuzzTester(child_processes)
-debugger.start(panel, switch_impls)
+  (panel, switch_impls) = default_topology.populate(controllers,
+                                                     create_worker,
+                                                     io_loop.remove_worker,
+                                                     num_switches=2)
+
+  scheduler = Scheduler(daemon=True)
+  scheduler.schedule(io_loop)
+
+  # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
+  debugger = FuzzTester(args.interactive)
+  debugger.start(panel, switch_impls)
+finally:
+  kill_children()
+  kill_scheduler()
