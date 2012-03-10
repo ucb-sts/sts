@@ -255,7 +255,7 @@ class FuzzTester (EventMixin):
 
     def repair_links(cut_this_round):
       for link in set(self.cut_links):
-        if link in crashed_this_round:
+        if link in cut_this_round:
           continue
         if self.random.random() < self.link_recovery_rate:
           msg.event("Restoring link %s" % str(link))
