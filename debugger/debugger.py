@@ -87,7 +87,7 @@ class FuzzTester (EventMixin):
     # debugger.debugger_entities.Link objects
     self.cut_links = set()
     # SwitchOutDpEvent objects
-    self.dropped_dp_events = set()
+    self.dropped_dp_events = []
     # SwitchImpl objects
     self.failed_switches = set()
     # topology.Controller objects
