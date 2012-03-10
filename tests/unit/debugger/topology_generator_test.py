@@ -125,8 +125,6 @@ class BufferedPanelTest(unittest.TestCase):
     self.assertTrue(self.switch.has_forwarded, "should have forwarded")
     
   def test_drop(self):
-    global forwarded
-    forwarded = False
     # raise the event 
     self.switch.raiseEvent(self.dp_out_event)
     self.assertFalse(self.switch.has_forwarded, "should not have forwarded yet")
