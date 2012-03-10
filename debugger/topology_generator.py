@@ -72,7 +72,7 @@ def create_mesh(num_switches):
   switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
   
   # grab a fully meshed patch panel to wire up these guys
-  patch_panel = PatchPanel(switches, FullyMeshedLinks(switches).get_connected_port)
+  patch_panel = BufferedPatchPanel(switches, FullyMeshedLinks(switches).get_connected_port)
 
   return (patch_panel, switches)
 
