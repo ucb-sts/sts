@@ -150,7 +150,7 @@ class FuzzTester (EventMixin):
         if answer != '' and answer.lower() != 'y':
           self.stop()
       else:
-        thread.sleep(0.100)
+        time.sleep(0.1)
 
   def stop(self):
     self.running = False
