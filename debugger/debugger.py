@@ -265,9 +265,6 @@ class FuzzTester (EventMixin):
     cut_this_round = sever_links()
     repair_links(cut_this_round)
   
-  def check_control_channel_crashes(self):
-    pass
-
   def check_timeouts(self):
     # Interpose on timeouts
     pass
