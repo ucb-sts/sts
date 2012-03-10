@@ -249,6 +249,7 @@ class FuzzTester (EventMixin):
         if self.random.random() < self.link_failure_rate:
           msg.event("Cutting link %s" % str(link))
           self.cut_links.add(link)
+          link.start_switch_impl.take_port_down(link.start_port)
           cut_this_round.add(link)
       return cut_this_round
 
@@ -258,6 +259,7 @@ class FuzzTester (EventMixin):
           continue
         if self.random.random() < self.link_recovery_rate:
           msg.event("Restoring link %s" % str(link))
+          link.start_switch_impl.bring_port_up(link.start_port)
           self.cut_links.remove(link)
 
     crashed_this_round = crash_switches()
