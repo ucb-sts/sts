@@ -161,28 +161,18 @@ class FuzzTester (EventMixin):
   #     Bookkeeping methods                      #
   # ============================================ #
   @property
-  def all_switches(self):
-    """ Return all switch_impls currently registered """
-    return self.switch_impls
-
-  @property
   def crashed_switches(self):
     """ Return the switch_impls which are currently down """
-    return filter(lambda switch_impl : switch_impl.failed, self.all_switches())
+    return filter(lambda switch_impl : switch_impl.failed, self.switch_impls)
 
   @property
   def live_switches(self):
     """ Return the switch_impls which are currently up """
-    return filter(lambda switch_impl : not switch_impl.failed, self.all_switches())
+    return filter(lambda switch_impl : not switch_impl.failed, self.switch_impls)
   
-  def all_links(self):
-    return self.dataplane_links
-  
-  def cut_links(self):
-    return self.cut_links
-  
+  @property
   def live_links(self):
-    return self.all_links() - self.cut_links()
+    return self.dataplane_links - self.cut_links
 
   # ============================================ #
   #      Methods to trigger events               #
@@ -223,7 +213,7 @@ class FuzzTester (EventMixin):
         else:
           log.debug("Delaying control plane %s for %s" % (type, str(switch_impl)))
         
-    for switch_impl in self.live_switches():
+    for switch_impl in self.live_switches:
       # Check reads
       # TODO: shouldn't be sticking our hands into switch_impl._connection
       if switch_impl._connection.io_worker.has_pending_receives():
@@ -237,7 +227,7 @@ class FuzzTester (EventMixin):
     ''' Decide whether to crash or restart switches, links and controllers '''
     def crash_switches():
       crashed_this_round = set()
-      for switch_impl in self.live_switches():
+      for switch_impl in self.live_switches:
         if self.random.random() < self.switch_failure_rate:
           msg.event("Crashing switch_impl %s" % str(switch_impl))
           switch_impl.fail()
@@ -246,7 +236,7 @@ class FuzzTester (EventMixin):
       return crashed_this_round
 
     def restart_switches(crashed_this_round):
-      for switch_impl in self.crashed_switches():
+      for switch_impl in self.crashed_switches:
         if switch_impl in crashed_this_round:
           continue
         if self.random.random() < self.switch_recovery_rate:
@@ -254,9 +244,9 @@ class FuzzTester (EventMixin):
           switch_impl.recover()
           self.failed_switches.remove(switch_impl)
 
-    def cut_links():
+    def sever_links():
       cut_this_round = set()
-      for link in self.live_links():
+      for link in self.live_links:
         if self.random.random() < self.link_failure_rate:
           msg.event("Cutting link %s" % str(link))
           self.cut_links.add(link)
@@ -264,7 +254,7 @@ class FuzzTester (EventMixin):
       return cut_this_round
 
     def repair_links(cut_this_round):
-      for link in self.cut_links():
+      for link in self.cut_links:
         if link in crashed_this_round:
           continue
         if self.random.random() < self.link_recovery_rate:
@@ -273,7 +263,7 @@ class FuzzTester (EventMixin):
 
     crashed_this_round = crash_switches()
     restart_switches(crashed_this_round)
-    cut_this_round = cut_links()
+    cut_this_round = sever_links()
     repair_links(cut_this_round)
   
   def check_control_channel_crashes(self):
