@@ -231,7 +231,7 @@ class FuzzTester (EventMixin):
       return crashed_this_round
 
     def restart_switches(crashed_this_round):
-      for switch_impl in self.crashed_switches:
+      for switch_impl in set(self.failed_switches):
         if switch_impl in crashed_this_round:
           continue
         if self.random.random() < self.switch_recovery_rate:
