@@ -102,13 +102,3 @@ class DeferredIOWorker(object):
 
   def consume_send_buf(self, l):
     return self.io_worker.consume_send_buf(l)
-
-  @property
-  def ready_to_send(self):
-    ''' Called by Select loop to see if we're actually ready to send '''
-    # We only push write data onto the worker after we've permitted it.
-    return self.io_worker.ready_to_send
-  
-  def push_receive_data(self, data):
-    ''' not strictly necessary (only called by Select loop, which calls the io_worker anyway) '''
-    self.io_worker.push_receive_data(data) 
