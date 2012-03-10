@@ -45,6 +45,9 @@ parser.add_argument("-R", "--random-seed", type=float, metavar="rnd",
 parser.add_argument("-s", "--steps", type=int, metavar="nsteps",
                     help="number of steps to simulate", default=None)
 
+parser.add_argument("-p", "--port", type=int, metavar="port",
+                    help="base port to use for controllers", default=8888)
+
 parser.add_argument("-c", "--config", help='optional experiment config file to load')
 parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
                    help='arguments to pass to the controller(s)')
@@ -59,7 +62,7 @@ else:
 if hasattr(config, 'controllers'):
   controllers = config.controllers(args.controller_args)
 else:
-  controllers = [Controller(args.controller_args)]
+  controllers = [Controller(args.controller_args, port=args.port)]
 
 child_processes = []
 scheduler = None
