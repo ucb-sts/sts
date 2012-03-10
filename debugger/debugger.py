@@ -64,11 +64,13 @@ class FuzzTester (EventMixin):
   it will inject intelligently chosen mock events (and observe
   their responses?)
   """
-  def __init__(self, interactive=True):
+  def __init__(self, interactive=True, random_seed=0.0, delay=0.1):
     self.interactive = interactive
     self.running = False
     self.panel = None
     self.switch_impls = []
+
+    self.delay = delay
 
     # TODO: make it easier for client to tweak these
     self.switch_failure_rate = 0.01
@@ -99,7 +101,7 @@ class FuzzTester (EventMixin):
     self.packets_sent = 0
 
     # Make execution deterministic to allow the user to easily replay
-    self.seed = 0.0
+    self.seed = random_seed
     self.random = random.Random(self.seed)
     self.traffic_generator = TrafficGenerator(self.random)
     self.invariant_checker = InvariantChecker(self)
@@ -122,17 +124,19 @@ class FuzzTester (EventMixin):
 
     # TODO: need a mechanism for signaling  when the distributed controller handshake has completed
 
-  def start(self, panel, switch_impls):
+  def simulate(self, panel, switch_impls, steps=None):
     """
     Start the fuzzer loop!
     """
     log.debug("Starting fuzz loop")
     self.panel = panel
     self.switch_impls = switch_impls
-    self.loop()
+    self.loop(steps)
 
-  def loop(self):
-    while True:
+  def loop(self, steps=None):
+    self.running = True
+    end_time = self.logical_time + steps if steps else sys.maxint
+    while self.running and self.logical_time < end_time:
       self.logical_time += 1
       self.trigger_events()
       msg.event("Round %d completed." % self.logical_time)
@@ -145,7 +149,7 @@ class FuzzTester (EventMixin):
         if answer != '' and answer.lower() != 'y':
           self.stop()
       else:
-        time.sleep(0.1)
+        time.sleep(self.delay)
 
   def stop(self):
     self.running = False
