@@ -274,12 +274,11 @@ class FuzzTester (EventMixin):
     # TODO: future feature: trace-driven packet generation
     for switch_impl in self.live_switches:
       if self.random.random() < self.traffic_generation_rate:
-        # FIXME do something smarter here than just generate packet ins
-        msg.event("injecting a random packet")
-        # event_type = self.random.choice(switch_impl._eventMixin_handlers.keys()) 
-        traffic_type = "icmp_ping"
-        # Generates a packet, and feeds it to the switch_impl
-        self.traffic_generator.generate(traffic_type, switch_impl)
+        if len(switch_impl.ports) > 0:
+          msg.event("injecting a random packet")
+          traffic_type = "icmp_ping"
+          # Generates a packet, and feeds it to the switch_impl
+          self.traffic_generator.generate(traffic_type, switch_impl)
 
   def invariant_check_prompt(self):
     answer = msg.raw_input('Check Invariants? [Ny]')
