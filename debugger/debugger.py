@@ -10,6 +10,7 @@
 
 import pox.openflow.libopenflow_01 as of
 from pox.lib.revent import EventMixin
+from debugger.debugger_entities import Link
 
 from traffic_generator import TrafficGenerator
 from invariant_checker import InvariantChecker
@@ -195,9 +196,12 @@ class FuzzTester (EventMixin):
         self.panel.drop_dp_event(dp_event)
         self.dropped_dp_events.append(dp_event)
       else:
-        msg.event("Forwarding dataplane event")
-        # Forward the message
-        self.panel.permit_dp_event(dp_event)
+        (next_hop, next_port) = self.panel.get_connected_port(dp_event.switch, dp_event.port)
+        link = Link(dp_event.switch, dp_event.port, next_hop, next_port) 
+        if not link in self.cut_links:
+          msg.event("Forwarding dataplane event")
+          # Forward the message
+          self.panel.permit_dp_event(dp_event)
     
   def check_controlplane(self):
     ''' Decide whether to delay or deliver packets '''
