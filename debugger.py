@@ -34,6 +34,17 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
              description=description)
 parser.add_argument("-n", "--non-interactive", help='run debugger non-interactively',
                     action="store_false", dest="interactive", default=True)
+
+parser.add_argument("-D", "--delay", type=float, metavar="time",
+                    default=0.1,
+                    help="delay in seconds for non-interactive simulation steps")
+
+parser.add_argument("-R", "--random-seed", type=float, metavar="rnd",
+                    help="Seed for the pseduo random number generator", default=0.0)
+
+parser.add_argument("-s", "--steps", type=int, metavar="nsteps",
+                    help="number of steps to simulate", default=None)
+
 parser.add_argument("-c", "--config", help='optional experiment config file to load')
 parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
                    help='arguments to pass to the controller(s)')
@@ -78,7 +89,8 @@ def kill_children(kill=None):
   while True:
     for child in child_processes:
       if child.poll() != None:
-        child_processes.remove(child)
+        if child in child_processes:
+          child_processes.remove(child)
     if len(child_processes) == 0:
       break
     time.sleep(0.1)
@@ -135,8 +147,9 @@ try:
   scheduler.schedule(io_loop)
 
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
-  debugger = FuzzTester(args.interactive)
-  debugger.start(panel, switch_impls)
+  debugger = FuzzTester(interactive=args.interactive, random_seed = args.random_seed,
+                        delay = args.delay)
+  debugger.simulate(panel, switch_impls, steps=args.steps)
 finally:
   kill_children()
   kill_scheduler()
