@@ -10,7 +10,7 @@
 
 import pox.openflow.libopenflow_01 as of
 from pox.lib.revent import EventMixin
-from debugger.debugger_entities import Link
+from debugger_entities import Link
 
 from traffic_generator import TrafficGenerator
 from invariant_checker import InvariantChecker
