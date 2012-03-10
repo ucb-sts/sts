@@ -229,7 +229,7 @@ class FuzzTester (EventMixin):
           switch_impl.fail()
           crashed_this_round.add(switch_impl)
           self.failed_switches.add(switch_impl)
-      return crashed
+      return crashed_this_round
 
     def restart_switches(crashed_this_round):
       for switch_impl in self.crashed_switches():
