@@ -83,10 +83,17 @@ class FuzzTester (EventMixin):
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
 
+    # Metatdata for simulated failures
+    # debugger.debugger_entities.Link objects
+    self.cut_links = set()
+    # SwitchOutDpEvent objects
     self.dropped_dp_events = set()
+    # SwitchImpl objects
     self.failed_switches = set()
+    # topology.Controller objects
     self.failed_controllers = set()
-    self.cancelled_timeouts = set() # ?
+    # ?
+    self.cancelled_timeouts = set()
 
     # Statistics to print on exit
     self.packets_sent = 0
