@@ -132,7 +132,7 @@ class FuzzTester (EventMixin):
     """
     log.debug("Starting fuzz loop")
     self.panel = panel
-    self.switch_impls = switch_impls
+    self.switch_impls = set(switch_impls)
     self.dataplane_links = set(links)
     self.loop(steps)
 
