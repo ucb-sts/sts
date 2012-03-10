@@ -132,7 +132,37 @@ class PatchPanel(object):
     if switch:
       switch.process_packet(packet, port.port_no)
 
+class BufferedPatchPanel(PatchPanel, EventMixin):
+  '''
+  A Buffered Patch panel.Listens to the SwitchDPPacketOut event on the switches,
+  and re-raises them to listeners of this object. Does not traffic until given
+  permission from a higher-level.
+  '''
+  _eventMixin_events = set([SwitchDpPacketOut])
 
+  def __init__(self, switches, connected_port_mapping):
+    self.switches = sorted(switches, key=lambda(sw): sw.dpid)
+    self.get_connected_port = connected_port_mapping
+    self.buffered_dp_out_events = set()
+    def handle_SwitchDpPacketOut(event):
+      self.buffered_dp_out_events.add(event)
+      self.raiseEventNoErrors(event)
+    for i, s in enumerate(self.switches):
+      s.addListener(SwitchDpPacketOut, handle_SwitchDpPacketOut)
+      
+  def permit_dp_event(self, event):
+    ''' Given a SwitchDpPacketOut event, permit it to be forwarded  ''' 
+    # TODO: self.forward_packet should not be externally visible!
+    self.forward_packet(event.switch, event.packet, event.port)
+    self.buffered_dp_out_events.remove(event)
+    
+  def drop_dp_event(self, event):
+    ''' Given a SwitchDpPacketOut event, remove it from our buffer, and do not forward ''' 
+    self.buffered_dp_out_events.remove(event)
+    
+  def get_buffered_dp_events(self):
+    ''' Return a set of all buffered SwitchDpPacketOut events ''' 
+    return self.buffered_dp_out_events
      
 class FullyMeshedLinks(object):
   """ A factory method for creating a fully meshed network. Connects every pair of switches. Ports are

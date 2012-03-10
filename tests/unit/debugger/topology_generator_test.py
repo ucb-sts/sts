@@ -5,11 +5,14 @@ import sys
 import os.path
 import itertools
 from copy import copy
+import types
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 from debugger.topology_generator import *
+from debugger.traffic_generator import *
 from pox.lib.ioworker.io_worker import RecocoIOLoop
+from pox.openflow.switch_impl import SwitchImpl
 
 class topology_generator_test(unittest.TestCase):
   _io_loop = RecocoIOLoop()
@@ -53,7 +56,7 @@ class topology_generator_test(unittest.TestCase):
     other_sw_ports.sort(key=lambda (sw,port): (sw.dpid, port.port_no))
     self.assertEqual(sw_ports, other_sw_ports)
 
-class FullyMeshedPanelTest(unittest.TestCase):
+class FullyMeshedLinkTest(unittest.TestCase):
   _io_loop = RecocoIOLoop()
   _io_ctor = _io_loop.create_worker_for_socket
   _io_dtor = _io_loop.remove_worker
@@ -62,11 +65,8 @@ class FullyMeshedPanelTest(unittest.TestCase):
     self.switches = [ create_switch(switch_id, 2, self._io_ctor, self._io_dtor) for switch_id in range(1, 4) ]
     self.links = FullyMeshedLinks(self.switches)
     self.get_connected_port = self.links.get_connected_port
-    self.m = PatchPanel(self.switches, self.get_connected_port)
 
   def test_connected_ports(self):
-    m = self.m
-
     def check_pair(a, b):
       a_switch = self.switches[a[0]-1]
       a_port = a_switch.ports[a[1]]
@@ -78,6 +78,63 @@ class FullyMeshedPanelTest(unittest.TestCase):
     check_pair( (1,1), (2,1))
     check_pair( (1,2), (3,1))
     check_pair( (3,2), (2,2))
+    
+class BufferedPanelTest(unittest.TestCase):
+  _io_loop = RecocoIOLoop()
+  _io_ctor = _io_loop.create_worker_for_socket
+  _io_dtor = _io_loop.remove_worker
+  
+  def setUp(self):
+    class MockSwitch(SwitchImpl):
+      _eventMixin_events = set([SwitchDpPacketOut])
+
+      def __init__(self, dpid, ports):
+        self.has_forwarded = False
+        self.dpid = 0
+        self.ports = {}
+        for port in ports:
+          self.ports[port.port_no] = port
+        
+      def process_packet(self, packet, in_port):
+        self.has_forwarded = True
+        
+    def create_mock_switch(num_ports, switch_id):
+      ports = []
+      for port_no in range(1, num_ports+1):
+        port = ofp_phy_port( port_no=port_no,
+                             hw_addr=EthAddr("00:00:00:00:%02x:%02x" % (switch_id, port_no)) )
+        # monkey patch an IP address onto the port for anteater purposes
+        port.ip_addr = "1.1.%d.%d" % (switch_id, port_no)
+        ports.append(port)
+        return MockSwitch(switch_id, ports)
+    
+    self.switches = [create_mock_switch(1,1), create_mock_switch(1,2)]
+    self.m = BufferedPatchPanel(self.switches, FullyMeshedLinks(self.switches).get_connected_port)
+    self.traffic_generator = TrafficGenerator()
+    self.switch = self.switches[0]
+    self.port = self.switch.ports.values()[0]
+    self.icmp_packet = self.traffic_generator.icmp_ping(self.switch, self.port)
+    self.dp_out_event = SwitchDpPacketOut(self.switch, self.icmp_packet, self.port)
+    
+  def test_buffering(self):
+    self.switch.raiseEvent(self.dp_out_event)
+    self.assertFalse(self.switch.has_forwarded, "should not have forwarded yet")
+    self.assertFalse(len(self.m.get_buffered_dp_events()) == 0, "should have buffered packet")
+    self.m.permit_dp_event(self.dp_out_event)
+    self.assertTrue(len(self.m.get_buffered_dp_events()) == 0, "should have cleared buffer")
+    self.assertTrue(self.switch.has_forwarded, "should have forwarded")
+    
+  def test_drop(self):
+    global forwarded
+    forwarded = False
+    # raise the event 
+    self.switch.raiseEvent(self.dp_out_event)
+    self.assertFalse(self.switch.has_forwarded, "should not have forwarded yet")
+    self.assertFalse(len(self.m.get_buffered_dp_events()) == 0, "should have buffered packet")
+    self.m.drop_dp_event(self.dp_out_event)
+    self.assertTrue(len(self.m.get_buffered_dp_events()) == 0, "should have cleared buffer")
+    self.assertFalse(self.switch.has_forwarded, "should not have forwarded")
+    
 
 if __name__ == '__main__':
   unittest.main()
