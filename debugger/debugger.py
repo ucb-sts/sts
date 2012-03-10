@@ -243,11 +243,8 @@ class FuzzTester (EventMixin):
     def cut_links():
       pass
 
-    def repair_links():
-      pass
-
-    crashed = crash_switches()
-    restart_switches(crashed)
+    crashed_this_round = crash_switches()
+    restart_switches(crashed_this_round)
     cut_links()
     repair_links()
   
