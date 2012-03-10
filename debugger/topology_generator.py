@@ -92,7 +92,11 @@ def connect_to_controllers(controller_info_list, io_worker_generator, switch_imp
     # Set non-blocking
     controller_socket.setblocking(0)
     io_worker = io_worker_generator(controller_socket)
-    switch_impl.set_socket(io_worker)
+    connection = switch_impl.set_io_worker(io_worker)
+    def handle_error(e):
+      connection.log.exception(e)
+      raise e
+    connection.error_handler = handle_error
 
 def populate(controller_config_list, io_worker_constructor, io_worker_destructor, num_switches=3):
   '''

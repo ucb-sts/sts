@@ -61,7 +61,7 @@ class FuzzSwitchImpl (SwitchImpl):
     # Set non-blocking
     controller_socket.setblocking(0)
     io_worker = self.io_worker_constructor(controller_socket)
-    self.set_socket(io_worker)
+    self.set_io_worker(io_worker)
 
   def serialize(self):
     # Skip over non-serializable data, e.g. sockets
