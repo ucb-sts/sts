@@ -19,7 +19,8 @@ processes. To emulate, we'll want to :
 
 from pox.openflow.switch_impl import SwitchImpl
 from pox.lib.util import connect_socket_with_backoff
- 
+
+import logging
 import pickle
 
 # TODO: model hosts in the network!
@@ -28,15 +29,32 @@ class FuzzSwitchImpl (SwitchImpl):
   """
   NOTE: a mock switch implementation for testing purposes. Can simulate dropping dead.
   """
-  def __init__ (self, io_worker_constructor, io_worker_destructor, dpid, name=None, ports=4, miss_send_len=128,
+  def __init__ (self, create_io_worker, dpid, name=None, ports=4, miss_send_len=128,
                 n_buffers=100, n_tables=1, capabilities=None):
     SwitchImpl.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
-    self.io_worker_constructor = io_worker_constructor
-    self.io_worker_destructor = io_worker_destructor
+
+    self.create_io_worker = create_io_worker
+
     self.failed = False
-    
+    self.log = logging.getLogger("FuzzSwitchImpl(%d)" % dpid)
+
+    def error_handler(e):
+      self.log.exception(e)
+      raise e
+
+    self.error_handler = error_handler
+
   def _handle_ConnectionUp(self, event):
     self._setConnection(event.connection, event.ofp)
+
+  def connect(self):
+    # NOTE: create_io_worker is /not/ an instancemethod but just a function
+    # so we have to pass in the self parameter explicitely
+    io_worker = self.create_io_worker(self)
+
+    conn = self.set_io_worker(io_worker)
+    # cause errors to be raised
+    conn.error_handler = self.error_handler
 
   def fail(self):
     # TODO: depending on the type of failure, a real switch failure
@@ -45,23 +63,16 @@ class FuzzSwitchImpl (SwitchImpl):
       self.log.warn("Switch already failed")
       return
     self.failed = True
-    
-    # Store the controller's address and port so we can reconnect later
-    (self.controller_address, self.controller_port) = self._connection.io_worker.socket.getpeername()
-    self.io_worker_destructor(self._connection.io_worker)
+
+    self._connection.close()
     self._connection = None
 
   def recover(self):
     if not self.failed:
       self.log.warn("Switch already up")
       return
+    self.connect()
     self.failed = False
-    # Reconnect by creating a brand new tcp socket
-    controller_socket = connect_socket_with_backoff(self.controller_address, self.controller_port)
-    # Set non-blocking
-    controller_socket.setblocking(0)
-    io_worker = self.io_worker_constructor(controller_socket)
-    self.set_io_worker(io_worker)
 
   def serialize(self):
     # Skip over non-serializable data, e.g. sockets

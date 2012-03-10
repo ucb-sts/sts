@@ -48,7 +48,7 @@ class Cycler():
     self._current_index %= len(self._list)
     return element
 
-def create_switch(switch_id, num_ports, io_worker_constructor, io_worker_destructor):
+def create_switch(switch_id, num_ports):
   ports = []
   for port_no in range(1, num_ports+1):
     port = ofp_phy_port( port_no=port_no,
@@ -57,16 +57,19 @@ def create_switch(switch_id, num_ports, io_worker_constructor, io_worker_destruc
     port.ip_addr = "1.1.%d.%d" % (switch_id, port_no)
     ports.append(port)
 
-  return FuzzSwitchImpl(io_worker_constructor, io_worker_destructor, dpid=switch_id, name="SoftSwitch(%d)" % switch_id, ports=ports)
+  def unitialized_io_worker(switch):
+    raise SystemError("Not initialialized")
 
-def create_mesh(num_switches, io_worker_constructor, io_worker_destructor):
+  return FuzzSwitchImpl(create_io_worker=unitialized_io_worker, dpid=switch_id, name="SoftSwitch(%d)" % switch_id, ports=ports)
+
+def create_mesh(num_switches):
   ''' Returns (patch_panel, switches) '''
   
   # Every switch has a link to every other switch, for N*(N-1) total ports
   ports_per_switch = num_switches - 1
 
   # Initialize switches
-  switches = [ create_switch(switch_id, ports_per_switch, io_worker_constructor, io_worker_destructor) for switch_id in range(1, num_switches+1) ]
+  switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
   
   # grab a fully meshed patch panel to wire up these guys
   patch_panel = PatchPanel(switches, FullyMeshedLinks(switches).get_connected_port)
@@ -83,28 +86,27 @@ def connect_to_controllers(controller_info_list, io_worker_generator, switch_imp
   Return a list of socket objects
   '''
   controller_info_cycler = Cycler(controller_info_list)
-  
+
   for switch_impl in switch_impls:
     # TODO: what if the controller is slow to boot?
     # Socket from the switch_impl to the controller
     controller_info = controller_info_cycler.next()
-    controller_socket = connect_socket_with_backoff(controller_info.address, controller_info.port)
-    # Set non-blocking
-    controller_socket.setblocking(0)
-    io_worker = io_worker_generator(controller_socket)
-    connection = switch_impl.set_io_worker(io_worker)
-    def handle_error(e):
-      connection.log.exception(e)
-      raise e
-    connection.error_handler = handle_error
+    def create_io_worker(switch):
+      controller_socket = connect_socket_with_backoff(controller_info.address, controller_info.port)
+      # Set non-blocking
+      controller_socket.setblocking(0)
+      return io_worker_generator(controller_socket)
 
-def populate(controller_config_list, io_worker_constructor, io_worker_destructor, num_switches=3):
+    switch_impl.create_io_worker = create_io_worker
+    switch_impl.connect()
+
+def populate(controller_config_list, io_worker_constructor, num_switches=3):
   '''
   Populate the topology as a mesh of switches, connect the switches
   to the controllers, and return 
   (PatchPanel, switches, controller_sockets)
   '''
-  (panel, switches) = create_mesh(num_switches, io_worker_constructor, io_worker_destructor)
+  (panel, switches) = create_mesh(num_switches)
   connect_to_controllers(controller_config_list, io_worker_constructor, switches)
   return (panel, switches)
 

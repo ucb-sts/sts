@@ -129,7 +129,6 @@ try:
 
   (panel, switch_impls) = default_topology.populate(controllers,
                                                      create_worker,
-                                                     io_loop.remove_worker,
                                                      num_switches=2)
 
   scheduler = Scheduler(daemon=True)
