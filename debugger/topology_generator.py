@@ -129,6 +129,9 @@ class PatchPanel(object):
       self.forward_packet(event.switch, event.packet, event.port)
     for i, s in enumerate(self.switches):
       s.addListener(SwitchDpPacketOut, handle_SwitchDpPacketOut)
+      
+  def get_connected_port(self, switch, port):
+    return self.get_connected_port(switch, port)
   
   def forward_packet(self, switch, packet, port):
     ''' Forward the packet out the given port '''
