@@ -92,10 +92,7 @@ class FuzzTester (EventMixin):
     # TODO: take a timestep parameter for how long
     # each logical timestep should last?
 
-    # events for this round
-    self.sorted_events = []
-    self.in_transit_messages = set()
-    self.dropped_messages = set()
+    self.dropped_dp_events = set()
     self.failed_switches = set()
     self.failed_controllers = set()
     self.cancelled_timeouts = set() # ?
@@ -191,19 +188,22 @@ class FuzzTester (EventMixin):
 
   def check_dataplane(self):
     ''' Decide whether to delay, drop, or deliver packets '''
-    # TODO: interpose on panel 
-    #for msg in self.in_transit_messages:
-    #  if self.random.random() < self.dataplane_delay_rate:
-    #    # Delay the message
-    #    msg.delayed_rounds += 1
-    #  elif self.random.random() < self.dataplane_drop_rate:
-    #    # Drop the message
-    #    self.dropped_messages.add(msg)
-    #    self.in_transit_messages.remove(msg)
-    #  else:
-    #    # TODO: deliver the message
-    #    pass
-    pass
+    for dp_event in self.panel.get_buffered_dp_events():
+      if self.random.random() < self.dataplane_delay_rate:
+        msg.event("Delaying dataplane event")
+        # (Monkey patch on a delay counter)
+        if not hasattr(dp_event, "delayed_rounds"):
+          dp_event.delayed_rounds = 0
+        dp_event.delayed_rounds += 1
+      elif self.random.random() < self.dataplane_drop_rate:
+        msg.event("Dropping dataplane event")
+        # Drop the message
+        self.panel.drop_dp_event(dp_event)
+        self.dropped_dp_events.append(dp_event)
+      else:
+        msg.event("Forwarding dataplane event")
+        # Forward the message
+        self.panel.permit_dp_event(dp_event)
     
   def check_controlplane(self):
     ''' Decide whether to delay or deliver packets '''
