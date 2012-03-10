@@ -78,7 +78,8 @@ def kill_children(kill=None):
   while True:
     for child in child_processes:
       if child.poll() != None:
-        child_processes.remove(child)
+        if child in child_processes:
+          child_processes.remove(child)
     if len(child_processes) == 0:
       break
     time.sleep(0.1)
