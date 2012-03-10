@@ -124,13 +124,14 @@ class FuzzTester (EventMixin):
 
     # TODO: need a mechanism for signaling  when the distributed controller handshake has completed
 
-  def simulate(self, panel, switch_impls, steps=None):
+  def simulate(self, panel, switch_impls, links, steps=None):
     """
     Start the fuzzer loop!
     """
     log.debug("Starting fuzz loop")
     self.panel = panel
     self.switch_impls = switch_impls
+    self.links = links
     self.loop(steps)
 
   def loop(self, steps=None):

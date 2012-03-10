@@ -139,9 +139,9 @@ try:
   # HACK
   create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket))
 
-  (panel, switch_impls) = default_topology.populate(controllers,
-                                                     create_worker,
-                                                     num_switches=2)
+  (panel, switch_impls, links) = default_topology.populate(controllers,
+                                                           create_worker,
+                                                           num_switches=2)
 
   scheduler = Scheduler(daemon=True)
   scheduler.schedule(io_loop)
@@ -149,7 +149,7 @@ try:
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
   debugger = FuzzTester(interactive=args.interactive, random_seed = args.random_seed,
                         delay = args.delay)
-  debugger.simulate(panel, switch_impls, steps=args.steps)
+  debugger.simulate(panel, switch_impls, links, steps=args.steps)
 finally:
   kill_children()
   kill_scheduler()
