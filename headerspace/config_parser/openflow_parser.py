@@ -243,8 +243,15 @@ def generate_transfer_function(tf, software_switch):
 
 def get_uniq_port_id(switch, port):
   ''' HSA assumes uniquely labeled ports '''
-  # DPID's are unique
-  dpid = switch.dpid
-  port_no = port.port_no
+  if type(switch) == int:
+    dpid = switch
+  else:
+    dpid = switch.dpid
+    
+  if type(port) == int:
+    port_no = port
+  else:
+    port_no = port.port_no
+    
   # port_no's are 16 bits long
   return (dpid << 16) + port_no
