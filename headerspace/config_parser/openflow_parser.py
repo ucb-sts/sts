@@ -95,12 +95,12 @@ def optimize_forwarding_table(self):
   '''
   print "=== DONE forwarding table compression ==="
   
-def ofp_match_to_input_ports(ofp_match, all_port_nos):
+def ofp_match_to_input_ports(ofp_match, switch, all_port_ids):
   in_ports = []
   if (ofp_match.wildcards & OFPFW_IN_PORT) or (ofp_match.wildcards & OFPFW_ALL):
-    in_ports = all_port_nos 
+    in_ports = all_port_ids
   else:
-    in_ports = [ofp_match.in_port]
+    in_ports = [get_uniq_port_id(switch, ofp_match.in_port)]
     
 def ofp_match_to_hsa_match(ofp_match):
   hsa_match = byte_array_get_all_x(hs_format["length"]*2)
@@ -179,20 +179,21 @@ def ofp_actions_to_hsa_rewrite(ofp_actions):
     
   return (mask, rewrite) 
 
-def ofp_actions_to_output_ports(ofp_actions, all_port_nos, in_port):
+def ofp_actions_to_output_ports(ofp_actions, switch, all_port_ids, in_port_id):
   global out_port_nos
   output_port_nos = []
   
   def output_packet(action):
     out_port = action.port
+    out_port_id = get_uniq_port_id(switch, out_port)
     if out_port < OFPP_MAX:
-      output_port_nos.append(out_port)
+      output_port_nos.append(out_port_id)
     elif out_port == OFPP_IN_PORT:
-      output_port_nos.append(in_port)
+      output_port_nos.append(in_port_id)
     elif out_port == OFPP_FLOOD or out_port == OFPP_ALL:
-      for port_no in all_port_nos:
-        if port_no != in_port:
-          output_port_nos.append(out_port)
+      for port_id in all_port_ids:
+        if port_id != in_port_id:
+          output_port_nos.append(port_id)
     elif out_port == OFPP_CONTROLLER:
       return
     else:
@@ -215,7 +216,7 @@ def generate_transfer_function(tf, software_switch):
   print "=== Generating Transfer Function ==="
   # generate the forwarding part of transfer fucntion, from the fwd_prt, to pre-output ports
   table = software_switch.table
-  all_port_nos = software_switch.ports.keys()
+  all_port_ids = map(lambda port: get_uniq_port_id(software_switch, port), software_switch.ports.values())
   for flow_entry in table.entries:
     # TODO: For now, we're assuming completely non-overlapping entries. Need to 
     #       deal with priorities properly!
@@ -223,17 +224,17 @@ def generate_transfer_function(tf, software_switch):
     ofp_actions = flow_entry.actions
     
     hsa_match = ofp_match_to_hsa_match(ofp_match)
-    input_port_nos = ofp_match_to_input_ports(ofp_match, all_port_nos)
+    input_port_ids = ofp_match_to_input_ports(ofp_match, all_port_ids)
     (mask, rewrite) = ofp_actions_to_hsa_rewrite(ofp_actions)
     output_port_nos = set()
-    for input_port_no in input_port_nos:
-      output_port_nos = output_port_nos.union(ofp_actions_to_output_ports(ofp_actions, all_port_nos, input_port_no))
+    for input_port_id in input_port_ids:
+      output_port_nos = output_port_nos.union(ofp_actions_to_output_ports(ofp_actions, all_port_ids, input_port_id))
 
     if len(output_port_nos)  == 0:
-      self_rule = TF.create_standard_rule(input_port_nos,hsa_match,[],None,None)
+      self_rule = TF.create_standard_rule(input_port_ids,hsa_match,[],None,None)
       tf.add_fwd_rule(self_rule)
     else:
-      tf_rule = TF.create_standard_rule(input_port_nos, ofp_match, output_port_nos, mask, rewrite)
+      tf_rule = TF.create_standard_rule(input_port_ids, ofp_match, output_port_nos, mask, rewrite)
       tf.add_rewrite_rule(tf_rule)
          
   print "=== Successfully Generated Transfer function ==="
