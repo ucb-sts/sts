@@ -31,5 +31,5 @@ class InvariantChecker():
     TTF = hsa_topo.generate_TTF(live_links)
     # TODO: don't assume that all links are edge links (need to model hosts in the network)
     edge_links = live_links
-    return hsa.compute_omega(TTF, NTF, edge_links)
+    return hsa.compute_omega(NTF, TTF, edge_links)
   
