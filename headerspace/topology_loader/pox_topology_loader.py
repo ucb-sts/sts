@@ -18,3 +18,10 @@ def generate_TTF(all_links):
     ttf.add_link_rule(rule)
     
   return ttf
+
+def generate_NTF(switches):
+  ntf = tf.TF(of.HS_FORMAT()["length"]*2)
+  for switch in switches:
+    of.generate_transfer_function(ntf, switch) 
+  return ntf
+    
