@@ -129,7 +129,7 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
 
 # Omega defines the externally visible behavior of the network. Defined as a table:
 #   (header space, edge_port) -> [(header_space, final_location),(header_space, final_location)...]
-def compute_omega(NTF, TTF, edge_ports, reverse_map, test_packet = None):
+def compute_omega(NTF, TTF, edge_ports, reverse_map={}, test_packet=None):
   omega = {}
   
   for start_port in edge_ports:
