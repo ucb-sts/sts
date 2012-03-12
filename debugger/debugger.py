@@ -107,7 +107,7 @@ class FuzzTester (EventMixin):
     self.seed = random_seed
     self.random = random.Random(self.seed)
     self.traffic_generator = TrafficGenerator(self.random)
-    self.invariant_checker = InvariantChecker(self)
+    self.invariant_checker = InvariantChecker()
 
     # TODO: future feature: log all events, and allow user to (interactively)
     # replay the execution
@@ -290,6 +290,7 @@ class FuzzTester (EventMixin):
       msg.interactive("  'b' - blackholes")
       msg.interactive("  'r' - routing consistency")
       msg.interactive("  'c' - connectivity")
+      msg.interactive("  'o' - omega")
       answer = msg.raw_input("  ")
       result = None
       if answer.lower() == 'l':
@@ -300,13 +301,12 @@ class FuzzTester (EventMixin):
         result = self.invariant_checker.check_routing_consistency()
       elif answer.lower() == 'c':
         result = self.invariant_checker.check_connectivity()
+      elif answer.lower() == 'o':
+        result = self.invariant_checker.compute_omega(self.live_switches, self.live_links)
       else:
         log.warn("Unknown input...")
 
       if not result:
         return
-      elif result == "sat":
-        msg.success("Invariant holds!")
       else:
-        msg.fail("Invariant violated!")
-
+        msg.interactive("Result: %s" % str(result))
