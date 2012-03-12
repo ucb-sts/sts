@@ -5,6 +5,7 @@ Created on Jan 27, 2011
 '''
 from headerspace.headerspace.hs import *
 from headerspace.headerspace.tf import *
+from headerspace.config_parser.openflow_parser import get_uniq_port_id
 
 # What is a p_node?
 # A hash apparently:
@@ -129,8 +130,10 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
 
 # Omega defines the externally visible behavior of the network. Defined as a table:
 #   (header space, edge_port) -> [(header_space, final_location),(header_space, final_location)...]
-def compute_omega(NTF, TTF, edge_ports, reverse_map={}, test_packet=None):
+def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
   omega = {}
+  
+  edge_ports = map(lambda link: get_uniq_port_id(link.start_switch_impl, link.start_port), edge_links)
   
   for start_port in edge_ports:
     print "port %d is being checked" % start_port
