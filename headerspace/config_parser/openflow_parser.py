@@ -101,6 +101,7 @@ def ofp_match_to_input_ports(ofp_match, switch, all_port_ids):
     in_ports = all_port_ids
   else:
     in_ports = [get_uniq_port_id(switch, ofp_match.in_port)]
+  return in_ports
     
 def ofp_match_to_hsa_match(ofp_match):
   hsa_match = byte_array_get_all_x(hs_format["length"]*2)
@@ -121,6 +122,7 @@ def ofp_match_to_hsa_match(ofp_match):
     if addr:
       # if addr, not all wildcard bits set
       set_field(hsa_match, field_name, addr, right_mask=32-mask_bits_from_left)
+  return hsa_match
     
 # Returns (mask, rewrite) 
 def ofp_actions_to_hsa_rewrite(ofp_actions):
@@ -175,7 +177,8 @@ def ofp_actions_to_hsa_rewrite(ofp_actions):
   }
   
   for action in ofp_actions:
-    handler_map[action.type](action)
+    if action.type in handler_map:
+      handler_map[action.type](action)
     
   return (mask, rewrite) 
 
@@ -213,7 +216,7 @@ def generate_transfer_function(tf, software_switch):
   '''
   The rules will be added to transfer function tf passed to the function.
   '''
-  print "=== Generating Transfer Function ==="
+  print "=== Generating Transfer Function for switch %d ===" % software_switch.dpid
   # generate the forwarding part of transfer fucntion, from the fwd_prt, to pre-output ports
   table = software_switch.table
   all_port_ids = map(lambda port: get_uniq_port_id(software_switch, port), software_switch.ports.values())
@@ -224,17 +227,17 @@ def generate_transfer_function(tf, software_switch):
     ofp_actions = flow_entry.actions
     
     hsa_match = ofp_match_to_hsa_match(ofp_match)
-    input_port_ids = ofp_match_to_input_ports(ofp_match, all_port_ids)
+    input_port_ids = ofp_match_to_input_ports(ofp_match, software_switch, all_port_ids)
     (mask, rewrite) = ofp_actions_to_hsa_rewrite(ofp_actions)
     output_port_nos = set()
     for input_port_id in input_port_ids:
-      output_port_nos = output_port_nos.union(ofp_actions_to_output_ports(ofp_actions, all_port_ids, input_port_id))
+      output_port_nos = output_port_nos.union(ofp_actions_to_output_ports(ofp_actions, software_switch, all_port_ids, input_port_id))
 
-    if len(output_port_nos)  == 0:
+    if len(output_port_nos) == 0:
       self_rule = TF.create_standard_rule(input_port_ids,hsa_match,[],None,None)
       tf.add_fwd_rule(self_rule)
     else:
-      tf_rule = TF.create_standard_rule(input_port_ids, ofp_match, output_port_nos, mask, rewrite)
+      tf_rule = TF.create_standard_rule(input_port_ids, hsa_match, output_port_nos, mask, rewrite)
       tf.add_rewrite_rule(tf_rule)
          
   print "=== Successfully Generated Transfer function ==="
