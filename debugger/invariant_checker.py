@@ -27,9 +27,12 @@ class InvariantChecker():
     pass
   
   def compute_omega(self, live_switches, live_links):
+    (NTF, TTF, edge_links) = self._get_transfer_functions(live_switches, live_links)
+    return hsa.compute_omega(NTF, TTF, edge_links)
+  
+  def _get_transfer_functions(self, live_switches, live_links):
     NTF = hsa_topo.generate_NTF(live_switches)
     TTF = hsa_topo.generate_TTF(live_links)
     # TODO: don't assume that all links are edge links (need to model hosts in the network)
     edge_links = live_links
-    return hsa.compute_omega(NTF, TTF, edge_links)
-  
+    return (NTF, TTF, edge_links)
