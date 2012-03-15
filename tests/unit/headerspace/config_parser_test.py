@@ -23,7 +23,7 @@ class config_parser_test(unittest.TestCase):
     switch.table.process_flow_mod(flow_mod)
     generate_transfer_function(tf, switch)
     print "tf: %s" % str(tf)
-    # TODO: verify correct match
+    # TODO: do something smarter than printing to console...
   
   def test_drop(self):
     tf = TF(HS_FORMAT()["length"]*2)
@@ -33,6 +33,8 @@ class config_parser_test(unittest.TestCase):
     switch.table.process_flow_mod(flow_mod)
     generate_transfer_function(tf, switch)
     print "tf: %s" % str(tf)
+    # TODO: do something smarter than printing to console...
+    
     
 if __name__ == '__main__':
   unittest.main()
