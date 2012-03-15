@@ -124,6 +124,7 @@ def ofp_match_to_hsa_match(ofp_match):
     
 # Returns (mask, rewrite) 
 def ofp_actions_to_hsa_rewrite(ofp_actions):
+  # TODO: this should include the previous match by default? Is that already implemented by TF?
   # Bits set to one are not touched
   mask = byte_array_get_all_one(hs_format["length"]*2)
   # Bits set to one are rewritten
@@ -232,6 +233,7 @@ def generate_transfer_function(tf, software_switch):
       output_port_nos = output_port_nos.union(ofp_actions_to_output_ports(ofp_actions, software_switch, all_port_ids, input_port_id))
 
     if len(output_port_nos) == 0:
+      # No output ports means a dropped packet in OpenFlow
       self_rule = TF.create_standard_rule(input_port_ids,hsa_match,[],None,None)
       tf.add_fwd_rule(self_rule)
     else:
