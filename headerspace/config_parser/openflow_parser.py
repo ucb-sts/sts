@@ -118,6 +118,8 @@ def ofp_match_to_hsa_match(ofp_match):
   for field_name in ['nw_src', 'nw_dst']:
     (addr, mask_bits_from_left) = getattr(ofp_match, "get_%s"%field_name)()
     if addr:
+      # TODO: signed or unsigned?
+      addr = addr.toUnsignedN()
       # if addr, not all wildcard bits set
       set_field(hsa_match, field_name, addr, right_mask=32-mask_bits_from_left)
   return hsa_match
