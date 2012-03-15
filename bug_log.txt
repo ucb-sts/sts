@@ -19,10 +19,3 @@ Crashing switch_impl SwitchImpl(dpid=2, num_ports=1)
 Round 88 completed.
 2012-03-10 13:49:37,615 - openflow.topology - WARNING - Switch 00-00-00-00-00-02 disconnected, but... it's wasn't 
 connected!
---------------
-Round 43 completed.
-2012-03-10 13:49:33,054 - openflow.discovery - INFO - link detected: 00-00-00-00-00-02.1 -> 00-00-00-00-00-01.1
-DEBUG:debugger:Giving permission for control plane receive for SwitchImpl(dpid=1, num_ports=1)
-DEBUG:FuzzSwitchImpl(1):Packet out
-INFO:packet:warning eth packet data too short to parse header: data len 0
--------------
