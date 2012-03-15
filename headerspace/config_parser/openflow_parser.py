@@ -109,7 +109,7 @@ def ofp_match_to_hsa_match(ofp_match):
   def set_hsa_field_match(ofp_match, hsa_match, field_name, flag):
     if (ofp_match.wildcards & flag):
       return # keep the bits wildcarded
-    set_field(hsa_match, field_name, ofp_match.__dict__[field_name])
+    set_field(hsa_match, field_name, ofp_match.__dict__['_'+field_name])
     
   for field_name in set(ofp_match_data.keys()) - set(['in_port', 'nw_src', 'nw_dst']):
     flag = ofp_match_data[field_name][1]
