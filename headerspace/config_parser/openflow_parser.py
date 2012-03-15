@@ -207,7 +207,8 @@ def ofp_actions_to_output_ports(ofp_actions, switch, all_port_ids, in_port_id):
   }
     
   for action in ofp_actions:
-    handler_map[action.type](action)
+    if action.type in handler_map:
+      handler_map[action.type](action)
  
   return output_port_nos
    
