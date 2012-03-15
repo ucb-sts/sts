@@ -97,7 +97,7 @@ def optimize_forwarding_table(self):
   
 def ofp_match_to_input_ports(ofp_match, switch, all_port_ids):
   in_ports = []
-  if (ofp_match.wildcards & OFPFW_IN_PORT) or (ofp_match.wildcards & OFPFW_ALL):
+  if (ofp_match.wildcards & OFPFW_IN_PORT):
     in_ports = all_port_ids
   else:
     in_ports = [get_uniq_port_id(switch, ofp_match.in_port)]
@@ -105,15 +105,13 @@ def ofp_match_to_input_ports(ofp_match, switch, all_port_ids):
     
 def ofp_match_to_hsa_match(ofp_match):
   hsa_match = byte_array_get_all_x(hs_format["length"]*2)
-  if (ofp_match.wildcards & OFPFW_ALL):
-    return hsa_match
   
   def set_hsa_field_match(ofp_match, hsa_match, field_name, flag):
     if (ofp_match.wildcards & flag):
       return # keep the bits wildcarded
     set_field(hsa_match, field_name, ofp_match.__dict__[field_name])
     
-  for field_name in ofp_match_data.keys() - ['in_port', 'nw_src', 'nw_dst']:
+  for field_name in set(ofp_match_data.keys()) - set(['in_port', 'nw_src', 'nw_dst']):
     flag = ofp_match_data[field_name][1]
     set_hsa_field_match(ofp_match, hsa_match, field_name, flag)  
   
