@@ -55,7 +55,8 @@ class msg():
   @staticmethod
   def fail(message):
     print msg.BEGIN + msg.B_RED + msg.BEGIN + msg.WHITE + message + msg.END
-
+    
+ 
 class FuzzTester (EventMixin):
   """
   This is part of a testing framework for controller applications. It
@@ -162,6 +163,35 @@ class FuzzTester (EventMixin):
 
   def stop(self):
     self.running = False
+    
+  def invariant_check_prompt(self):
+    answer = msg.raw_input('Check Invariants? [Ny]')
+    if answer != '' and answer.lower() != 'n':
+      msg.interactive("Which one?")
+      msg.interactive("  'l' - loops")
+      msg.interactive("  'b' - blackholes")
+      msg.interactive("  'r' - routing consistency")
+      msg.interactive("  'c' - connectivity")
+      msg.interactive("  'o' - omega")
+      answer = msg.raw_input("  ")
+      result = None
+      if answer.lower() == 'l':
+        result = self.invariant_checker.check_loops()
+      elif answer.lower() == 'b':
+        result = self.invariant_checker.check_blackholes()
+      elif answer.lower() == 'r':
+        result = self.invariant_checker.check_routing_consistency()
+      elif answer.lower() == 'c':
+        result = self.invariant_checker.check_connectivity()
+      elif answer.lower() == 'o':
+        result = self.invariant_checker.compute_omega(self.live_switches, self.live_links)
+      else:
+        log.warn("Unknown input...")
+
+      if not result:
+        return
+      else:
+        msg.interactive("Result: %s" % str(result))
 
   # ============================================ #
   #     Bookkeeping methods                      #
@@ -287,31 +317,4 @@ class FuzzTester (EventMixin):
           # Generates a packet, and feeds it to the switch_impl
           self.traffic_generator.generate(traffic_type, switch_impl)
 
-  def invariant_check_prompt(self):
-    answer = msg.raw_input('Check Invariants? [Ny]')
-    if answer != '' and answer.lower() != 'n':
-      msg.interactive("Which one?")
-      msg.interactive("  'l' - loops")
-      msg.interactive("  'b' - blackholes")
-      msg.interactive("  'r' - routing consistency")
-      msg.interactive("  'c' - connectivity")
-      msg.interactive("  'o' - omega")
-      answer = msg.raw_input("  ")
-      result = None
-      if answer.lower() == 'l':
-        result = self.invariant_checker.check_loops()
-      elif answer.lower() == 'b':
-        result = self.invariant_checker.check_blackholes()
-      elif answer.lower() == 'r':
-        result = self.invariant_checker.check_routing_consistency()
-      elif answer.lower() == 'c':
-        result = self.invariant_checker.check_connectivity()
-      elif answer.lower() == 'o':
-        result = self.invariant_checker.compute_omega(self.live_switches, self.live_links)
-      else:
-        log.warn("Unknown input...")
 
-      if not result:
-        return
-      else:
-        msg.interactive("Result: %s" % str(result))
