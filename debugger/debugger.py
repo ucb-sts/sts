@@ -120,6 +120,7 @@ class FuzzTester (EventMixin):
   def _load_fuzzer_params(self, fuzzer_params):
     if os.path.exists(fuzzer_params):
       # TODO: more pythonic way to read lines (currently on a plane...)
+      # TODO: even better: there is probably a library for parsing config files
       for line in file(fuzzer_params).read().splitlines():
         if line == "[fuzzer]":
           # TODO: handle more directives other than [fuzzer]
