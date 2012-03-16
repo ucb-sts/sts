@@ -106,18 +106,25 @@ def ofp_match_to_input_ports(ofp_match, switch, all_port_ids):
 def ofp_match_to_hsa_match(ofp_match):
   hsa_match = byte_array_get_all_x(hs_format["length"]*2)
   
-  def set_hsa_field_match(ofp_match, hsa_match, field_name, flag):
+  def field_wardcarded(ofp_match, flag):
     if (ofp_match.wildcards & flag):
-      return # keep the bits wildcarded
-    set_field(hsa_match, field_name, ofp_match.__dict__['_'+field_name])
-    
-  for field_name in set(ofp_match_data.keys()) - set(['in_port', 'nw_src', 'nw_dst']):
+      return True
+    return False
+  
+  for field_name in set(ofp_match_data.keys()) - set(['in_port','dl_src','dl_dst','nw_src','nw_dst']):
     flag = ofp_match_data[field_name][1]
-    set_hsa_field_match(ofp_match, hsa_match, field_name, flag)  
+    if not field_wardcarded(ofp_match, flag):
+      set_field(hsa_match, field_name, ofp_match.__dict__['_'+field_name])
+    
+  for field_name in ['dl_src', 'dl_dst']:
+    addr = getattr(ofp_match, field_name)
+    if addr is not None: # None addr implies wildcard
+      addr = addr.toInt()
+      set_field(hsa_match, field_name, addr)
   
   for field_name in ['nw_src', 'nw_dst']:
     (addr, mask_bits_from_left) = getattr(ofp_match, "get_%s"%field_name)()
-    if addr:
+    if addr is not None: # None addr implies wildcard
       # TODO: signed or unsigned?
       addr = addr.toUnsignedN()
       # if addr, not all wildcard bits set
