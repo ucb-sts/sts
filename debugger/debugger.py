@@ -65,7 +65,7 @@ class FuzzTester (EventMixin):
   it will inject intelligently chosen mock events (and observe
   their responses?)
   """
-  def __init__(self, interactive=True, random_seed=0.0, delay=0.1):
+  def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True, random_seed=0.0, delay=0.1):
     self.interactive = interactive
     self.running = False
     self.panel = None
@@ -73,17 +73,7 @@ class FuzzTester (EventMixin):
 
     self.delay = delay
 
-    # TODO: make it easier for client to tweak these
-    self.switch_failure_rate = 0.01
-    self.switch_recovery_rate = 0.5
-    self.control_channel_failure_rate = 0.0
-    self.control_channel_recovery_rate = 0.0
-    self.controlplane_delay_rate = 0.5
-    self.dataplane_drop_rate = 0.01
-    self.dataplane_delay_rate = 0.05
-    self.link_failure_rate = 0.01
-    self.link_recovery_rate = 0.25
-    self.traffic_generation_rate = 0.05
+    self._load_fuzzer_params(fuzzer_params)
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
@@ -126,7 +116,21 @@ class FuzzTester (EventMixin):
     # ]
 
     # TODO: need a mechanism for signaling  when the distributed controller handshake has completed
-
+    
+  def _load_fuzzer_params(self, fuzzer_params):
+    if os.path.exists(fuzzer_params):
+      # TODO: more pythonic way to read lines (currently on a plane...)
+      for line in file(fuzzer_params).read().splitlines():
+        if line == "[fuzzer]":
+          # TODO: handle more directives other than [fuzzer]
+          continue 
+        (kw, eq, val) = line.split()
+        val = float(val)
+        setattr(self, kw, val)
+    else:
+      # TODO: default values in case fuzzer_config is not present / missing directives
+      raise IOError("Could not find logging config file: %s" % fuzzer_params)
+     
   def simulate(self, panel, switch_impls, links, steps=None):
     """
     Start the fuzzer loop!

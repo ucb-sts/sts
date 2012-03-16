@@ -48,6 +48,9 @@ parser.add_argument("-s", "--steps", type=int, metavar="nsteps",
 parser.add_argument("-p", "--port", type=int, metavar="port",
                     help="base port to use for controllers", default=8888)
 
+parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
+                    help="optional parameters for the fuzzer (e.g. fail rate)")
+
 parser.add_argument("-c", "--config", help='optional experiment config file to load')
 parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
                    help='arguments to pass to the controller(s)')
@@ -150,8 +153,8 @@ try:
                                                            num_switches=2)
 
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
-  debugger = FuzzTester(interactive=args.interactive, random_seed = args.random_seed,
-                        delay = args.delay)
+  debugger = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
+                        random_seed = args.random_seed, delay = args.delay)
   debugger.simulate(panel, switch_impls, links, steps=args.steps)
 finally:
   kill_children()
