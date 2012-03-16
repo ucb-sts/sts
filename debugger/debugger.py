@@ -210,10 +210,10 @@ class FuzzTester (EventMixin):
     ''' Decide whether to delay or deliver packets '''
     def check_deliver(switch_impl, type, give_permission):
         if self.random.random() < self.controlplane_delay_rate:
+          log.debug("Delaying control plane %s for %s" % (type, str(switch_impl)))
+        else:
           log.debug("Giving permission for control plane %s for %s" % (type, str(switch_impl)))
           give_permission()
-        else:
-          log.debug("Delaying control plane %s for %s" % (type, str(switch_impl)))
         
     for switch_impl in self.live_switches:
       # Check reads
