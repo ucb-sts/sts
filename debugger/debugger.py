@@ -24,6 +24,7 @@ import time
 import random
 import os
 import logging
+import pickle
 
 log = logging.getLogger("debugger")
 
@@ -66,8 +67,12 @@ class FuzzTester (EventMixin):
   it will inject intelligently chosen mock events (and observe
   their responses?)
   """
-  def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True, random_seed=0.0, delay=0.1):
+  def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True, random_seed=0.0, delay=0.1, dataplane_trace=None):
     self.interactive = interactive
+    # Format of trace file is a pickled array of DataplaneEvent objects
+    self.dataplane_trace = None
+    if dataplane_trace:
+      self.dataplane_trace = pickle.load(file(dataplane_trace))
     self.running = False
     self.panel = None
     self.switch_impls = []
@@ -155,6 +160,7 @@ class FuzzTester (EventMixin):
         # TODO: print out the state of the network at each timestep? Take a
         # verbose flag..
         self.invariant_check_prompt()
+        self.dataplane_trace_prompt()
         answer = msg.raw_input('Continue to next round? [Yn]').strip()
         if answer != '' and answer.lower() != 'y':
           self.stop()
@@ -192,6 +198,25 @@ class FuzzTester (EventMixin):
         return
       else:
         msg.interactive("Result: %s" % str(result))
+  
+  def dataplane_trace_prompt(self):
+    # TODO: support non-interactive trace input
+    if self.dataplane_trace:
+      while True:
+        answer = msg.raw_input('Feed in next dataplane event? [Ny]')
+        if answer != '' and answer.lower() != 'n':
+          dp_event = self.dataplane_trace.pop(0)
+          switches = filter(lambda switch: switch.dpid == dp_event.switch_dpid, self.switch_impls)
+          if len(switches) == 0:
+            log.warn("switch id %d not present" % dp_event.switch_dpid)
+            break
+          switch = switches[0]
+          if dp_event.port_no not in switch.ports:
+            log.warn("port id %d not present" % dp_event.port_no)
+            break
+          switch.process_packet(dp_event.packet, dp_event.port_no)
+        else:
+          break
 
   # ============================================ #
   #     Bookkeeping methods                      #
@@ -307,14 +332,14 @@ class FuzzTester (EventMixin):
     pass
 
   def fuzz_traffic(self):
-    # randomly generate messages from switches
-    # TODO: future feature: trace-driven packet generation
-    for switch_impl in self.live_switches:
-      if self.random.random() < self.traffic_generation_rate:
-        if len(switch_impl.ports) > 0:
-          msg.event("injecting a random packet")
-          traffic_type = "icmp_ping"
-          # Generates a packet, and feeds it to the switch_impl
-          self.traffic_generator.generate(traffic_type, switch_impl)
+    if not self.dataplane_trace:
+      # randomly generate messages from switches
+      for switch_impl in self.live_switches:
+        if self.random.random() < self.traffic_generation_rate:
+          if len(switch_impl.ports) > 0:
+            msg.event("injecting a random packet")
+            traffic_type = "icmp_ping"
+            # Generates a packet, and feeds it to the switch_impl
+            self.traffic_generator.generate(traffic_type, switch_impl)
 
 

@@ -51,6 +51,9 @@ parser.add_argument("-p", "--port", type=int, metavar="port",
 parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
                     help="optional parameters for the fuzzer (e.g. fail rate)")
 
+parser.add_argument("-t", "--trace-file", default=None,
+                    help="optional dataplane trace file (see trace_generator.py)")
+
 parser.add_argument("-c", "--config", help='optional experiment config file to load')
 parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
                    help='arguments to pass to the controller(s)')
@@ -154,7 +157,8 @@ try:
 
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
   debugger = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
-                        random_seed = args.random_seed, delay = args.delay)
+                        random_seed=args.random_seed, delay=args.delay,
+                        dataplane_trace=args.trace_file)
   debugger.simulate(panel, switch_impls, links, steps=args.steps)
 finally:
   kill_children()
