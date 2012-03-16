@@ -63,7 +63,7 @@ def create_switch(switch_id, num_ports):
   return FuzzSwitchImpl(create_io_worker=unitialized_io_worker, dpid=switch_id, name="SoftSwitch(%d)" % switch_id, ports=ports)
 
 def create_mesh(num_switches):
-  ''' Returns (patch_panel, switches) '''
+  ''' Returns (patch_panel, switches, links) '''
   
   # Every switch has a link to every other switch, for N*(N-1) total ports
   ports_per_switch = num_switches - 1
