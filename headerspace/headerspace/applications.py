@@ -74,6 +74,7 @@ def get_all_x(NTF):
   all_x = byte_array_get_all_x(NTF.length)
   test_pkt = headerspace(NTF.length)
   test_pkt.add_hs(all_x)
+  return test_pkt
                     
 def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
     loops = []
