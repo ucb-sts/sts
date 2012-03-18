@@ -54,7 +54,7 @@ parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
 parser.add_argument("-t", "--trace-file", default=None,
                     help="optional dataplane trace file (see trace_generator.py)")
 
-parser.add_argument("-s", "--num-switches", type=int, default=1,
+parser.add_argument("-N", "--num-switches", type=int, default=2,
                     help="number of switches to create in the network")
 
 parser.add_argument("-c", "--config", help='optional experiment config file to load')
