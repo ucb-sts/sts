@@ -10,7 +10,7 @@
 
 import pox.openflow.libopenflow_01 as of
 from pox.lib.revent import EventMixin
-from debugger_entities import Link
+from debugger_entities import Link, HostDpPacketOut
 
 from traffic_generator import TrafficGenerator
 from invariant_checker import InvariantChecker
@@ -138,14 +138,16 @@ class FuzzTester (EventMixin):
       # TODO: default values in case fuzzer_config is not present / missing directives
       raise IOError("Could not find logging config file: %s" % fuzzer_params)
      
-  def simulate(self, panel, switch_impls, links, steps=None):
+  def simulate(self, panel, switch_impls, network_links, hosts, access_links, steps=None):
     """
     Start the fuzzer loop!
     """
     log.debug("Starting fuzz loop")
     self.panel = panel
     self.switch_impls = set(switch_impls)
-    self.dataplane_links = set(links)
+    self.dataplane_links = set(network_links)
+    self.hosts = hosts
+    self.access_links = set(access_links)
     self.loop(steps)
 
   def loop(self, steps=None):
@@ -190,7 +192,8 @@ class FuzzTester (EventMixin):
       elif answer.lower() == 'c':
         result = self.invariant_checker.check_connectivity()
       elif answer.lower() == 'o':
-        result = self.invariant_checker.compute_omega(self.live_switches, self.live_links)
+        # TODO: cut/repair access links?
+        result = self.invariant_checker.compute_omega(self.live_switches, self.live_links, self.access_links)
       else:
         log.warn("Unknown input...")
 
@@ -201,6 +204,7 @@ class FuzzTester (EventMixin):
   
   def dataplane_trace_prompt(self):
     # TODO: support non-interactive trace input
+    # TODO: currently broken -- use hosts
     if self.dataplane_trace:
       while True:
         answer = msg.raw_input('Feed in next dataplane event? [Ny]')
@@ -255,12 +259,16 @@ class FuzzTester (EventMixin):
         self.panel.drop_dp_event(dp_event)
         self.dropped_dp_events.append(dp_event)
       else:
-        (next_hop, next_port) = self.panel.get_connected_port(dp_event.switch, dp_event.port)
-        link = Link(dp_event.switch, dp_event.port, next_hop, next_port) 
-        if not link in self.cut_links:
-          msg.event("Forwarding dataplane event")
-          # Forward the message
+        if type(dp_event) == HostDpPacketOut:
+          # TODO: model access link failures:
           self.panel.permit_dp_event(dp_event)
+        else:
+          (next_hop, next_port) = self.panel.get_connected_port(dp_event.switch, dp_event.port)
+          link = Link(dp_event.switch, dp_event.port, next_hop, next_port) 
+          if not link in self.cut_links:
+            msg.event("Forwarding dataplane event")
+            # Forward the message
+            self.panel.permit_dp_event(dp_event)
     
   def check_controlplane(self):
     ''' Decide whether to delay or deliver packets '''
