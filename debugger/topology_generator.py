@@ -80,8 +80,8 @@ def create_host(ingress_switch_or_switches):
   interface_switch_pairs = []
   for switch in switches:
     port = get_switchs_host_port(switch)
-    mac = EthAddr("FF:FF:FF:FF:%02x:%02x" % (switch.dpid, port.port_no)) 
-    ip_addr = IPAddr("255.255.%d.%d" % (switch.dpid, port.port_no))
+    mac = EthAddr("12:34:56:78:%02x:%02x" % (switch.dpid, port.port_no)) 
+    ip_addr = IPAddr("123.123.%d.%d" % (switch.dpid, port.port_no))
     name = "eth%d" % switch.dpid
     interface = HostInterface(mac, ip_addr, name)
     interface_switch_pairs.append((interface, switch))
