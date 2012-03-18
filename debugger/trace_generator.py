@@ -47,7 +47,30 @@ def generate_example_trace():
     if ping_or_pong == "ping":
       ping = icmp(type=TYPE_ECHO_REQUEST, payload=ping_or_pong)
     else:
-      dst_ip_addr = access_links[0].host.interfaces[0].ips[0]
+      ping = icmp(type=TYPE_ECHO_REPLY, payload=ping_or_pong)
+    ipp.payload = ping 
+    eth.payload = ipp
+    packet_events.append(DataplaneEvent(access_link.host.name, access_link.interface, eth))
+    
+  # ping ping (no responses) between fake hosts
+  for _ in range(40):
+    trace.append(packet_events[0])
+    trace.append(packet_events[1])
+    
+  write_trace_log(trace, "traces/ping_pong.trace")
+  
+def generate_example_trace_same_subnet():
+  # TODO: highly redundant
+  trace = []
+  
+  (patch_panel, switches, network_links, hosts, access_links) = topo_gen.create_mesh(num_switches=2)
+  
+  packet_events = []
+  ping_or_pong = "ping"
+  for access_link in access_links:
+    other_host = (set(hosts) - set([access_link.host])).pop()
+    eth = ethernet(src=access_link.host.interfaces[0].mac,dst=other_host.interfaces[0].mac,type=ethernet.IP_TYPE)
+    dst_ip_addr = other_host.interfaces[0].ips[0]
     ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
     if ping_or_pong == "ping":
       ping = icmp(type=TYPE_ECHO_REQUEST, payload=ping_or_pong)
@@ -62,8 +85,7 @@ def generate_example_trace():
     trace.append(packet_events[0])
     trace.append(packet_events[1])
     
-  write_trace_log(trace, "traces/ping_pong.trace")
+  write_trace_log(trace, "traces/ping_pong_same_subnet.trace")
   
-
 if __name__ == '__main__':
   generate_example_trace()
