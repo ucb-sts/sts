@@ -136,6 +136,28 @@ class HostInterface (object):
     self.ips = ip_or_ips
     self.name = name
     
+  def __eq__(self, other):
+    if type(other) != HostInterface:
+      return False
+    if self.mac.toInt() != other.mac.toInt():
+      return False
+    other_ip_ints = map(lambda ip: ip.toUnsignedN(), other.ips)
+    for ip in self.ips:
+      if ip.toUnsignedN() not in other_ip_ints:
+        return False
+    if len(other.ips) != len(self.ips):
+      return False
+    if self.name != other.name:
+      return False
+    return True
+  
+  def __hash__(self):
+    hash_code = self.mac.toInt().__hash__()
+    for ip in self.ips:
+      hash_code += ip.toUnsignedN().__hash__()
+    hash_code += self.name.__hash__()
+    return hash_code
+  
   def __str__(self):
     return self.name
     
