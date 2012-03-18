@@ -31,30 +31,66 @@ class topology_generator_test(unittest.TestCase):
       self._test_create_mesh(i)
 
   def _test_create_mesh(self, size):
-    (panel, switches, links) = create_mesh(size)
+    (panel, switches, network_links, hosts, access_links) = create_mesh(size)
     self.assertEqual(len(switches), size)
-    self.assertEqual([sw for sw in switches if len(sw.ports) == size-1 ], switches)
+    self.assertEqual([sw for sw in switches if len(sw.ports) == size ], switches)
 
-    # check that all pairs of switches are connected
-    sw_pairs = [pair for pair in itertools.permutations(switches, 2) if pair[0] != pair[1] ]
-    # create a list of tuples of all (switches, ports)
-    sw_ports = [ (sw, p) for sw in switches for _, p in sw.ports.iteritems() ]
-    # collect the 'other' switches, ports. Should end up the same, modulo sorting
-    other_sw_ports = []
+    # check that all pairs of switches are connected to each other
+    non_connected_sw_pairs = [pair for pair in itertools.permutations(switches, 2) if pair[0] != pair[1] ]
+    # create a list of all (switch, port) pairs
+    sw_port_pairs = [ (sw, p) for sw in switches for _, p in sw.ports.iteritems() ]
+    # check the all hosts are connected once
+    non_connected_hosts = set(hosts)
+    # create a list of all (host, interface) pairs
+    host_interface_pairs = [ (host, interface) for host in hosts for interface in host.interfaces ]
+    # collect the 'other' (switch, port) pairs. This + (hosts, interface) pairs should
+    # end up the same as sw_port_pairs + host_interface_pairs 
+    other_sw_port_pairs = []
+    # List of (host, interface) edge tail pairs
+    other_host_interface_pairs = []
+    # list of (switch, port) access ports
+    access_sw_port_pairs = []
 
     for switch in switches:
       for port_no, port in switch.ports.iteritems():
         # TODO: abuse of dynamic types... get_connected_port is a field
-        (other_switch, other_port) = panel.get_connected_port(switch, port)
-        self.assertTrue( (switch, other_switch) in sw_pairs, "Switches %s, %s connected twice" % (switch, other_switch))
-        sw_pairs.remove( (switch, other_switch) )
-        other_sw_ports.append( (other_switch, other_port) )
-
-    self.assertEqual(len(sw_pairs), 0, "Non-connected switches: %s" % sw_pairs)
-    # sort the other guy by (dpid, port_no)
-    other_sw_ports.sort(key=lambda (sw,port): (sw.dpid, port.port_no))
-    self.assertEqual(sw_ports, other_sw_ports)
-
+        (other_node, other_port) = panel.get_connected_port(switch, port)
+        if type(other_node) == Host:
+          self.assertTrue( other_node in non_connected_hosts, "%s" % str(other_node) )
+          non_connected_hosts.remove(other_node)
+          access_sw_port_pairs.append( (switch, port) )
+          other_host_interface_pairs.append( (other_node, other_port) )
+        else:
+          self.assertTrue( (switch, other_node) in non_connected_sw_pairs, "Switches %s, %s connected twice" % (switch, other_node))
+          non_connected_sw_pairs.remove( (switch, other_node) )
+          other_sw_port_pairs.append( (other_node, other_port) )
+        
+    self.assertEqual(len(non_connected_sw_pairs), 0, "Non-connected switches: %s" % non_connected_sw_pairs)
+    self.assertEqual(len(non_connected_hosts), 0, "Non-connected hosts: %s" % non_connected_hosts)
+    
+    # Ensure the list was already unique
+    self.assertEqual(len(set(sw_port_pairs)), len(sw_port_pairs))
+    self.assertEqual(len(set(other_sw_port_pairs)), len(other_sw_port_pairs))
+    self.assertEqual(len(set(access_sw_port_pairs)), len(access_sw_port_pairs))
+    # Test all switches connected
+    self.assertEqual(set(sw_port_pairs), set(other_sw_port_pairs).union(set(access_sw_port_pairs)))
+    # Ensure the list was already unique 
+    self.assertEqual(len(set(host_interface_pairs)), len(host_interface_pairs))
+    self.assertEqual(len(set(other_host_interface_pairs)), len(other_host_interface_pairs))
+    self.assertEqual(set(host_interface_pairs), set(other_host_interface_pairs))
+    
+    # Make sure that all access links are accounted for
+    self.assertTrue(len(access_links) == len(hosts))
+    for access_link in access_links:
+      self.assertTrue((access_link.host, access_link.interface) in host_interface_pairs)
+      self.assertTrue((access_link.switch, access_link.switch_port) in access_sw_port_pairs)
+      
+    # Make sure that all network links are accounted for
+    self.assertTrue(len(network_links) == len(switches) * (len(switches) - 1))
+    for link in network_links:
+      self.assertTrue((link.start_switch_impl, link.start_port) in sw_port_pairs)
+      self.assertTrue((link.end_switch_impl, link.end_port) in sw_port_pairs)
+    
 class FullyMeshedLinkTest(unittest.TestCase):
   _io_loop = RecocoIOLoop()
   _io_ctor = _io_loop.create_worker_for_socket
@@ -106,7 +142,7 @@ class BufferedPanelTest(unittest.TestCase):
         return MockSwitch(switch_id, ports)
     
     self.switches = [create_mock_switch(1,1), create_mock_switch(1,2)]
-    self.m = BufferedPatchPanel(self.switches, FullyMeshedLinks(self.switches).get_connected_port)
+    self.m = BufferedPatchPanel(self.switches, [], FullyMeshedLinks(self.switches).get_connected_port)
     self.traffic_generator = TrafficGenerator()
     self.switch = self.switches[0]
     self.port = self.switch.ports.values()[0]
