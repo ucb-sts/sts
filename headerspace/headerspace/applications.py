@@ -198,7 +198,7 @@ def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
                 else:
                   tmp_propag.append(new_p_node) 
       propagation = tmp_propag
-    return omega
+  return omega
   
 def print_reachability(paths, reverse_map):
     for p_node in paths:

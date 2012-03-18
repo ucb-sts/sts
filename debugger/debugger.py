@@ -200,7 +200,7 @@ class FuzzTester (EventMixin):
       else:
         log.warn("Unknown input...")
 
-      if not result:
+      if result is None:
         return
       else:
         msg.interactive("Result: %s" % str(result))
