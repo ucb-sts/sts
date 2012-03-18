@@ -17,7 +17,7 @@ processes. To emulate, we'll want to :
           and the control application?
 """
 
-from pox.openflow.switch_impl import SwitchImpl
+from pox.openflow.switch_impl import SwitchImpl, DpPacketOut
 from pox.lib.util import connect_socket_with_backoff, assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
@@ -116,17 +116,6 @@ class Link (object):
   def __repr__(self):
     return "(%d:%d) -> (%d:%d)" % (self.start_switch_impl.dpid, self.start_port.port_no, 
                                    self.end_switch_impl.dpid, self.end_port.port_no)
-
-class HostDpPacketOut (Event):
-  """ Event raised by Hosts when a dataplane packet is sent out an access link """
-  def __init__ (self, host, interface, packet):
-    assert_type("host", host, Host, none_ok=False)
-    assert_type("interface", interface, HostInterface, none_ok=False)
-    assert_type("packet", packet, ethernet, none_ok=False)
-    Event.__init__(self)
-    self.host = host 
-    self.interface = interface
-    self.packet = packet
 
 class AccessLink (object):
   '''
