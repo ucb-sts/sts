@@ -178,7 +178,7 @@ class Host (EventMixin):
   If multiple host VMs are too heavy-weight for a single machine, run the
   hosts on their own machines!
   '''
-  _eventMixin_events = set([HostDpPacketOut])
+  _eventMixin_events = set([DpPacketOut])
 
   def __init__(self, interfaces, name=""):
     '''
@@ -190,7 +190,7 @@ class Host (EventMixin):
     
   def send(self, interface, packet):
     ''' Send a packet out a given interface '''
-    self.raiseEvent(HostDpPacketOut(self, interface, packet))
+    self.raiseEvent(DpPacketOut(self, packet, interface))
   
   def receive(self, interface, packet):
     '''
