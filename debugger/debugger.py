@@ -10,7 +10,7 @@
 
 import pox.openflow.libopenflow_01 as of
 from pox.lib.revent import EventMixin
-from debugger_entities import Link, HostDpPacketOut
+from debugger_entities import Link, Host
 
 from traffic_generator import TrafficGenerator
 from invariant_checker import InvariantChecker
@@ -147,6 +147,9 @@ class FuzzTester (EventMixin):
     self.switch_impls = set(switch_impls)
     self.dataplane_links = set(network_links)
     self.hosts = hosts
+    self.name2host = {}
+    for host in hosts:
+      self.name2host[host.name] = host
     self.access_links = set(access_links)
     self.loop(steps)
 
@@ -204,21 +207,17 @@ class FuzzTester (EventMixin):
   
   def dataplane_trace_prompt(self):
     # TODO: support non-interactive trace input
-    # TODO: currently broken -- use hosts
     if self.dataplane_trace:
       while True:
         answer = msg.raw_input('Feed in next dataplane event? [Ny]')
         if answer != '' and answer.lower() != 'n':
           dp_event = self.dataplane_trace.pop(0)
-          switches = filter(lambda switch: switch.dpid == dp_event.switch_dpid, self.switch_impls)
-          if len(switches) == 0:
-            log.warn("switch id %d not present" % dp_event.switch_dpid)
+          # Assume unique names
+          host = self.name2host[dp_event.hostname]
+          if not host:
+            log.warn("Host %s not present" % str(host))
             break
-          switch = switches[0]
-          if dp_event.port_no not in switch.ports:
-            log.warn("port id %d not present" % dp_event.port_no)
-            break
-          switch.process_packet(dp_event.packet, dp_event.port_no)
+          host.send(dp_event.interface, dp_event.packet)
         else:
           break
 
@@ -259,7 +258,7 @@ class FuzzTester (EventMixin):
         self.panel.drop_dp_event(dp_event)
         self.dropped_dp_events.append(dp_event)
       else:
-        if type(dp_event) == HostDpPacketOut:
+        if type(dp_event.node) == Host:
           # TODO: model access link failures:
           self.panel.permit_dp_event(dp_event)
         else:
