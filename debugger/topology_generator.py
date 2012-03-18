@@ -19,8 +19,8 @@ of switches, with one host connected to each switch. For example, with N = 3:
                   host3
 '''
 
-from debugger_entities import FuzzSwitchImpl, Link, Host, HostDpPacketOut, HostInterface, AccessLink
-from pox.openflow.switch_impl import ofp_phy_port, SwitchDpPacketOut
+from debugger_entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink
+from pox.openflow.switch_impl import ofp_phy_port, DpPacketOut
 from pox.lib.addresses import EthAddr, IPAddr
 from pox.lib.util import connect_socket_with_backoff
 from pox.lib.revent import EventMixin
@@ -163,23 +163,19 @@ class PatchPanel(object):
     self.get_connected_port = connected_port_mapping
     self.hosts = hosts
     for i, s in enumerate(self.switches):
-      s.addListener(SwitchDpPacketOut, self.handle_DpPacketOut)
+      s.addListener(DpPacketOut, self.handle_DpPacketOut)
     for host in self.hosts:
-      host.addListener(HostDpPacketOut, self.handle_DpPacketOut)
+      host.addListener(DpPacketOut, self.handle_DpPacketOut)
       
   def handle_DpPacketOut(self, event):
-    if type(event) == HostDpPacketOut:
-      (node, port) = self.get_connected_port(event.host, event.interface)
-    else: # SwtichDpPacketOut
-      (node, port) = self.get_connected_port(event.switch, event.port)
-      
+    (node, port) = self.get_connected_port(event.node, event.port)
     if type(node) == Host:
       self.deliver_packet(node, event.packet, port)
     else:
       self.forward_packet(node, event.packet, port)
            
-  def get_connected_port(self, switch, port):
-    return self.get_connected_port(switch, port)
+  def get_connected_port(self, node, port):
+    return self.get_connected_port(node, port)
   
   def forward_packet(self, next_switch, packet, next_port):
     ''' Forward the packet to the given port '''
@@ -195,7 +191,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
   and re-raises them to listeners of this object. Does not traffic until given
   permission from a higher-level.
   '''
-  _eventMixin_events = set([SwitchDpPacketOut, HostDpPacketOut])
+  _eventMixin_events = set([DpPacketOut])
 
   def __init__(self, switches, hosts, connected_port_mapping):
     self.get_connected_port = connected_port_mapping
@@ -206,9 +202,9 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
       self.buffered_dp_out_events.add(event)
       self.raiseEventNoErrors(event)
     for i, s in enumerate(self.switches):
-      s.addListener(SwitchDpPacketOut, handle_DpPacketOut)
+      s.addListener(DpPacketOut, handle_DpPacketOut)
     for host in self.hosts:
-      host.addListener(HostDpPacketOut, handle_DpPacketOut)
+      host.addListener(DpPacketOut, handle_DpPacketOut)
       
   def permit_dp_event(self, event):
     ''' Given a SwitchDpPacketOut event, permit it to be forwarded  ''' 
@@ -247,8 +243,8 @@ class FullyMeshedLinks(object):
       self.port2access_link[access_link.switch_port] = access_link
       self.interface2access_link[access_link.interface] = access_link
       
-  def get_connected_port(self, switch, port):
-    ''' Given a switch and a port, return a tuple (node, port) that is directly connected to the port '''
+  def get_connected_port(self, node, port):
+    ''' Given a node and a port, return a tuple (node, port) that is directly connected to the port '''
     if port in self.port2access_link:
       access_link = self.port2access_link[port]
       return (access_link.host, access_link.interface)
@@ -256,7 +252,7 @@ class FullyMeshedLinks(object):
       access_link = self.interface2access_link[port]
       return (access_link.switch, access_link.switch_port)
     else:
-      switch_no = self.switch_index_by_dpid[switch.dpid]
+      switch_no = self.switch_index_by_dpid[node.dpid]
       # when converting between switch and port, compensate for the skipped self port
       port_no = port.port_no - 1
       other_switch_no = port_no if port_no < switch_no else port_no + 1
