@@ -18,7 +18,9 @@ processes. To emulate, we'll want to :
 """
 
 from pox.openflow.switch_impl import SwitchImpl
-from pox.lib.util import connect_socket_with_backoff
+from pox.lib.util import connect_socket_with_backoff, assert_type
+from pox.openflow.libopenflow_01 import *
+from pox.lib.revent import Event, EventMixin
 
 import logging
 import pickle
@@ -85,10 +87,12 @@ class FuzzSwitchImpl (SwitchImpl):
       serializable.ofp_phy_ports = self.switch_impl.ports.values()
     return pickle.dumps(serializable, protocol=0)
 
-class Link():
+class Link (object):
   """
+  A network link between two switches
+  
   Temporary stand in for Murphy's graph-library for the NOM.
-
+  
   Note: Directed!
   """
   def __init__(self, start_switch_impl, start_port, end_switch_impl, end_port):
@@ -112,3 +116,79 @@ class Link():
   def __repr__(self):
     return "(%d:%d) -> (%d:%d)" % (self.start_switch_impl.dpid, self.start_port.port_no, 
                                    self.end_switch_impl.dpid, self.end_port.port_no)
+
+class HostDpPacketOut (Event):
+  """ Event raised by Hosts when a dataplane packet is sent out an access link """
+  def __init__ (self, host, interface, packet):
+    assert_type("host", host, Host, none_ok=False)
+    assert_type("interface", interface, HostInterface, none_ok=False)
+    assert_type("packet", packet, ethernet, none_ok=False)
+    Event.__init__(self)
+    self.host = host 
+    self.interface = interface
+    self.packet = packet
+
+class AccessLink (object):
+  '''
+  Represents a bidirectional edge: host <-> ingress switch
+  '''
+  def __init__(self, host, interface, switch, switch_port):
+    self.host = host
+    self.interface = interface
+    self.switch = switch
+    self.switch_port = switch_port
+    
+class HostInterface (object):
+  ''' Represents a host's interface (e.g. eth0) '''
+  def __init__(self, mac, ip_or_ips=[], name=""):
+    self.mac = mac
+    if type(ip_or_ips) != list:
+      ip_or_ips = [ip_or_ips]
+    self.ips = ip_or_ips
+    self.name = name
+    
+  def __str__(self):
+    return self.name
+    
+#                Host
+#          /      |       \
+#  interface   interface  interface
+#    |            |           |
+# access_link acccess_link access_link
+#    |            |           |
+# switch_port  switch_port  switch_port
+
+class Host (EventMixin):
+  '''
+  A very simple Host entity.
+  
+  For more sophisticated hosts, we should spawn a separate VM!
+  
+  If multiple host VMs are too heavy-weight for a single machine, run the
+  hosts on their own machines!
+  '''
+  _eventMixin_events = set([HostDpPacketOut])
+
+  def __init__(self, interfaces, name=""):
+    '''
+    - interfaces A list of HostInterfaces
+    '''
+    self.interfaces = interfaces
+    self.log = logging.getLogger(name)
+    self.name = name
+    
+  def send(self, interface, packet):
+    ''' Send a packet out a given interface '''
+    self.raiseEvent(HostDpPacketOut(self, interface, packet))
+  
+  def receive(self, interface, packet):
+    '''
+    Process an incoming packet from a switch
+    
+    Called by PatchPanel
+    '''
+    self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
+  
+  def __str__(self):
+    return self.name
+    
