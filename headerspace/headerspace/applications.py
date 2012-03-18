@@ -133,7 +133,8 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
 def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
   omega = {}
   
-  edge_ports = map(lambda link: get_uniq_port_id(link.start_switch_impl, link.start_port), edge_links)
+  # TODO: need to model host end of link, or does switch end suffice?
+  edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
   
   for start_port in edge_ports:
     print "port %d is being checked" % start_port
