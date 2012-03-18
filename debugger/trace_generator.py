@@ -40,9 +40,12 @@ def generate_example_trace():
   packet_events = []
   ping_or_pong = "ping"
   for access_link in access_links:
+    other_host = (set(hosts) - set([access_link.host])).pop()
     eth = ethernet(src=access_link.host.interfaces[0].mac,dst=access_link.switch_port.hw_addr,type=ethernet.IP_TYPE)
+    dst_ip_addr = other_host.interfaces[0].ips[0]
+    ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
     if ping_or_pong == "ping":
-      dst_ip_addr = access_links[1].host.interfaces[0].ips[0]
+      ping = icmp(type=TYPE_ECHO_REQUEST, payload=ping_or_pong)
     else:
       dst_ip_addr = access_links[0].host.interfaces[0].ips[0]
     ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
