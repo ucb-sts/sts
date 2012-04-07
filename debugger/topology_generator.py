@@ -366,6 +366,7 @@ class FatTree (object):
       # We give it a portland pseudo mac, just for giggles
       # Slightly modified from portland (no vmid, assume 8 bit pod id):
       # 00:00:00:<pod>:<position>:<port>
+      # position and pod are 0-indexed, port is 1-indexed
       position = len(self.edges) % self.edge_per_pod
       edge.position = position
       portland_mac = EthAddr("00:00:00:%02x:%02x:%02x" % (current_pod_id, position, port_no)) 
@@ -377,8 +378,6 @@ class FatTree (object):
       host.pod_id = current_pod_id
       self.hosts.append(host)
       self.access_links = self.access_links.union(set(host_access_links))
-      # Not really an internal link, but it originates on the edge switch
-      self.internal_links.add(Link(edge, edge.ports[port_no], host, host.interfaces[0]))
       
     # Now edge <-> agg
     for pod_id in range(num_pods): 
@@ -493,3 +492,4 @@ class FatTree (object):
       link = self.port2internal_link[port]
       return (link.end_switch, link.end_port)
     raise "Node %s Port %s not in network" % (str(node), str(port))
+  
