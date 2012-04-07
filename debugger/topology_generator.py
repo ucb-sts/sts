@@ -439,7 +439,7 @@ class FatTree (object):
       # number in the PMAC destination address to determine the appropriate output port.
       for port_no in core.ports.keys():
         # port_no i+1 corresponds to pod i
-        match = ofp_match(nw_dst=IPAddr("123.%d.0.0/16" % port_no-1))
+        match = ofp_match(nw_dst=IPAddr("123.%d.0.0/16" % (port_no-1)))
         flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=port_no)])
         core._receive_flow_mod(flow_mod)
       
