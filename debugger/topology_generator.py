@@ -147,6 +147,16 @@ def populate(controller_config_list, io_worker_constructor, num_switches=3):
   connect_to_controllers(controller_config_list, io_worker_constructor, switches)
   return (panel, switches, network_links, hosts, access_links) 
 
+def populate_fat_tree(num_pods=48):
+  '''
+  Populate the topology as a fat tree, and return
+  (PatchPanel, switches, network_links, hosts, access_links)
+  '''
+  # Too lazy to connect to controllers
+  fat_tree = FatTree(num_pods)
+  patch_panel = BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
+  return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
+
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
       Listens to the SwitchDPPacketOut event on the switches.
@@ -273,3 +283,123 @@ class FullyMeshedLinks(object):
         self.all_network_links.append(Link(switch, port, other_switch, other_port))
     return self.all_network_links
     
+class FatTree (object):
+  ''' Construct a FatTree topology with a given number of pods '''
+  def __init__(self, num_pods=48):
+    if num_pods < 4:
+      raise "Can't handle Fat Trees with less than 4 pods"
+       
+    self.hosts = []
+    self.cores = []
+    self.aggs = []
+    self.edges = []
+    # Note that access links are bi-directional
+    self.access_links = set()
+    # But internal links are uni-directional? 
+    self.internal_links = set()
+    
+    self.construct_tree(num_pods)
+    
+    self.switches = self.cores + self.aggs + self.edges
+    
+    # Auxiliary data to make get_connected_port efficient
+    self.port2internal_link = {}
+    for link in self.internal_links:
+      self.port2internal_link[link.start_port] = link
+      
+    self.port2access_link = {}
+    self.interface2access_link = {} 
+    for access_link in self.access_links:
+      self.port2access_link[access_link.switch_port] = access_link
+      self.interface2access_link[access_link.interface] = access_link
+       
+  def construct_tree(self, num_pods):
+    '''
+    According to  "A Scalable, Commodity Data Center Network Architecture", 
+    k = number of ports per switch = number of pods
+    number core switches =  (k/2)^2
+    number of edge switches per pod = k / 2
+    number of agg switches per pod = k / 2
+    number of hosts attached to each edge switch = k / 2
+    number of hosts per pod = (k/2)^2
+    total number of hosts  = k^3 / 4
+    '''
+    # self == store these numbers for later
+    k = self.k = self.ports_per_switch = self.num_pods = num_pods
+    self.hosts_per_pod = self.total_core = (k/2)**2
+    self.edge_per_pod = self.agg_per_pod = self.hosts_per_edge = k / 2 
+    self.total_hosts = self.hosts_per_pod * num_pods
+    
+    current_pod_id = -1
+    current_dpid = -1
+    # We construct it from bottom up, starting at host <-> edge
+    for i in range(self.total_hosts):
+      if (i % self.hosts_per_pod) == 0:
+        current_pod_id += 1
+        
+      if (i % self.hosts_per_edge) == 0:
+        current_dpid += 1
+        edge_switch = create_switch(current_dpid, self.ports_per_switch)
+        edge_switch.pod_id = current_pod_id
+        self.edges.append(edge_switch)
+        
+      edge = self.edges[-1]
+      (host, host_access_links) = create_host(edge)
+      host.pod_id = current_pod_id
+      self.hosts.append(host)
+      self.access_links = self.access_links.union(set(host_access_links))
+      # edge ports 1 through (k/2) are dedicated to hosts, and (k/2)+1 through k are for agg
+      port_no = (i % self.hosts_per_edge) + 1
+      # Not really an internal link, but it originates on the edge switch
+      self.internal_links.add(Link(edge, edge.ports[port_no], host, host.interfaces[0]))
+      
+    # Now edge <-> agg
+    for pod_id in range(num_pods): 
+      current_aggs = []
+      for _ in  range(self.agg_per_pod):
+        current_dpid += 1
+        current_aggs.append(create_switch(current_dpid, self.ports_per_switch))
+      
+      current_edges = self.edges[pod_id * self.edge_per_pod : (pod_id * self.edge_per_pod) + self.edge_per_pod]
+      # edge ports (k/2)+1 through k connect to aggs
+      # agg port k+1 connects to edge switch k in the pod
+      current_agg_port_no = 1
+      for edge in current_edges:
+        current_edge_port_no = (k/2)+1
+        for agg in current_aggs:
+          self.internal_links.add(Link(edge, edge.ports[current_edge_port_no], agg, agg.ports[current_agg_port_no]))
+          self.internal_links.add(Link(agg, agg.ports[current_agg_port_no], edge, edge.ports[current_edge_port_no]))
+          current_edge_port_no += 1
+        current_agg_port_no += 1
+      
+      self.aggs += current_aggs    
+      
+    # Finally, agg <-> core
+    for i in range(self.total_core): 
+      current_dpid += 1
+      self.cores.append(create_switch(current_dpid, self.ports_per_switch))
+      
+    core_cycler = Cycler(self.cores)
+    for agg in self.aggs: 
+      # agg ports (k/2)+1 through k connect to cores
+      # core port i+1 connects to pod i
+      for agg_port_no in range(k/2+1, k+1):
+        core = core_cycler.next()
+        core_port_no = agg.pod_id + 1
+        self.internal_links.add(Link(agg, agg.ports[agg_port_no], core, core.ports[core_port_no]))
+        self.internal_links.add(Link(core, core.ports[core_port_no], agg, agg.ports[agg_port_no]))
+  
+
+  def get_connected_port(self, node, port):
+    ''' Given a node and a port, return a tuple (node, port) that is directly connected to the port '''
+    # TODO: use a $@#*$! graph library
+    if port in self.port2access_link:
+      access_link = self.port2access_link[port]
+      return (access_link.host, access_link.interface)
+    if port in self.interface2access_link:
+      access_link = self.interface2access_link[port]
+      return (access_link.switch, access_link.switch_port)
+    if port in self.port2internal_link:
+      link = self.port2internal_link[port]
+      return (link.end_switch, link.end_port)
+    raise "Node %s Port %s not in network" % (str(node), str(port))
