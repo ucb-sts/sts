@@ -22,6 +22,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
 from debugger_entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink
 from pox.openflow.switch_impl import ofp_phy_port, DpPacketOut
 from pox.lib.addresses import EthAddr, IPAddr
+from pox.openflow.libopenflow_01 import *
 from pox.lib.util import connect_socket_with_backoff
 from pox.lib.revent import EventMixin
 import socket
@@ -70,18 +71,33 @@ def get_switchs_host_port(switch):
   # We wire up the last port of the switch to the host
   return switch.ports[sorted(switch.ports.keys())[-1]]
 
-def create_host(ingress_switch_or_switches):
+def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None):
   ''' Create a Host, wired up to the given ingress switches '''
   switches = ingress_switch_or_switches
   if type(switches) != list:
     switches = [ingress_switch_or_switches]
+    
+  macs = mac_or_macs
+  if mac_or_macs and type(mac_or_macs) != list:
+    macs = [mac_or_macs]
+    
+  ips = ip_or_ips
+  if ip_or_ips and type(ip_or_ips) != list:
+    ips = [ip_or_ips]
   
   interfaces = []
   interface_switch_pairs = []
   for switch in switches:
     port = get_switchs_host_port(switch)
-    mac = EthAddr("12:34:56:78:%02x:%02x" % (switch.dpid, port.port_no)) 
-    ip_addr = IPAddr("123.123.%d.%d" % (switch.dpid, port.port_no))
+    if macs:
+      mac = macs.pop(0)
+    else:
+      mac = EthAddr("12:34:56:78:%02x:%02x" % (switch.dpid, port.port_no)) 
+    if ips:
+      ip_addr = ips.pop(0) 
+    else:
+      ip_addr = IPAddr("123.123.%d.%d" % (switch.dpid, port.port_no))
+      
     name = "eth%d" % switch.dpid
     interface = HostInterface(mac, ip_addr, name)
     interface_switch_pairs.append((interface, switch))
@@ -154,6 +170,7 @@ def populate_fat_tree(num_pods=48):
   '''
   # Too lazy to connect to controllers
   fat_tree = FatTree(num_pods)
+  fat_tree.install_portland_routes()
   patch_panel = BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
   return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
 
@@ -344,12 +361,22 @@ class FatTree (object):
         self.edges.append(edge_switch)
         
       edge = self.edges[-1]
-      (host, host_access_links) = create_host(edge)
+      # edge ports 1 through (k/2) are dedicated to hosts, and (k/2)+1 through k are for agg
+      port_no = (i % self.hosts_per_edge) + 1
+      # We give it a portland pseudo mac, just for giggles
+      # Slightly modified from portland (no vmid, assume 8 bit pod id):
+      # 00:00:00:<pod>:<position>:<port>
+      position = len(self.edges) % self.edge_per_pod
+      edge.position = position
+      portland_mac = EthAddr("00:00:00:%02x:%02x:%02x" % (current_pod_id, position, port_no)) 
+      # Uhh, unfortunately, OpenFlow 1.0 doesn't support prefix matching on MAC addresses. 
+      # So we do prefix matching on IP addresses, which yields exactly the same # of flow
+      # entries for HSA, right?
+      portland_ip_addr = IPAddr("123.%d.%d.%d" % (current_pod_id, position, port_no))
+      (host, host_access_links) = create_host(edge, portland_mac, portland_ip_addr)
       host.pod_id = current_pod_id
       self.hosts.append(host)
       self.access_links = self.access_links.union(set(host_access_links))
-      # edge ports 1 through (k/2) are dedicated to hosts, and (k/2)+1 through k are for agg
-      port_no = (i % self.hosts_per_edge) + 1
       # Not really an internal link, but it originates on the edge switch
       self.internal_links.add(Link(edge, edge.ports[port_no], host, host.interfaces[0]))
       
@@ -389,7 +416,68 @@ class FatTree (object):
         self.internal_links.add(Link(agg, agg.ports[agg_port_no], core, core.ports[core_port_no]))
         self.internal_links.add(Link(core, core.ports[core_port_no], agg, agg.ports[agg_port_no]))
   
+  def install_default_routes(self):
+    '''
+    Install static routes as proposed in Section 3 of "A Scalable, Commodity Data Center Network Architecture".
+    This is really a strawman routing scheme. PORTLAND, et. al. are much better
+    '''
+    pass
 
+  def install_portland_routes(self):
+    '''
+    We use a modified version of PORTLAND. We make two changes: OpenFlow 1.0 doesn't support prefix matching
+    on MAC addresses, so we use IP addresses instead. (same # of flow entries, and we don't model flooding anyway)
+    Second, we ignore vmid and assume 8 bit pod ids. So, IPs are of the form:
+    123.pod.position.port
+    '''
+    k = self.k
+    
+    for core in self.cores:
+      # When forwarding a packet, the core switch simply inspects the bits corresponding to the pod
+      # number in the PMAC destination address to determine the appropriate output port.
+      for port_no in core.ports.keys():
+        # port_no i+1 corresponds to pod i
+        match = ofp_match(nw_dst=IPAddr("123.%d.0.0/16" % port_no-1))
+        flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=port_no)])
+        core._receive_flow_mod(flow_mod)
+      
+    for agg in self.aggs:
+      # Aggregation switches must determine whether a packet is destined for a host
+      # in the same or different pod by inspecting the PMAC. If in the same pod,
+      # the packet must be forwarded to an output port corresponding to the position
+      # entry in the PMAC. If in a different pod, the packet may be forwarded along 
+      # any of the aggregation switch's links to the core layer in the fault-free case.  
+      pod_id = agg.pod_id
+      for port_no in range(1, k/2+1):
+        # ports 1 through k/2 are connected to edge switches 0 through k/2-1
+        position = port_no - 1
+        match = ofp_match(nw_dst=IPAddr("123.%d.%d.0/24" % pod_id, position))
+        flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=port_no)])
+        agg._receive_flow_mod(flow_mod)
+        
+      # We model load balancing to uplinks as a single flow entry -- h/w supports ecmp efficiently
+      # while only requiring a single TCAM entry
+      match = ofp_match(nw_dst=IPAddr("123.0.0.0/8"))
+      # Forward to the right-most uplink
+      flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
+      agg._receive_flow_mod(flow_mod)
+      
+    for edge in self.edges:
+      # if a connected host, deliver to host. Else, ECMP over uplinks
+      pod_id = edge.pod_id
+      position = edge.position
+      for port_no in range(1,k/2+1):
+        match = ofp_match(nw_dst=IPAddr("123.%d.%d.%d" % pod_id, position, port_no))
+        flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
+        edge._receive_flow_mod(flow_mod)
+         
+      # We model load balancing to uplinks as a single flow entry -- h/w supports ecmp efficiently
+      # while only requiring a single TCAM entry
+      match = ofp_match(nw_dst=IPAddr("123.0.0.0/8"))
+      # Forward to the right-most uplink
+      flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
+      edge._receive_flow_mod(flow_mod)
+  
   def get_connected_port(self, node, port):
     ''' Given a node and a port, return a tuple (node, port) that is directly connected to the port '''
     # TODO: use a $@#*$! graph library
