@@ -385,7 +385,9 @@ class FatTree (object):
       current_aggs = []
       for _ in  range(self.agg_per_pod):
         current_dpid += 1
-        current_aggs.append(create_switch(current_dpid, self.ports_per_switch))
+        agg = create_switch(current_dpid, self.ports_per_switch)
+        agg.pod_id = pod_id
+        current_aggs.append(agg)
       
       current_edges = self.edges[pod_id * self.edge_per_pod : (pod_id * self.edge_per_pod) + self.edge_per_pod]
       # edge ports (k/2)+1 through k connect to aggs
