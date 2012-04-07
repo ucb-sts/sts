@@ -439,7 +439,7 @@ class FatTree (object):
       # number in the PMAC destination address to determine the appropriate output port.
       for port_no in core.ports.keys():
         # port_no i+1 corresponds to pod i
-        match = ofp_match(nw_dst=IPAddr("123.%d.0.0/16" % (port_no-1)))
+        match = ofp_match(nw_dst="123.%d.0.0/16" % (port_no-1))
         flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=port_no)])
         core._receive_flow_mod(flow_mod)
       
@@ -453,13 +453,13 @@ class FatTree (object):
       for port_no in range(1, k/2+1):
         # ports 1 through k/2 are connected to edge switches 0 through k/2-1
         position = port_no - 1
-        match = ofp_match(nw_dst=IPAddr("123.%d.%d.0/24" % pod_id, position))
+        match = ofp_match(nw_dst="123.%d.%d.0/24" % (pod_id, position))
         flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=port_no)])
         agg._receive_flow_mod(flow_mod)
         
       # We model load balancing to uplinks as a single flow entry -- h/w supports ecmp efficiently
       # while only requiring a single TCAM entry
-      match = ofp_match(nw_dst=IPAddr("123.0.0.0/8"))
+      match = ofp_match(nw_dst="123.0.0.0/8")
       # Forward to the right-most uplink
       flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
       agg._receive_flow_mod(flow_mod)
@@ -469,13 +469,13 @@ class FatTree (object):
       pod_id = edge.pod_id
       position = edge.position
       for port_no in range(1,k/2+1):
-        match = ofp_match(nw_dst=IPAddr("123.%d.%d.%d" % pod_id, position, port_no))
+        match = ofp_match(nw_dst="123.%d.%d.%d" % (pod_id, position, port_no))
         flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
         edge._receive_flow_mod(flow_mod)
          
       # We model load balancing to uplinks as a single flow entry -- h/w supports ecmp efficiently
       # while only requiring a single TCAM entry
-      match = ofp_match(nw_dst=IPAddr("123.0.0.0/8"))
+      match = ofp_match(nw_dst="123.0.0.0/8")
       # Forward to the right-most uplink
       flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
       edge._receive_flow_mod(flow_mod)
