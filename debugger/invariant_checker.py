@@ -30,6 +30,10 @@ class InvariantChecker():
     (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
     return hsa.compute_omega(NTF, TTF, edge_links)
   
+  def compute_single_omega(self, start_link, live_switches, live_links, edge_links):
+    (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
+    return hsa.compute_single_omega(NTF, TTF, start_link, edge_links)
+  
   def _get_transfer_functions(self, live_switches, live_links):
     NTF = hsa_topo.generate_NTF(live_switches)
     TTF = hsa_topo.generate_TTF(live_links)
