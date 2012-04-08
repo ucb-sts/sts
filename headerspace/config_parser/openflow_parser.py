@@ -11,6 +11,16 @@ from pox.openflow.libopenflow_01 import *
 import re
 from collections import namedtuple
 
+global header_length
+header_length = 31
+# These should really be frozen (immutable), but python doesn't have language support for that..
+global all_one
+all_one = byte_array_get_all_one(header_length*2)
+global all_zero
+all_zero = byte_array_get_all_zero(header_length*2)
+global all_x
+all_x = byte_array_get_all_x(header_length*2)
+
 global fields
 # Taken from ofp_match in openflow 1.0 spec
 # Note that these are ordered
@@ -248,7 +258,10 @@ def generate_transfer_function(tf, software_switch):
       tf.add_fwd_rule(self_rule)
     else:
       tf_rule = TF.create_standard_rule(input_port_ids, hsa_match, output_port_nos, mask, rewrite)
-      tf.add_rewrite_rule(tf_rule)
+      if byte_array_equal(mask, all_one) and byte_array_equal(rewrite, all_zero):
+        tf.add_fwd_rule(tf_rule)
+      else:
+        tf.add_rewrite_rule(tf_rule)
          
   print "=== Successfully Generated Transfer function ==="
   #print tf

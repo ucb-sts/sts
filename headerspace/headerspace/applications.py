@@ -72,8 +72,9 @@ def find_reachability(NTF, TTF, in_port, out_ports, input_pkt):
   
 def get_all_x(NTF):
   all_x = byte_array_get_all_x(NTF.length)
-  test_pkt = headerspace(NTF.length)
+  test_pkt = headerspace(NTF.format)
   test_pkt.add_hs(all_x)
+  return test_pkt
                     
 def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
     loops = []
@@ -136,9 +137,27 @@ def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
   # TODO: need to model host end of link, or does switch end suffice?
   edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
   
+  print "edge_ports: %s" % str(edge_ports)
+  
   for start_port in edge_ports:
+    port_omega = compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map, test_packet)
+    omega = dict(omega.items() + port_omega.items()) 
+  
+  return omega
+    
+def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_packet=None):
+    if type(start_port) != int:
+      start_port = get_uniq_port_id(start_port.switch, start_port.switch_port)
+      
+    if type(edge_ports) != list:
+      edge_ports = list(edge_ports)
+    if type(edge_ports[0]) != int:
+      edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_ports)
+    
     print "port %d is being checked" % start_port
+    
     propagation = []
+    port_omega = {}
     
     # put all-x test packet in propagation graph
     test_pkt = test_packet
@@ -187,10 +206,10 @@ def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
                   original_headers = find_loop_original_header(NTF,TTF,new_p_node)
                   for original_header in original_headers:
                     key = (original_header, start_port)
-                    if not key in omega:
+                    if not key in port_omega:
                       # TODO: python default value for hash?
-                      omega[key] = []
-                    omega[key].append((next_h, next_p))
+                      port_omega[key] = []
+                    port_omega[key].append((next_h, next_p))
                     
                 if linked_p in new_p_node["visits"]:
                   print "WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %d "%(\
@@ -198,7 +217,7 @@ def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
                 else:
                   tmp_propag.append(new_p_node) 
       propagation = tmp_propag
-    return omega
+    return port_omega
   
 def print_reachability(paths, reverse_map):
     for p_node in paths:

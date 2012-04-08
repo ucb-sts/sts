@@ -8,17 +8,26 @@ from headerspace.headerspace.hs import *
 from array import array
 from headerspace.headerspace.wildcard_dictionary import wildcard_dictionary
 
+def ports_to_hex(ports):
+  return map(lambda x: hex(x), ports)
+
 class TF(object):
   '''
   models a box transfer function, a network transfer function or a topology transfer function
   '''
 
-  def __init__(self, length):
+  def __init__(self, hsa_format):
     '''
     Constructor
-    length is two times the length of packet headers in bytes. (it is number of nibbles)
     '''
-    self.length = length
+    # For backwards compabibility
+    if type(hsa_format) == int:
+      self.length = hsa_format
+      self.format = None
+    else:
+      self.length = hsa_format["length"] * 2
+      self.format = hsa_format
+      
     self.rules = []
     self.custom_rules = []
     self.lazy_eval_nibbles = []
@@ -91,19 +100,19 @@ class TF(object):
         match = byte_array_to_hs_string(rule['match'])
         mask = byte_array_to_hs_string(rule['mask'])
         rewrite = byte_array_to_hs_string(rule['rewrite'])
-        string = "in_ports: %s, match: %s => ((h & %s) | %s, %s)" % (rule['in_ports'], \
-                    match, mask, rewrite, rule['out_ports'])
+        string = "in_ports: %s, match: %s => ((h & %s) | %s, %s)" % (ports_to_hex(rule['in_ports']), \
+                    match, mask, rewrite, ports_to_hex(rule['out_ports']))
         strings.append(string)
 
       if (rule['action'] == 'fwd'):
         match = byte_array_to_hs_string(rule['match'])
-        string = "in_ports: %s, match: %s => (h , %s)" % (rule['in_ports'], \
-                    match, rule['out_ports'])
+        string = "in_ports: %s, match: %s => (h , %s)" % (ports_to_hex(rule['in_ports']), \
+                    match, ports_to_hex(rule['out_ports']))
         strings.append(string)
 
       if (rule['action'] == 'link'):
-        string = "in_ports: %s => out_ports: %s" % (rule['in_ports'], \
-                    rule['out_ports'])
+        string = "in_ports: %s => out_ports: %s" % (ports_to_hex(rule['in_ports']), \
+                    ports_to_hex(rule['out_ports']))
         strings.append(string)
 
       if (rule['action'] == 'custom'):
@@ -120,18 +129,18 @@ class TF(object):
         inv_match = byte_array_to_hs_string(rule['inverse_match'])
         mask = byte_array_to_hs_string(rule['mask'])
         inv_rewrite = byte_array_to_hs_string(rule['inverse_rewrite'])
-        string = "out_ports: %s match: %s => ((h & %s) | %s, %s)" % (rule['out_ports'], \
-                    inv_match, mask, inv_rewrite, rule['in_ports'])
+        string = "out_ports: %s match: %s => ((h & %s) | %s, %s)" % (ports_to_hex(rule['out_ports']), \
+                    inv_match, mask, inv_rewrite, ports_to_hex(rule['in_ports']))
         strings.append(string)
       if (rule['action'] == 'fwd'):
         match = byte_array_to_hs_string(rule['match'])
-        string = "out_ports: %s match: %s => (h , %s)" % (rule['out_ports'], \
-                    match, rule['in_ports'])
+        string = "out_ports: %s match: %s => (h , %s)" % (ports_to_hex(rule['out_ports']), \
+                    match, ports_to_hex(rule['in_ports']))
         strings.append(string)
 
       if (rule['action'] == 'link'):
-        string = "out_ports: %s => in_ports: %s)" % (rule['out_ports'], \
-                    rule['in_ports'])
+        string = "out_ports: %s => in_ports: %s)" % (ports_to_hex(rule['out_ports']), \
+                    ports_to_hex(rule['in_ports']))
         strings.append(string)
     return strings
 
@@ -215,11 +224,11 @@ class TF(object):
   def standard_rule_to_string(std_rule):
     string = ""
     string += "ID = %s, "%std_rule["id"]
-    string += "in_ports = %s, "%std_rule["in_ports"]
+    string += "in_ports = %s, "%ports_to_hex(std_rule["in_ports"])
     string += "match = %s, "%byte_array_to_hs_string(std_rule["match"])
     string += "mask = %s, "%byte_array_to_hs_string(std_rule["mask"])
     string += "rewrite = %s, "%byte_array_to_hs_string(std_rule["rewrite"])
-    string += "out_ports = %s"%std_rule["out_ports"]
+    string += "out_ports = %s"%ports_to_hex(std_rule["out_ports"])
     return string
 
   def find_influences(self, priority):
@@ -757,7 +766,4 @@ class TF(object):
 
   def __str__(self):
     strs = self.to_string()
-    result = ""
-    for s in strs:
-      result += "%s\n"%s
-    return result
+    return "\n".join(strs)

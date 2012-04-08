@@ -138,15 +138,46 @@ def byte_has_no_x(b):
       return False
   return True
 
+def bytes_all_x(bytes):
+  # A byte is 8 bits
+  # HSA bytes only carries 4 bits of information though
+  # So b >> 0  & b'11 is the right-most bit
+  #    b >> 2  & b'11 is the second-from-right bit
+  # 0 -> b'01 == 0x01
+  # 1 -> b'10 == 0x02
+  # x -> b'11 == 0x03
+  # z -> b'00 == 0x00
+  for byte in bytes:
+    # b'11111111 == 0xFF
+    if byte != 0xFF:
+      return False
+  return True
+
 def byte_to_int(b):
+  # Big endian
+  # fill in bits of val from least-significant to most significant
   val = 0
   for i in range(4):
+    # b >> 0 & 0x03 is the right-most bit
     b_shift = b >> (i * 2)
     next_bit = b_shift & 0x03
     if (next_bit == 0x02):
       val = val + 2**i
     elif (next_bit != 0x01):
       return None
+  return val
+
+def bytes_to_int(bytes):
+  # Big endian
+  # Fill in bytes of val from most-significant to least significant
+  val = 0 
+  for byte in bytes:
+    # Each HSA byte contains 4 bits of information, not 8
+    val <<= 4
+    byte_val = byte_to_int(byte)
+    if byte_val is None:
+      return None
+    val += byte_val
   return val
 
 def byte_array_to_pretty_hs_string(byte_array):
@@ -161,6 +192,7 @@ def byte_array_to_pretty_hs_string(byte_array):
     if (cntr % 2 == 0 and cntr+1 < len):
       if (byte_has_no_x(byte_array[cntr]) and byte_has_no_x(byte_array[cntr+1])):
         pretty_flag = True
+        # *16 <-> << 4
         val = byte_to_int(byte_array[cntr]) + byte_to_int(byte_array[cntr+1])*16
         if cntr > 0:
           str = "D%d,%s"%(val,str)
@@ -278,18 +310,23 @@ class headerspace(object):
   It also enables normal set operations on header space.
   '''
 
-  def __init__(self, length):
+  def __init__(self, hsa_format):
     '''
     Constructor
-    length is two times the length of packet headers in bytes.
     '''
+    # For backwards compabibility
+    if type(hsa_format) == int:
+      self.length = hsa_format
+      self.format = None
+    else:
+      self.length = hsa_format["length"] * 2
+      self.format = hsa_format
     self.hs_list = []
     self.hs_diff = []
     # list of (tf,rule_id,port) that has been lazy evaluated
     self.lazy_rule_ids = []
     # list of (tf,rule_id,port) that has been evaluated on this headerspace
     self.applied_rule_ids = []
-    self.length = length
 
   def add_hs(self, value):
     '''
@@ -374,7 +411,10 @@ class headerspace(object):
     '''
     create a deep copy of itself
     '''
-    deep_copy = headerspace(self.length)
+    if self.format is not None:
+      deep_copy = headerspace(self.format)
+    else:
+      deep_copy = headerspace(self.length)
     for elem in self.hs_list:
       deep_copy.hs_list.append(bytearray(elem))
     for elem in self.hs_diff:
@@ -392,10 +432,16 @@ class headerspace(object):
     strings = []
     diffs = []
     for hs in self.hs_list:
-      new_expression = byte_array_to_pretty_hs_string(hs)
+      if self.format is not None:
+        new_expression = self.format["display"](hs)
+      else:
+        new_expression = byte_array_to_pretty_hs_string(hs)
       strings.append(new_expression)
     for hs in self.hs_diff:
-      new_expression = byte_array_to_pretty_hs_string(hs)
+      if self.format is not None:
+        new_expression = self.format["display"](hs)
+      else:
+        new_expression = byte_array_to_pretty_hs_string(hs)
       diffs.append(new_expression)
 
     union1 = ""
