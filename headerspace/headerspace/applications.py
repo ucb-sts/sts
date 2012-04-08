@@ -172,7 +172,6 @@ def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_
         
     propagation.append(p_node)
     while len(propagation) > 0: # TODO: is this stopping condition correct?!!!
-      
       # get the next node in propagation graph and apply it to NTF and TTF
       print "Propagation has length: %d" % len(propagation)
       tmp_propag = []
