@@ -7,6 +7,8 @@ from headerspace.headerspace.hs import *
 from headerspace.headerspace.tf import *
 from headerspace.config_parser.openflow_parser import get_uniq_port_id
 
+import sys
+
 # What is a p_node?
 # A hash apparently:
 #  hdr -> foo
@@ -19,7 +21,6 @@ def print_p_node(p_node):
     print p_node["visits"]
     print "-----"
     
-
 def find_reachability(NTF, TTF, in_port, out_ports, input_pkt):
     paths = []
     propagation = []
@@ -171,52 +172,46 @@ def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_
     p_node["hs_history"] = []
         
     propagation.append(p_node)
-    while len(propagation) > 0: # TODO: is this stopping condition correct?!!!
+    while len(propagation) > 0:
       # get the next node in propagation graph and apply it to NTF and TTF
       print " -- Propagation has length: %d --" % len(propagation)
       tmp_propag = []
       for p_node in propagation:
         print "Checking port: %s hdr: %s" % (port_to_hex(p_node["port"]), str(p_node["hdr"]))
         # hp is "header port"
-        next_hp = NTF.T(p_node["hdr"],p_node["port"])
-        if len(next_hp) == 0:
-          print "    next_hp: []"
-        else:
-          print "    next_hp: %s -> %s" % (str(next_hp[0][0]), ports_to_hex(next_hp[0][1]))
-          
-        for (next_h,next_ps) in next_hp:
+        next_hps = NTF.T(p_node["hdr"],p_node["port"])
+                  
+        for (next_h,next_ps) in next_hps:
           for next_p in next_ps:
-            # TODO: do I necessarily want to invoke the topology transfer function right off the bat?
-            # TODO: how are packet drops represented?
-            #       I believe that is represented as a null header space... Do I need to
-            #       worry about that? Or do NTF/TTF take care of that for me?
+            sys.stdout.write("    next_hp: %s -> %s" % (port_to_hex(next_p),str(next_h)))
+            
+            # Note: right now, we encode packet drops as a lack of a leave in the propogation graph
+            if next_p in edge_ports:
+              # We've reached our final destination!
+              # ASSUMPTION: no edge port will send it back out into the network...
+              # use the inverse T trick to get original headerspace which led us here
+              original_headers = find_loop_original_header(NTF,TTF,p_node)
+              for original_header in original_headers:
+                key = (original_header, start_port)
+                if not key in port_omega:
+                  # TODO: python default value for hash?
+                  port_omega[key] = []
+                port_omega[key].append((next_h, next_p))            
+                
             linked = TTF.T(next_h,next_p)
+            if not linked:
+              sys.stdout.write("\n")
             for (linked_h,linked_ports) in linked:
               for linked_p in linked_ports:
+                print " -> %s" % (port_to_hex(linked_p))
                 new_p_node = {}
                 new_p_node["hdr"] = linked_h
                 new_p_node["port"] = linked_p
                 new_p_node["visits"] = list(p_node["visits"])
                 new_p_node["visits"].append(p_node["port"])
-                #new_p_node["visits"].append(next_p)
                 new_p_node["hs_history"] = list(p_node["hs_history"])
                 new_p_node["hs_history"].append(p_node["hdr"])
-                #print new_p_node
                   
-                # TODO: This definitely doesn't properly handle dropped packets...
-                if next_p in edge_ports:
-                  # We've reached our final destination!
-                  # ASSUMPTION: no edge port will send it back out into the network...
-              
-                  # use the inverse T trick to get original headerspace which led us here
-                  original_headers = find_loop_original_header(NTF,TTF,new_p_node)
-                  for original_header in original_headers:
-                    key = (original_header, start_port)
-                    if not key in port_omega:
-                      # TODO: python default value for hash?
-                      port_omega[key] = []
-                    port_omega[key].append((next_h, next_p))
-                    
                 if linked_p in new_p_node["visits"]:
                   print "WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %s "%(\
                          new_p_node["hdr"],ports_to_hex(new_p_node["visits"]),hex(new_p_node["port"]))
@@ -272,7 +267,6 @@ def loop_path_to_str(p_node, reverse_map):
     return str
         
 def trace_hs_back(applied_rule_list,hs,last_port):
-
     port = last_port
     hs_list = [hs]
     hs.applied_rule_ids = []
