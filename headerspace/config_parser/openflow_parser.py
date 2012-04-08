@@ -345,11 +345,14 @@ def generate_transfer_function(tf, software_switch):
     ofp_actions = flow_entry.actions
     
     hsa_match = ofp_match_to_hsa_match(ofp_match)
-    input_port_ids = ofp_match_to_input_ports(ofp_match, software_switch, all_port_ids)
+    input_port_ids = set(ofp_match_to_input_ports(ofp_match, software_switch, all_port_ids))
     (mask, rewrite) = ofp_actions_to_hsa_rewrite(ofp_actions)
     output_port_nos = set()
     for input_port_id in input_port_ids:
       output_port_nos = output_port_nos.union(ofp_actions_to_output_ports(ofp_actions, software_switch, all_port_ids, input_port_id))
+      
+    # No self-loops. TODO: this is the wrong place to handle this
+    input_port_ids -= output_port_nos
 
     if len(output_port_nos) == 0:
       # No output ports means a dropped packet in OpenFlow
