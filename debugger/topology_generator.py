@@ -71,7 +71,7 @@ def get_switchs_host_port(switch):
   # We wire up the last port of the switch to the host
   return switch.ports[sorted(switch.ports.keys())[-1]]
 
-def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None):
+def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, get_switch_port=get_switchs_host_port):
   ''' Create a Host, wired up to the given ingress switches '''
   switches = ingress_switch_or_switches
   if type(switches) != list:
@@ -88,7 +88,7 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None):
   interfaces = []
   interface_switch_pairs = []
   for switch in switches:
-    port = get_switchs_host_port(switch)
+    port = get_switch_port(switch)
     if macs:
       mac = macs.pop(0)
     else:
@@ -105,7 +105,7 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None):
     
   name = "host:" + ",".join(map(lambda switch: "%d" % switch.dpid, switches))
   host = Host(interfaces, name)
-  access_links = [ AccessLink(host, interface, switch, get_switchs_host_port(switch)) for interface, switch in interface_switch_pairs ] 
+  access_links = [ AccessLink(host, interface, switch, get_switch_port(switch)) for interface, switch in interface_switch_pairs ] 
   return (host, access_links)
 
 def create_mesh(num_switches):
@@ -374,7 +374,7 @@ class FatTree (object):
       # So we do prefix matching on IP addresses, which yields exactly the same # of flow
       # entries for HSA, right?
       portland_ip_addr = IPAddr("123.%d.%d.%d" % (current_pod_id, position, edge_port_no))
-      (host, host_access_links) = create_host(edge, portland_mac, portland_ip_addr)
+      (host, host_access_links) = create_host(edge, portland_mac, portland_ip_addr, lambda switch: edge_port_no)
       host.pod_id = current_pod_id
       self.hosts.append(host)
       self.access_links = self.access_links.union(set(host_access_links))
