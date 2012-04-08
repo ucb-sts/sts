@@ -9,7 +9,10 @@ from array import array
 from headerspace.headerspace.wildcard_dictionary import wildcard_dictionary
 
 def ports_to_hex(ports):
-  return map(lambda x: hex(x), ports)
+  return map(port_to_hex, ports)
+
+def port_to_hex(port):
+  return hex(port)
 
 class TF(object):
   '''
