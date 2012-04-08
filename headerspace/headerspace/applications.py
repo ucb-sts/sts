@@ -218,8 +218,9 @@ def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_
                     port_omega[key].append((next_h, next_p))
                     
                 if linked_p in new_p_node["visits"]:
-                  print "WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %d "%(\
-                         new_p_node["hdr"],new_p_node["visits"],new_p_node["port"])
+                  print "WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %s "%(\
+                         new_p_node["hdr"],ports_to_hex(new_p_node["visits"]),hex(new_p_node["port"]))
+                  return port_omega
                 else:
                   tmp_propag.append(new_p_node) 
       propagation = tmp_propag

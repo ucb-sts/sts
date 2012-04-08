@@ -92,20 +92,24 @@ class TF(object):
       for aff in rule["influence_on"]:
         print "%s"%(byte_array_to_pretty_hs_string(aff["match"]))
       print "-------------------"
-
+      
+  def hs_string(self, byte_array):
+    match = headerspace(self.format)
+    match.add_hs(byte_array)
+    return str(match)
+    
   def to_string(self):
     strings = []
     for rule in self.rules:
+      match = self.hs_string(rule['match'])
       if (rule['action'] == 'rw'):
-        match = byte_array_to_hs_string(rule['match'])
-        mask = byte_array_to_hs_string(rule['mask'])
-        rewrite = byte_array_to_hs_string(rule['rewrite'])
+        mask = self.hs_string(rule['mask'])
+        rewrite = self.hs_string(rule['rewrite'])
         string = "in_ports: %s, match: %s => ((h & %s) | %s, %s)" % (ports_to_hex(rule['in_ports']), \
                     match, mask, rewrite, ports_to_hex(rule['out_ports']))
         strings.append(string)
 
       if (rule['action'] == 'fwd'):
-        match = byte_array_to_hs_string(rule['match'])
         string = "in_ports: %s, match: %s => (h , %s)" % (ports_to_hex(rule['in_ports']), \
                     match, ports_to_hex(rule['out_ports']))
         strings.append(string)

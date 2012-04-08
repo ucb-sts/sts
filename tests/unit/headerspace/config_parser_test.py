@@ -35,6 +35,31 @@ class config_parser_test(unittest.TestCase):
     print "tf: %s" % str(tf)
     # TODO: do something smarter than printing to console...
     
+  def test_ip_display(self):
+    tf = TF(HS_FORMAT())
+    flow_mod = ofp_flow_mod(xid=124, priority=1, match=ofp_match(in_port=1, nw_dst="254.0.0.0/8"), action=ofp_action_output(port=2))
+    switch = create_switch(1, 2)
+    switch.table.process_flow_mod(flow_mod)
+    generate_transfer_function(tf, switch)
+    print "tf: %s" % str(tf)
+    
+  def test_field_display(self):
+    tf = TF(HS_FORMAT())
+    flow_mod = ofp_flow_mod(xid=124, priority=1, match=ofp_match(nw_tos=6), action=ofp_action_output(port=2))
+    switch = create_switch(1, 2)
+    switch.table.process_flow_mod(flow_mod)
+    generate_transfer_function(tf, switch)
+    print "tf: %s" % str(tf)
+    
+  def test_eth_display(self):
+    tf = TF(HS_FORMAT())
+    print "int value is: ", EthAddr("00:00:11:22:33:00").toInt()
+    print "string is:", str(EthAddr("00:00:11:22:33:00"))
+    flow_mod = ofp_flow_mod(xid=124, priority=1, match=ofp_match(dl_src="00:00:11:22:33:00"), action=ofp_action_output(port=2))
+    switch = create_switch(1, 2)
+    switch.table.process_flow_mod(flow_mod)
+    generate_transfer_function(tf, switch)
+    print "tf: %s" % str(tf)
     
 if __name__ == '__main__':
   unittest.main()

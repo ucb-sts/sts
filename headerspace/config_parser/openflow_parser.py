@@ -27,7 +27,56 @@ global fields
 fields = ["dl_src", "dl_dst", "dl_vlan", "dl_vlan_pcp", "dl_type", "nw_tos", "nw_proto", "nw_src", "nw_dst", "tp_src", "tp_dst"]
 
 field_info = namedtuple('field_info', ['position', 'length'])
+
+def ethernet_display(bytes):
+  if bytes_all_x(bytes):
+    return "x"
+  else:
+    # OpenFlow 1.0 doesn't support prefix matching over ethernet addrs
+    # So assume it's raw (no wildcards)
+    print "Int unpacked is:", bytes_to_int(bytes)
+    print "Eth String is:" + str(EthAddr(bytes_to_int(bytes)))
+    return str(EthAddr(bytes_to_int(bytes)))
     
+def ip_display(bytes):
+  if bytes_all_x(bytes):
+    # Optimization
+    return "x"
+  else:
+    if len(bytes) != 4*2:
+      raise RuntimeError(len(bytes))
+    
+    # Have to get a bit at a time, since an HSA byte contains 4 real bits,
+    # and mask length may not be a multiple of 4
+    # 0th byte, 0th bit is least significant
+    val = 0
+    current_idx = 0
+    mask_length_bits = 32
+    # twice as many bytes as normal IP addr
+    for byte_idx in range(8):
+      # Half as many bits per byte
+      for bit_idx in range(4):
+        bit_val = byte_array_get_bit(bytes,byte_idx,bit_idx)
+        if bit_val == 0x03:
+          # wildcard.
+          # Assumes that all wildcard bits are consecutive (no non-wildcard exists after a wildcard)
+          mask_length_bits -= 1
+        else:
+          normal_bit = hsa_bit_to_normal_bit(bit_val)
+          val += (normal_bit << current_idx)
+        current_idx += 1
+    
+    # I'm misunderstanding something about IPAddr's network order
+    # arg... the val is in network order (has been sanity checked), but
+    # seeting network_order=True makes the byte order backwards...
+    return IPAddr(val).__str__() + "/" + str(mask_length_bits)
+
+def default_display(bytes):
+  if bytes_all_x(bytes):
+    return "x"
+  else:
+    return str(bytes_to_int(bytes))
+      
 def HS_FORMAT():
   format = {}
   
@@ -51,7 +100,53 @@ def HS_FORMAT():
     format[field] = field_info(position, field_length)
     position += field_length
     
+  # 31 bytes
   format["length"] = position
+  
+  display_handler_map = {
+    "dl_src" : ethernet_display, 
+    "dl_dst" : ethernet_display,
+    "dl_vlan" : default_display,
+    "dl_vlan_pcp" : default_display,       
+    "dl_type" :  default_display,
+    "nw_tos" : default_display,
+    "nw_proto" : default_display,
+    "nw_src" : ip_display,
+    "nw_dst" : ip_display,
+    "tp_src" : default_display,
+    "tp_dst" : default_display
+  }
+  
+  def display(byte_array):
+    # Note that byte array is twice the length of our format (to encode x, y)
+    # so, s/b 62 bytes long
+    if len(byte_array) != format["length"]*2:
+      raise "Unknown byte array length. Got %d, s/b %d" % (len(byte_array),format["length"]*2)
+    
+    if byte_array_equal(byte_array, all_one):
+      return "1^L"
+    if byte_array_equal(byte_array, all_zero):
+      return "0^L"
+    if byte_array_equal(byte_array, all_x):
+      return "x^L"
+    
+    field_strs = []
+    for field in fields:
+      strings = []
+      strings.append(field)
+      strings.append(":")
+      # Twice as many HSA bytes to normal bytes
+      last_byte_index = format[field].length * 2
+      bytes = byte_array[0:last_byte_index]
+      byte_array = byte_array[last_byte_index:]
+      display = display_handler_map[field](bytes)
+      if display == "x":
+        continue
+      strings.append(display) 
+      field_strs.append("".join(strings))
+    return ",".join(field_strs)
+       
+  format["display"] = display
   return format
 
 global hs_format
@@ -140,7 +235,7 @@ def ofp_match_to_hsa_match(ofp_match):
     (addr, mask_bits_from_left) = getattr(ofp_match, "get_%s"%field_name)()
     if addr is not None: # None addr implies wildcard
       # TODO: signed or unsigned?
-      addr = addr.toUnsignedN()
+      addr = socket.htonl(addr.toUnsignedN())
       # if addr, not all wildcard bits set
       set_field(hsa_match, field_name, addr, right_mask=32-mask_bits_from_left)
   return hsa_match

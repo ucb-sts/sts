@@ -170,8 +170,9 @@ def byte_to_int(b):
 def bytes_to_int(bytes):
   # Big endian
   # Fill in bytes of val from most-significant to least significant
-  val = 0 
-  for byte in bytes:
+  val = 0
+  # bytes[0] is least significant, so we reverse
+  for byte in reversed(bytes):
     # Each HSA byte contains 4 bits of information, not 8
     val <<= 4
     byte_val = byte_to_int(byte)
@@ -293,6 +294,17 @@ def byte_array_get_bit(b_array,byte,bit):
     return 0x04;
   else:
     return (b_array[byte] >> 2*bit) & 0x03;
+
+def hsa_bit_to_normal_bit(bit):
+  # 0 -> b'01 == 1
+  # 1 -> b'10 == 2
+  # x -> b'11 == 0x03
+  # z -> b'00 == 0x00
+  if bit == 1:
+    return 0
+  if bit == 2:
+    return 1
+  raise RuntimeError("Not passed a normal bit %d!" % bit)
 
 def byte_array_set_bytes(b_array, byte, value, num_bytes):
   if byte+num_bytes>len(b_array):
