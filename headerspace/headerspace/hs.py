@@ -314,8 +314,13 @@ class headerspace(object):
     '''
     Constructor
     '''
-    self.format = hsa_format
-    self.length = hsa_format["length"] * 2
+    # For backwards compabibility
+    if type(hsa_format) == int:
+      self.length = hsa_format
+      self.format = None
+    else:
+      self.length = hsa_format["length"] * 2
+      self.format = hsa_format
     self.hs_list = []
     self.hs_diff = []
     # list of (tf,rule_id,port) that has been lazy evaluated
@@ -406,7 +411,10 @@ class headerspace(object):
     '''
     create a deep copy of itself
     '''
-    deep_copy = headerspace(self.format)
+    if self.format is not None:
+      deep_copy = headerspace(self.format)
+    else:
+      deep_copy = headerspace(self.length)
     for elem in self.hs_list:
       deep_copy.hs_list.append(bytearray(elem))
     for elem in self.hs_diff:
@@ -424,10 +432,16 @@ class headerspace(object):
     strings = []
     diffs = []
     for hs in self.hs_list:
-      new_expression = self.format["display"](hs)
+      if self.format is not None:
+        new_expression = self.format["display"](hs)
+      else:
+        new_expression = byte_array_to_pretty_hs_string(hs)
       strings.append(new_expression)
     for hs in self.hs_diff:
-      new_expression = self.format["display"](hs)
+      if self.format is not None:
+        new_expression = self.format["display"](hs)
+      else:
+        new_expression = byte_array_to_pretty_hs_string(hs)
       diffs.append(new_expression)
 
     union1 = ""

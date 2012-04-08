@@ -20,8 +20,14 @@ class TF(object):
     '''
     Constructor
     '''
-    self.format = hsa_format
-    self.length = hsa_format["length"] * 2
+    # For backwards compabibility
+    if type(hsa_format) == int:
+      self.length = hsa_format
+      self.format = None
+    else:
+      self.length = hsa_format["length"] * 2
+      self.format = hsa_format
+      
     self.rules = []
     self.custom_rules = []
     self.lazy_eval_nibbles = []
