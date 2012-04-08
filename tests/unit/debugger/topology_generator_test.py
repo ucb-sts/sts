@@ -119,7 +119,7 @@ class BufferedPanelTest(unittest.TestCase):
   
   def setUp(self):
     class MockSwitch(SwitchImpl):
-      _eventMixin_events = set([SwitchDpPacketOut])
+      _eventMixin_events = set([DpPacketOut])
 
       def __init__(self, dpid, ports):
         self.has_forwarded = False
@@ -147,7 +147,7 @@ class BufferedPanelTest(unittest.TestCase):
     self.switch = self.switches[0]
     self.port = self.switch.ports.values()[0]
     self.icmp_packet = self.traffic_generator.icmp_ping(self.switch, self.port)
-    self.dp_out_event = SwitchDpPacketOut(self.switch, self.icmp_packet, self.port)
+    self.dp_out_event = DpPacketOut(self.switch, self.icmp_packet, self.port)
     
   def test_buffering(self):
     self.switch.raiseEvent(self.dp_out_event)
