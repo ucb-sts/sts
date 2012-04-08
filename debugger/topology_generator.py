@@ -303,8 +303,8 @@ class FullyMeshedLinks(object):
 class FatTree (object):
   ''' Construct a FatTree topology with a given number of pods '''
   def __init__(self, num_pods=48):
-    if num_pods < 4:
-      raise "Can't handle Fat Trees with less than 4 pods"
+    if num_pods < 2:
+      raise "Can't handle Fat Trees with less than 2 pods"
        
     self.hosts = []
     self.cores = []
