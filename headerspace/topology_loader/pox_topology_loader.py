@@ -9,7 +9,7 @@ import headerspace.config_parser.openflow_parser as of
 
 def generate_TTF(all_links):
   ''' Takes a list of debugger.debugger_entities.Link objects (directed) '''
-  ttf = tf.TF(of.HS_FORMAT()["length"]*2)
+  ttf = tf.TF(of.HS_FORMAT())
   
   for link in all_links:
     uniq_from_port = of.get_uniq_port_id(link.start_switch_impl, link.start_port)
@@ -17,11 +17,13 @@ def generate_TTF(all_links):
     rule = tf.TF.create_standard_rule([uniq_from_port], None,[uniq_to_port], None, None)
     ttf.add_link_rule(rule)
     
+  print "TTF: %s" % str(ttf)
   return ttf
 
 def generate_NTF(switches):
-  ntf = tf.TF(of.HS_FORMAT()["length"]*2)
+  ntf = tf.TF(of.HS_FORMAT())
   for switch in switches:
     of.generate_transfer_function(ntf, switch) 
+  print "NTF: %s" % str(ntf)
   return ntf
     

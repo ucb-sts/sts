@@ -16,12 +16,12 @@ class TF(object):
   models a box transfer function, a network transfer function or a topology transfer function
   '''
 
-  def __init__(self, length):
+  def __init__(self, hsa_format):
     '''
     Constructor
-    length is two times the length of packet headers in bytes. (it is number of nibbles)
     '''
-    self.length = length
+    self.format = hsa_format
+    self.length = hsa_format["length"] * 2
     self.rules = []
     self.custom_rules = []
     self.lazy_eval_nibbles = []

@@ -72,7 +72,7 @@ def find_reachability(NTF, TTF, in_port, out_ports, input_pkt):
   
 def get_all_x(NTF):
   all_x = byte_array_get_all_x(NTF.length)
-  test_pkt = headerspace(NTF.length)
+  test_pkt = headerspace(NTF.format)
   test_pkt.add_hs(all_x)
   return test_pkt
                     
