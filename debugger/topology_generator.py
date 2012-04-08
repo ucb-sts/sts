@@ -367,7 +367,7 @@ class FatTree (object):
       # Slightly modified from portland (no vmid, assume 8 bit pod id):
       # 00:00:00:<pod>:<position>:<port>
       # position and pod are 0-indexed, port is 1-indexed
-      position = len(self.edges) % self.edge_per_pod
+      position = (len(self.edges)-1) % self.edge_per_pod
       edge.position = position
       portland_mac = EthAddr("00:00:00:%02x:%02x:%02x" % (current_pod_id, position, edge_port_no)) 
       # Uhh, unfortunately, OpenFlow 1.0 doesn't support prefix matching on MAC addresses. 
