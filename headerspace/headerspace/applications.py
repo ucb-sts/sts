@@ -154,7 +154,7 @@ def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_
     if type(edge_ports[0]) != int:
       edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_ports)
     
-    print "port %d is being checked" % start_port
+    print "port %s is being checked" % hex(start_port)
     
     propagation = []
     port_omega = {}
@@ -172,12 +172,18 @@ def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_
         
     propagation.append(p_node)
     while len(propagation) > 0: # TODO: is this stopping condition correct?!!!
+      
       # get the next node in propagation graph and apply it to NTF and TTF
       print "Propagation has length: %d" % len(propagation)
       tmp_propag = []
       for p_node in propagation:
         # hp is "header port"
         next_hp = NTF.T(p_node["hdr"],p_node["port"])
+        if len(next_hp) == 0:
+          print "next_hp: []"
+        else:
+          print "next_hp: %s" % ports_to_hex(next_hp[0][1])
+          
         for (next_h,next_ps) in next_hp:
           for next_p in next_ps:
             # TODO: do I necessarily want to invoke the topology transfer function right off the bat?
