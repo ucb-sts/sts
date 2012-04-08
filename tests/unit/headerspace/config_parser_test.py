@@ -17,7 +17,7 @@ from headerspace.headerspace.tf import *
 
 class config_parser_test(unittest.TestCase):
   def test_basic(self):
-    tf = TF(HS_FORMAT()["length"]*2)
+    tf = TF(HS_FORMAT())
     switch = create_switch(1, 2)
     flow_mod = ofp_flow_mod(xid=124, priority=1, match=ofp_match(in_port=1, nw_src="1.2.3.4"), action=ofp_action_output(port=2))
     switch.table.process_flow_mod(flow_mod)
@@ -26,7 +26,7 @@ class config_parser_test(unittest.TestCase):
     # TODO: do something smarter than printing to console...
   
   def test_drop(self):
-    tf = TF(HS_FORMAT()["length"]*2)
+    tf = TF(HS_FORMAT())
     switch = create_switch(1, 2)
     # Don't give it an action
     flow_mod = ofp_flow_mod(xid=124, priority=1, match=ofp_match(in_port=1, nw_src="1.2.3.4"))
