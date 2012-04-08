@@ -362,18 +362,18 @@ class FatTree (object):
         
       edge = self.edges[-1]
       # edge ports 1 through (k/2) are dedicated to hosts, and (k/2)+1 through k are for agg
-      port_no = (i % self.hosts_per_edge) + 1
+      edge_port_no = (i % self.hosts_per_edge) + 1
       # We give it a portland pseudo mac, just for giggles
       # Slightly modified from portland (no vmid, assume 8 bit pod id):
       # 00:00:00:<pod>:<position>:<port>
       # position and pod are 0-indexed, port is 1-indexed
       position = len(self.edges) % self.edge_per_pod
       edge.position = position
-      portland_mac = EthAddr("00:00:00:%02x:%02x:%02x" % (current_pod_id, position, port_no)) 
+      portland_mac = EthAddr("00:00:00:%02x:%02x:%02x" % (current_pod_id, position, edge_port_no)) 
       # Uhh, unfortunately, OpenFlow 1.0 doesn't support prefix matching on MAC addresses. 
       # So we do prefix matching on IP addresses, which yields exactly the same # of flow
       # entries for HSA, right?
-      portland_ip_addr = IPAddr("123.%d.%d.%d" % (current_pod_id, position, port_no))
+      portland_ip_addr = IPAddr("123.%d.%d.%d" % (current_pod_id, position, edge_port_no))
       (host, host_access_links) = create_host(edge, portland_mac, portland_ip_addr)
       host.pod_id = current_pod_id
       self.hosts.append(host)
@@ -468,8 +468,9 @@ class FatTree (object):
       pod_id = edge.pod_id
       position = edge.position
       for port_no in range(1,k/2+1):
+        # Route down to the host
         match = ofp_match(nw_dst="123.%d.%d.%d" % (pod_id, position, port_no))
-        flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
+        flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=port_no)])
         edge._receive_flow_mod(flow_mod)
          
       # We model load balancing to uplinks as a single flow entry -- h/w supports ecmp efficiently
