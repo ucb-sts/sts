@@ -31,6 +31,27 @@ import errno
 import sys
 import itertools
 
+class Cycler():
+  """
+  Abstraction for cycling through the given list circularly:
+
+  c = Cycler([1,2,3])
+  while True:
+    print c.next()
+  """
+  def __init__(self, arr):
+    self._list = list(arr)
+    self._current_index = 0
+
+  def next(self):
+    if len(self._list) == 0:
+      return None
+
+    element = self._list[self._current_index]
+    self._current_index += 1
+    self._current_index %= len(self._list)
+    return element
+
 def create_switch(switch_id, num_ports):
   ports = []
   for port_no in range(1, num_ports+1):
