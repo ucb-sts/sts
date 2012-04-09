@@ -153,15 +153,18 @@ def populate_fat_tree(num_pods=48):
   patch_panel = BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
   return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
 
-def populate_from_topology(topology):
-  hosts = topology.find(is_a=Host) 
-  return (BufferedPatchPanelForTopology(topology), 
-           topology.find(is_a=SwitchImpl), 
+def populate_from_topology(graph):
+  """
+  Take a pox.lib.graph.graph.Graph and generate arguments needed for the simulator
+  """
+  hosts = graph.find(is_a=Host) 
+  return (BufferedPatchPanelForTopology(graph), 
+           graph.find(is_a=SwitchImpl), 
            hosts,
            [AccessLink(host, switch[0], switch[1][0], switch[1][1])
             for host in hosts 
             for switch in filter(lambda n: isinstance(n[1][0], SwitchImpl),
-            topology.ports_for_node(host).iteritems())])
+            graph.ports_for_node(host).iteritems())])
 
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
