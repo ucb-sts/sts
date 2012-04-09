@@ -13,6 +13,8 @@ from debugger.topology_generator import *
 from debugger.traffic_generator import *
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.openflow.switch_impl import SwitchImpl
+from pox.lib.graph.graph import Graph
+from debugger.debugger_entities import Host, HostInterface
 
 class topology_generator_test(unittest.TestCase):
   _io_loop = RecocoIOLoop()
@@ -112,6 +114,49 @@ class FullyMeshedLinkTest(unittest.TestCase):
     check_pair( (1,1), (2,1))
     check_pair( (1,2), (3,1))
     check_pair( (3,2), (2,2))
+
+class TopologyUnitTest(unittest.TestCase):
+  _io_loop = RecocoIOLoop()
+  _io_ctor = _io_loop.create_worker_for_socket
+
+  def setUp(self):
+    class MockSwitch(SwitchImpl):
+      _eventMixin_events = set([DpPacketOut])
+
+      def __init__(self, dpid, ports):
+        self.has_forwarded = False
+        self.dpid = dpid
+        self.ports = {}
+        for port in ports:
+          self.ports[port.port_no] = port
+      def process_packet(self, packet, in_port):
+        self.has_forwarded = True
+    def create_mock_switch(num_ports, switch_id):
+      ports = []
+      for port_no in range(1, num_ports+1):
+        port = ofp_phy_port( port_no=port_no,
+                             hw_addr=EthAddr("00:00:00:00:%02x:%02x" % (switch_id, port_no)) )
+        # monkey patch an IP address onto the port for anteater purposes
+        port.ip_addr = "1.1.%d.%d" % (switch_id, port_no)
+        ports.append(port)
+      return MockSwitch(switch_id, ports)
+    self.g = Graph()
+    self.switches = [create_mock_switch(2, 1), create_mock_switch(2, 2)]
+    self.hosts = [Host([HostInterface(EthAddr("00:00:00:00:00:01"))], name="host1"),
+                  Host([HostInterface(EthAddr("00:00:00:00:00:02"))], name="host2")]
+    for switch in self.switches:
+      self.g.add(switch)
+    for host in self.hosts:
+      self.g.add(host)
+    self.g.link((self.switches[0], self.switches[0].ports[2]), (self.switches[1], self.switches[1].ports[2]))
+    self.g.link((self.hosts[0], self.hosts[0].interfaces[0]), (self.switches[0], self.switches[0].ports[1]))
+    self.g.link((self.hosts[1], self.hosts[1].interfaces[0]), (self.switches[1], self.switches[1].ports[1]))
+    (self.patch, self.switches_calc, self.hosts_calc, self.access_links) = populate_from_topology(self.g)
+
+  def test_generated_topology(self):
+    self.assertEqual(len(self.access_links), len(self.hosts))
+    self.assertEqual(len(self.hosts_calc), len(self.hosts))
+    self.assertEqual(len(self.switches_calc), len(self.switches))
     
 class BufferedPanelTest(unittest.TestCase):
   _io_loop = RecocoIOLoop()

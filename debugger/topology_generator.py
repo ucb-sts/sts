@@ -20,7 +20,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
 '''
 
 from debugger_entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink
-from pox.openflow.switch_impl import ofp_phy_port, DpPacketOut
+from pox.openflow.switch_impl import ofp_phy_port, DpPacketOut, SwitchImpl
 from pox.lib.addresses import EthAddr, IPAddr
 from pox.openflow.libopenflow_01 import *
 from pox.lib.util import connect_socket_with_backoff
@@ -153,6 +153,16 @@ def populate_fat_tree(num_pods=48):
   patch_panel = BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
   return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
 
+def populate_from_topology(topology):
+  hosts = topology.find(is_a=Host) 
+  return (BufferedPatchPanelForTopology(topology), 
+           topology.find(is_a=SwitchImpl), 
+           hosts,
+           [AccessLink(host, switch[0], switch[1][0], switch[1][1])
+            for host in hosts 
+            for switch in filter(lambda n: isinstance(n[1][0], SwitchImpl),
+            topology.ports_for_node(host).iteritems())])
+
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
       Listens to the SwitchDPPacketOut event on the switches.
@@ -190,6 +200,13 @@ class PatchPanel(object):
   def deliver_packet(self, host, packet, host_interface):
     ''' Deliver the packet to its final destination '''
     host.receive(host_interface, packet)
+
+def BufferedPatchPanelForTopology(topology):
+  """
+  Given a pox.lib.graph.graph object with hosts, switches, and other things, 
+  produce an appropriate BufferedPatchPanel
+  """
+  return BufferedPatchPanel(topology.find(is_a=SwitchImpl), topology.find(is_a=Host), lambda node, port:topology.port_for_node(node, port))
 
 class BufferedPatchPanel(PatchPanel, EventMixin):
   '''
