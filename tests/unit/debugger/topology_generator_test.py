@@ -151,7 +151,6 @@ class BufferedPanelTest(unittest.TestCase):
     self.dp_out_event = DpPacketOut(self.switch1, self.icmp_packet, self.port)
     
   def test_buffering(self):
-    import pdb; pdb.set_trace()
     self.switch1.raiseEvent(self.dp_out_event)
     self.assertFalse(self.switch2.has_forwarded, "should not have forwarded yet")
     self.assertFalse(len(self.m.get_buffered_dp_events()) == 0, "should have buffered packet")
