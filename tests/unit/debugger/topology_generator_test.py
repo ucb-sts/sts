@@ -189,27 +189,29 @@ class BufferedPanelTest(unittest.TestCase):
     self.switches = [create_mock_switch(1,1), create_mock_switch(1,2)]
     self.m = BufferedPatchPanel(self.switches, [], FullyMeshedLinks(self.switches).get_connected_port)
     self.traffic_generator = TrafficGenerator()
-    self.switch = self.switches[0]
-    self.port = self.switch.ports.values()[0]
-    self.icmp_packet = self.traffic_generator.icmp_ping(self.switch, self.port)
-    self.dp_out_event = DpPacketOut(self.switch, self.icmp_packet, self.port)
+    self.switch1 = self.switches[0]
+    self.switch2 = self.switches[1]
+    self.port = self.switch1.ports.values()[0]
+    self.icmp_packet = self.traffic_generator.icmp_ping(self.switch1, self.port)
+    self.dp_out_event = DpPacketOut(self.switch1, self.icmp_packet, self.port)
     
   def test_buffering(self):
-    self.switch.raiseEvent(self.dp_out_event)
-    self.assertFalse(self.switch.has_forwarded, "should not have forwarded yet")
+    import pdb; pdb.set_trace()
+    self.switch1.raiseEvent(self.dp_out_event)
+    self.assertFalse(self.switch2.has_forwarded, "should not have forwarded yet")
     self.assertFalse(len(self.m.get_buffered_dp_events()) == 0, "should have buffered packet")
     self.m.permit_dp_event(self.dp_out_event)
     self.assertTrue(len(self.m.get_buffered_dp_events()) == 0, "should have cleared buffer")
-    self.assertTrue(self.switch.has_forwarded, "should have forwarded")
+    self.assertTrue(self.switch2.has_forwarded, "should have forwarded")
     
   def test_drop(self):
     # raise the event 
-    self.switch.raiseEvent(self.dp_out_event)
-    self.assertFalse(self.switch.has_forwarded, "should not have forwarded yet")
+    self.switch1.raiseEvent(self.dp_out_event)
+    self.assertFalse(self.switch2.has_forwarded, "should not have forwarded yet")
     self.assertFalse(len(self.m.get_buffered_dp_events()) == 0, "should have buffered packet")
     self.m.drop_dp_event(self.dp_out_event)
     self.assertTrue(len(self.m.get_buffered_dp_events()) == 0, "should have cleared buffer")
-    self.assertFalse(self.switch.has_forwarded, "should not have forwarded")
+    self.assertFalse(self.switch2.has_forwarded, "should not have forwarded")
     
 
 if __name__ == '__main__':
