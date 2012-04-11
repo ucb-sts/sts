@@ -4,3 +4,10 @@ This is untested, undocumented, non-working code from a research project.
 It's definitely unsupported and probably not very helpful to you right now.
 
 You have been warned :)
+
+ == Notes ==
+
+You'll need to load the pox submodule to run pox applications.
+
+After cloning, run:
+  $ git submodule update
