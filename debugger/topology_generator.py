@@ -154,18 +154,29 @@ def populate_fat_tree(controller_config_list, io_worker_constructor, num_pods=48
   connect_to_controllers(controller_config_list, io_worker_constructor, fat_tree.switches)
   return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
 
-def populate_from_topology(graph):
+def populate_from_topology(controller_config_list, io_worker_contructor, graph):
   """
   Take a pox.lib.graph.graph.Graph and generate arguments needed for the simulator
   """
   hosts = graph.find(is_a=Host) 
-  return (BufferedPatchPanelForTopology(graph), 
-           graph.find(is_a=SwitchImpl), 
+  switches = graph.find(is_a=SwitchImpl)
+  internal_links = set()
+  visited_nodes = set()
+  for switch in switches:
+      visited_nodes.add(switch)
+      internal_links.union([Link(switch, other[0], other[1][0], other[1][1])
+                        for other in filter(lambda n: (isinstance(n[1][0], SwitchImpl) and (n[1][0] not in visited_nodes)),
+                                  graph.ports_for_node(switch).iteritems())])
+  (patch, switches, internal_links, hosts, access_links) =  (BufferedPatchPanelForTopology(graph), 
+           switches, 
+           internal_links,
            hosts,
-           [AccessLink(host, switch[0], switch[1][0], switch[1][1])
+           set([AccessLink(host, switch[0], switch[1][0], switch[1][1])
             for host in hosts 
             for switch in filter(lambda n: isinstance(n[1][0], SwitchImpl),
-            graph.ports_for_node(host).iteritems())])
+            graph.ports_for_node(host).iteritems())]))
+  connect_to_controllers(controller_config_list, io_worker_contructor, switches)
+  return (patch, switches, internal_links, hosts, access_links)
 
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
@@ -395,7 +406,6 @@ class FatTree (object):
       for edge in current_edges:
         current_edge_port_no = (k/2)+1
         for agg in current_aggs:
-          self.internal_links.add(Link(edge, edge.ports[current_edge_port_no], agg, agg.ports[current_agg_port_no]))
           self.internal_links.add(Link(agg, agg.ports[current_agg_port_no], edge, edge.ports[current_edge_port_no]))
           current_edge_port_no += 1
         current_agg_port_no += 1

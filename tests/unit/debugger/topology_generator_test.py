@@ -15,6 +15,7 @@ from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.openflow.switch_impl import SwitchImpl
 from pox.lib.graph.graph import Graph
 from debugger.debugger_entities import Host, HostInterface
+from debugger.experiment_config_lib import Controller
 
 class topology_generator_test(unittest.TestCase):
   _io_loop = RecocoIOLoop()
@@ -131,6 +132,8 @@ class TopologyUnitTest(unittest.TestCase):
           self.ports[port.port_no] = port
       def process_packet(self, packet, in_port):
         self.has_forwarded = True
+      def connect(self):
+        pass
     def create_mock_switch(num_ports, switch_id):
       ports = []
       for port_no in range(1, num_ports+1):
@@ -151,7 +154,7 @@ class TopologyUnitTest(unittest.TestCase):
     self.g.link((self.switches[0], self.switches[0].ports[2]), (self.switches[1], self.switches[1].ports[2]))
     self.g.link((self.hosts[0], self.hosts[0].interfaces[0]), (self.switches[0], self.switches[0].ports[1]))
     self.g.link((self.hosts[1], self.hosts[1].interfaces[0]), (self.switches[1], self.switches[1].ports[1]))
-    (self.patch, self.switches_calc, self.hosts_calc, self.access_links) = populate_from_topology(self.g)
+    (self.patch, self.switches_calc, internal_links, self.hosts_calc, self.access_links) = populate_from_topology([Controller([], port=0)] ,lambda(socket):None,self.g)
 
   def test_generated_topology(self):
     self.assertEqual(len(self.access_links), len(self.hosts))
