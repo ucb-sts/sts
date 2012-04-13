@@ -142,7 +142,7 @@ def populate(controller_config_list, io_worker_constructor, num_switches=3):
   connect_to_controllers(controller_config_list, io_worker_constructor, switches)
   return (panel, switches, network_links, hosts, access_links) 
 
-def populate_fat_tree(num_pods=48):
+def populate_fat_tree(controller_config_list, io_worker_constructor, num_pods=48):
   '''
   Populate the topology as a fat tree, and return
   (PatchPanel, switches, network_links, hosts, access_links)
@@ -151,6 +151,7 @@ def populate_fat_tree(num_pods=48):
   fat_tree = FatTree(num_pods)
   fat_tree.install_portland_routes()
   patch_panel = BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
+  connect_to_controllers(controller_config_list, io_worker_constructor, fat_tree.switches)
   return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
 
 def populate_from_topology(graph):

@@ -154,8 +154,13 @@ try:
 
   # TODO: need a better way to choose FatTree vs. Mesh vs. whatever
   # Also, abusing the "num_switches" command line arg -> num_pods
-  (panel, switch_impls, network_links,
-                   hosts, access_links) = default_topology.populate_fat_tree(num_pods=args.num_switches)
+  (panel,
+   switch_impls,
+   network_links,
+   hosts,
+   access_links) = default_topology.populate_fat_tree(controllers,
+                                                      create_worker,
+                                                      num_pods=args.num_switches)
 
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
   debugger = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
