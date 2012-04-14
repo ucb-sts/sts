@@ -25,12 +25,12 @@ class DeferredIOWorkerTest(unittest.TestCase):
   def test_not_sent_until_permitted(self):
     i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
     i.send("foo")
-    self.assertFalse(i.io_worker.ready_to_send)
-    self.assertFalse(i.send_queue.empty())
+    self.assertFalse(i._io_worker._ready_to_send)
+    self.assertFalse(i._send_queue.empty())
     i.permit_send()
-    self.assertTrue(i.send_queue.empty())
-    i.consume_send_buf(3)
-    self.assertFalse(i.io_worker.ready_to_send)
+    self.assertTrue(i._send_queue.empty())
+    i._io_worker._consume_send_buf(3)
+    self.assertFalse(i._io_worker._ready_to_send)
 
   def test_not_received_until_permitted(self):
     i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
@@ -38,12 +38,12 @@ class DeferredIOWorkerTest(unittest.TestCase):
     def d(worker):
       self.data = worker.peek_receive_buf()
     i.set_receive_handler(d)
-    i.io_worker.push_receive_data("bar")
+    i._io_worker._push_receive_data("bar")
     self.assertEqual(self.data, None)
     i.permit_receive()
     self.assertEqual(self.data, "bar")
     # d does not consume the data
-    i.io_worker.push_receive_data("hepp")
+    i._io_worker._push_receive_data("hepp")
     i.permit_receive()
     self.assertEqual(self.data, "barhepp")
 
@@ -54,11 +54,11 @@ class DeferredIOWorkerTest(unittest.TestCase):
       self.data = worker.peek_receive_buf()
       worker.consume_receive_buf(len(self.data))
     i.set_receive_handler(consume)
-    i.io_worker.push_receive_data("bar")
+    i._io_worker._push_receive_data("bar")
     self.assertEqual(self.data, None)
     i.permit_receive()
     self.assertEqual(self.data, "bar")
     # data has been consumed
-    i.io_worker.push_receive_data("hepp")
+    i._io_worker._push_receive_data("hepp")
     i.permit_receive()
     self.assertEqual(self.data, "hepp")
