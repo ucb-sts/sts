@@ -23,16 +23,19 @@ class DeferredIOWorker(object):
   Rather than actually sending/receiving right away, queue the messages.
   Then there are separate methods for actually sending the messages via
   the wrapped io_worker
+  
+  io_worker: io_worker to wrap
+  call_later: recoco.Scheduler's call_later factory method for scheduling/thread-safety
   '''
   def __init__(self, io_worker, call_later):
-    self.io_worker = io_worker
-    self.io_worker.set_receive_handler(self.io_worker_receive_handler)
-    self.call_later = call_later
+    self._io_worker = io_worker
+    self._io_worker.set_receive_handler(self.io_worker_receive_handler)
+    self._call_later = call_later
     # Thread-safe read and write queues of indefinite length
-    self.receive_queue = Queue.Queue()
-    self.send_queue = Queue.Queue()
+    self._receive_queue = Queue.Queue()
+    self._send_queue = Queue.Queue()
     # Read buffer that we present to clients
-    self.receive_buf = ""
+    self._receive_buf = ""
 
   def permit_send(self):
     '''
@@ -41,17 +44,17 @@ class DeferredIOWorker(object):
     
     raises an exception if the write queue is empty
     '''
-    message = self.send_queue.get()
+    message = self._send_queue.get()
     # TODO: will recoco guarentee in-order delivery of a sequence of these send requests?
-    self.call_later(lambda: self.io_worker.send(message))
+    self._call_later(lambda: self._io_worker.send(message))
 
   def send(self, data):
     """ send data from the client side. fire and forget. """
-    self.send_queue.put(data)
+    self._send_queue.put(data)
 
   def has_pending_sends(self):
     ''' called by the "arbitrator" in charge of deferal '''
-    return not self.send_queue.empty()
+    return not self._send_queue.empty()
 
   def permit_receive(self):
     '''
@@ -60,21 +63,22 @@ class DeferredIOWorker(object):
     
     raises an exception if the read queue is empty
     '''
-    data = self.receive_queue.get()
-    self.receive_buf += data
-    self.client_receive_handler(self)
+    data = self._receive_queue.get()
+    self._receive_buf += data
+    self._client_receive_handler(self)
 
   def set_receive_handler(self, block):
     ''' Called by client '''
-    self.client_receive_handler = block
+    self._client_receive_handler = block
     
   def peek_receive_buf(self):
-    return self.receive_buf
+    ''' Called by client '''
+    return self._receive_buf
 
   def consume_receive_buf(self, l):
-    ''' called from the client to consume receive buffer '''
-    assert(len(self.receive_buf) >= l)
-    self.receive_buf = self.receive_buf[l:]
+    ''' called by client to consume receive buffer '''
+    assert(len(self._receive_buf) >= l)
+    self._receive_buf = self._receive_buf[l:]
     
   def io_worker_receive_handler(self, io_worker):
     ''' called from io_worker (recoco thread, after the Select loop pushes onto io_worker) '''
@@ -82,27 +86,22 @@ class DeferredIOWorker(object):
     message = io_worker.peek_receive_buf()
     io_worker.consume_receive_buf(len(message))
     # thread-safe queue
-    self.receive_queue.put(message)
+    self._receive_queue.put(message)
       
   def has_pending_receives(self):
     ''' called by the "arbitrator" in charge of deferal '''
-    return not self.receive_queue.empty()
+    return not self._receive_queue.empty()
   
-  # Delegation functions.
+  # ------- Delegation functions. ---------
   # TODO: is there a more pythonic way to implement delegation?
   
   def fileno(self):
     # thread safety shoudn't matter here
-    return self.io_worker.fileno()
+    return self._io_worker.fileno()
 
   def close(self):
-    self.call_later(self.io_worker.close)
+    self._call_later(self._io_worker.close)
 
   @property
   def socket(self):
-    # TODO: does thread-safety matter here? Suppose the client changes an option on the socket.
-    return self.io_worker.socket
-
-  def consume_send_buf(self, l):
-    # TODO: does thread-safety matter here? We want this to be a synchronous method...
-    return self.io_worker.consume_send_buf(l)
+    return self._io_worker.socket
