@@ -82,27 +82,22 @@ class DeferredIOWorker(object):
     message = io_worker.peek_receive_buf()
     io_worker.consume_receive_buf(len(message))
     # thread-safe queue
-    self.receive_queue.put(message)
+    self._receive_queue.put(message)
       
   def has_pending_receives(self):
     ''' called by the "arbitrator" in charge of deferal '''
-    return not self.receive_queue.empty()
+    return not self._receive_queue.empty()
   
-  # Delegation functions.
+  # ------- Delegation functions. ---------
   # TODO: is there a more pythonic way to implement delegation?
   
   def fileno(self):
     # thread safety shoudn't matter here
-    return self.io_worker.fileno()
+    return self._io_worker.fileno()
 
   def close(self):
-    self.call_later(self.io_worker.close)
+    self._call_later(self._io_worker.close)
 
   @property
   def socket(self):
-    # TODO: does thread-safety matter here? Suppose the client changes an option on the socket.
-    return self.io_worker.socket
-
-  def consume_send_buf(self, l):
-    # TODO: does thread-safety matter here? We want this to be a synchronous method...
-    return self.io_worker.consume_send_buf(l)
+    return self._io_worker.socket
