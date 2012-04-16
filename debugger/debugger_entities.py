@@ -214,6 +214,20 @@ class Controller (Host):
     self.connected = True
     self._ofp_handler = {}
     self._connection = None
+    self.mod_handlers = {
+       # Reactive handlers
+       ofp_type_rev_map['OFPT_HELLO'] : lambda x: self.receive(ofp_type_rev_map['OFPT_HELLO'], x),
+       ofp_type_rev_map['OFPT_ECHO_REQUEST'] : lambda x: self.receive(ofp_type_rev_map['OFPT_ECHO_REQUEST'], x),
+       ofp_type_rev_map['OFPT_FEATURES_REQUEST'] : lambda x: self.receive(ofp_type_rev_map['OFPT_FEATURES_REQUEST'], x),
+       ofp_type_rev_map['OFPT_FLOW_MOD'] : lambda x: self.receive(ofp_type_rev_map['OFPT_FLOW_MOD'], x),
+       ofp_type_rev_map['OFPT_PACKET_OUT'] : lambda x: self.receive(ofp_type_rev_map['OFPT_PACKET_OUT'], x),
+       ofp_type_rev_map['OFPT_BARRIER_REQUEST'] :lambda x: self.receive(ofp_type_rev_map['OFPT_BARRIER_REQUEST'], x),
+       ofp_type_rev_map['OFPT_SET_CONFIG'] : lambda x: self.receive(ofp_type_rev_map['OFPT_SET_CONFIG'], x),
+
+       # Proactive responses
+       ofp_type_rev_map['OFPT_ECHO_REPLY'] : lambda x: self.receive(ofp_type_rev_map['OFPT_ECHO_REPLY'], x)
+       # TODO: many more packet types to process
+    }
 
   def send(self, packet):
     ''' Process an incoming openflow packet '''
@@ -230,11 +244,10 @@ class Controller (Host):
   def ofp_handlers(self, handler):
     self._ofp_handler = handler
     mod_handlers = {}
-    for k in self._ofp_handler.iterkeys():
-      mod_handlers[k] = lambda x: self.receive(k, x)
+    #mod_handlers = {k : lambda x: self.receive(k, x) for k in self._ofp_handler.keys()}
     if self._connection is not None:
       del self._connection
-    self._connection = ControllerConnection(self.io_worker, mod_handlers)
+    self._connection = ControllerConnection(self.io_worker, self.mod_handlers)
 
   @property
   def error_handler(self):
