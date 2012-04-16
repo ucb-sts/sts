@@ -55,7 +55,6 @@ class FuzzSwitchImpl (SwitchImpl):
     io_worker = self.create_io_worker(self)
 
     conn = Controller(io_worker)
-    print "Setting connection"
     self.set_connection(conn)
     # cause errors to be raised
     conn.error_handler = self.error_handler
@@ -214,27 +213,15 @@ class Controller (Host):
     self.connected = True
     self._ofp_handler = {}
     self._connection = None
-    self.mod_handlers = {
-       # Reactive handlers
-       ofp_type_rev_map['OFPT_HELLO'] : lambda x: self.receive(ofp_type_rev_map['OFPT_HELLO'], x),
-       ofp_type_rev_map['OFPT_ECHO_REQUEST'] : lambda x: self.receive(ofp_type_rev_map['OFPT_ECHO_REQUEST'], x),
-       ofp_type_rev_map['OFPT_FEATURES_REQUEST'] : lambda x: self.receive(ofp_type_rev_map['OFPT_FEATURES_REQUEST'], x),
-       ofp_type_rev_map['OFPT_FLOW_MOD'] : lambda x: self.receive(ofp_type_rev_map['OFPT_FLOW_MOD'], x),
-       ofp_type_rev_map['OFPT_PACKET_OUT'] : lambda x: self.receive(ofp_type_rev_map['OFPT_PACKET_OUT'], x),
-       ofp_type_rev_map['OFPT_BARRIER_REQUEST'] :lambda x: self.receive(ofp_type_rev_map['OFPT_BARRIER_REQUEST'], x),
-       ofp_type_rev_map['OFPT_SET_CONFIG'] : lambda x: self.receive(ofp_type_rev_map['OFPT_SET_CONFIG'], x),
-
-       # Proactive responses
-       ofp_type_rev_map['OFPT_ECHO_REPLY'] : lambda x: self.receive(ofp_type_rev_map['OFPT_ECHO_REPLY'], x)
-       # TODO: many more packet types to process
-    }
+    self.mod_handlers = {}
+  
+  def create_callback(self, req):
+    return lambda msg: self.receive(req, msg)
 
   def send(self, packet):
     ''' Process an incoming openflow packet '''
     if self.connected and self._connection is not None:
       self._connection.send(packet)
-    else:
-      print self.ofp_handler
 
   @property
   def ofp_handlers(self):
@@ -243,8 +230,7 @@ class Controller (Host):
   @ofp_handlers.setter
   def ofp_handlers(self, handler):
     self._ofp_handler = handler
-    mod_handlers = {}
-    #mod_handlers = {k : lambda x: self.receive(k, x) for k in self._ofp_handler.keys()}
+    self.mod_handlers = {k : self.create_callback(k) for k in self._ofp_handler.keys()}
     if self._connection is not None:
       del self._connection
     self._connection = ControllerConnection(self.io_worker, self.mod_handlers)
