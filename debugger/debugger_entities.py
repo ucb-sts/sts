@@ -17,7 +17,7 @@ processes. To emulate, we'll want to :
           and the control application?
 """
 
-from pox.openflow.switch_impl import SwitchImpl, DpPacketOut
+from pox.openflow.switch_impl import SwitchImpl, DpPacketOut, ControllerConnection
 from pox.lib.util import connect_socket_with_backoff, assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
@@ -51,10 +51,11 @@ class FuzzSwitchImpl (SwitchImpl):
 
   def connect(self):
     # NOTE: create_io_worker is /not/ an instancemethod but just a function
-    # so we have to pass in the self parameter explicitely
+    # so we have to pass in the self parameter explicitly
     io_worker = self.create_io_worker(self)
 
-    conn = self.set_io_worker(io_worker)
+    conn = Controller(io_worker)
+    self.set_connection(conn)
     # cause errors to be raised
     conn.error_handler = self.error_handler
 
@@ -203,3 +204,54 @@ class Host (EventMixin):
   def __str__(self):
     return self.name
     
+class Controller (Host):
+  '''
+  A very simple controller
+  '''
+  def __init__(self, io_worker):
+    self.io_worker = io_worker
+    self.connected = True
+    self.ofp_hander = {}
+    self._connection = None
+
+  def send(self, message):
+    ''' Process an incoming openflow packet '''
+    if connected:
+      self._connection.send(packet)
+
+  @property
+  def ofp_handler(self):
+    return self._ofp_handler
+
+  @ofp_handler.setter
+  def ofp_handler(self, handler):
+    self._ofp_handler = handler
+    mod_handlers = {}
+    for k in self._ofp_handler.iterkeys():
+      mod_handlers[k] = lambda x: self.received(k, x)
+    if self._connection is not None:
+      del self._connection
+    self._connection = ControllerConnection(self.io_worker, mod_handlers)
+
+  @property
+  def error_handler(self):
+    return self._error_handler
+  
+  @error_handler.setter
+  def error_handler(self, handler):
+    self._error_handler = handler
+    if self._connection is not None:
+      self._connection.error_handler = self.checked_error_handler
+  
+  def checked_error_handler(self, error):
+    if connected:
+      self._error_handler(error)
+
+  def receive(self, ofp_type, msg):
+    if connected:
+      if ofp_type in self._ofp_handler:
+        ofp_handler[ofp_type](msg)
+    else:
+      class NotConnectedException(Exception):
+        pass
+      raise NotConnectedException
