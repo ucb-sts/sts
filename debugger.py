@@ -85,6 +85,10 @@ parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.
 #parser.disable_interspersed_args()
 args = parser.parse_args()
 
+if not args.controller_args:
+  parser.print_help()
+  sys.exit(1)
+
 if args.config:
   config = __import__(args.config_file)
 else:
