@@ -68,7 +68,7 @@ parser.add_argument("-s", "--steps", type=int, metavar="nsteps",
                     help="number of steps to simulate", default=None)
 
 parser.add_argument("-p", "--port", type=int, metavar="port",
-                    help="base port to use for controllers", default=8888)
+                    help="base port to use for controllers", default=6633)
 
 parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
                     help="optional parameters for the fuzzer (e.g. fail rate)")
