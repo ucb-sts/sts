@@ -55,6 +55,7 @@ class FuzzSwitchImpl (SwitchImpl):
     io_worker = self.create_io_worker(self)
 
     conn = Controller(io_worker)
+    print "Setting connection"
     self.set_connection(conn)
     # cause errors to be raised
     conn.error_handler = self.error_handler
@@ -214,7 +215,7 @@ class Controller (Host):
     self._ofp_handler = {}
     self._connection = None
 
-  def send(self, message):
+  def send(self, packet):
     ''' Process an incoming openflow packet '''
     if self.connected and self._connection is not None:
       self._connection.send(packet)
@@ -222,15 +223,15 @@ class Controller (Host):
       print self.ofp_handler
 
   @property
-  def ofp_handler(self):
+  def ofp_handlers(self):
     return self._ofp_handler
 
-  @ofp_handler.setter
-  def ofp_handler(self, handler):
+  @ofp_handlers.setter
+  def ofp_handlers(self, handler):
     self._ofp_handler = handler
     mod_handlers = {}
     for k in self._ofp_handler.iterkeys():
-      mod_handlers[k] = lambda x: self.received(k, x)
+      mod_handlers[k] = lambda x: self.receive(k, x)
     if self._connection is not None:
       del self._connection
     self._connection = ControllerConnection(self.io_worker, mod_handlers)
@@ -252,7 +253,7 @@ class Controller (Host):
   def receive(self, ofp_type, msg):
     if self.connected:
       if ofp_type in self._ofp_handler:
-        ofp_handler[ofp_type](msg)
+        self.ofp_handlers[ofp_type](msg)
     else:
       class NotConnectedException(Exception):
         pass
