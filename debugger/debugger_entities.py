@@ -211,13 +211,15 @@ class Controller (Host):
   def __init__(self, io_worker):
     self.io_worker = io_worker
     self.connected = True
-    self.ofp_hander = {}
+    self._ofp_handler = {}
     self._connection = None
 
   def send(self, message):
     ''' Process an incoming openflow packet '''
-    if connected:
+    if self.connected and self._connection is not None:
       self._connection.send(packet)
+    else:
+      print self.ofp_handler
 
   @property
   def ofp_handler(self):
@@ -244,11 +246,11 @@ class Controller (Host):
       self._connection.error_handler = self.checked_error_handler
   
   def checked_error_handler(self, error):
-    if connected:
+    if self.connected:
       self._error_handler(error)
 
   def receive(self, ofp_type, msg):
-    if connected:
+    if self.connected:
       if ofp_type in self._ofp_handler:
         ofp_handler[ofp_type](msg)
     else:
