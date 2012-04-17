@@ -1,13 +1,17 @@
- == Here be dragons ==
+This is a troubleshooting framework for software-defined networks. It is
+useful for both network operators seeking to track down network policy-violations,
+and platform developers seeking to test and debug control software.
 
-This is untested, undocumented, non-working code from a research project.
-It's definitely unsupported and probably not very helpful to you right now.
-
-You have been warned :)
+The code is quite nascent and still in flux.
 
  == Notes ==
+
+Requires python 2.7+
 
 You'll need to load the pox submodule to run pox applications.
 
 After cloning, run:
   $ git submodule update
+
+To run, see:
+  $ ./debugger.py -h

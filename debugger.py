@@ -1,4 +1,28 @@
-#!/usr/bin/python
+#!/bin/bash -
+
+# If you have PyPy 1.6+ in a directory called pypy alongside pox.py, we
+# use it.
+# Otherwise, we try to use a Python interpreter called python2.7, which
+# is a good idea if you're using Python from MacPorts, for example.
+# We fall back to just "python" and hope that works.
+
+''''echo -n
+export OPT="-O"
+export FLG=""
+if [[ "$(basename $0)" == "debug-pox.py" ]]; then
+  export OPT=""
+  export FLG="--debug"
+fi
+
+if [ -x pypy/bin/pypy ]; then
+  exec pypy/bin/pypy $OPT "$0" $FLG "$@"
+fi
+
+if [ "$(type -P python2.7)" != "" ]; then
+  exec python2.7 $OPT "$0" $FLG "$@"
+fi
+exec python $OPT "$0" $FLG "$@"
+'''
 
 from debugger.debugger import FuzzTester
 from debugger.deferred_io import DeferredIOWorker
@@ -45,7 +69,7 @@ parser.add_argument("-s", "--steps", type=int, metavar="nsteps",
                     help="number of steps to simulate", default=None)
 
 parser.add_argument("-p", "--port", type=int, metavar="port",
-                    help="base port to use for controllers", default=8888)
+                    help="base port to use for controllers", default=6633)
 
 parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
                     help="optional parameters for the fuzzer (e.g. fail rate)")
@@ -61,6 +85,10 @@ parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.
                    help='arguments to pass to the controller(s)')
 #parser.disable_interspersed_args()
 args = parser.parse_args()
+
+if not args.controller_args:
+  parser.print_help()
+  sys.exit(1)
 
 if args.config:
   config = __import__(args.config_file)
@@ -145,7 +173,7 @@ try:
   io_loop = RecocoIOLoop()
   
   scheduler = Scheduler(daemon=True, useEpoll=True)
-  scheduler.schedule(io_loop)
+  #scheduler.schedule(io_loop)
 
   #if hasattr(config, 'switches'):
   #  switches = config.switches()
