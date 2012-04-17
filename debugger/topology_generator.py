@@ -75,7 +75,12 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, ge
     if ips:
       ip_addr = ips.pop(0) 
     else:
-      ip_addr = IPAddr("123.123.%d.%d" % (switch.dpid, port.port_no))
+      q0 = (switch.dpid) >> 8
+      q0 = 1 + (q0 % 255)
+      q1 = (switch.dpid) >> 4
+      q1 = 1 + (q1 % 255)
+      q2 = (switch.dpid % 256)
+      ip_addr = IPAddr("%d.%d.%d.%d" % (q0, q1, q2, port.port_no))
       
     name = "eth%d" % switch.dpid
     interface = HostInterface(mac, ip_addr, name)
@@ -147,7 +152,9 @@ def populate_fat_tree(controller_config_list, io_worker_constructor, num_pods=48
   Populate the topology as a fat tree, and return
   (PatchPanel, switches, network_links, hosts, access_links)
   '''
+  print "populate_fat_tree: About to populate"
   fat_tree = FatTree(num_pods)
+  print "Done populating"
   patch_panel = BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
   connect_to_controllers(controller_config_list, io_worker_constructor, fat_tree.switches)
   return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
@@ -156,6 +163,7 @@ def populate_from_topology(controller_config_list, io_worker_contructor, graph):
   """
   Take a pox.lib.graph.graph.Graph and generate arguments needed for the simulator
   """
+  print "Start populating"
   hosts = graph.find(is_a=Host) 
   switches = graph.find(is_a=SwitchImpl)
   internal_links = set()
@@ -173,7 +181,9 @@ def populate_from_topology(controller_config_list, io_worker_contructor, graph):
             for host in hosts 
             for switch in filter(lambda n: isinstance(n[1][0], SwitchImpl),
             graph.ports_for_node(host).iteritems())]))
+  print "Connecting to controller"
   connect_to_controllers(controller_config_list, io_worker_contructor, switches)
+  print "Done populating"
   return (patch, switches, internal_links, hosts, access_links)
 
 class PatchPanel(object):
@@ -312,6 +322,7 @@ class FullyMeshedLinks(object):
 class FatTree (object):
   ''' Construct a FatTree topology with a given number of pods '''
   def __init__(self, num_pods=48):
+    print "Initing fat_tree object"
     if num_pods < 2:
       raise "Can't handle Fat Trees with less than 2 pods"
        
@@ -338,7 +349,7 @@ class FatTree (object):
     for access_link in self.access_links:
       self.port2access_link[access_link.switch_port] = access_link
       self.interface2access_link[access_link.interface] = access_link
-       
+    print "Done initing"
   def construct_tree(self, num_pods):
     '''
     According to  "A Scalable, Commodity Data Center Network Architecture", 

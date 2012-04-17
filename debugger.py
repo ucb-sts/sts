@@ -6,6 +6,7 @@ import debugger.topology_generator as default_topology
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from debugger.experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
+from pox.lib.graph.graph import Graph 
 
 import signal
 import sys
@@ -139,6 +140,7 @@ try:
     print command_line_args
     child = subprocess.Popen(command_line_args)
     child_processes.append(child)
+  print "Controller up"
 
   io_loop = RecocoIOLoop()
   
@@ -151,17 +153,42 @@ try:
   #  switches = []
   # HACK
   create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket), scheduler.callLater)
-
+  
+  print "Setting up topology"
   # TODO: need a better way to choose FatTree vs. Mesh vs. whatever
   # Also, abusing the "num_switches" command line arg -> num_pods
+  #(panel,
+  # switch_impls,
+  # network_links,
+  # hosts,
+  # access_links) = default_topology.populate_fat_tree(controllers,
+  #                                                    create_worker,
+  #                                                    num_pods=args.num_switches)
+
+  graph = Graph()
+  switches = [None for i in xrange(0, args.num_switches)]
+  hosts = [None for i in xrange(0, args.num_switches)]
+  from time import clock
+  print str.format("{0} Starting to build graph", clock())
+  for i in xrange(0, args.num_switches):
+    switches[i] = default_topology.create_switch(i + 1, 3)
+    hosts[i] = default_topology.create_host(switches[i], get_switch_port = lambda s: s.ports[3] )[0]
+    graph.add(switches[i])
+    graph.add(hosts[i])
+    if i > 0:
+      graph.link((switches[i - 1], switches[i-1].ports[2]), (switches[i], switches[i].ports[1]))
+    graph.link((switches[i], switches[i].ports[3]), (hosts[i], hosts[i].interfaces[0]))
+
+  print str.format("{0} Done building graph", clock())
   (panel,
    switch_impls,
    network_links,
    hosts,
-   access_links) = default_topology.populate_fat_tree(controllers,
+   access_links) = default_topology.populate_from_topology(controllers,
                                                       create_worker,
-                                                      num_pods=args.num_switches)
+                                                      graph)
 
+  print str.format("{0} Done setting up switches", clock())
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
   debugger = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
                         random_seed=args.random_seed, delay=args.delay,
