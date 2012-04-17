@@ -142,7 +142,7 @@ try:
 
   io_loop = RecocoIOLoop()
   
-  scheduler = Scheduler(daemon=True)
+  scheduler = Scheduler(daemon=True, useEpoll=True)
   scheduler.schedule(io_loop)
 
   #if hasattr(config, 'switches'):
