@@ -25,6 +25,7 @@ from pox.lib.addresses import EthAddr, IPAddr
 from pox.openflow.libopenflow_01 import *
 from pox.lib.util import connect_socket_with_backoff
 from pox.lib.revent import EventMixin
+from pox.lib.recoco import Sleep
 import socket
 import time
 import errno
@@ -128,6 +129,15 @@ def connect_to_controllers(controller_info_list, io_worker_generator, switch_imp
 
   logger.debug("Connecting %d switches to %d controllers..." % (len(switch_impls), len(controller_info_list)))
 
+  def create_io_worker(switch):
+    create_io_worker.count = create_io_worker.count + 1
+    controller_socket = connect_socket_with_backoff(controller_info.address, controller_info.port, non_blocking = create_io_worker.has_connected and (create_io_worker.count % 5 != 0) and (create_io_worker.count < len(switch_impls)))
+    # Set non-blocking
+    controller_socket.setblocking(0)
+    create_io_worker.has_connected = True
+    return io_worker_generator(controller_socket)
+  create_io_worker.count = 0
+  create_io_worker.has_connected = False
   for (idx, switch_impl) in enumerate(switch_impls):
     if not idx % 250:
       logger.debug("Connecting switch %d / %d" % (idx, len(switch_impls)))
@@ -135,15 +145,8 @@ def connect_to_controllers(controller_info_list, io_worker_generator, switch_imp
     # TODO: what if the controller is slow to boot?
     # Socket from the switch_impl to the controller
     controller_info = controller_info_cycler.next()
-    def create_io_worker(switch):
-      controller_socket = connect_socket_with_backoff(controller_info.address, controller_info.port)
-      # Set non-blocking
-      controller_socket.setblocking(0)
-      return io_worker_generator(controller_socket)
-
     switch_impl.create_io_worker = create_io_worker
     switch_impl.connect()
-
   logger.debug("Controller connections done")
 
 def populate(controller_config_list, io_worker_constructor, num_switches=3):
