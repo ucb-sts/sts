@@ -13,7 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), *itertools.repeat("..", 
 
 from pox.lib.mock_socket import MockSocket
 from pox.lib.ioworker.io_worker import IOWorker
-from debugger.deferred_io import DeferredIOWorker
+from sts.deferred_io import DeferredIOWorker
 from nose.tools import eq_
 
 class DeferredIOWorkerTest(unittest.TestCase):

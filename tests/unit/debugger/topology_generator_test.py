@@ -9,12 +9,12 @@ import types
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
-from debugger.topology_generator import *
-from debugger.traffic_generator import *
+from sts.topology_generator import *
+from sts.traffic_generator import *
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.openflow.switch_impl import SwitchImpl
 from pox.lib.graph.graph import Graph
-from debugger.debugger_entities import Host, HostInterface
+from sts.debugger_entities import Host, HostInterface
 
 class topology_generator_test(unittest.TestCase):
   _io_loop = RecocoIOLoop()

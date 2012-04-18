@@ -32,7 +32,7 @@ import sys
 import itertools
 import logging
 
-logger = logging.getLogger("debugger.topology_generator")
+logger = logging.getLogger("sts.topology_generator")
 
 def create_switch(switch_id, num_ports):
   ports = []

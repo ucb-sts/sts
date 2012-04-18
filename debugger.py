@@ -24,11 +24,13 @@ fi
 exec python $OPT "$0" $FLG "$@"
 '''
 
-from debugger.debugger import FuzzTester
-from debugger.deferred_io import DeferredIOWorker
-import debugger.topology_generator as default_topology
+from sts.debugger import FuzzTester
+from sts.deferred_io import DeferredIOWorker
+from sts.procutils import kill_procs, popen_filtered
+
+import sts.topology_generator as default_topology
 from pox.lib.ioworker.io_worker import RecocoIOLoop
-from debugger.experiment_config_lib import Controller
+from sts.experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
 
 import signal
@@ -42,8 +44,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 # We use python as our DSL for specifying experiment configuration  
 # The module can define the following functions:
-#   controllers(command_line_args=[]) => returns a list of pox.debugger.experiment_config_info.ControllerInfo objects
-#   switches()                        => returns a list of pox.debugger.experiment_config_info.Switch objects
+#   controllers(command_line_args=[]) => returns a list of pox.sts.experiment_config_info.ControllerInfo objects
+#   switches()                        => returns a list of pox.sts.experiment_config_info.Switch objects
 
 description = """
 Run a debugger experiment.

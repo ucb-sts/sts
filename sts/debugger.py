@@ -26,38 +26,10 @@ import os
 import logging
 import pickle
 
+from sts.console import msg
+
 log = logging.getLogger("debugger")
 
-class msg():
-  BEGIN = '\033[1;'
-  END = '\033[1;m'
-
-  GRAY, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, CRIMSON = map(lambda num: str(num) + "m", range(30, 39))
-  B_GRAY, B_RED, B_GREEN, B_YELLOW, B_BLUE, B_MAGENTA, B_CYAN, B_WHITE, B_CRIMSON =  map(lambda num: str(num) + "m", range(40, 49))
-
-  @staticmethod
-  def interactive(message):
-    # todo: would be nice to simply give logger a color arg, but that doesn't exist...
-    print msg.BEGIN + msg.WHITE + message + msg.END
-
-  @staticmethod
-  def event(message):
-    print msg.BEGIN + msg.CYAN + message + msg.END
-
-  @staticmethod
-  def raw_input(message):
-    prompt = msg.BEGIN + msg.WHITE + message + msg.END
-    return raw_input(prompt)
-
-  @staticmethod
-  def success(message):
-    print msg.BEGIN + msg.B_GREEN + msg.BEGIN + msg.WHITE + message + msg.END
-
-  @staticmethod
-  def fail(message):
-    print msg.BEGIN + msg.B_RED + msg.BEGIN + msg.WHITE + message + msg.END
-    
- 
 class FuzzTester (EventMixin):
   """
   This is part of a testing framework for controller applications. It
@@ -85,7 +57,7 @@ class FuzzTester (EventMixin):
     self.logical_time = 0
 
     # Metatdata for simulated failures
-    # debugger.debugger_entities.Link objects
+    # sts.debugger_entities.Link objects
     self.cut_links = set()
     # SwitchOutDpEvent objects
     self.dropped_dp_events = []
@@ -122,7 +94,7 @@ class FuzzTester (EventMixin):
     # ]
 
     # TODO: need a mechanism for signaling  when the distributed controller handshake has completed
-    
+
   def _load_fuzzer_params(self, fuzzer_params):
     if os.path.exists(fuzzer_params):
       # TODO: more pythonic way to read lines (currently on a plane...)
@@ -130,14 +102,14 @@ class FuzzTester (EventMixin):
       for line in file(fuzzer_params).read().splitlines():
         if line == "[fuzzer]":
           # TODO: handle more directives other than [fuzzer]
-          continue 
+          continue
         (kw, eq, val) = line.split()
         val = float(val)
         setattr(self, kw, val)
     else:
       # TODO: default values in case fuzzer_config is not present / missing directives
       raise IOError("Could not find logging config file: %s" % fuzzer_params)
-     
+
   def simulate(self, panel, switch_impls, network_links, hosts, access_links, steps=None):
     """
     Start the fuzzer loop!
@@ -174,7 +146,7 @@ class FuzzTester (EventMixin):
 
   def stop(self):
     self.running = False
-    
+
   def invariant_check_prompt(self):
     answer = msg.raw_input('Check Invariants? [Ny]')
     if answer != '' and answer.lower() != 'n':
@@ -204,7 +176,7 @@ class FuzzTester (EventMixin):
         return
       else:
         msg.interactive("Result: %s" % str(result))
-  
+
   def dataplane_trace_prompt(self):
     # TODO: support non-interactive trace input
     if self.dataplane_trace:
@@ -228,7 +200,7 @@ class FuzzTester (EventMixin):
   def live_switches(self):
     """ Return the switch_impls which are currently up """
     return self.switch_impls - self.failed_switches
-  
+
   @property
   def live_links(self):
     return self.dataplane_links - self.cut_links
@@ -263,27 +235,27 @@ class FuzzTester (EventMixin):
           self.panel.permit_dp_event(dp_event)
         else:
           (next_hop, next_port) = self.panel.get_connected_port(dp_event.switch, dp_event.port)
-          link = Link(dp_event.switch, dp_event.port, next_hop, next_port) 
+          link = Link(dp_event.switch, dp_event.port, next_hop, next_port)
           if not link in self.cut_links:
             msg.event("Forwarding dataplane event")
             # Forward the message
             self.panel.permit_dp_event(dp_event)
-    
+
   def check_controlplane(self):
     ''' Decide whether to delay or deliver packets '''
     def check_deliver(switch_impl, type, give_permission):
-        if self.random.random() < self.controlplane_delay_rate:
-          log.debug("Delaying control plane %s for %s" % (type, str(switch_impl)))
-        else:
-          log.debug("Giving permission for control plane %s for %s" % (type, str(switch_impl)))
-          give_permission()
-        
+      if self.random.random() < self.controlplane_delay_rate:
+        log.debug("Delaying control plane %s for %s" % (type, str(switch_impl)))
+      else:
+        log.debug("Giving permission for control plane %s for %s" % (type, str(switch_impl)))
+        give_permission()
+
     for switch_impl in self.live_switches:
       # Check reads
       # TODO: shouldn't be sticking our hands into switch_impl._connection
       if switch_impl._connection.io_worker.has_pending_receives():
         check_deliver(switch_impl, "receive", switch_impl._connection.io_worker.permit_receive)
-      
+
       # Check writes
       if switch_impl._connection.io_worker.has_pending_sends():
         check_deliver(switch_impl, "send", switch_impl._connection.io_worker.permit_send)
@@ -333,7 +305,7 @@ class FuzzTester (EventMixin):
     restart_switches(crashed_this_round)
     cut_this_round = sever_links()
     repair_links(cut_this_round)
-  
+
   def check_timeouts(self):
     # Interpose on timeouts
     pass
@@ -348,5 +320,3 @@ class FuzzTester (EventMixin):
             traffic_type = "icmp_ping"
             # Generates a packet, and feeds it to the switch_impl
             self.traffic_generator.generate(traffic_type, switch_impl)
-
-

@@ -8,7 +8,7 @@ import headerspace.headerspace.tf as tf
 import headerspace.config_parser.openflow_parser as of
 
 def generate_TTF(all_links):
-  ''' Takes a list of debugger.debugger_entities.Link objects (directed) '''
+  ''' Takes a list of sts.debugger_entities.Link objects (directed) '''
   ttf = tf.TF(of.HS_FORMAT())
   
   for link in all_links:
