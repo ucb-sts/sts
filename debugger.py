@@ -103,48 +103,9 @@ else:
 
 child_processes = []
 scheduler = None
-def kill_children(kill=None):
+def kill_children():
   global child_processes
-  global scheduler
-
-  if kill == None:
-    if hasattr(kill_children,"already_run"):
-      kill = True
-    else:
-      kill = False
-      kill_children.already_run = True
-
-  if len(child_processes) == 0:
-    return
-
-  print >> sys.stderr, "%s child controllers..." % ("Killing" if kill else "Terminating"),
-  for child in child_processes:
-    if kill:
-      child.kill()
-    else:
-      child.terminate()
-
-  start_time = time.time()
-  last_dot = start_time
-  while True:
-    for child in child_processes:
-      if child.poll() != None:
-        if child in child_processes:
-          child_processes.remove(child)
-    if len(child_processes) == 0:
-      break
-    time.sleep(0.1)
-    now = time.time()
-    if (now - last_dot) > 1:
-      sys.stderr.write(".")
-      last_dot = now
-    if (now - start_time) > 5:
-      if kill:
-        break
-      else:
-        sys.stderr.write(' FAILED (timeout)!\n')
-        return kill_children(kill=True)
-  sys.stderr.write(' OK\n')
+  kill_procs(child_processes)
 
 def kill_scheduler():
   if scheduler and not scheduler._hasQuit:
@@ -163,11 +124,11 @@ signal.signal(signal.SIGTERM, handle_int)
 
 try:
   # Boot the controllers
-  for c in controllers:
+  for i, c in enumerate(controllers):
     command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
                         map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
     print command_line_args
-    child = subprocess.Popen(command_line_args)
+    child = popen_filtered("c%d" % i, command_line_args)
     child_processes.append(child)
 
   io_loop = RecocoIOLoop()
@@ -193,10 +154,10 @@ try:
                                                       num_pods=args.num_switches)
 
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
-  debugger = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
+  simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
                         random_seed=args.random_seed, delay=args.delay,
                         dataplane_trace=args.trace_file)
-  debugger.simulate(panel, switch_impls, network_links, hosts, access_links, steps=args.steps)
+  simulator.simulate(panel, switch_impls, network_links, hosts, access_links, steps=args.steps)
 finally:
   kill_children()
   kill_scheduler()
