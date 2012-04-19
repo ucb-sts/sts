@@ -172,28 +172,29 @@ def populate_fat_tree(controller_config_list, io_worker_constructor, num_pods=48
   connect_to_controllers(controller_config_list, io_worker_constructor, fat_tree.switches)
   return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
 
-def populate_from_topology(controller_config_list, io_worker_contructor, graph):
+def populate_from_topology(controller_config_list, io_worker_contructor, graph, internal_links = None, access_links = None):
   """
   Take a pox.lib.graph.graph.Graph and generate arguments needed for the simulator
   """
   print "Start populating"
   hosts = graph.find(is_a=Host) 
   switches = graph.find(is_a=SwitchImpl)
-  internal_links = set()
-  visited_nodes = set()
-  for switch in switches:
-      visited_nodes.add(switch)
-      internal_links.union([Link(switch, other[0], other[1][0], other[1][1])
-                        for other in filter(lambda n: (isinstance(n[1][0], SwitchImpl) and (n[1][0] not in visited_nodes)),
-                                  graph.ports_for_node(switch).iteritems())])
+  if internal_links is None:
+    internal_links = set()
+    visited_nodes = set()
+    for switch in switches:
+        visited_nodes.add(switch)
+        internal_links.union([Link(switch, other[0], other[1][0], other[1][1])
+                          for other in filter(lambda n: (isinstance(n[1][0], SwitchImpl) and (n[1][0] not in visited_nodes)),
+                                    graph.ports_for_node(switch).iteritems())])
   (patch, switches, internal_links, hosts, access_links) =  (BufferedPatchPanelForTopology(graph), 
            switches, 
            internal_links,
            hosts,
-           set([AccessLink(host, switch[0], switch[1][0], switch[1][1])
+           (set([AccessLink(host, switch[0], switch[1][0], switch[1][1])
             for host in hosts 
             for switch in filter(lambda n: isinstance(n[1][0], SwitchImpl),
-            graph.ports_for_node(host).iteritems())]))
+            graph.ports_for_node(host).iteritems())]) if access_links is None else access_links))
   print "Connecting to controller"
   connect_to_controllers(controller_config_list, io_worker_contructor, switches)
   print "Done populating"

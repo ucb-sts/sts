@@ -25,6 +25,7 @@ exec python $OPT "$0" $FLG "$@"
 '''
 
 from debugger.debugger import FuzzTester
+from debugger.debugger_entities import Link, AccessLink, Host, FuzzSwitchImpl
 from debugger.deferred_io import DeferredIOWorker
 import debugger.topology_generator as default_topology
 from pox.lib.ioworker.io_worker import RecocoIOLoop
@@ -81,6 +82,8 @@ parser.add_argument("-N", "--num-switches", type=int, default=2,
                     help="number of switches to create in the network")
 
 parser.add_argument("-c", "--config", help='optional experiment config file to load')
+
+parser.add_argument("-F", "--filename", type=str, help='Filename to load topology from', default=None)
 parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
                    help='arguments to pass to the controller(s)')
 #parser.disable_interspersed_args()
@@ -166,8 +169,8 @@ try:
     command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
                         map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
     print command_line_args
-    child = subprocess.Popen(command_line_args)
-    child_processes.append(child)
+    #child = subprocess.Popen(command_line_args)
+    #child_processes.append(child)
   print "Controller up"
 
   io_loop = RecocoIOLoop()
@@ -194,19 +197,53 @@ try:
   #                                                    num_pods=args.num_switches)
 
   graph = Graph()
-  switches = [None for i in xrange(0, args.num_switches)]
-  hosts = [None for i in xrange(0, args.num_switches)]
   from time import clock
   print str.format("{0} Starting to build graph", clock())
-  for i in xrange(0, args.num_switches):
-    switches[i] = default_topology.create_switch(i + 1, 3)
-    hosts[i] = default_topology.create_host(switches[i], get_switch_port = lambda s: s.ports[3] )[0]
-    graph.add(switches[i])
-    graph.add(hosts[i])
-    if i > 0:
-      graph.link((switches[i - 1], switches[i-1].ports[2]), (switches[i], switches[i].ports[1]))
-    graph.link((switches[i], switches[i].ports[3]), (hosts[i], hosts[i].interfaces[0]))
-  graph.link((switches[0], switches[0].ports[1]), (switches[-1], switches[-1].ports[2]))
+  access_links = set()
+  internal_links = set()
+  if args.filename is None:
+    switches = [None for i in xrange(0, args.num_switches)]
+    hosts = [None for i in xrange(0, args.num_switches)]
+    for i in xrange(0, args.num_switches):
+      switches[i] = default_topology.create_switch(i + 1, 3)
+      hosts[i] = default_topology.create_host(switches[i], get_switch_port = lambda s: s.ports[3] )[0]
+      graph.add(switches[i])
+      graph.add(hosts[i])
+      if i > 0:
+        graph.link((switches[i - 1], switches[i-1].ports[2]), (switches[i], switches[i].ports[1]))
+        internal_links.add(Link(switches[i - 1], switches[i - 1].ports[2], switches[i], switches[i].ports[1]))
+      graph.link((switches[i], switches[i].ports[3]), (hosts[i], hosts[i].interfaces[0]))
+      access_links.add(AccessLink(hosts[i], hosts[i].interfaces[0], switches[i], switches[i].ports[3]))
+    graph.link((switches[0], switches[0].ports[1]), (switches[-1], switches[-1].ports[2]))
+    internal_links.add(Link(switches[0], switches[0].ports[1], switches[-1], switches[-1].ports[2]))
+  else:
+    import json
+    from os.path import expanduser
+    jsonf = open(expanduser(args.filename))
+    objs = json.load(jsonf)
+    ports = {}
+    for link in objs['links']:
+      if link[0] not in ports:
+        ports[link[0]] = 1
+      else:
+        ports[link[0]] += 1
+      if link[1] not in ports:
+        ports[link[1]] = 1
+      else:
+        ports[link[1]] += 1
+    switches = {}
+    next_port = {}
+    for switch, ports in ports.iteritems():
+      switches[switch] = default_topology.create_switch(int(switch), ports)
+      graph.add(switches[switch])
+      next_port[switch] = 1
+    for link in objs['links']:
+      graph.link((switches[link[0]], switches[link[0]].ports[next_port[link[0]]]),
+                 (switches[link[1]], switches[link[1]].ports[next_port[link[1]]]))
+      internal_links.add(Link(switches[link[0]], switches[link[0]].ports[next_port[link[0]]],
+                         switches[link[1]], switches[link[1]].ports[next_port[link[1]]]))
+      next_port[link[0]] += 1
+      next_port[link[1]] += 1
   print str.format("{0} Done building graph", clock())
   (panel,
    switch_impls,
@@ -214,7 +251,9 @@ try:
    hosts,
    access_links) = default_topology.populate_from_topology(controllers,
                                                       create_worker,
-                                                      graph)
+                                                      graph,
+                                                      internal_links = internal_links,
+                                                      access_links = access_links)
 
   print str.format("{0} Done setting up switches", clock())
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
