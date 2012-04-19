@@ -242,7 +242,13 @@ def BufferedPatchPanelForTopology(topology):
   Given a pox.lib.graph.graph object with hosts, switches, and other things,
   produce an appropriate BufferedPatchPanel
   """
-  return BufferedPatchPanel(topology.find(is_a=SwitchImpl), topology.find(is_a=Host), lambda node, port:topology.port_for_node(node, port))
+  def port_for_node(node, port):
+    
+    toret = topology.port_for_node(node, port)
+    if toret is None:
+      print node, port
+    return toret
+  return BufferedPatchPanel(topology.find(is_a=SwitchImpl), topology.find(is_a=Host),port_for_node)
 
 class BufferedPatchPanel(PatchPanel, EventMixin):
   '''

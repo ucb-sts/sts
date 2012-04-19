@@ -173,7 +173,7 @@ try:
   io_loop = RecocoIOLoop()
   
   scheduler = Scheduler(daemon=True, useEpoll=True)
-  #scheduler.schedule(io_loop)
+  scheduler.schedule(io_loop)
 
   #if hasattr(config, 'switches'):
   #  switches = config.switches()
@@ -206,7 +206,7 @@ try:
     if i > 0:
       graph.link((switches[i - 1], switches[i-1].ports[2]), (switches[i], switches[i].ports[1]))
     graph.link((switches[i], switches[i].ports[3]), (hosts[i], hosts[i].interfaces[0]))
-
+  graph.link((switches[0], switches[0].ports[1]), (switches[-1], switches[-1].ports[2]))
   print str.format("{0} Done building graph", clock())
   (panel,
    switch_impls,
