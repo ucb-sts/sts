@@ -89,9 +89,9 @@ parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.
 #parser.disable_interspersed_args()
 args = parser.parse_args()
 
-if not args.controller_args:
-  parser.print_help()
-  sys.exit(1)
+#if not args.controller_args:
+#  parser.print_help()
+#  sys.exit(1)
 
 if args.config:
   config = __import__(args.config_file)
@@ -101,7 +101,7 @@ else:
 if hasattr(config, 'controllers'):
   controllers = config.controllers(args.controller_args)
 else:
-  controllers = [Controller(args.controller_args, port=args.port)]
+  controllers = [Controller([], port=args.port)]
 
 child_processes = []
 scheduler = None
@@ -165,13 +165,13 @@ signal.signal(signal.SIGTERM, handle_int)
 
 try:
   # Boot the controllers
-  for c in controllers:
-    command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
-                        map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
-    print command_line_args
+#  for c in controllers:
+#    command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
+#                        map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
+#    print command_line_args
     #child = subprocess.Popen(command_line_args)
     #child_processes.append(child)
-  print "Controller up"
+#  print "Controller up"
 
   io_loop = RecocoIOLoop()
   

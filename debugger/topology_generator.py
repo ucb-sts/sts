@@ -131,7 +131,7 @@ def connect_to_controllers(controller_info_list, io_worker_generator, switch_imp
 
   def create_io_worker(switch):
     create_io_worker.count = create_io_worker.count + 1
-    controller_socket = connect_socket_with_backoff(controller_info.address, controller_info.port, non_blocking = create_io_worker.has_connected and (create_io_worker.count % 5 != 0) and (create_io_worker.count < len(switch_impls)))
+    controller_socket = connect_socket_with_backoff(controller_info.address, controller_info.port, non_blocking = create_io_worker.has_connected and (create_io_worker.count % 8 != 0) and (create_io_worker.count < len(switch_impls)))
     # Set non-blocking
     controller_socket.setblocking(0)
     create_io_worker.has_connected = True
