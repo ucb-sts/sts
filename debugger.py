@@ -55,6 +55,10 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
 parser.add_argument("-n", "--non-interactive", help='run debugger non-interactively',
                     action="store_false", dest="interactive", default=True)
 
+parser.add_argument("-C", "--check-interval", type=int,
+                    help='Run correspondence checking every C timesteps (assume -n)',
+                    dest="check_interval", default=25)
+
 parser.add_argument("-D", "--delay", type=float, metavar="time",
                     default=0.1,
                     help="delay in seconds for non-interactive simulation steps")
@@ -150,13 +154,14 @@ try:
    network_links,
    hosts,
    access_links) = default_topology.populate(controllers,
-                                                      create_worker,
-                                                      num_switches=args.num_switches)
+                                             create_worker,
+                                             num_switches=args.num_switches)
 
-  # For instrumenting the controller 
+  # For instrumenting the controller
   control_socket = connect_socket_with_backoff('', 6634)
 
   simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
+                        check_interval=args.check_interval,
                         random_seed=args.random_seed, delay=args.delay,
                         dataplane_trace=args.trace_file, control_socket=control_socket)
   simulator.simulate(panel, switch_impls, network_links, hosts, access_links, steps=args.steps)

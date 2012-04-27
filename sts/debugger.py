@@ -39,8 +39,10 @@ class FuzzTester (EventMixin):
   it will inject intelligently chosen mock events (and observe
   their responses?)
   """
-  def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True, random_seed=0.0, delay=0.1, dataplane_trace=None, control_socket=None):
+  def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True, check_interval=25,
+               random_seed=0.0, delay=0.1, dataplane_trace=None, control_socket=None):
     self.interactive = interactive
+    self.check_interval = check_interval
     # Format of trace file is a pickled array of DataplaneEvent objects
     self.dataplane_trace = None
     if dataplane_trace:
@@ -48,7 +50,6 @@ class FuzzTester (EventMixin):
     self.running = False
     self.panel = None
     self.switch_impls = []
-    self.control_socket = control_socket
 
     self.delay = delay
 
@@ -76,7 +77,7 @@ class FuzzTester (EventMixin):
     self.seed = random_seed
     self.random = random.Random(self.seed)
     self.traffic_generator = TrafficGenerator(self.random)
-    self.invariant_checker = InvariantChecker()
+    self.invariant_checker = InvariantChecker(control_socket)
 
     # TODO: future feature: log all events, and allow user to (interactively)
     # replay the execution
@@ -142,19 +143,24 @@ class FuzzTester (EventMixin):
         answer = msg.raw_input('Continue to next round? [Yn]').strip()
         if answer != '' and answer.lower() != 'y':
           self.stop()
+      elif (self.logical_time % self.check_interval) == 0:
+        self.run_correspondence()
       else:
         time.sleep(self.delay)
 
   def stop(self):
     self.running = False
     
-  def fetch_controller_state(self):
-    # TODO: we really need to be able to pause the controller, since correspondence
-    # checking might take awhile...
-    self.control_socket.send("FETCH")
-    (switches, flows, policy) = self.control_socket.recv(100000)
-    return (switches, flows, policy)
-    
+  def run_correspondence(self):
+    log.debug("Snapshotting controller...")
+    controller_state = self.invariant_checker.fetch_controller_state()
+    log.debug("Computing controller omega...")
+    controller_omega = self.invariant_checker.compute_omega_from_frenetic(controller_state)
+    log.debug("Computing physical omega...")
+    physical_omega = self.invariant_checker.compute_omega(self.live_switches, self.live_links, self.access_links)
+    result = None # compare controller_omega and physical_omega
+    return result
+
   def invariant_check_prompt(self):
     answer = msg.raw_input('Check Invariants? [Ny]')
     if answer != '' and answer.lower() != 'n':
@@ -175,11 +181,7 @@ class FuzzTester (EventMixin):
       elif answer.lower() == 'c':
         result = self.invariant_checker.check_connectivity()
       elif answer.lower() == 'o':
-        # TODO: cut/repair access links?
-        controller_state = self.fetch_controller_state()
-        controller_omega = self.invariant_checker.compute_omega_from_frenetic(controller_state)
-        physical_omega = self.invariant_checker.compute_omega(self.live_switches, self.live_links, self.access_links)
-        result = None # compare controller_omega and physical_omega
+        result = self.run_correspondence()
       else:
         log.warn("Unknown input...")
 
