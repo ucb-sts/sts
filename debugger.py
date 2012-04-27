@@ -43,11 +43,6 @@ import argparse
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-# We use python as our DSL for specifying experiment configuration  
-# The module can define the following functions:
-#   controllers(command_line_args=[]) => returns a list of pox.sts.experiment_config_info.ControllerInfo objects
-#   switches()                        => returns a list of pox.sts.experiment_config_info.Switch objects
-
 description = """
 Run a debugger experiment.
 Example usage:
@@ -91,6 +86,10 @@ args = parser.parse_args()
 if not args.controller_args:
     print >> sys.stderr, "Warning: no controller arguments given"
 
+# We use python as our DSL for specifying experiment configuration  
+# The module can define the following functions:
+#   controllers(command_line_args=[]) => returns a list of pox.sts.experiment_config_info.ControllerInfo objects
+#   switches()                        => returns a list of pox.sts.experiment_config_info.Switch objects
 if args.config:
   config = __import__(args.config_file)
 else:
@@ -141,10 +140,7 @@ try:
   scheduler.schedule(io_loop)
 
   #if hasattr(config, 'switches'):
-  #  switches = config.switches()
-  #else:
-  #  switches = []
-  # HACK
+  #  pass
   create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket), scheduler.callLater)
 
   # TODO: need a better way to choose FatTree vs. Mesh vs. whatever
@@ -160,7 +156,6 @@ try:
   # For instrumenting the controller 
   control_socket = connect_socket_with_backoff('', 6634)
 
-  # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
   simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
                         random_seed=args.random_seed, delay=args.delay,
                         dataplane_trace=args.trace_file, control_socket=control_socket)
