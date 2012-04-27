@@ -31,7 +31,7 @@ from sts.procutils import kill_procs, popen_filtered
 import sts.topology_generator as default_topology
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.lib.util import connect_socket_with_backoff
-from debugger.experiment_config_lib import Controller
+from sts.experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
 
 import signal
