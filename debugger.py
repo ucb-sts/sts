@@ -24,9 +24,11 @@ fi
 exec python $OPT "$0" $FLG "$@"
 '''
 
-from debugger.debugger import FuzzTester
-from debugger.deferred_io import DeferredIOWorker
-import debugger.topology_generator as default_topology
+from sts.debugger import FuzzTester
+from sts.deferred_io import DeferredIOWorker
+from sts.procutils import kill_procs, popen_filtered
+
+import sts.topology_generator as default_topology
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.lib.util import connect_socket_with_backoff
 from debugger.experiment_config_lib import Controller
@@ -43,8 +45,8 @@ logging.basicConfig(level=logging.DEBUG)
 
 # We use python as our DSL for specifying experiment configuration  
 # The module can define the following functions:
-#   controllers(command_line_args=[]) => returns a list of pox.debugger.experiment_config_info.ControllerInfo objects
-#   switches()                        => returns a list of pox.debugger.experiment_config_info.Switch objects
+#   controllers(command_line_args=[]) => returns a list of pox.sts.experiment_config_info.ControllerInfo objects
+#   switches()                        => returns a list of pox.sts.experiment_config_info.Switch objects
 
 description = """
 Run a debugger experiment.
@@ -104,48 +106,9 @@ else:
 
 child_processes = []
 scheduler = None
-def kill_children(kill=None):
+def kill_children():
   global child_processes
-  global scheduler
-
-  if kill == None:
-    if hasattr(kill_children,"already_run"):
-      kill = True
-    else:
-      kill = False
-      kill_children.already_run = True
-
-  if len(child_processes) == 0:
-    return
-
-  print >> sys.stderr, "%s child controllers..." % ("Killing" if kill else "Terminating"),
-  for child in child_processes:
-    if kill:
-      child.kill()
-    else:
-      child.terminate()
-
-  start_time = time.time()
-  last_dot = start_time
-  while True:
-    for child in child_processes:
-      if child.poll() != None:
-        if child in child_processes:
-          child_processes.remove(child)
-    if len(child_processes) == 0:
-      break
-    time.sleep(0.1)
-    now = time.time()
-    if (now - last_dot) > 1:
-      sys.stderr.write(".")
-      last_dot = now
-    if (now - start_time) > 5:
-      if kill:
-        break
-      else:
-        sys.stderr.write(' FAILED (timeout)!\n')
-        return kill_children(kill=True)
-  sys.stderr.write(' OK\n')
+  kill_procs(child_processes)
 
 def kill_scheduler():
   if scheduler and not scheduler._hasQuit:
@@ -174,7 +137,7 @@ try:
 
   io_loop = RecocoIOLoop()
   
-  scheduler = Scheduler(daemon=True)
+  scheduler = Scheduler(daemon=True, useEpoll=True)
   scheduler.schedule(io_loop)
 
   #if hasattr(config, 'switches'):
@@ -198,10 +161,10 @@ try:
   control_socket = connect_socket_with_backoff('', 6634)
 
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
-  debugger = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
+  simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
                         random_seed=args.random_seed, delay=args.delay,
                         dataplane_trace=args.trace_file, control_socket=control_socket)
-  debugger.simulate(panel, switch_impls, network_links, hosts, access_links, steps=args.steps)
+  simulator.simulate(panel, switch_impls, network_links, hosts, access_links, steps=args.steps)
 finally:
   kill_children()
   kill_scheduler()
