@@ -86,15 +86,17 @@ parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.
 args = parser.parse_args()
 
 if not args.controller_args:
-  parser.print_help()
-  sys.exit(1)
+    print >> sys.stderr, "Warning: no controller arguments given"
 
 if args.config:
   config = __import__(args.config_file)
 else:
   config = object()
 
+boot_controllers = False
+
 if hasattr(config, 'controllers'):
+  boot_controllers = True
   controllers = config.controllers(args.controller_args)
 else:
   controllers = [Controller(args.controller_args, port=args.port)]
@@ -161,12 +163,13 @@ signal.signal(signal.SIGTERM, handle_int)
 
 try:
   # Boot the controllers
-  for c in controllers:
-    command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
-                        map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
-    print command_line_args
-    child = subprocess.Popen(command_line_args)
-    child_processes.append(child)
+  if boot_controllers:
+    for c in controllers:
+      command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
+                          map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
+      print command_line_args
+      child = subprocess.Popen(command_line_args)
+      child_processes.append(child)
 
   io_loop = RecocoIOLoop()
   
