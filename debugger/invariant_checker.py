@@ -30,6 +30,12 @@ class InvariantChecker():
     (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
     return hsa.compute_omega(NTF, TTF, edge_links)
   
+  def compute_omega_from_frenetic(self, controller_state):
+    #(NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
+    #return hsa.compute_omega(NTF, TTF, edge_links)
+    (switches, flows, policy) = controller_state
+    print controller_state
+  
   def compute_single_omega(self, start_link, live_switches, live_links, edge_links):
     (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
     return hsa.compute_single_omega(NTF, TTF, start_link, edge_links)

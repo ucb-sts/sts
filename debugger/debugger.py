@@ -67,7 +67,7 @@ class FuzzTester (EventMixin):
   it will inject intelligently chosen mock events (and observe
   their responses?)
   """
-  def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True, random_seed=0.0, delay=0.1, dataplane_trace=None):
+  def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True, random_seed=0.0, delay=0.1, dataplane_trace=None, control_socket=None):
     self.interactive = interactive
     # Format of trace file is a pickled array of DataplaneEvent objects
     self.dataplane_trace = None
@@ -76,6 +76,7 @@ class FuzzTester (EventMixin):
     self.running = False
     self.panel = None
     self.switch_impls = []
+    self.control_socket = control_socket
 
     self.delay = delay
 
@@ -175,6 +176,13 @@ class FuzzTester (EventMixin):
   def stop(self):
     self.running = False
     
+  def fetch_controller_state(self):
+    # TODO: we really need to be able to pause the controller, since correspondence
+    # checking might take awhile...
+    self.control_socket.send("FETCH")
+    (switches, flows, policy) = self.control_socket.recv(100000)
+    return (switches, flows, policy)
+    
   def invariant_check_prompt(self):
     answer = msg.raw_input('Check Invariants? [Ny]')
     if answer != '' and answer.lower() != 'n':
@@ -196,7 +204,10 @@ class FuzzTester (EventMixin):
         result = self.invariant_checker.check_connectivity()
       elif answer.lower() == 'o':
         # TODO: cut/repair access links?
-        result = self.invariant_checker.compute_omega(self.live_switches, self.live_links, self.access_links)
+        controller_state = self.fetch_controller_state()
+        controller_omega = self.invariant_checker.compute_omega_from_frenetic(controller_state)
+        physical_omega = self.invariant_checker.compute_omega(self.live_switches, self.live_links, self.access_links)
+        result = None # compare controller_omega and physical_omega
       else:
         log.warn("Unknown input...")
 

@@ -28,6 +28,7 @@ from debugger.debugger import FuzzTester
 from debugger.deferred_io import DeferredIOWorker
 import debugger.topology_generator as default_topology
 from pox.lib.ioworker.io_worker import RecocoIOLoop
+from pox.lib.util import connect_socket_with_backoff
 from debugger.experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
 
@@ -189,14 +190,17 @@ try:
    switch_impls,
    network_links,
    hosts,
-   access_links) = default_topology.populate_fat_tree(controllers,
+   access_links) = default_topology.populate(controllers,
                                                       create_worker,
-                                                      num_pods=args.num_switches)
+                                                      num_switches=args.num_switches)
+
+  # For instrumenting the controller 
+  control_socket = connect_socket_with_backoff('', 6634)
 
   # TODO: allow user to configure the fuzzer parameters, e.g. drop rate
   debugger = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
                         random_seed=args.random_seed, delay=args.delay,
-                        dataplane_trace=args.trace_file)
+                        dataplane_trace=args.trace_file, control_socket=control_socket)
   debugger.simulate(panel, switch_impls, network_links, hosts, access_links, steps=args.steps)
 finally:
   kill_children()
