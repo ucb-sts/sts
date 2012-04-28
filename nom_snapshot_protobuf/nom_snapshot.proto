@@ -15,6 +15,7 @@ message Action {
 }
 
 message Match {
+   // TODO: matches on more than one field?!
    enum HeaderField {
       dl_src = 0;
       dl_dst = 1;

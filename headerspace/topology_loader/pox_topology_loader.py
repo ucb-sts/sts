@@ -7,6 +7,13 @@ Created on Mar 10, 2012
 import headerspace.headerspace.tf as tf
 import headerspace.config_parser.openflow_parser as of
 
+# Python, Y U NO HAVE FIND BUILT IN
+def find(f, seq):
+  """Return first item in sequence where f(item) == True."""
+  for item in seq:
+    if f(item): 
+      return item
+
 def generate_TTF(all_links):
   ''' Takes a list of sts.debugger_entities.Link objects (directed) '''
   ttf = tf.TF(of.HS_FORMAT())
@@ -27,3 +34,11 @@ def generate_NTF(switches):
   print "NTF: %s" % str(ntf)
   return ntf
     
+def NTF_from_snapshot(controller_snapshot, real_switches):
+  ntf = tf.TF(of.HS_FORMAT())
+  for protobuf_switch in controller_snapshot.switches:
+    dpid = protobuf_switch.dpid
+    real_switch = find(lambda sw: sw.dpid == dpid, real_switches)
+    of.tf_from_protobuf_switch(ntf, protobuf_switch, real_switch) 
+  print "NTF: %s" % str(ntf)
+  return ntf

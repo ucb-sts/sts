@@ -7,6 +7,11 @@ from helper import *
 from headerspace.headerspace.tf import *
 from headerspace.headerspace.hs import *
 from pox.openflow.libopenflow_01 import *
+from pox.openflow.flow_table import SwitchFlowTable, TableEntry
+from pox.openflow.switch_impl import SwitchImpl
+
+# TODO: bad separation of concerns
+import nom_snapshot_protobuf.nom_snapshot_pb2 as nom_snapshot
 
 import re
 from collections import namedtuple
@@ -369,6 +374,59 @@ def generate_transfer_function(tf, software_switch):
   #print tf
   return 0
 
+# TODO: wrong place for this:
+def ofp_match_from_protobuf_match(protobuf_match):
+  match_type = protobuf_match.field
+  value = protobuf_match.value
+  if match_type == nom_snapshot.Match.dl_src:
+    return ofp_match(dl_src=EthAddr(value))
+  if match_type == nom_snapshot.Match.dl_dst:
+    return ofp_match(dl_dst=EthAddr(value))
+  if match_type == nom_snapshot.Match.dl_vlan:
+    return ofp_match(dl_vlan=value)
+  if match_type == nom_snapshot.Match.dl_vlan_pcp:
+    return ofp_match(dl_vlan_pcp=value)
+  if match_type == nom_snapshot.Match.dl_type:
+    return ofp_match(dl_type=value)
+  if match_type == nom_snapshot.Match.nw_tos:
+    return ofp_match(nw_tos=value)
+  if match_type == nom_snapshot.Match.nw_proto:
+    return ofp_match(nw_proto=value)
+  if match_type == nom_snapshot.Match.nw_src:
+    return ofp_match(nw_src=IPAddr(value))
+  if match_type == nom_snapshot.Match.nw_dst:
+    return ofp_match(nw_dst=IPAddr(value))
+  if match_type == nom_snapshot.Match.tp_src:
+    return ofp_match(tp_src=value)
+  if match_type == nom_snapshot.Match.tp_dst:
+    return ofp_match(tp_dst=value)
+  if match_type == nom_snapshot.Match.in_port:
+    return ofp_match(in_port=value)
+  if match_type == nom_snapshot.Match.switch:
+    return None
+
+# TODO: wrong place for this:
+def of_action_from_protobuf_action(protobuf_action):
+  if protobuf_action.type == nom_snapshot.Action.output:
+    return ofp_action_output(port=protobuf_action.port)
+  else:
+    raise RuntimeError("Unsupported Action %s" % protobuf_action.type)
+
+def tf_from_protobuf_switch(ntf, protobuf_switch, real_switch):
+  # clone the real switch, insert flow entries from policy, run
+  # generate_transfer_function()
+  dummy_switch = SwitchImpl(real_switch.dpid, ports=real_switch.ports.values())
+  for rule in protobuf_switch.rules:
+    # TODO: don't ignore polarity
+    match = ofp_match_from_protobuf_match(rule.match)
+    actions = []
+    for protobuf_action in rule.actions:
+      action = of_action_from_protobuf_action(protobuf_action)
+      actions.append(action)
+
+    flow_entry = TableEntry(match=match, actions=actions)
+    dummy_switch.table.add_entry(flow_entry)
+  return generate_transfer_function(ntf, dummy_switch)
 
 def get_uniq_port_id(switch, port):
   ''' HSA assumes uniquely labeled ports '''

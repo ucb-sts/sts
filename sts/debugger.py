@@ -155,9 +155,14 @@ class FuzzTester (EventMixin):
     log.debug("Snapshotting controller...")
     controller_snapshot = self.invariant_checker.fetch_controller_snapshot()
     log.debug("Computing controller omega...")
-    controller_omega = self.invariant_checker.compute_omega_from_snapshot(controller_snapshot)
+    controller_omega = self.invariant_checker.compute_omega_from_snapshot(controller_snapshot,
+                                                                          self.live_switches,
+                                                                          self.live_links,
+                                                                          self.access_links)
     log.debug("Computing physical omega...")
-    physical_omega = self.invariant_checker.compute_omega(self.live_switches, self.live_links, self.access_links)
+    physical_omega = self.invariant_checker.compute_omega(self.live_switches,
+                                                          self.live_links,
+                                                          self.access_links)
     result = None # compare controller_omega and physical_omega
     return result
 

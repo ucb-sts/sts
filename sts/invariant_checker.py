@@ -16,8 +16,7 @@ class InvariantChecker(object):
   def fetch_controller_snapshot(self):
     # TODO: we really need to be able to pause the controller, since correspondence
     # checking might take awhile...
-    # TODO: should just use an RPC framework, e.g. Pyro, XML-RPC. Protobufs would actually be a great
-    #       serialization format -- clear documentation on format and meaning
+    # TODO: should just use an RPC framework, e.g. Pyro, XML-RPC.
     log.debug("Sending Request")
     self.control_socket.send("FETCH", socket.MSG_WAITALL)
     log.debug("Receiving Results")
@@ -28,7 +27,7 @@ class InvariantChecker(object):
       if not data: break
       bytes.append(data)
       # HACK. Doesn't handle case where data is exactly 1024 bytes
-      # TODO: figure out the right way to avoid blocking
+      # TODO: figure out the right way to avoid blocking. (Better: use RPC)
       if len(data) != 1024: break
         
     snapshot = nom_snapshot.Snapshot()
@@ -57,10 +56,12 @@ class InvariantChecker(object):
     (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
     return hsa.compute_omega(NTF, TTF, edge_links)
   
-  def compute_omega_from_snapshot(self, controller_snapshot):
-    #(NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
-    #return hsa.compute_omega(NTF, TTF, edge_links)
-    print controller_snapshot
+  def compute_omega_from_snapshot(self, controller_snapshot, live_switches, live_links, edge_links):
+    NTF = hsa_topo.NTF_from_snapshot(controller_snapshot, live_switches)
+    # Frenetic doesn't store any link or host information.
+    # No virtualizatoin though, so we can assume the same TTF
+    TTF = hsa_topo.generate_TTF(live_links)
+    return hsa.compute_omega(NTF, TTF, edge_links)
   
   def compute_single_omega(self, start_link, live_switches, live_links, edge_links):
     (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
