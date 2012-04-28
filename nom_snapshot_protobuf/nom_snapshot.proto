@@ -15,26 +15,31 @@ message Action {
 }
 
 message Match {
-    enum HeaderField {
-       dl_src = 0;
-       dl_dst = 1;
-       dl_vlan = 2;
-       dl_vlan_pcp = 3;
-       dl_type = 4;
-       nw_tos = 5;
-       nw_proto = 6;
-       nw_src = 7;
-       nw_dst = 8;
-       tp_src = 9;
-       tp_dst = 10;
-    }
+   enum HeaderField {
+      dl_src = 0;
+      dl_dst = 1;
+      dl_vlan = 2;
+      dl_vlan_pcp = 3;
+      dl_type = 4;
+      nw_tos = 5;
+      nw_proto = 6;
+      nw_src = 7;
+      nw_dst = 8;
+      tp_src = 9;
+      tp_dst = 10;
+      // These aren't really fields...
+      in_port = 11;
+      // TODO: what does this mean?
+      switch = 12;
+   }
 
    // header field
    required HeaderField field = 1;
    // True is ==, False is !=
-   optional bool polarity = 2;
-   // Header values that must match
-   repeated int32 values = 3;
+   optional bool polarity = 2 [default = true];
+   // Header value that must match
+   // encoded as a string to allow for MAC addresses, dotted quads, etc.
+   required string value = 3;
 }
 
 message Rule {

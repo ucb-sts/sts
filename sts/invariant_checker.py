@@ -15,13 +15,15 @@ class InvariantChecker(object):
   def fetch_controller_state(self):
     # TODO: we really need to be able to pause the controller, since correspondence
     # checking might take awhile...
+    # TODO: should just use an RPC framework, e.g. Pyro, XML-RPC. Protobufs would actually be a great
+    #       serialization format -- clear documentation on format and meaning
     log.debug("Sending Request")
     self.control_socket.send("FETCH", socket.MSG_WAITALL)
     log.debug("Receiving Results")
     bytes = []
     while True:
       data = self.control_socket.recv(1024)
-      print "Data packet received"
+      log.debug("%d byte packet received" % len(data))
       if not data: break
       bytes.append(data)
       # HACK. Doesn't handle case where data is exactly 1024 bytes

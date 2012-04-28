@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 class protobuf_test(unittest.TestCase):
     def test_basic(self):
         test_action = Action(type=Action.output, port=2)
-        test_match = Match(field=Match.dl_src, polarity=False, values=[1])
+        test_match = Match(field=Match.dl_src, polarity=False, value="1")
         test_rule = Rule(match=test_match, actions=[test_action])
         test_switch = Switch(dpid=1, rules=[test_rule])
         test_host = Host(mac="00:00:00:00:00:00")

@@ -11,7 +11,7 @@ from google.protobuf import descriptor_pb2
 DESCRIPTOR = descriptor.FileDescriptor(
   name='nom_snapshot.proto',
   package='nom_snapshot',
-  serialized_pb='\n\x12nom_snapshot.proto\x12\x0cnom_snapshot\"_\n\x06\x41\x63tion\x12-\n\x04type\x18\x01 \x02(\x0e\x32\x1f.nom_snapshot.Action.ActionType\x12\x0c\n\x04port\x18\x02 \x02(\x05\"\x18\n\nActionType\x12\n\n\x06output\x10\x00\"\xf6\x01\n\x05Match\x12.\n\x05\x66ield\x18\x01 \x02(\x0e\x32\x1f.nom_snapshot.Match.HeaderField\x12\x10\n\x08polarity\x18\x02 \x01(\x08\x12\x0e\n\x06values\x18\x03 \x03(\x05\"\x9a\x01\n\x0bHeaderField\x12\n\n\x06\x64l_src\x10\x00\x12\n\n\x06\x64l_dst\x10\x01\x12\x0b\n\x07\x64l_vlan\x10\x02\x12\x0f\n\x0b\x64l_vlan_pcp\x10\x03\x12\x0b\n\x07\x64l_type\x10\x04\x12\n\n\x06nw_tos\x10\x05\x12\x0c\n\x08nw_proto\x10\x06\x12\n\n\x06nw_src\x10\x07\x12\n\n\x06nw_dst\x10\x08\x12\n\n\x06tp_src\x10\t\x12\n\n\x06tp_dst\x10\n\"Q\n\x04Rule\x12\"\n\x05match\x18\x01 \x02(\x0b\x32\x13.nom_snapshot.Match\x12%\n\x07\x61\x63tions\x18\x02 \x03(\x0b\x32\x14.nom_snapshot.Action\"9\n\x06Switch\x12\x0c\n\x04\x64pid\x18\x01 \x01(\x05\x12!\n\x05rules\x18\x02 \x03(\x0b\x32\x12.nom_snapshot.Rule\"\x13\n\x04Host\x12\x0b\n\x03mac\x18\x01 \x01(\t\"U\n\x08Snapshot\x12&\n\x08switches\x18\x01 \x03(\x0b\x32\x14.nom_snapshot.Switch\x12!\n\x05hosts\x18\x02 \x03(\x0b\x32\x12.nom_snapshot.Host')
+  serialized_pb='\n\x12nom_snapshot.proto\x12\x0cnom_snapshot\"_\n\x06\x41\x63tion\x12-\n\x04type\x18\x01 \x02(\x0e\x32\x1f.nom_snapshot.Action.ActionType\x12\x0c\n\x04port\x18\x02 \x02(\x05\"\x18\n\nActionType\x12\n\n\x06output\x10\x00\"\x94\x02\n\x05Match\x12.\n\x05\x66ield\x18\x01 \x02(\x0e\x32\x1f.nom_snapshot.Match.HeaderField\x12\x16\n\x08polarity\x18\x02 \x01(\x08:\x04true\x12\r\n\x05value\x18\x03 \x02(\t\"\xb3\x01\n\x0bHeaderField\x12\n\n\x06\x64l_src\x10\x00\x12\n\n\x06\x64l_dst\x10\x01\x12\x0b\n\x07\x64l_vlan\x10\x02\x12\x0f\n\x0b\x64l_vlan_pcp\x10\x03\x12\x0b\n\x07\x64l_type\x10\x04\x12\n\n\x06nw_tos\x10\x05\x12\x0c\n\x08nw_proto\x10\x06\x12\n\n\x06nw_src\x10\x07\x12\n\n\x06nw_dst\x10\x08\x12\n\n\x06tp_src\x10\t\x12\n\n\x06tp_dst\x10\n\x12\x0b\n\x07in_port\x10\x0b\x12\n\n\x06switch\x10\x0c\"Q\n\x04Rule\x12\"\n\x05match\x18\x01 \x02(\x0b\x32\x13.nom_snapshot.Match\x12%\n\x07\x61\x63tions\x18\x02 \x03(\x0b\x32\x14.nom_snapshot.Action\"9\n\x06Switch\x12\x0c\n\x04\x64pid\x18\x01 \x01(\x05\x12!\n\x05rules\x18\x02 \x03(\x0b\x32\x12.nom_snapshot.Rule\"\x13\n\x04Host\x12\x0b\n\x03mac\x18\x01 \x01(\t\"U\n\x08Snapshot\x12&\n\x08switches\x18\x01 \x03(\x0b\x32\x14.nom_snapshot.Switch\x12!\n\x05hosts\x18\x02 \x03(\x0b\x32\x12.nom_snapshot.Host')
 
 
 
@@ -82,11 +82,19 @@ _MATCH_HEADERFIELD = descriptor.EnumDescriptor(
       name='tp_dst', index=10, number=10,
       options=None,
       type=None),
+    descriptor.EnumValueDescriptor(
+      name='in_port', index=11, number=11,
+      options=None,
+      type=None),
+    descriptor.EnumValueDescriptor(
+      name='switch', index=12, number=12,
+      options=None,
+      type=None),
   ],
   containing_type=None,
   options=None,
-  serialized_start=226,
-  serialized_end=380,
+  serialized_start=231,
+  serialized_end=410,
 )
 
 
@@ -143,14 +151,14 @@ _MATCH = descriptor.Descriptor(
     descriptor.FieldDescriptor(
       name='polarity', full_name='nom_snapshot.Match.polarity', index=1,
       number=2, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
+      has_default_value=True, default_value=True,
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
     descriptor.FieldDescriptor(
-      name='values', full_name='nom_snapshot.Match.values', index=2,
-      number=3, type=5, cpp_type=1, label=3,
-      has_default_value=False, default_value=[],
+      name='value', full_name='nom_snapshot.Match.value', index=2,
+      number=3, type=9, cpp_type=9, label=2,
+      has_default_value=False, default_value=unicode("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -165,7 +173,7 @@ _MATCH = descriptor.Descriptor(
   is_extendable=False,
   extension_ranges=[],
   serialized_start=134,
-  serialized_end=380,
+  serialized_end=410,
 )
 
 
@@ -199,8 +207,8 @@ _RULE = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=382,
-  serialized_end=463,
+  serialized_start=412,
+  serialized_end=493,
 )
 
 
@@ -234,8 +242,8 @@ _SWITCH = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=465,
-  serialized_end=522,
+  serialized_start=495,
+  serialized_end=552,
 )
 
 
@@ -262,8 +270,8 @@ _HOST = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=524,
-  serialized_end=543,
+  serialized_start=554,
+  serialized_end=573,
 )
 
 
@@ -297,8 +305,8 @@ _SNAPSHOT = descriptor.Descriptor(
   options=None,
   is_extendable=False,
   extension_ranges=[],
-  serialized_start=545,
-  serialized_end=630,
+  serialized_start=575,
+  serialized_end=660,
 )
 
 _ACTION.fields_by_name['type'].enum_type = _ACTION_ACTIONTYPE
