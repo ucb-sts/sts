@@ -1,0 +1,52 @@
+package nom_snapshot;
+
+// TODO: we could potentially just use the OpenFlow format for encoding
+// matches + actions. We do need proto bufs for switches and hosts though...
+
+message Action {
+    enum ActionType {
+        output = 0;        
+    }
+
+    // Silly proto bufs doesn't support subclassing
+    required ActionType type = 1;
+    // Output port. TODO: don't assume OFPAT_OUTPUT
+    required int32 port = 2;
+}
+
+message Match {
+    enum HeaderField {
+       dl_src = 0;
+       dl_dst = 1;
+       dl_vlan = 2;
+       dl_vlan_pcp = 3;
+       dl_type = 4;
+       nw_tos = 5;
+       nw_proto = 6;
+       nw_src = 7;
+       nw_dst = 8;
+       tp_src = 9;
+       tp_dst = 10;
+    }
+
+   // header field
+   required HeaderField field = 1;
+   // True is ==, False is !=
+   optional bool polarity = 2;
+   // Header values that must match
+   repeated int32 values = 3;
+}
+
+message Rule {
+    required Match match = 1;
+    repeated Action actions = 2;
+}
+
+message Switch {
+    optional int32 dpid = 1;
+    repeated Rule rules = 2;
+}
+
+message Host {
+    optional string mac = 1;    
+}
