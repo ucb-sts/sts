@@ -15,6 +15,7 @@ class protobuf_test(unittest.TestCase):
         test_rule = Rule(match=test_match, actions=[test_action])
         test_switch = Switch(dpid=1, rules=[test_rule])
         test_host = Host(mac="00:00:00:00:00:00")
+        test_snapshot = Snapshot(switches=[test_switch], hosts=[test_host])
 
 if __name__ == '__main__':
   unittest.main()
