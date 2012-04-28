@@ -3,6 +3,7 @@ from pox.openflow.libopenflow_01 import *
 from debugger_entities import *
 import headerspace.topology_loader.pox_topology_loader as hsa_topo
 import headerspace.headerspace.applications as hsa
+import nom_snapshot_protobuf.nom_snapshot_pb2 as nom_snapshot
 
 import pickle
 import logging
@@ -12,7 +13,7 @@ class InvariantChecker(object):
   def __init__(self, control_socket):
     self.control_socket = control_socket
     
-  def fetch_controller_state(self):
+  def fetch_controller_snapshot(self):
     # TODO: we really need to be able to pause the controller, since correspondence
     # checking might take awhile...
     # TODO: should just use an RPC framework, e.g. Pyro, XML-RPC. Protobufs would actually be a great
@@ -30,8 +31,9 @@ class InvariantChecker(object):
       # TODO: figure out the right way to avoid blocking
       if len(data) != 1024: break
         
-    (switches, policy) = pickle.loads(''.join(bytes))
-    return (switches, policy)
+    snapshot = nom_snapshot.Snapshot()
+    snapshot.ParseFromString(''.join(bytes))
+    return snapshot
   
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
@@ -55,11 +57,10 @@ class InvariantChecker(object):
     (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
     return hsa.compute_omega(NTF, TTF, edge_links)
   
-  def compute_omega_from_frenetic(self, controller_state):
+  def compute_omega_from_snapshot(self, controller_snapshot):
     #(NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
     #return hsa.compute_omega(NTF, TTF, edge_links)
-    (switches, policy) = controller_state
-    print controller_state
+    print controller_snapshot
   
   def compute_single_omega(self, start_link, live_switches, live_links, edge_links):
     (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
