@@ -1,0 +1,2 @@
+NOTE: unit test filenames must contain the substring "test" for nosetests to
+find them
