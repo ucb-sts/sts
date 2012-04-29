@@ -144,7 +144,17 @@ class FuzzTester (EventMixin):
         if answer != '' and answer.lower() != 'y':
           self.stop()
       elif (self.logical_time % self.check_interval) == 0:
-        self.run_correspondence()
+        # Time to run correspondence!
+        # spawn a thread for running correspondence. Make sure the controller doesn't 
+        # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
+        # TODO: this is a HACK
+        thread = threading.Thread(target=self.run_correspondence) 
+        thread.start()
+        while thread.isAlive():
+          for switch in self.live_switches:
+            # connection -> deferred io worker -> io worker
+            switch._connection.io_worker._io_worker.send(of.ofp_echo_request().pack())
+          thread.join(2.0)
       else:
         time.sleep(self.delay)
 
