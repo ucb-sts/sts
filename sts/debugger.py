@@ -181,7 +181,7 @@ class FuzzTester (EventMixin):
       elif answer.lower() == 'c':
         result = self.invariant_checker.check_connectivity()
       elif answer.lower() == 'o':
-        result = self.run_correspondence()
+        result = self.invariant_checker.check_correspondence()
       else:
         log.warn("Unknown input...")
 
