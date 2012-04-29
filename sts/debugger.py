@@ -148,7 +148,7 @@ class FuzzTester (EventMixin):
         # spawn a thread for running correspondence. Make sure the controller doesn't 
         # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
         # TODO: this is a HACK
-        thread = threading.Thread(target=self.run_correspondence) 
+        thread = threading.Thread(target=self.invariant_checker.check_correspondence)
         thread.start()
         while thread.isAlive():
           for switch in self.live_switches:
@@ -161,21 +161,6 @@ class FuzzTester (EventMixin):
   def stop(self):
     self.running = False
     
-  def run_correspondence(self):
-    log.debug("Snapshotting controller...")
-    controller_snapshot = self.invariant_checker.fetch_controller_snapshot()
-    log.debug("Computing controller omega...")
-    controller_omega = self.invariant_checker.compute_omega_from_snapshot(controller_snapshot,
-                                                                          self.live_switches,
-                                                                          self.live_links,
-                                                                          self.access_links)
-    log.debug("Computing physical omega...")
-    physical_omega = self.invariant_checker.compute_omega(self.live_switches,
-                                                          self.live_links,
-                                                          self.access_links)
-    result = None # compare controller_omega and physical_omega
-    return result
-
   def invariant_check_prompt(self):
     answer = msg.raw_input('Check Invariants? [Ny]')
     if answer != '' and answer.lower() != 'n':

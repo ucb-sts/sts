@@ -49,17 +49,27 @@ class InvariantChecker(object):
   def check_routing_consistency(self):
     pass
   
-  def check_correspondence(self):
-    pass
-  
-  def compute_omega(self, live_switches, live_links, edge_links):
+  def check_correspondence(self, live_switches, live_links, edge_links):
+    log.debug("Snapshotting controller...")
+    controller_snapshot = self.fetch_controller_snapshot()
+    log.debug("Computing physical omega...")
+    physical_omega = self.compute_physical_omega(live_switches, live_links, edge_links)
+    log.debug("Computing controller omega...")
+    controller_omega = self.compute_controller_omega(controller_snapshot, live_switches, live_links, edge_links)
+    # TODO: compare omegas
+    
+  # --------------------------------------------------------------#
+  #                    HSA utilities                              #
+  # --------------------------------------------------------------#
+  def compute_physical_omega(self, live_switches, live_links, edge_links):
     (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
-    return hsa.compute_omega(NTF, TTF, edge_links)
+    physical_omega = hsa.compute_omega(NTF, TTF, edge_links)
+    return physical_omega
   
-  def compute_omega_from_snapshot(self, controller_snapshot, live_switches, live_links, edge_links):
+  def compute_controller_omega(self, controller_snapshot, live_switches, live_links, edge_links):
     NTF = hsa_topo.NTF_from_snapshot(controller_snapshot, live_switches)
     # Frenetic doesn't store any link or host information.
-    # No virtualizatoin though, so we can assume the same TTF
+    # No virtualization though, so we can assume the same TTF. TODO: for now...
     TTF = hsa_topo.generate_TTF(live_links)
     return hsa.compute_omega(NTF, TTF, edge_links)
   
