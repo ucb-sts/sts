@@ -7,6 +7,7 @@ import nom_snapshot_protobuf.nom_snapshot_pb2 as nom_snapshot
 
 import pickle
 import logging
+import collections
 log = logging.getLogger("invariant_checker")
 
 class InvariantChecker(object):
@@ -83,10 +84,32 @@ class InvariantChecker(object):
     return (NTF, TTF)
   
   def infer_policy_violations(self, physical_omega, controller_omega):
-    # Omegas are { (original hs, original port) -> [(final hs1, final port1), (final hs2, final port2)...] }
     print "# entries in physical omega: %d" % len(physical_omega)
     print "# entries in controller omega: %d" % len(controller_omega)
     
-    # (physical - controller) = missing routing policies
-    # (controller - physical) = missing ACL policies
+    def get_simple_dict(omega):
+      # TODO: ignoring original hs means that we don't account for
+      # field modifications, e.g. TTL decreases
+      #
+      # Omegas are { (original hs, original port) -> [(final hs1, final port1), (final hs2, final port2)...] }
+      # Want to turn them into port -> [(final hs1, final port1), (final hs2, final port2)...] 
+      simple_dict = collections.defaultdict(lambda: set()) 
+      for key, tuples in omega.iteritems():
+        (hs, port) = key
+        for tup in tuples:
+          simple_dict[port].add(tup)
+      return simple_dict
+      
+    physical_omega = get_simple_dict(physical_omega)
+    controller_omega = get_simple_dict(controller_omega)
     
+    def print_missing_entries(print_string, omega1, omega2):
+      for origin_port, final_locations in omega1.iteritems():
+        for final_location in final_locations:
+          if origin_port not in omega2 or final_location not in omega2[origin_port]:
+            print "%s: %s" % (print_string, str(final_location))
+            
+    # (physical - controller) = missing routing policies
+    print_missing_entries("missing routing entries: ", physical_omega, controller_omega)
+    # (controller - physical) = missing ACL policies.
+    print_missing_entries("missing acl entries: ", controller_omega, physical_omega)

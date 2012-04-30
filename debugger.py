@@ -57,7 +57,9 @@ parser.add_argument("-n", "--non-interactive", help='run debugger non-interactiv
 
 parser.add_argument("-C", "--check-interval", type=int,
                     help='Run correspondence checking every C timesteps (assume -n)',
-                    dest="check_interval", default=25)
+                    dest="check_interval", default=35)
+
+# TODO: add argument for trace injection interval
 
 parser.add_argument("-D", "--delay", type=float, metavar="time",
                     default=0.1,

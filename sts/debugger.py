@@ -40,7 +40,7 @@ class FuzzTester (EventMixin):
   their responses?)
   """
   def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True,
-               check_interval=25, trace_interval=10, random_seed=0.0,
+               check_interval=35, trace_interval=10, random_seed=0.0,
                delay=0.1, dataplane_trace=None, control_socket=None):
     self.interactive = interactive
     self.check_interval = check_interval
