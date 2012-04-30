@@ -2,7 +2,7 @@
 ccopy_reg
 _reconstructor
 p1
-(cdebugger.trace_generator
+(csts.trace_generator
 DataplaneEvent
 p2
 c__builtin__
@@ -14,7 +14,7 @@ Rp5
 S'interface'
 p7
 g1
-(cdebugger.debugger_entities
+(csts.debugger_entities
 HostInterface
 p8
 g3
@@ -157,7 +157,7 @@ p67
 I4
 sS'id'
 p68
-I23584
+I7178
 sg61
 g32
 sS'parsed'
@@ -252,7 +252,7 @@ I5
 sg67
 I4
 sg68
-I23585
+I7179
 sg61
 g80
 sg69
