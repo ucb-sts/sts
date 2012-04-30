@@ -186,6 +186,7 @@ def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_
             sys.stdout.write("    next_hp: %s -> %s" % (port_to_hex(next_p),str(next_h)))
             
             # Note: right now, we encode packet drops as a lack of a leave in the propogation graph
+            # TODO: not in (not edge ports) would work better
             if next_p in edge_ports:
               # We've reached our final destination!
               # ASSUMPTION: no edge port will send it back out into the network...
@@ -196,7 +197,7 @@ def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_
                 if not key in port_omega:
                   # TODO: python default value for hash?
                   port_omega[key] = []
-                port_omega[key].append((next_h, next_p))            
+                port_omega[key].append((next_h, next_p))
                 
             linked = TTF.T(next_h,next_p)
             if not linked:
