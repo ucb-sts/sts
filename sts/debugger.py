@@ -39,10 +39,12 @@ class FuzzTester (EventMixin):
   it will inject intelligently chosen mock events (and observe
   their responses?)
   """
-  def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True, check_interval=25,
-               random_seed=0.0, delay=0.1, dataplane_trace=None, control_socket=None):
+  def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True,
+               check_interval=25, trace_interval=10, random_seed=0.0,
+               delay=0.1, dataplane_trace=None, control_socket=None):
     self.interactive = interactive
     self.check_interval = check_interval
+    self.trace_interval = trace_interval
     # Format of trace file is a pickled array of DataplaneEvent objects
     self.dataplane_trace = None
     if dataplane_trace:
@@ -143,21 +145,26 @@ class FuzzTester (EventMixin):
         answer = msg.raw_input('Continue to next round? [Yn]').strip()
         if answer != '' and answer.lower() != 'y':
           self.stop()
-      elif (self.logical_time % self.check_interval) == 0:
-        # Time to run correspondence!
-        # spawn a thread for running correspondence. Make sure the controller doesn't 
-        # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
-        # TODO: this is a HACK
-        def do_correspondence():
-          self.invariant_checker.check_correspondence(self.live_switches, self.live_links, self.access_links)
-        thread = threading.Thread(target=do_correspondence)
-        thread.start()
-        while thread.isAlive():
-          for switch in self.live_switches:
-            # connection -> deferred io worker -> io worker
-            switch._connection.io_worker._io_worker.send(of.ofp_echo_request().pack())
-          thread.join(2.0)
-      else:
+          break
+      else: # not self.interactive
+        if (self.logical_time % self.check_interval) == 0:
+          # Time to run correspondence!
+          # spawn a thread for running correspondence. Make sure the controller doesn't 
+          # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
+          # TODO: this is a HACK
+          def do_correspondence():
+            self.invariant_checker.check_correspondence(self.live_switches, self.live_links, self.access_links)
+          thread = threading.Thread(target=do_correspondence)
+          thread.start()
+          while thread.isAlive():
+            for switch in self.live_switches:
+              # connection -> deferred io worker -> io worker
+              switch._connection.io_worker._io_worker.send(of.ofp_echo_request().pack())
+            thread.join(2.0)
+     
+        if self.dataplane_trace and (self.logical_time % self.trace_interval) == 0:
+          self.inject_trace_event()
+          
         time.sleep(self.delay)
 
   def stop(self):
@@ -193,20 +200,13 @@ class FuzzTester (EventMixin):
         return
       else:
         msg.interactive("Result: %s" % str(result))
-
+        
   def dataplane_trace_prompt(self):
-    # TODO: support non-interactive trace input
     if self.dataplane_trace:
       while True:
         answer = msg.raw_input('Feed in next dataplane event? [Ny]')
         if answer != '' and answer.lower() != 'n':
-          dp_event = self.dataplane_trace.pop(0)
-          # Assume unique names
-          host = self.name2host[dp_event.hostname]
-          if not host:
-            log.warn("Host %s not present" % str(host))
-            break
-          host.send(dp_event.interface, dp_event.packet)
+          self.inject_trace_event()
         else:
           break
 
@@ -326,6 +326,21 @@ class FuzzTester (EventMixin):
   def check_timeouts(self):
     # Interpose on timeouts
     pass
+  
+  def inject_trace_event(self):
+    ''' Precondition: --trace is set '''
+    if len(self.dataplane_trace) == 0:
+      log.warn("No more trace inputs to inject!")
+      return
+    else:
+      log.info("Injecting trace input")
+      dp_event = self.dataplane_trace.pop(0)
+      # Assume unique names
+      host = self.name2host[dp_event.hostname]
+      if not host:
+        log.warn("Host %s not present" % str(host))
+        return
+      host.send(dp_event.interface, dp_event.packet)
 
   def fuzz_traffic(self):
     if not self.dataplane_trace:
