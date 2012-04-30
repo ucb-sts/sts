@@ -417,6 +417,10 @@ def tf_from_protobuf_switch(ntf, protobuf_switch, real_switch):
     match_kws = []
     for field_match in (rule.match.field_matches):
       match_kws.append(get_kw_for_field_match(field_match))
+    # HACK: Frenetic ignores dl_vlan_pcp, and nw_tos. Add these in manually
+    # with zeroed-out values
+    match_kws.append("dl_vlan_pcp=0")
+    match_kws.append("nw_tos=0")
     match = eval("ofp_match("+','.join(match_kws)+")")
       
     actions = []
