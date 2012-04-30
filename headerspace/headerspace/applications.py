@@ -138,7 +138,7 @@ def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
   # TODO: need to model host end of link, or does switch end suffice?
   edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
   
-  print "edge_ports: %s" % str(edge_ports)
+  print "edge_ports: %s" % ports_to_hex(edge_ports)
   
   for start_port in edge_ports:
     port_omega = compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map, test_packet)
