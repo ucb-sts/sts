@@ -56,7 +56,7 @@ class InvariantChecker(object):
     physical_omega = self.compute_physical_omega(live_switches, live_links, edge_links)
     log.debug("Computing controller omega...")
     controller_omega = self.compute_controller_omega(controller_snapshot, live_switches, live_links, edge_links)
-    # TODO: compare omegas
+    self.infer_policy_violations(physical_omega, controller_omega)
     
   # --------------------------------------------------------------#
   #                    HSA utilities                              #
@@ -81,3 +81,12 @@ class InvariantChecker(object):
     NTF = hsa_topo.generate_NTF(live_switches)
     TTF = hsa_topo.generate_TTF(live_links)
     return (NTF, TTF)
+  
+  def infer_policy_violations(self, physical_omega, controller_omega):
+    # Omegas are { (original hs, original port) -> [(final hs1, final port1), (final hs2, final port2)...] }
+    print "# entries in physical omega: %d" % len(physical_omega)
+    print "# entries in controller omega: %d" % len(controller_omega)
+    
+    # (physical - controller) = missing routing policies
+    # (controller - physical) = missing ACL policies
+    
