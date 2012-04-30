@@ -34,13 +34,18 @@ message Match {
       switch = 12;
    }
 
-   // header field
-   required HeaderField field = 1;
+   // A Match is zero or more FieldMatches
+   // (this is how you encode a hash table in protobufs)
+   message FieldMatch {
+      optional HeaderField field = 1;
+      // encoded as a string to allow for MAC addresses, dotted quads, etc.
+      optional string value = 2;
+   }
+
    // True is ==, False is !=
    optional bool polarity = 2 [default = true];
-   // Header value that must match
-   // encoded as a string to allow for MAC addresses, dotted quads, etc.
-   required string value = 3;
+   // Header values that must match
+   repeated FieldMatch field_matches = 3;
 }
 
 message Rule {
