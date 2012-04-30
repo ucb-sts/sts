@@ -374,36 +374,32 @@ def generate_transfer_function(tf, software_switch):
   #print tf
   return 0
 
-# TODO: wrong place for this:
-def ofp_match_from_protobuf_match(protobuf_match):
-  match_type = protobuf_match.field
-  value = protobuf_match.value
-  if match_type == nom_snapshot.Match.dl_src:
-    return ofp_match(dl_src=EthAddr(value))
-  if match_type == nom_snapshot.Match.dl_dst:
-    return ofp_match(dl_dst=EthAddr(value))
-  if match_type == nom_snapshot.Match.dl_vlan:
-    return ofp_match(dl_vlan=value)
-  if match_type == nom_snapshot.Match.dl_vlan_pcp:
-    return ofp_match(dl_vlan_pcp=value)
-  if match_type == nom_snapshot.Match.dl_type:
-    return ofp_match(dl_type=value)
-  if match_type == nom_snapshot.Match.nw_tos:
-    return ofp_match(nw_tos=value)
-  if match_type == nom_snapshot.Match.nw_proto:
-    return ofp_match(nw_proto=value)
-  if match_type == nom_snapshot.Match.nw_src:
-    return ofp_match(nw_src=IPAddr(value))
-  if match_type == nom_snapshot.Match.nw_dst:
-    return ofp_match(nw_dst=IPAddr(value))
-  if match_type == nom_snapshot.Match.tp_src:
-    return ofp_match(tp_src=value)
-  if match_type == nom_snapshot.Match.tp_dst:
-    return ofp_match(tp_dst=value)
-  if match_type == nom_snapshot.Match.in_port:
-    return ofp_match(in_port=value)
-  if match_type == nom_snapshot.Match.switch:
-    return None
+def get_kw_for_field_match(field_match):
+  type_to_name = {
+    nom_snapshot.Match.dl_src:"dl_src",
+    nom_snapshot.Match.dl_dst:"dl_dst",
+    nom_snapshot.Match.dl_vlan:"dl_vlan",
+    nom_snapshot.Match.dl_vlan_pcp:"dl_vlan_pcp",
+    nom_snapshot.Match.dl_type:"dl_type",
+    nom_snapshot.Match.nw_tos:"nw_tos",
+    nom_snapshot.Match.nw_proto:"nw_proto",
+    nom_snapshot.Match.nw_src:"nw_src",
+    nom_snapshot.Match.nw_dst:"nw_dst",
+    nom_snapshot.Match.tp_src:"tp_src",
+    nom_snapshot.Match.tp_dst:"tp_dst",
+    nom_snapshot.Match.in_port:"in_port",
+    nom_snapshot.Match.switch:"switch"
+  }
+
+  value = field_match.value
+  field_name = type_to_name[field_match.field]
+  if field_name == "dl_dst" or field_name == "dl_src":
+    value = "EthAddr(\"%s\")" % value 
+  if field_name == "nw_dst" or field_name == "nw_src":
+    # Odd that ofp_match takes EthAddrs, but just strings for IpAddrs...
+    value = "\"%s\"" % value
+    
+  return "%s=%s" % (field_name, value)
 
 # TODO: wrong place for this:
 def of_action_from_protobuf_action(protobuf_action):
@@ -418,7 +414,11 @@ def tf_from_protobuf_switch(ntf, protobuf_switch, real_switch):
   dummy_switch = SwitchImpl(real_switch.dpid, ports=real_switch.ports.values())
   for rule in protobuf_switch.rules:
     # TODO: don't ignore polarity
-    match = ofp_match_from_protobuf_match(rule.match)
+    match_kws = []
+    for field_match in (rule.match.field_matches):
+      match_kws.append(get_kw_for_field_match(field_match))
+    match = eval("ofp_match("+','.join(match_kws)+")")
+      
     actions = []
     for protobuf_action in rule.actions:
       action = of_action_from_protobuf_action(protobuf_action)
