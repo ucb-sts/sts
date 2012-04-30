@@ -153,7 +153,11 @@ class FuzzTester (EventMixin):
           # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
           # TODO: this is a HACK
           def do_correspondence():
-            self.invariant_checker.check_correspondence(self.live_switches, self.live_links, self.access_links)
+            any_policy_violations = self.invariant_checker.check_correspondence(self.live_switches, self.live_links, self.access_links)
+            if any_policy_violations:
+              msg.fail("There were policy-violations!")
+            else:
+              msg.interactive("No policy-violations!")
           thread = threading.Thread(target=do_correspondence)
           thread.start()
           while thread.isAlive():

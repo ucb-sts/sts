@@ -51,13 +51,14 @@ class InvariantChecker(object):
     pass
   
   def check_correspondence(self, live_switches, live_links, edge_links):
+    ''' Return if there were any policy-violations '''
     log.debug("Snapshotting controller...")
     controller_snapshot = self.fetch_controller_snapshot()
     log.debug("Computing physical omega...")
     physical_omega = self.compute_physical_omega(live_switches, live_links, edge_links)
     log.debug("Computing controller omega...")
     controller_omega = self.compute_controller_omega(controller_snapshot, live_switches, live_links, edge_links)
-    self.infer_policy_violations(physical_omega, controller_omega)
+    return self.infer_policy_violations(physical_omega, controller_omega)
     
   # --------------------------------------------------------------#
   #                    HSA utilities                              #
@@ -84,6 +85,7 @@ class InvariantChecker(object):
     return (NTF, TTF)
   
   def infer_policy_violations(self, physical_omega, controller_omega):
+    ''' Return if there were any missing entries '''
     print "# entries in physical omega: %d" % len(physical_omega)
     print "# entries in controller omega: %d" % len(controller_omega)
     
@@ -97,19 +99,27 @@ class InvariantChecker(object):
       for key, tuples in omega.iteritems():
         (hs, port) = key
         for tup in tuples:
-          simple_dict[port].add(tup)
+          printable_tup = (str(tup[0]), tup[1])
+          simple_dict[port].add(printable_tup)
       return simple_dict
       
     physical_omega = get_simple_dict(physical_omega)
     controller_omega = get_simple_dict(controller_omega)
     
     def print_missing_entries(print_string, omega1, omega2):
+      any_missing_entries = False
       for origin_port, final_locations in omega1.iteritems():
         for final_location in final_locations:
           if origin_port not in omega2 or final_location not in omega2[origin_port]:
-            print "%s: %s" % (print_string, str(final_location))
+            any_missing_entries = True
+            print ": %s: %s" % (print_string, str(final_location))
+      if not any_missing_entries:
+        print "No %s!" % print_string
+      return any_missing_entries
             
     # (physical - controller) = missing routing policies
-    print_missing_entries("missing routing entries: ", physical_omega, controller_omega)
+    missing_routing_entries = print_missing_entries("missing routing entries", physical_omega, controller_omega)
     # (controller - physical) = missing ACL policies.
-    print_missing_entries("missing acl entries: ", controller_omega, physical_omega)
+    missing_acl_entries = print_missing_entries("missing acl entries", controller_omega, physical_omega)
+    return missing_routing_entries or missing_acl_entries
+    
