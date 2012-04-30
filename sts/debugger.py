@@ -148,7 +148,9 @@ class FuzzTester (EventMixin):
         # spawn a thread for running correspondence. Make sure the controller doesn't 
         # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
         # TODO: this is a HACK
-        thread = threading.Thread(target=self.invariant_checker.check_correspondence)
+        def do_correspondence():
+          self.invariant_checker.check_correspondence(self.live_switches, self.live_links, self.access_links)
+        thread = threading.Thread(target=do_correspondence)
         thread.start()
         while thread.isAlive():
           for switch in self.live_switches:
@@ -181,7 +183,9 @@ class FuzzTester (EventMixin):
       elif answer.lower() == 'c':
         result = self.invariant_checker.check_connectivity()
       elif answer.lower() == 'o':
-        result = self.invariant_checker.check_correspondence()
+        result = self.invariant_checker.check_correspondence(self.live_switches,
+                                                             self.live_links,
+                                                             self.access_links)
       else:
         log.warn("Unknown input...")
 
