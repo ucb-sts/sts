@@ -39,8 +39,8 @@ def ethernet_display(bytes):
   else:
     # OpenFlow 1.0 doesn't support prefix matching over ethernet addrs
     # So assume it's raw (no wildcards)
-    print "Int unpacked is:", bytes_to_int(bytes)
-    print "Eth String is:" + str(EthAddr(bytes_to_int(bytes)))
+    #print "Int unpacked is:", bytes_to_int(bytes)
+    #print "Eth String is:" + str(EthAddr(bytes_to_int(bytes)))
     return str(EthAddr(bytes_to_int(bytes)))
     
 def ip_display(bytes):
@@ -233,7 +233,7 @@ def ofp_match_to_hsa_match(ofp_match):
         addr = EthAddr(addr).toInt()
       else:
         addr = addr.toInt()
-      print "addr is: ", addr
+      #print "addr is: ", addr
       set_field(hsa_match, field_name, addr)
   
   for field_name in ['nw_src', 'nw_dst']:
