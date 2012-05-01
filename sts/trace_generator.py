@@ -88,7 +88,7 @@ def generate_example_trace_same_subnet():
     
   write_trace_log(trace, "traces/ping_pong_same_subnet.trace")
    
-def generate_example_trace_fat_tree(num_pods=5):
+def generate_example_trace_fat_tree(num_pods=4):
   # TODO: highly redundant
   
   fat_tree = topo_gen.FatTree(num_pods)
