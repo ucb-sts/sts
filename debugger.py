@@ -155,9 +155,9 @@ try:
    switch_impls,
    network_links,
    hosts,
-   access_links) = default_topology.populate(controllers,
+   access_links) = default_topology.populate_fat_tree(controllers,
                                              create_worker,
-                                             num_switches=args.num_switches)
+                                             num_pods=args.num_switches)
 
   # For instrumenting the controller
   control_socket = connect_socket_with_backoff('', 6634)
