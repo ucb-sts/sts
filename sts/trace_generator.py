@@ -10,6 +10,7 @@ from pox.lib.packet.icmp import *
 from pox.lib.util import assert_type
 import topology_generator as topo_gen
 from debugger_entities import HostInterface
+from collections import defaultdict
 import pickle
 
 class DataplaneEvent (object):
@@ -86,6 +87,33 @@ def generate_example_trace_same_subnet():
     trace.append(packet_events[1])
     
   write_trace_log(trace, "traces/ping_pong_same_subnet.trace")
+   
+def generate_example_trace_fat_tree(num_pods=5):
+  # TODO: highly redundant
+  
+  fat_tree = topo_gen.FatTree(num_pods)
+  #fat_tree.install_portland_routes()
+  patch_panel = topo_gen.BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
+  (switches, network_links, hosts, access_links) = (fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
+  
+  dataplane_events = []
+  payload = "ping"
+  for access_link in access_links:
+    hostname = access_link.host.name
+    other_hosts = list((set(hosts) - set([access_link.host])))
+    for other_host in other_hosts:
+      eth = ethernet(src=access_link.host.interfaces[0].mac,dst=other_host.interfaces[0].mac,type=ethernet.IP_TYPE)
+      dst_ip_addr = other_host.interfaces[0].ips[0]
+      ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
+      ping = icmp(type=TYPE_ECHO_REQUEST, payload=payload)
+      ipp.payload = ping 
+      eth.payload = ipp
+      dataplane_events.append(DataplaneEvent(hostname, access_link.interface, eth))
+    
+  # ping pong (no responses) between fake hosts
+  # (Some large number: TODO: serialize a generator to disk)
+  trace = [ random.choice(dataplane_events) for _ in range(50000)]
+  write_trace_log(trace, "traces/ping_pong_fat_tree.trace")
   
 if __name__ == '__main__':
   generate_example_trace()
