@@ -251,11 +251,11 @@ class FuzzTester (EventMixin):
         self.panel.drop_dp_event(dp_event)
         self.dropped_dp_events.append(dp_event)
       else:
-        if type(dp_event.node) == Host:
+        (next_hop, next_port) = self.panel.get_connected_port(dp_event.switch, dp_event.port)
+        if type(dp_event.node) == Host or type(next_hop) == Host:
           # TODO: model access link failures:
           self.panel.permit_dp_event(dp_event)
         else:
-          (next_hop, next_port) = self.panel.get_connected_port(dp_event.switch, dp_event.port)
           link = Link(dp_event.switch, dp_event.port, next_hop, next_port)
           if not link in self.cut_links:
             msg.event("Forwarding dataplane event")

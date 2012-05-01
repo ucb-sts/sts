@@ -208,7 +208,9 @@ class PatchPanel(object):
 
   def forward_packet(self, next_switch, packet, next_port):
     ''' Forward the packet to the given port '''
-    next_switch.process_packet(packet, next_port.port_no)
+    if type(next_port) != int:
+      next_port = next_port.port_no
+    next_switch.process_packet(packet, next_port)
 
   def deliver_packet(self, host, packet, host_interface):
     ''' Deliver the packet to its final destination '''
@@ -389,7 +391,7 @@ class FatTree (object):
       # So we do prefix matching on IP addresses, which yields exactly the same # of flow
       # entries for HSA, right?
       portland_ip_addr = IPAddr("123.%d.%d.%d" % (current_pod_id, position, edge_port_no))
-      (host, host_access_links) = create_host(edge, portland_mac, portland_ip_addr, lambda switch: edge_port_no)
+      (host, host_access_links) = create_host(edge, portland_mac, portland_ip_addr, lambda switch: switch.ports[edge_port_no])
       host.pod_id = current_pod_id
       self.hosts.append(host)
       self.access_links = self.access_links.union(set(host_access_links))

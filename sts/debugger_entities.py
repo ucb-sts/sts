@@ -96,6 +96,8 @@ class Link (object):
   Note: Directed!
   """
   def __init__(self, start_switch_impl, start_port, end_switch_impl, end_port):
+    assert_type("start_port", start_port, ofp_phy_port, none_ok=False)
+    assert_type("end_port", end_port, ofp_phy_port, none_ok=False)
     self.start_switch_impl = start_switch_impl
     self.start_port = start_port
     self.end_switch_impl = end_switch_impl
@@ -122,6 +124,8 @@ class AccessLink (object):
   Represents a bidirectional edge: host <-> ingress switch
   '''
   def __init__(self, host, interface, switch, switch_port):
+    assert_type("interface", interface, HostInterface, none_ok=False)
+    assert_type("switch_port", switch_port, ofp_phy_port, none_ok=False)
     self.host = host
     self.interface = interface
     self.switch = switch
