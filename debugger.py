@@ -77,6 +77,8 @@ parser.add_argument("-p", "--port", type=int, metavar="port",
 parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
                     help="optional parameters for the fuzzer (e.g. fail rate)")
 
+# Major TODO: need to type-check trace file (i.e., every host in the trace must be present in the network!)
+#              this has already wasted several hours of time...
 parser.add_argument("-t", "--trace-file", default=None,
                     help="optional dataplane trace file (see trace_generator.py)")
 
