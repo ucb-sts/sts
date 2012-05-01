@@ -359,7 +359,8 @@ class FatTree (object):
     self.total_hosts = self.hosts_per_pod * num_pods
 
     current_pod_id = -1
-    current_dpid = -1
+    # zero is not a valid dpid -- (first dpid is 0+1)
+    current_dpid = 0
     # We construct it from bottom up, starting at host <-> edge
     for i in range(self.total_hosts):
       if not i % 1000:
@@ -503,6 +504,10 @@ class FatTree (object):
 
   def get_connected_port(self, node, port):
     ''' Given a node and a port, return a tuple (node, port) that is directly connected to the port '''
+    print "Getting Connected Port! Node %s Port %s" % (str(node), str(port))
+    print "port_to_access_link: %s" % self.port2access_link.keys()
+    print "interface_to_access_link: %s" % self.interface2access_link.keys()
+    print "port_to_internal_link: %s" % self.port2internal_link.keys()
     # TODO: use a $@#*$! graph library
     if port in self.port2access_link:
       access_link = self.port2access_link[port]
