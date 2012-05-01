@@ -513,4 +513,4 @@ class FatTree (object):
     if port in self.port2internal_link:
       link = self.port2internal_link[port]
       return (link.end_switch_impl, link.end_port)
-    raise "Node %s Port %s not in network" % (str(node), str(port))
+    raise RuntimeError("Node %s Port %s not in network" % (str(node), str(port)))
