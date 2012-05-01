@@ -162,8 +162,11 @@ class HostInterface (object):
     hash_code += self.name.__hash__()
     return hash_code
   
-  def __str__(self):
-    return self.name
+  def __str__(self, *args, **kwargs):
+    return "HostInterface:" + self.name + ":" + str(self.mac) + ":" + str(self.ips)
+  
+  def __repr__(self, *args, **kwargs):
+    return self.__str__()
     
 #                Host
 #          /      |       \
