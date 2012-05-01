@@ -11,6 +11,7 @@ Requires python 2.7+
 You'll need to load the pox submodule to run pox applications.
 
 After cloning, run:
+  $ git submodule init
   $ git submodule update
 
 To run, see:
