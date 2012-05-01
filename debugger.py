@@ -43,6 +43,13 @@ import argparse
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
+logger = logging.getLogger("sts")
+
+# We use python as our DSL for specifying experiment configuration  
+# The module can define the following functions:
+#   controllers(command_line_args=[]) => returns a list of pox.sts.experiment_config_info.ControllerInfo objects
+#   switches()                        => returns a list of pox.sts.experiment_config_info.Switch objects
+
 description = """
 Run a debugger experiment.
 Example usage:
@@ -138,6 +145,7 @@ try:
                           map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
       print command_line_args
       child = subprocess.Popen(command_line_args)
+      logger.info("Launched controller c%d: %s [PID %d]" % (i, " ".join(command_line_args), child.pid))
       child_processes.append(child)
 
   io_loop = RecocoIOLoop()
