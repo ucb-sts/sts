@@ -327,19 +327,36 @@ class FatTree (object):
     self.internal_links = set()
 
     self.construct_tree(num_pods)
-
+    
     self.switches = self.cores + self.aggs + self.edges
 
     # Auxiliary data to make get_connected_port efficient
     self.port2internal_link = {}
     for link in self.internal_links:
+      if link.start_port in self.port2internal_link:
+        raise RuntimeError("%s Already there %s" % (str(link), str(self.port2internal_link[link.start_port])))
       self.port2internal_link[link.start_port] = link
+      
+    # TODO: this should be in a unit test, not here
+    if len(self.port2internal_link) != len(self.internal_links):
+      raise RuntimeError("Not enough port2internal_links(%d s/b %d)" % \
+                        (len(self.port2internal_link), len(self.internal_links)))
 
     self.port2access_link = {}
     self.interface2access_link = {}
     for access_link in self.access_links:
       self.port2access_link[access_link.switch_port] = access_link
       self.interface2access_link[access_link.interface] = access_link
+      
+    # TODO: this should be in a unit test, not here
+    if len(self.port2access_link) != len(self.access_links):
+      raise RuntimeError("Not enough port2accesslinks (%d s/b %d)" % \
+                        (len(self.port2access_link), len(self.access_links)))
+      
+    # TODO: this should be in a unit test, not here
+    if len(self.interface2access_link) != len(self.access_links):
+      raise RuntimeError("Not enough interface2accesslinks (%d s/b %d)" % \
+                        (len(self.interface2accesslinks), len(self.access_links)))
 
   def construct_tree(self, num_pods):
     '''
@@ -438,8 +455,27 @@ class FatTree (object):
         self.internal_links.add(Link(agg, agg.ports[agg_port_no], core, core.ports[core_port_no]))
         self.internal_links.add(Link(core, core.ports[core_port_no], agg, agg.ports[agg_port_no]))
 
+    self._sanity_check_tree()
     logger.debug("Fat tree construction: done (%d cores, %d aggs, %d edges, %d hosts)" %
         (len(self.cores), len(self.aggs), len(self.edges), len(self.hosts)))
+    
+  def _sanity_check_tree(self):
+    # TODO: this should be in a unit test, not here
+    if len(self.access_links) != self.total_hosts:
+      raise RuntimeError("incorrect # of access links (%d, s/b %d)" % \
+                          (len(self.access_links),len(self.total_hosts)))  
+    
+    # k = number of ports per switch = number of pods
+    # number core switches =  (k/2)^2
+    # number of edge switches per pod = k / 2
+    # number of agg switches per pod = k / 2
+    total_switches = self.total_core + ((self.edge_per_pod + self.agg_per_pod) * self.k)
+    print "total_switches: %d" % total_switches
+    # uni-directional links (on in both directions):
+    total_internal_links = (total_switches * self.k) - self.total_hosts
+    if len(self.internal_links) != total_internal_links:
+      raise RuntimeError("incorrect # of internal links (%d, s/b %d)" % \
+                          (len(self.internal_links),total_internal_links))  
 
   def install_default_routes(self):
     '''
