@@ -123,9 +123,10 @@ class FuzzTester (EventMixin):
     self.switch_impls = set(switch_impls)
     self.dataplane_links = set(network_links)
     self.hosts = hosts
-    self.name2host = {}
+    self.interface2host = {}
     for host in hosts:
-      self.name2host[host.name] = host
+      for interface in host.interfaces:
+        self.interface2host[interface] = host
     self.access_links = set(access_links)
     self.loop(steps)
 
@@ -339,8 +340,7 @@ class FuzzTester (EventMixin):
     else:
       log.info("Injecting trace input")
       dp_event = self.dataplane_trace.pop(0)
-      # Assume unique names
-      host = self.name2host[dp_event.hostname]
+      host = self.interface2host[dp_event.interface]
       if not host:
         log.warn("Host %s not present" % str(host))
         return

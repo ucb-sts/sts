@@ -85,7 +85,7 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, ge
     interface_switch_pairs.append((interface, switch))
     interfaces.append(interface)
 
-  name = "host:" + ",".join(map(lambda switch: "%d" % switch.dpid, switches))
+  name = "host:" + ",".join(map(lambda interface: "%s" % str(interface.ips), interfaces)) 
   host = Host(interfaces, name)
   access_links = [ AccessLink(host, interface, switch, get_switch_port(switch)) for interface, switch in interface_switch_pairs ]
   return (host, access_links)

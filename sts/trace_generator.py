@@ -18,11 +18,9 @@ class DataplaneEvent (object):
   Encapsulates a packet injected at a (switch.dpid, port) pair in the network
   Used for trace generation or replay debugging
   '''
-  def __init__ (self, hostname, interface, packet):
-    assert_type("hostname", hostname, str, none_ok=False)
+  def __init__ (self, interface, packet):
     assert_type("interface", interface, HostInterface, none_ok=False)
     assert_type("packet", packet, ethernet, none_ok=False)
-    self.hostname = hostname
     self.interface = interface 
     self.packet = packet
 
@@ -51,7 +49,7 @@ def generate_example_trace():
       ping = icmp(type=TYPE_ECHO_REPLY, payload=ping_or_pong)
     ipp.payload = ping 
     eth.payload = ipp
-    packet_events.append(DataplaneEvent(access_link.host.name, access_link.interface, eth))
+    packet_events.append(DataplaneEvent(access_link.interface, eth))
     
   # ping ping (no responses) between fake hosts
   for _ in range(40):
@@ -79,7 +77,7 @@ def generate_example_trace_same_subnet():
       ping = icmp(type=TYPE_ECHO_REPLY, payload=ping_or_pong)
     ipp.payload = ping 
     eth.payload = ipp
-    packet_events.append(DataplaneEvent(access_link.host.name, access_link.interface, eth))
+    packet_events.append(DataplaneEvent(access_link.interface, eth))
     
   # ping ping (no responses) between fake hosts
   for _ in range(40):
@@ -92,14 +90,13 @@ def generate_example_trace_fat_tree(num_pods=4):
   # TODO: highly redundant
   
   fat_tree = topo_gen.FatTree(num_pods)
-  #fat_tree.install_portland_routes()
   patch_panel = topo_gen.BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
   (switches, network_links, hosts, access_links) = (fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
   
-  dataplane_events = []
+  host2pings = defaultdict(lambda: [])
   payload = "ping"
   for access_link in access_links:
-    hostname = access_link.host.name
+    host = access_link.host
     other_hosts = list((set(hosts) - set([access_link.host])))
     for other_host in other_hosts:
       eth = ethernet(src=access_link.host.interfaces[0].mac,dst=other_host.interfaces[0].mac,type=ethernet.IP_TYPE)
@@ -108,11 +105,16 @@ def generate_example_trace_fat_tree(num_pods=4):
       ping = icmp(type=TYPE_ECHO_REQUEST, payload=payload)
       ipp.payload = ping 
       eth.payload = ipp
-      dataplane_events.append(DataplaneEvent(hostname, access_link.interface, eth))
+      host2pings[host].append(DataplaneEvent(access_link.interface, eth))
     
   # ping pong (no responses) between fake hosts
   # (Some large number: TODO: serialize a generator to disk)
-  trace = [ random.choice(dataplane_events) for _ in range(50000)]
+  # Trace is [one ping from every host to a random other host] * 50000
+  trace = []
+  for _ in range(50000):
+    for host, pings in host2pings.iteritems():
+      trace.append(random.choice(pings)) 
+    
   write_trace_log(trace, "traces/ping_pong_fat_tree.trace")
   
 if __name__ == '__main__':
