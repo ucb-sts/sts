@@ -64,7 +64,7 @@ parser.add_argument("-n", "--non-interactive", help='run debugger non-interactiv
 
 parser.add_argument("-C", "--check-interval", type=int,
                     help='Run correspondence checking every C timesteps (assume -n)',
-                    dest="check_interval", default=70)
+                    dest="check_interval", default=35)
 
 # TODO: add argument for trace injection interval
 
@@ -81,8 +81,8 @@ parser.add_argument("-s", "--steps", type=int, metavar="nsteps",
 parser.add_argument("-p", "--port", type=int, metavar="port",
                     help="base port to use for controllers", default=6633)
 
-parser.add_argument("-F", "--fat-tree", action="store_true", default=False, dest="fattree",
-                    help="generate a fat tree topology with N ponds (by default: create a fully meshed topology)")
+parser.add_argument("-l", "--snapshotport", type=int, metavar="snapshotport",
+                    help="port to use for controllers for snapshotting", default=6634)
 
 parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
                     help="optional parameters for the fuzzer (e.g. fail rate)")
@@ -155,7 +155,7 @@ try:
 
   io_loop = RecocoIOLoop()
   
-  scheduler = Scheduler(daemon=True, useEpoll=False)
+  scheduler = Scheduler(daemon=True, useEpoll=True)
   scheduler.schedule(io_loop)
 
   #if hasattr(config, 'switches'):
