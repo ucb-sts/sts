@@ -113,6 +113,12 @@ class FuzzTester (EventMixin):
     else:
       # TODO: default values in case fuzzer_config is not present / missing directives
       raise IOError("Could not find logging config file: %s" % fuzzer_params)
+    
+  def type_check_dataplane_trace(self):
+    if self.dataplane_trace is not None:
+      for dp_event in self.dataplane_trace:
+        if dp_event.interface not in self.interface2host:
+          raise RuntimeError("Dataplane trace does not type check (%s)" % str(dp_event.interface))
 
   def simulate(self, panel, switch_impls, network_links, hosts, access_links, steps=None):
     """
@@ -128,6 +134,7 @@ class FuzzTester (EventMixin):
       for interface in host.interfaces:
         self.interface2host[interface] = host
     self.access_links = set(access_links)
+    self.type_check_dataplane_trace()
     self.loop(steps)
 
   def loop(self, steps=None):
