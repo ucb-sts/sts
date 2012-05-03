@@ -168,9 +168,7 @@ class FuzzTester (EventMixin):
             thread.join(2.0)
      
         if self.dataplane_trace and (self.logical_time % self.trace_interval) == 0:
-          # Time to inject packets!
-          for _ in self.hosts:
-            self.inject_trace_event()
+          self.inject_trace_event()
           
         time.sleep(self.delay)
 

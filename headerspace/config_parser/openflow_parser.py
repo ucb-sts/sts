@@ -11,7 +11,7 @@ from pox.openflow.flow_table import SwitchFlowTable, TableEntry
 from pox.openflow.switch_impl import SwitchImpl
 
 # TODO: bad separation of concerns
-import nom_snapshot_protobuf.nom_snapshot_pb2 as nom_snapshot
+#import nom_snapshot_protobuf.nom_snapshot_pb2 as nom_snapshot
 
 import re
 from collections import namedtuple
