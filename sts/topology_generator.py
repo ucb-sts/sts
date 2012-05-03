@@ -125,7 +125,7 @@ def connect_to_controllers(controller_info_list, io_worker_generator, switch_imp
   logger.debug("Connecting %d switches to %d controllers..." % (len(switch_impls), len(controller_info_list)))
 
   for (idx, switch_impl) in enumerate(switch_impls):
-    if not idx % 250:
+    if len(switch_impls) < 20 or not idx % 250:
       logger.debug("Connecting switch %d / %d" % (idx, len(switch_impls)))
 
     # TODO: what if the controller is slow to boot?

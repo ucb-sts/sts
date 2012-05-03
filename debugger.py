@@ -81,6 +81,9 @@ parser.add_argument("-s", "--steps", type=int, metavar="nsteps",
 parser.add_argument("-p", "--port", type=int, metavar="port",
                     help="base port to use for controllers", default=6633)
 
+parser.add_argument("-F", "--fat-tree", action="store_true", default=False, dest="fattree",
+                    help="generate a fat tree topology with N ponds (by default: create a fully meshed topology)")
+
 parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
                     help="optional parameters for the fuzzer (e.g. fail rate)")
 
@@ -167,7 +170,13 @@ try:
    hosts,
    access_links) = default_topology.populate(controllers,
                                              create_worker,
+<<<<<<< HEAD
                                              num_switches=args.num_switches)
+=======
+                                             num_pods=args.num_switches) \
+                                                 if args.fattree else \
+                   default_topology.populate(controllers, create_worker, num_switches=args.num_switches)
+>>>>>>> 6ef0189ffb92d47a2fc73b8180f585be04c28d4d
 
   # For instrumenting the controller
   control_socket = connect_socket_with_backoff('', 6634)
