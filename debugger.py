@@ -64,7 +64,7 @@ parser.add_argument("-n", "--non-interactive", help='run debugger non-interactiv
 
 parser.add_argument("-C", "--check-interval", type=int,
                     help='Run correspondence checking every C timesteps (assume -n)',
-                    dest="check_interval", default=35)
+                    dest="check_interval", default=70)
 
 # TODO: add argument for trace injection interval
 
@@ -165,9 +165,9 @@ try:
    switch_impls,
    network_links,
    hosts,
-   access_links) = default_topology.populate_fat_tree(controllers,
+   access_links) = default_topology.populate(controllers,
                                              create_worker,
-                                             num_pods=args.num_switches)
+                                             num_switches=args.num_switches)
 
   # For instrumenting the controller
   control_socket = connect_socket_with_backoff('', 6634)
