@@ -90,91 +90,100 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, ge
   access_links = [ AccessLink(host, interface, switch, get_switch_port(switch)) for interface, switch in interface_switch_pairs ]
   return (host, access_links)
 
-def create_mesh(num_switches):
-  ''' Returns (patch_panel, switches, network_links, hosts, access_links) '''
+ 
+class TopologyGenerator(object):
+  def __init__(self):
+    self.connections_per_switch = 1
+    self.fat_tree = False
 
-  # Every switch has a link to every other switch + 1 host, for N*(N-1)+N = N^2 total ports
-  ports_per_switch = (num_switches - 1) + 1
+  def create_mesh(self, num_switches):
+    ''' Returns (patch_panel, switches, network_links, hosts, access_links) '''
 
-  # Initialize switches
-  switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
-  host_access_link_pairs = [ create_host(switch) for switch in switches ]
-  hosts = map(lambda pair: pair[0], host_access_link_pairs)
-  access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
-  # this is python's .flatten:
-  access_links = list(itertools.chain.from_iterable(access_link_list_list))
+    # Every switch has a link to every other switch + 1 host, for N*(N-1)+N = N^2 total ports
+    ports_per_switch = (num_switches - 1) + 1
 
-  # grab a fully meshed patch panel to wire up these guys
-  link_topology = FullyMeshedLinks(switches, access_links)
-  patch_panel = BufferedPatchPanel(switches, hosts, link_topology.get_connected_port)
-  network_links = link_topology.get_network_links()
+    # Initialize switches
+    switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
+    host_access_link_pairs = [ create_host(switch) for switch in switches ]
+    hosts = map(lambda pair: pair[0], host_access_link_pairs)
+    access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
+    # this is python's .flatten:
+    access_links = list(itertools.chain.from_iterable(access_link_list_list))
 
-  return (patch_panel, switches, network_links, hosts, access_links)
+    # grab a fully meshed patch panel to wire up these guys
+    link_topology = FullyMeshedLinks(switches, access_links)
+    patch_panel = BufferedPatchPanel(switches, hosts, link_topology.get_connected_port)
+    network_links = link_topology.get_network_links()
 
-def connect_to_controllers(controller_info_list, io_worker_generator, switch_impls):
-  '''
-  Bind sockets from the switch_impls to the controllers. For now, assign each switch to the next
-  controller in the list in a round robin fashion.
+    return (patch_panel, switches, network_links, hosts, access_links)
 
-  Controller info list is a list of (controller ip address, controller port number) tuples
+  def connect_to_controllers(self, controller_info_list, io_worker_generator, switch_impls):
+    '''
+    Bind sockets from the switch_impls to the controllers. For now, assign each switch to the next
+    controller in the list in a round robin fashion.
 
-  Return a list of socket objects
-  '''
-  controller_info_cycler = itertools.cycle(controller_info_list)
+    Controller info list is a list of (controller ip address, controller port number) tuples
 
-  logger.debug("Connecting %d switches to %d controllers..." % (len(switch_impls), len(controller_info_list)))
+    Return a list of socket objects
+    '''
+    controller_info_cycler = itertools.cycle(controller_info_list)
 
-  for (idx, switch_impl) in enumerate(switch_impls):
-    if len(switch_impls) < 20 or not idx % 250:
-      logger.debug("Connecting switch %d / %d" % (idx, len(switch_impls)))
+    logger.debug("Connecting %d switches to %d controllers (setting up %d conns per switch)..." % (len(switch_impls), len(controller_info_list), self.connections_per_switch))
 
-    # TODO: what if the controller is slow to boot?
-    # Socket from the switch_impl to the controller
-    controller_info = controller_info_cycler.next()
-    def create_io_worker(switch):
-      controller_socket = connect_socket_with_backoff(controller_info.address, controller_info.port)
-      # Set non-blocking
-      controller_socket.setblocking(0)
-      return io_worker_generator(controller_socket)
+    for (idx, switch_impl) in enumerate(switch_impls):
+      if len(switch_impls) < 20 or not idx % 250:
+        logger.debug("Connecting switch %d / %d" % (idx, len(switch_impls)))
 
-    switch_impl.create_io_worker = create_io_worker
-    switch_impl.connect()
+      def create_io_worker(switch, controller_info):
+        controller_socket = connect_socket_with_backoff(controller_info.address, controller_info.port)
+        # Set non-blocking
+        controller_socket.setblocking(0)
+        return io_worker_generator(controller_socket)
+      switch_impl.create_io_worker = create_io_worker
 
-  logger.debug("Controller connections done")
+      # TODO: what if the controller is slow to boot?
+      # Socket from the switch_impl to the controller
+      for i in range(0, self.connections_per_switch):
+        controller_info = controller_info_cycler.next()
+        switch_impl.add_controller_info(controller_info)
 
-def populate(controller_config_list, io_worker_constructor, num_switches=3):
-  '''
-  Populate the topology as a mesh of switches, connect the switches
-  to the controllers, and return
-  (PatchPanel, switches, network_links, hosts, access_links)
-  '''
-  (panel, switches, network_links, hosts, access_links) = create_mesh(num_switches)
-  connect_to_controllers(controller_config_list, io_worker_constructor, switches)
-  return (panel, switches, network_links, hosts, access_links)
+      switch_impl.connect()
 
-def populate_fat_tree(controller_config_list, io_worker_constructor, num_pods=48):
-  '''
-  Populate the topology as a fat tree, and return
-  (PatchPanel, switches, network_links, hosts, access_links)
-  '''
-  fat_tree = FatTree(num_pods)
-  #fat_tree.install_portland_routes()
-  patch_panel = BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
-  connect_to_controllers(controller_config_list, io_worker_constructor, fat_tree.switches)
-  return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
+    logger.debug("Controller connections done")
 
-def populate_from_topology(graph):
-  """
-  Take a pox.lib.graph.graph.Graph and generate arguments needed for the simulator
-  """
-  hosts = graph.find(is_a=Host)
-  return (BufferedPatchPanelForTopology(graph),
-           graph.find(is_a=SwitchImpl),
-           hosts,
-           [AccessLink(host, switch[0], switch[1][0], switch[1][1])
-            for host in hosts
-            for switch in filter(lambda n: isinstance(n[1][0], SwitchImpl),
-            graph.ports_for_node(host).iteritems())])
+  def populate(self, controller_config_list, io_worker_constructor, num_switches=3):
+    '''
+    Populate the topology as a mesh of switches, connect the switches
+    to the controllers, and return
+    (PatchPanel, switches, network_links, hosts, access_links)
+    '''
+    (panel, switches, network_links, hosts, access_links) = self.create_mesh(num_switches)
+    self.connect_to_controllers(controller_config_list, io_worker_constructor, switches)
+    return (panel, switches, network_links, hosts, access_links)
+
+  def populate_fat_tree(self, controller_config_list, io_worker_constructor, num_pods=48):
+    '''
+    Populate the topology as a fat tree, and return
+    (PatchPanel, switches, network_links, hosts, access_links)
+    '''
+    fat_tree = FatTree(num_pods)
+    #fat_tree.install_portland_routes()
+    patch_panel = BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
+    self.connect_to_controllers(controller_config_list, io_worker_constructor, fat_tree.switches)
+    return (patch_panel, fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
+
+  def populate_from_topology(self, graph):
+    """
+    Take a pox.lib.graph.graph.Graph and generate arguments needed for the simulator
+    """
+    hosts = graph.find(is_a=Host)
+    return (BufferedPatchPanelForTopology(graph),
+             graph.find(is_a=SwitchImpl),
+             hosts,
+             [AccessLink(host, switch[0], switch[1][0], switch[1][1])
+              for host in hosts
+              for switch in filter(lambda n: isinstance(n[1][0], SwitchImpl),
+              graph.ports_for_node(host).iteritems())])
 
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.

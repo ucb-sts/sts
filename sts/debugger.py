@@ -164,7 +164,7 @@ class FuzzTester (EventMixin):
           while thread.isAlive():
             for switch in self.live_switches:
               # connection -> deferred io worker -> io worker
-              switch._connection.io_worker._io_worker.send(of.ofp_echo_request().pack())
+              switch.send(of.ofp_echo_request().pack())
             thread.join(2.0)
      
         if self.dataplane_trace and (self.logical_time % self.trace_interval) == 0:
@@ -275,12 +275,14 @@ class FuzzTester (EventMixin):
     for switch_impl in self.live_switches:
       # Check reads
       # TODO: shouldn't be sticking our hands into switch_impl._connection
-      if switch_impl._connection.io_worker.has_pending_receives():
-        check_deliver(switch_impl, "receive", switch_impl._connection.io_worker.permit_receive)
+      for c in switch_impl.connections:
+        if c.io_worker.has_pending_receives():
+          check_deliver(switch_impl, "receive", c.io_worker.permit_receive)
 
       # Check writes
-      if switch_impl._connection.io_worker.has_pending_sends():
-        check_deliver(switch_impl, "send", switch_impl._connection.io_worker.permit_send)
+      for c in switch_impl.connections:
+        if c.io_worker.has_pending_sends():
+          check_deliver(switch_impl, "send", c.io_worker.permit_send)
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
