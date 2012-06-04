@@ -12,3 +12,7 @@ ext/*
 pox/lib/pxpcap/pxpcap_c/build
 pox/lib/pxpcap/pxpcap_c/WpdPack
 pypy/
+
+# ignore eclipse project files
+.pydevproject
+.project
