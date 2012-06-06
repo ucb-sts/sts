@@ -87,6 +87,10 @@ parser.add_argument("-l", "--snapshotport", type=int, metavar="snapshotport",
 parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
                     help="optional parameters for the fuzzer (e.g. fail rate)")
 
+parser.add_argument("-F", "--fat-tree", type=bool, default=False,
+                    dest="fattree",
+                    help="optional parameters for the fuzzer (e.g. fail rate)")
+
 # Major TODO: need to type-check trace file (i.e., every host in the trace must be present in the network!)
 #              this has already wasted several hours of time...
 parser.add_argument("-t", "--trace-file", default=None,
@@ -155,7 +159,7 @@ try:
 
   io_loop = RecocoIOLoop()
   
-  scheduler = Scheduler(daemon=True, useEpoll=True)
+  scheduler = Scheduler(daemon=True, useEpoll=False)
   scheduler.schedule(io_loop)
 
   #if hasattr(config, 'switches'):
@@ -175,7 +179,7 @@ try:
                    default_topology.populate(controllers, create_worker, num_switches=args.num_switches)
 
   # For instrumenting the controller
-  control_socket = connect_socket_with_backoff('', 6634)
+  #control_socket = connect_socket_with_backoff('', 6634)
 
   simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
                         check_interval=args.check_interval,
