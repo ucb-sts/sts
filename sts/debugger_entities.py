@@ -18,6 +18,7 @@ processes. To emulate, we'll want to :
 """
 
 from pox.openflow.switch_impl import SwitchImpl, DpPacketOut
+from pox.openflow.nx_switch_impl import NXSwitchImpl
 from pox.lib.util import connect_socket_with_backoff, assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
@@ -27,13 +28,13 @@ import pickle
 
 # TODO: model hosts in the network!
 
-class FuzzSwitchImpl (SwitchImpl):
+class FuzzSwitchImpl (NXSwitchImpl):
   """
   NOTE: a mock switch implementation for testing purposes. Can simulate dropping dead.
   """
   def __init__ (self, create_io_worker, dpid, name=None, ports=4, miss_send_len=128,
                 n_buffers=100, n_tables=1, capabilities=None):
-    SwitchImpl.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
+    NXSwitchImpl.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
 
     self.create_io_worker = create_io_worker
 
@@ -45,6 +46,10 @@ class FuzzSwitchImpl (SwitchImpl):
       raise e
 
     self.error_handler = error_handler
+    self.controller_info = []
+
+  def add_controller_info(self, info):
+    self.controller_info.append(info)
 
   def _handle_ConnectionUp(self, event):
     self._setConnection(event.connection, event.ofp)
@@ -52,11 +57,11 @@ class FuzzSwitchImpl (SwitchImpl):
   def connect(self):
     # NOTE: create_io_worker is /not/ an instancemethod but just a function
     # so we have to pass in the self parameter explicitely
-    io_worker = self.create_io_worker(self)
-
-    conn = self.set_io_worker(io_worker)
-    # cause errors to be raised
-    conn.error_handler = self.error_handler
+    for info in self.controller_info:
+      io_worker = self.create_io_worker(self, info)
+      conn = self.set_io_worker(io_worker)
+      # cause errors to be raised
+      conn.error_handler = self.error_handler
 
   def fail(self):
     # TODO: depending on the type of failure, a real switch failure
@@ -65,9 +70,10 @@ class FuzzSwitchImpl (SwitchImpl):
       self.log.warn("Switch already failed")
       return
     self.failed = True
-
-    self._connection.close()
-    self._connection = None
+  
+    for connection in self.connections:
+      connection.close()
+    self.connections = []
 
   def recover(self):
     if not self.failed:
