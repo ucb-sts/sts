@@ -34,11 +34,12 @@ def generate_NTF(switches):
   print "NTF: %s" % str(ntf)
   return ntf
     
-def NTF_from_snapshot(controller_snapshot, real_switches):
+def NTF_from_snapshot(rules, real_switches):
   ntf = tf.TF(of.HS_FORMAT())
-  for protobuf_switch in controller_snapshot.switches:
-    dpid = protobuf_switch.dpid
+  dpids = set( (m.dpid for m in rules))
+  for dpid in dpids:
+    dpid_rules = [ m for m in rules if m.dpid == dpid ]
     real_switch = find(lambda sw: sw.dpid == dpid, real_switches)
-    of.tf_from_protobuf_switch(ntf, protobuf_switch, real_switch) 
+    of.tf_from_protobuf_switch(ntf, dpid_rules, real_switch) 
   print "NTF: %s" % str(ntf)
   return ntf

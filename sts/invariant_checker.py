@@ -1,40 +1,31 @@
+import json
+import urllib2
 
 from pox.openflow.libopenflow_01 import *
 from debugger_entities import *
 import headerspace.topology_loader.pox_topology_loader as hsa_topo
 import headerspace.headerspace.applications as hsa
 #import nom_snapshot_protobuf.nom_snapshot_pb2 as nom_snapshot
-
+import nom_snapshot_json as nom_snapshot
 import pickle
 import logging
 import collections
 log = logging.getLogger("invariant_checker")
 
 class InvariantChecker(object):
-  def __init__(self, control_socket):
-    self.control_socket = control_socket
-    
+  def __init__(self, control_url):
+    self.control_url = control_url
+
   def fetch_controller_snapshot(self):
-    # TODO: we really need to be able to pause the controller, since correspondence
-    # checking might take awhile...
-    # TODO: should just use an RPC framework, e.g. Pyro, XML-RPC.
-    log.debug("Sending Request")
-    self.control_socket.send("FETCH", socket.MSG_WAITALL)
-    log.debug("Receiving Results")
-    bytes = []
-    while True:
-      data = self.control_socket.recv(1024)
-      log.debug("%d byte packet received" % len(data))
-      if not data: break
-      bytes.append(data)
-      # HACK. Doesn't handle case where data is exactly 1024 bytes
-      # TODO: figure out the right way to avoid blocking. (Better: use RPC)
-      if len(data) != 1024: break
-        
-    snapshot = nom_snapshot.Snapshot()
-    snapshot.ParseFromString(''.join(bytes))
-    return snapshot
-  
+    req = urllib2.Request('http://localhost:8080/wm/core/proact')
+    response = urllib2.urlopen(req)
+    json_data = response.read()
+    l = json.loads(json_data)
+    res = []
+    for m in l:
+      res.append(nom_snapshot.Snapshot.from_json_map(m))
+    return res
+
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
   # --------------------------------------------------------------#
