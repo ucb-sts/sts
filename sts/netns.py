@@ -7,7 +7,7 @@ with network namespaces.
 
 import itertools
 import socket
-from os import system
+import subprocess
 
 import deferred_io
 
@@ -27,10 +27,9 @@ class HostIOWorker(object):
 
   def __init__(self, deferred_ioworker):
     self._deferred_ioworker = deferred_ioworker
-    self._iface_index = HostIOWorker._namespace_index.next()
-    self.init()
+    self.init(HostIOWorker._namespace_index.next())
 
-  def init(self):
+  def init(self, iface_index):
     '''
     Set up and launch the network namespace.
 
@@ -40,22 +39,35 @@ class HostIOWorker(object):
 
     Just called from __init__ for now. Separated for potential laziness.
     '''
-    host_device = "heth%d" % (self._iface_index)
-    guest_device = "geth%d" % (self._iface_index)
-    # TODO fail with an exception on bad shell commands
-    error_code = system("ip link add name %s type veth peer name %s" %
-        (host_device, guest_device))
+    host_device = "heth%d" % (iface_index)
+    guest_device = "geth%d" % (iface_index)
 
-    error_code = system("ip link set %s promisc on" % (host_device,))
-    error_code = system("ip link set %s up" % (host_device,))
+    try:
+      subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
+      subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
+      subprocess.check_call(['ip','link','set',host_device,'up'])
+    except subprocess.CalledProcessError:
+      pass # TODO raise a more informative exception
 
     # make the host-side socket
     # do this before unshare/fork to make failure/cleanup easier
     s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, ETH_P_ALL)
     s.bind((host_device, ETH_P_ALL))
+    self._socket = s
 
     # all else should have succeeded, so now we fork and unshare for the guest
-    # TODO actually do this...
+    guest = Popen(["unshare", "-n", "/bin/bash"])
+    #TODO get this to somehow open up in a screen/tmux session?
+
+    # push down the guest device into the netns
+    try:
+      subprocess.check_call(['ip', 'link', 'set', guest_device, 'netns', guest.pid])
+    except subprocess.CalledProcessError:
+      pass # TODO raise a more informative exception
+    finally:
+      s.close()
+
+    self._guest = guest
 
   ### Shutdown methods ###
 
@@ -63,14 +75,11 @@ class HostIOWorker(object):
     '''
     Shutdown the socket that is set up.
     '''
-    pass
+    self._socket.close()
+    # TODO force self.guest to terminate with SIG_something
 
   def close(self):
     self._close_socket()
     self._call_later(self._deferred_ioworker.close)
 
-  def __del__(self): # TODO maybe this should be aliased to _close_socket instead?
-    '''
-    Clean up the socket at the very least
-    '''
-    self._close_socket()
+  __del__ = _close_socket # close socket at the very least!
