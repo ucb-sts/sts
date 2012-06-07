@@ -33,7 +33,8 @@ class topology_generator_test(unittest.TestCase):
       self._test_create_mesh(i)
 
   def _test_create_mesh(self, size):
-    (panel, switches, network_links, hosts, access_links) = create_mesh(size)
+    topogen = TopologyGenerator()
+    (panel, switches, network_links, hosts, access_links) = topogen.create_mesh(size)
     self.assertEqual(len(switches), size)
     self.assertEqual([sw for sw in switches if len(sw.ports) == size ], switches)
 
@@ -151,7 +152,7 @@ class TopologyUnitTest(unittest.TestCase):
     self.g.link((self.switches[0], self.switches[0].ports[2]), (self.switches[1], self.switches[1].ports[2]))
     self.g.link((self.hosts[0], self.hosts[0].interfaces[0]), (self.switches[0], self.switches[0].ports[1]))
     self.g.link((self.hosts[1], self.hosts[1].interfaces[0]), (self.switches[1], self.switches[1].ports[1]))
-    (self.patch, self.switches_calc, self.hosts_calc, self.access_links) = populate_from_topology(self.g)
+    (self.patch, self.switches_calc, self.hosts_calc, self.access_links) = TopologyGenerator().populate_from_topology(self.g)
 
   def test_generated_topology(self):
     self.assertEqual(len(self.access_links), len(self.hosts))

@@ -29,6 +29,7 @@ from sts.deferred_io import DeferredIOWorker
 from sts.procutils import kill_procs, popen_filtered
 
 import sts.topology_generator as default_topology
+from sts.topology_generator import TopologyGenerator
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.lib.util import connect_socket_with_backoff
 from sts.experiment_config_lib import Controller
@@ -113,17 +114,24 @@ if not args.controller_args:
 #   controllers(command_line_args=[]) => returns a list of pox.sts.experiment_config_info.ControllerInfo objects
 #   switches()                        => returns a list of pox.sts.experiment_config_info.Switch objects
 if args.config:
-  config = __import__(args.config_file)
+  config = __import__(args.config)
 else:
   config = object()
 
 boot_controllers = False
 
 if hasattr(config, 'controllers'):
-  boot_controllers = True
-  controllers = config.controllers(args.controller_args)
+  if hasattr(config.controllers, '__call__'):
+    controllers = config.controllers(args.controller_args)
+  else:
+    controllers = config.controllers
 else:
   controllers = [Controller(args.controller_args, port=args.port)]
+
+if hasattr(config, 'topology_generator'):
+  topology_generator = config.topology_generator
+else:
+  topology_generator = TopologyGenerator()
 
 child_processes = []
 scheduler = None
@@ -172,14 +180,15 @@ try:
    switch_impls,
    network_links,
    hosts,
-   access_links) = default_topology.populate_fat_tree(controllers,
+   access_links) = topology_generator.populate_fat_tree(controllers,
                                              create_worker,
                                              num_pods=args.num_switches) \
                                                  if args.fattree else \
-                   default_topology.populate(controllers, create_worker, num_switches=args.num_switches)
+                   topology_generator.populate(controllers, create_worker, num_switches=args.num_switches)
 
   # For instrumenting the controller
-  #control_socket = connect_socket_with_backoff('', 6634)
+  # TODO: This ugly hack has to be cleaned up ASAP ASAP
+  control_socket = None #connect_socket_with_backoff('', 6634)
 
   simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
                         check_interval=args.check_interval,
