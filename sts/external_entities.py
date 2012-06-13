@@ -1,9 +1,10 @@
 '''
-Utilites for launching and managing processes which run in and/or communicate
-with network namespaces.
+A factory module to create sockets or other interfaces to edge entities.
 
 @author samw
 '''
+
+# TODO create a func to serve as a decorator to check for sudo (see mininet)
 
 import itertools
 import socket
@@ -14,18 +15,16 @@ ETH_P_ALL = 3 # The socket module doesn't have this. From C linux headers
 # FIXME does this counter need to be threadsafe? itertools is not...
 _netns_index = itertools.count(0) # for creating unique host device names
 
-def netns():
+def netns(cmd="xterm"):
   '''
-  Set up and launch the network namespace.
+  Set up and launch cmd in a new network namespace.
+
+  Returns a tuple of the (socket, Popen object of unshared project in netns)
 
   This method uses functionality that requires CAP_NET_ADMIN capabilites. This
   means that the calling method should check that the python process was
   launched as admin/superuser.
-
-  Returns an IOWorker that wraps the raw socket.
   '''
-  global _netns_index
-
   iface_index = _netns_index.next()
 
   host_device = "heth%d" % (iface_index)
@@ -44,7 +43,7 @@ def netns():
   s.bind((host_device, ETH_P_ALL))
 
   # all else should have succeeded, so now we fork and unshare for the guest
-  guest = Popen(["unshare", "-n", "xterm"])
+  guest = subprocess.Popen(["unshare", "-n", cmd])
   #TODO get this to somehow open up in a screen/tmux session?
 
   # push down the guest device into the netns
@@ -55,4 +54,4 @@ def netns():
   finally:
     s.close()
 
-  # wrap the socket with an IOWorker
+  return (s,guest)
