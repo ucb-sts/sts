@@ -41,6 +41,7 @@ def netns(cmd="xterm"):
   # do this before unshare/fork to make failure/cleanup easier
   s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, ETH_P_ALL)
   s.bind((host_device, ETH_P_ALL))
+  s.setblocking(0) # set non-blocking
 
   # all else should have succeeded, so now we fork and unshare for the guest
   guest = subprocess.Popen(["unshare", "-n", cmd])
