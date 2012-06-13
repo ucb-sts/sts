@@ -408,27 +408,13 @@ def of_action_from_protobuf_action(protobuf_action):
   else:
     raise RuntimeError("Unsupported Action %s" % protobuf_action.type)
 
-def tf_from_protobuf_switch(ntf, protobuf_switch, real_switch):
+def tf_from_protobuf_switch(ntf, rules, real_switch):
   # clone the real switch, insert flow entries from policy, run
   # generate_transfer_function()
   dummy_switch = SwitchImpl(real_switch.dpid, ports=real_switch.ports.values())
-  for rule in protobuf_switch.rules:
-    # TODO: don't ignore polarity
-    match_kws = []
-    for field_match in (rule.match.field_matches):
-      match_kws.append(get_kw_for_field_match(field_match))
-    # HACK: Frenetic ignores dl_vlan_pcp, and nw_tos. Add these in manually
-    # with zeroed-out values
-    match_kws.append("dl_vlan_pcp=0")
-    match_kws.append("nw_tos=0")
-    match = eval("ofp_match("+','.join(match_kws)+")")
-      
-    actions = []
-    for protobuf_action in rule.actions:
-      action = of_action_from_protobuf_action(protobuf_action)
-      actions.append(action)
+  for rule in rules:
+    flow_entry = rule.to_entry()
 
-    flow_entry = TableEntry(match=match, actions=actions)
     dummy_switch.table.add_entry(flow_entry)
   return generate_transfer_function(ntf, dummy_switch)
 
@@ -439,7 +425,7 @@ def get_uniq_port_id(switch, port):
   else:
     dpid = switch.dpid
     
-  if type(port) == int:
+  if type(port) == int or type(port) == long:
     port_no = port
   else:
     port_no = port.port_no
