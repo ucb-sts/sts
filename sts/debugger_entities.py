@@ -22,6 +22,7 @@ from pox.openflow.nx_switch_impl import NXSwitchImpl
 from pox.lib.util import connect_socket_with_backoff, assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
+from pox.lib.packet import ethernet
 
 import logging
 import pickle
@@ -191,13 +192,6 @@ class Endpoint (object):
   __metaclass__ = abc.ABCMeta
 
   @abc.abstractmethod
-  def send(self, interface, packet):
-    ''' Send a packet out a given interface.
-
-    Packet is sent "toward" the simulated network. '''
-    pass
-
-  @abc.abstractmethod
   def receive(self, interface, packet):
     '''
     Process an incoming packet from a switch
@@ -226,6 +220,9 @@ class Host (EventMixin, Endpoint):
     self.name = name
     
   def send(self, interface, packet):
+    ''' Send a packet out a given interface.
+
+    Packet is sent "toward" the simulated network. '''
     self.raiseEvent(DpPacketOut(self, packet, interface))
   
   def receive(self, interface, packet):
@@ -237,26 +234,27 @@ class Host (EventMixin, Endpoint):
 class NetworkNamespaceHost (EventMixin, Endpoint):
   ''' A host that wraps a socket from a network namespace '''
 
-  def __init__(self, guest, interface, name):
+  def __init__(self, ioworker, interface, name):
     ''' guest = ioworker wrapping the socket of the guest in the netns
         interface = a HostInterface '''
-    self.ioworker = guest
+    ioworker.set_receive_handler(self._send)
+    self.ioworker = ioworker
     self.interface = interface # only makes sense to have 1 interface for now...
     self.name = name
 
-  def send(self, interface, packet):
+  def _send(self, ioworker):
     '''Send a packet out a given interface.
-    
+
     To avoid confusion, this method sends the packets received from the raw
-    socket *into* the simulator network.'''
-    # TODO
-    # this should be called by the ioworker whenever something has been received
-    # on the raw socket the ioworker wraps. Send should turn around and 
-    # parse the bytes raised from the 
-    pass
+    socket *into* the simulator network. It does this by raising a DpPacketOut
+    event.
+
+    ioworker should equal self.ioworker, based on duck type of IOWorker handler method call.'''
+    eth_packet = ethernet(raw=ioworker.peek_receive_buf()) # would buf ever be shorter than an eth packet?
+    ioworker.consume_receive_buf(len(eth_packet.pack())) # is this the correct way to slurp the bits used?
+    self.raiseEvent(DpPacketOut(self, eth_packet, self.interface))
 
   def receive(self, interface, packet):
     '''Receive a packet from the simulator's network. Pack it into bits and push
     it out over the ioworker.'''
-    raise NotImplementedError()
-    # self.ioworker.send(packet)
+    self.ioworker.send(packet.pack())
