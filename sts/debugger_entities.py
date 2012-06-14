@@ -25,6 +25,7 @@ from pox.lib.revent import Event, EventMixin
 
 import logging
 import pickle
+import abc
 
 # TODO: model hosts in the network!
 
@@ -182,7 +183,30 @@ class HostInterface (object):
 #    |            |           |
 # switch_port  switch_port  switch_port
 
-class Host (EventMixin):
+class Endpoint (object):
+  ''' An abstract class to define methods common to all endpoints.
+
+  This is used for routing and delivery decisions based on object type in
+  PatchPanel. '''
+  __metaclass__ = abc.ABCMeta
+
+  @abc.abstractmethod
+  def send(self, interface, packet):
+    ''' Send a packet out a given interface.
+
+    Packet is sent "toward" the simulated network. '''
+    pass
+
+  @abc.abstractmethod
+  def receive(self, interface, packet):
+    '''
+    Process an incoming packet from a switch
+
+    Called by PatchPanel
+    '''
+    pass
+
+class Host (EventMixin, Endpoint):
   '''
   A very simple Host entity.
   
@@ -202,17 +226,37 @@ class Host (EventMixin):
     self.name = name
     
   def send(self, interface, packet):
-    ''' Send a packet out a given interface '''
     self.raiseEvent(DpPacketOut(self, packet, interface))
   
   def receive(self, interface, packet):
-    '''
-    Process an incoming packet from a switch
-    
-    Called by PatchPanel
-    '''
     self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
   
   def __str__(self):
     return self.name
+
+class NetworkNamespaceHost (EventMixin, Endpoint):
+  ''' A host that wraps a socket from a network namespace '''
+
+  def __init__(self, guest, interface, name):
+    ''' guest = ioworker wrapping the socket of the guest in the netns
+        interface = a HostInterface '''
+    self.ioworker = guest
+    self.interface = interface # only makes sense to have 1 interface for now...
+    self.name = name
+
+  def send(self, interface, packet):
+    '''Send a packet out a given interface.
     
+    To avoid confusion, this method sends the packets received from the raw
+    socket *into* the simulator network.'''
+    # TODO
+    # this should be called by the ioworker whenever something has been received
+    # on the raw socket the ioworker wraps. Send should turn around and 
+    # parse the bytes raised from the 
+    pass
+
+  def receive(self, interface, packet):
+    '''Receive a packet from the simulator's network. Pack it into bits and push
+    it out over the ioworker.'''
+    raise NotImplementedError()
+    # self.ioworker.send(packet)

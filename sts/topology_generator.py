@@ -19,7 +19,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
                   host3
 '''
 
-from debugger_entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink
+from debugger_entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink, Endpoint
 from pox.openflow.switch_impl import ofp_phy_port, DpPacketOut, SwitchImpl
 from pox.lib.addresses import EthAddr, IPAddr
 from pox.openflow.libopenflow_01 import *
@@ -207,7 +207,7 @@ class PatchPanel(object):
 
   def handle_DpPacketOut(self, event):
     (node, port) = self.get_connected_port(event.node, event.port)
-    if type(node) == Host:
+    if isinstance(node, Endpoint):
       self.deliver_packet(node, event.packet, port)
     else:
       self.forward_packet(node, event.packet, port)
