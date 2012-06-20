@@ -20,6 +20,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
 '''
 
 from debugger_entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink, Endpoint
+from external_entities import netns
 from pox.openflow.switch_impl import ofp_phy_port, DpPacketOut, SwitchImpl
 from pox.lib.addresses import EthAddr, IPAddr
 from pox.openflow.libopenflow_01 import *
@@ -90,7 +91,13 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, ge
   access_links = [ AccessLink(host, interface, switch, get_switch_port(switch)) for interface, switch in interface_switch_pairs ]
   return (host, access_links)
 
- 
+def create_netns_host(cmd='xterm', io_worker_generator, interface, switch):
+  ''' Create a host with a process running in a separate network namespace. '''
+  soket, guest, guest_eth_addr = netns(cmd)
+  io_worker = io_worker_generator(soket)
+  host = NetworkNamespaceHost(io_worker, interface, str(guest_eth_addr))
+  # TODO not sure how to finish this method...
+
 class TopologyGenerator(object):
   def __init__(self):
     self.connections_per_switch = 1
