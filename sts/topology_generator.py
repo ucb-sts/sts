@@ -91,12 +91,23 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, ge
   access_links = [ AccessLink(host, interface, switch, get_switch_port(switch)) for interface, switch in interface_switch_pairs ]
   return (host, access_links)
 
-def create_netns_host(cmd='xterm', io_worker_generator, interface, switch):
-  ''' Create a host with a process running in a separate network namespace. '''
-  soket, guest, guest_eth_addr = netns(cmd)
+def create_netns_host(cmd='xterm', io_worker_generator, interface, switch, get_switch_port=get_switchs_host_port, ips):
+  ''' Create a host with a process running in a separate network namespace.
+  The netns can only communicate with a single interface (for now) because it must
+  correspond to the physical interface in the network namespace guest.
+
+  Because there is only 1 logical interface possible, this means that there can only be
+  1 switch as well. '''
+  if type(ips) != list:
+    ips = [ips]
+
+  soket, guest, guest_mac, guest_device_name = netns(cmd)
   io_worker = io_worker_generator(soket)
-  host = NetworkNamespaceHost(io_worker, interface, str(guest_eth_addr))
-  # TODO not sure how to finish this method...
+  interface = HostInterface(guest_mac, ips, guest_device_name)
+  host = NetworkNamespaceHost(io_worker, interface, guest_device_name)
+  name = "host:" + str(interface.ips)
+  access_link = AccessLink(host, interface, switch, get_switch_port(switch))
+  return (host, [access_link]) # just to be consistent with create_host
 
 class TopologyGenerator(object):
   def __init__(self):

@@ -73,4 +73,4 @@ def netns(cmd="xterm"):
   finally:
     s.close()
 
-  return (s, guest, guest_eth_addr)
+  return (s, guest, guest_eth_addr, guest_device)
