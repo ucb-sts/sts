@@ -129,8 +129,10 @@ if hasattr(config, 'controllers'):
     controllers = config.controllers(args.controller_args)
   else:
     controllers = config.controllers
+  boot_controllers = config.boot_controllers if hasattr(config, 'boot_controllers') else (len(config.controllers)>0)
 else:
   controllers = [Controller(args.controller_args, port=args.port)]
+  boot_controllers = (len(args.controller_args)>0)
 
 if hasattr(config, 'topology_generator'):
   topology_generator = config.topology_generator
