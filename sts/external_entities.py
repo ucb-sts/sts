@@ -39,7 +39,9 @@ def netns(cmd="xterm"):
   if system() != 'Linux':
     raise EnvironmentError('network namespace functionality requires a Linux environment')
 
-  if (uid = geteuid()) != 0:
+  uid = geteuid()
+  if uid != 0:
+    # user must have CAP_NET_ADMIN, which doesn't have to be su, but most often is
     raise EnvironmentError("superuser privileges required to launch network namespace")
 
   iface_index = _netns_index.next()
