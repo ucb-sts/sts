@@ -73,8 +73,7 @@ def netns(cmd="xterm"):
   try:
     subprocess.check_call(['ip', 'link', 'set', guest_device, 'netns', str(guest.pid)])
   except subprocess.CalledProcessError:
-    raise # TODO raise a more informative exception
-  finally:
     s.close()
+    raise # TODO raise a more informative exception
 
   return (s, guest, guest_eth_addr, guest_device)
