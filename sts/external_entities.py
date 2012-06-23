@@ -7,6 +7,8 @@ A factory module to create sockets or other interfaces to edge entities.
 import itertools
 import socket
 import subprocess
+import fcntl
+import struct
 from os import geteuid
 from exceptions import EnvironmentError
 from platform import system
@@ -17,7 +19,7 @@ ETH_P_ALL = 3 # The socket module doesn't have this. From C linux headers
 # FIXME does this counter need to be threadsafe? itertools is not...
 _netns_index = itertools.count(0) # for creating unique host device names
 
-def get_eth_address_for_interface(interface):
+def get_eth_address_for_interface(ifname):
   '''Returns an EthAddr object from the interface specified by the argument.
 
   interface is a string, commonly eth0, wlan0, lo.'''
@@ -49,14 +51,14 @@ def netns(cmd="xterm"):
   host_device = "heth%d" % (iface_index)
   guest_device = "geth%d" % (iface_index)
 
-  guest_eth_addr = get_eth_address_for_interface(guest_device)
-
   try:
     subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
     subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
     subprocess.check_call(['ip','link','set',host_device,'up'])
   except subprocess.CalledProcessError:
     raise # TODO raise a more informative exception
+
+  guest_eth_addr = get_eth_address_for_interface(guest_device)
 
   # make the host-side socket
   # do this before unshare/fork to make failure/cleanup easier
@@ -69,7 +71,7 @@ def netns(cmd="xterm"):
 
   # push down the guest device into the netns
   try:
-    subprocess.check_call(['ip', 'link', 'set', guest_device, 'netns', guest.pid])
+    subprocess.check_call(['ip', 'link', 'set', guest_device, 'netns', str(guest.pid)])
   except subprocess.CalledProcessError:
     raise # TODO raise a more informative exception
   finally:

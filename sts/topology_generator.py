@@ -19,7 +19,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
                   host3
 '''
 
-from debugger_entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink, Endpoint
+from debugger_entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink, Endpoint, NetworkNamespaceHost
 from external_entities import netns
 from pox.openflow.switch_impl import ofp_phy_port, DpPacketOut, SwitchImpl
 from pox.lib.addresses import EthAddr, IPAddr
@@ -104,15 +104,15 @@ def create_netns_host(io_worker_generator, ingress_switch, ip_addr=IPAddr("123.1
   interface = HostInterface(guest_mac, ip_addr, guest_device_name)
   host = NetworkNamespaceHost(io_worker, interface, guest_device_name)
   name = "host:" + str(interface.ips)
-  access_link = AccessLink(host, interface, switch, get_switch_port(switch))
-  return (host, access_link)
+  access_link = AccessLink(host, interface, ingress_switch, get_switch_port(ingress_switch))
+  return (host, [access_link]) # single item list to be consistent with create_host
 
 class TopologyGenerator(object):
   def __init__(self):
     self.connections_per_switch = 1
     self.fat_tree = False
 
-  def create_mesh(self, num_switches):
+  def create_mesh(self, num_switches, netns_hosts, io_worker_constructor):
     ''' Returns (patch_panel, switches, network_links, hosts, access_links) '''
 
     # Every switch has a link to every other switch + 1 host, for N*(N-1)+N = N^2 total ports
@@ -120,7 +120,13 @@ class TopologyGenerator(object):
 
     # Initialize switches
     switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
-    host_access_link_pairs = [ create_host(switch) for switch in switches ]
+    if netns_hosts > 0:
+      host_access_link_pairs = [ create_host(switch) for switch in switches[:-1*netns_hosts] ]
+      netns_host_access_link_pairs = ( create_netns_host(io_worker_constructor, switch) for switch in switches[-1*netns_hosts:] )
+      host_access_link_pairs += netns_host_access_link_pairs
+    else:
+      host_access_link_pairs = [ create_host(switch) for switch in switches ]
+
     hosts = map(lambda pair: pair[0], host_access_link_pairs)
     access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
     # this is python's .flatten:
@@ -167,13 +173,13 @@ class TopologyGenerator(object):
 
     logger.debug("Controller connections done")
 
-  def populate(self, controller_config_list, io_worker_constructor, num_switches=3):
+  def populate(self, controller_config_list, io_worker_constructor, num_switches=3, netns_hosts=0):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers, and return
     (PatchPanel, switches, network_links, hosts, access_links)
     '''
-    (panel, switches, network_links, hosts, access_links) = self.create_mesh(num_switches)
+    (panel, switches, network_links, hosts, access_links) = self.create_mesh(num_switches,netns_hosts, io_worker_constructor)
     self.connect_to_controllers(controller_config_list, io_worker_constructor, switches)
     return (panel, switches, network_links, hosts, access_links)
 

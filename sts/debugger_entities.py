@@ -234,12 +234,14 @@ class Host (EventMixin, Endpoint):
 class NetworkNamespaceHost (EventMixin, Endpoint):
   ''' A host that wraps a socket from a network namespace '''
 
+  _eventMixin_events = set([DpPacketOut])
+
   def __init__(self, ioworker, interface, name):
     ''' guest = ioworker wrapping the socket of the guest in the netns
         interface = a HostInterface '''
     ioworker.set_receive_handler(self._send)
     self.ioworker = ioworker
-    self.interface = interface # only makes sense to have 1 interface for now...
+    self.interfaces = [interface] # only makes sense to have 1 interface for now, but need to be compatible with Host
     self.name = name
 
   def _send(self, ioworker):
