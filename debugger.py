@@ -125,8 +125,10 @@ if hasattr(config, 'controllers'):
     controllers = config.controllers(args.controller_args)
   else:
     controllers = config.controllers
+  boot_controllers = config.boot_controllers if hasattr(config, 'boot_controllers') else (len(config.controllers)>0)
 else:
   controllers = [Controller(args.controller_args, port=args.port)]
+  boot_controllers = (len(args.controller_args)>0)
 
 if hasattr(config, 'topology_generator'):
   topology_generator = config.topology_generator
@@ -157,11 +159,11 @@ signal.signal(signal.SIGTERM, handle_int)
 try:
   # Boot the controllers
   if boot_controllers:
-    for c in controllers:
+    for (i, c) in enumerate(controllers):
       command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
                           map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
       print command_line_args
-      child = subprocess.Popen(command_line_args)
+      child = popen_filtered("c%d" % i, command_line_args)
       logger.info("Launched controller c%d: %s [PID %d]" % (i, " ".join(command_line_args), child.pid))
       child_processes.append(child)
 
