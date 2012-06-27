@@ -52,6 +52,11 @@ def netns(cmd="xterm"):
   guest_device = "geth%d" % (iface_index)
 
   try:
+    null = file("/dev/null", 'w')
+    for dev in (host_device, guest_device):
+      if subprocess.call(['ip', 'link', 'show', dev], stdout=null, stderr=null) == 0:
+        subprocess.check_call(['ip', 'link', 'del', dev])
+
     subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
     subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
     subprocess.check_call(['ip','link','set',host_device,'up'])
