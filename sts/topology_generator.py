@@ -112,7 +112,7 @@ class TopologyGenerator(object):
     self.connections_per_switch = 1
     self.fat_tree = False
 
-  def create_mesh(self, num_switches, netns_hosts, io_worker_constructor):
+  def create_mesh(self, num_switches, netns_hosts, netns_cmd, io_worker_constructor):
     ''' Returns (patch_panel, switches, network_links, hosts, access_links) '''
 
     # Every switch has a link to every other switch + 1 host, for N*(N-1)+N = N^2 total ports
@@ -122,7 +122,7 @@ class TopologyGenerator(object):
     switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
     if netns_hosts > 0:
       host_access_link_pairs = [ create_host(switch) for switch in switches[:-1*netns_hosts] ]
-      netns_host_access_link_pairs = ( create_netns_host(io_worker_constructor, switch) for switch in switches[-1*netns_hosts:] )
+      netns_host_access_link_pairs = ( create_netns_host(io_worker_constructor, switch, cmd=netns_cmd) for switch in switches[-1*netns_hosts:] )
       host_access_link_pairs += netns_host_access_link_pairs
     else:
       host_access_link_pairs = [ create_host(switch) for switch in switches ]
@@ -173,13 +173,13 @@ class TopologyGenerator(object):
 
     logger.debug("Controller connections done")
 
-  def populate(self, controller_config_list, io_worker_constructor, num_switches=3, netns_hosts=0):
+  def populate(self, controller_config_list, io_worker_constructor, num_switches=3, netns_hosts=0, netns_cmd='xterm'):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers, and return
     (PatchPanel, switches, network_links, hosts, access_links)
     '''
-    (panel, switches, network_links, hosts, access_links) = self.create_mesh(num_switches,netns_hosts, io_worker_constructor)
+    (panel, switches, network_links, hosts, access_links) = self.create_mesh(num_switches, netns_hosts, netns_cmd, io_worker_constructor)
     self.connect_to_controllers(controller_config_list, io_worker_constructor, switches)
     return (panel, switches, network_links, hosts, access_links)
 

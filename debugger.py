@@ -105,6 +105,8 @@ parser.add_argument("-c", "--config", help='optional experiment config file to l
 parser.add_argument("-z", "--netns-hosts", type=int, metavar="netns_hosts", default=0,
                     help="number of network namespace hosts to fire up (defaults to opening an xterm for each)")
 
+parser.add_argument("-Z", "--netns-cmd", type=str, metavar="netns_cmd", default='xterm', help='the command used to launch each network namespace host')
+
 parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
                    help='arguments to pass to the controller(s)')
 #parser.disable_interspersed_args()
@@ -190,7 +192,7 @@ try:
                                              create_worker,
                                              num_pods=args.num_switches) \
                                                  if args.fattree else \
-                   topology_generator.populate(controllers, create_worker, num_switches=args.num_switches, netns_hosts=args.netns_hosts)
+                   topology_generator.populate(controllers, create_worker, num_switches=args.num_switches, netns_hosts=args.netns_hosts, netns_cmd=args.netns_cmd)
 
   # For instrumenting the controller
   # TODO: This ugly hack has to be cleaned up ASAP ASAP

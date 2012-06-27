@@ -72,7 +72,7 @@ def netns(cmd="xterm"):
   s.setblocking(0) # set non-blocking
 
   # all else should have succeeded, so now we fork and unshare for the guest
-  guest = subprocess.Popen(["unshare", "-n", cmd])
+  guest = subprocess.Popen(["unshare", "-n", "--"] + cmd.split())
 
   # push down the guest device into the netns
   try:
