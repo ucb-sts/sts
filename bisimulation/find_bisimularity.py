@@ -2,6 +2,10 @@
 
 import re
 
+# ===================== #
+#    Classes            #
+# ===================== #
+
 class State(object):
     def __init__(self, name, start_state=False, final_state=False):
         self.name = name
@@ -67,9 +71,11 @@ class Bisimulation(object):
     def __repr__(self):
         return str(self.pairs)
 
-# =============================== #
+# ===================== #
+#    Algorithm          #
+# ===================== #
 
-def find_bisimilarity(fsm_a, fsm_b, language):
+def find_bisimilarity(fsm_a, fsm_b, language, verbose=False):
     '''
     A bisimulation is any relation between States X States, 
     where:
@@ -93,9 +99,11 @@ def find_bisimilarity(fsm_a, fsm_b, language):
     TODO: this algorithm isn't the optimal O(NlogN) version
     '''
     union = FSM.merge(fsm_a, fsm_b)
-    print "Union: %s" % union
+    if verbose:
+        print "Union: %s" % union
     # To initialize, we start out with three partitions:
     #  { start states, final_states, everything else }
+    # TODO: I don't understand why we initialize like this
     start_states = set([state for state in union.states if state.start_state])
     final_states = set([state for state in union.states if state.final_state])
     remainders = set(union.states) - start_states - final_states
@@ -104,7 +112,8 @@ def find_bisimilarity(fsm_a, fsm_b, language):
     for paritition in [start_states, final_states, remainders]:
         quotient.append(paritition) 
 
-    print "Initial quotient: %s" % quotient
+    if verbose:
+        print "Initial quotient: %s" % quotient
 
     # We continue "partitioning" the quotient until we're left only with
     # equivalence classes
@@ -146,8 +155,9 @@ def find_bisimilarity(fsm_a, fsm_b, language):
                 p2_pred = get_predecessor(union, p2, word)
                 intersection = p1.intersection(p2_pred)
                 if intersection != p1 and len(intersection) > 0:
-                    print "Choppable: P1: %s P2: %s" % (p1, p2)
-                    print "Pred(P2): %s" % p2_pred
+                    if verbose:
+                        print "Choppable: P1: %s P2: %s" % (p1, p2)
+                        print "Pred(P2): %s" % p2_pred
                     return (p1, p2_pred)
         
         # If we got here, we're done!
@@ -155,48 +165,149 @@ def find_bisimilarity(fsm_a, fsm_b, language):
 
     choppable = choppable_partition(quotient)
     while choppable:
-        # Choppable: P1: set([Logical_A, Physical_A, Physical_B, Logical_B]) P2: set([Physical_Switch1, Physical_Switch2, Logical_Switch])
-        # Quotient is: [set([Physical_Switch1, Physical_Switch2, Logical_Switch]), set([Logical_A, Physical_A]), set([Physical_B, Logical_B])]
         (p1, p2_pred) = choppable
         chop1 = p1.intersection(p2_pred)
         chop2 = p1 - p2_pred
         quotient = [partition for partition in quotient if partition != p1]
         quotient += [chop1, chop2]
-        print "Quotient is: %s" % quotient
+        if verbose:
+            print "Quotient is: %s" % quotient
 
         choppable = choppable_partition(quotient)
 
     return quotient
 
+# ===================== #
+#    Examples           #
+# ===================== #
+
 if __name__ == '__main__':
-    # The simplest logical view:
-    '''
-        A /.*/-> Switch /1.2.3.4/-> B
-    '''
-    
+    # Logical network
     a = State("A", True, True)
     b = State("B", True, True)
     switch = State("Switch")
-    # "ingresss" vs. "egress" is defined wrt the network
-    a_ingress = Transition(".*", a, switch)
-    b_egress = Transition("1.2.3.4", switch, b)
-    logical_network = FSM("Logical", [a,b,switch],
-                          [a_ingress,b_egress])
 
-    # A slightly more complicated physical network: 
-    '''
-        A /.*/-> Switch1 /.*/-> Switch2 /1.2.3.4/-> B
-    '''
+    # Physical network
     switch_1 = State("Switch1")
     switch_2 = State("Switch2")
-    # "ingresss" vs. "egress" is defined wrt the network
-    a_ingress = Transition(".*", a, switch_1)
-    switch_1_to_2 = Transition(".*", switch_1, switch_2)
-    b_egress = Transition("1.2.3.4", switch_2, b)
-    physical_network = FSM("Physical", [a,b,switch_1,switch_2],
-                           [a_ingress,switch_1_to_2,b_egress])
 
     # Our language is very simple for now 
-    language = ["1.2.3.4"]
-    result = find_bisimilarity(logical_network, physical_network, language)
-    print "Result: %s" % result
+    language = ["1.2.3.4", "5.6.7.8"]
+
+    verbose = True
+
+    def test_simple_route():
+        # The simplest logical view:
+        '''
+            A /.*/-> Switch /1.2.3.4/-> B
+        '''
+        
+        # "ingresss" vs. "egress" is defined wrt the network
+        a_ingress = Transition(".*", a, switch)
+        b_egress = Transition("1.2.3.4", switch, b)
+        logical_network = FSM("Logical", [a,b,switch],
+                              [a_ingress,b_egress])
+
+        # A slightly more complicated physical network: 
+        '''
+            A /.*/-> Switch1 /.*/-> Switch2 /1.2.3.4/-> B
+        '''
+        # "ingresss" vs. "egress" is defined wrt the network
+        a_ingress = Transition(".*", a, switch_1)
+        switch_1_to_2 = Transition(".*", switch_1, switch_2)
+        b_egress = Transition("1.2.3.4", switch_2, b)
+        physical_network = FSM("Physical", [a,b,switch_1,switch_2],
+                               [a_ingress,switch_1_to_2,b_egress])
+
+        return find_bisimilarity(logical_network, physical_network,
+                                 language, verbose)
+
+    def test_ACL():
+        # A simple ACL from A to B
+        '''
+            A /.*/-> Switch /[^1.2.3.4]/-> B
+        '''
+        # "ingresss" vs. "egress" is defined wrt the network
+        a_ingress = Transition(".*", a, switch)
+        b_egress = Transition("[^1.2.3.4]", switch, b)
+        logical_network = FSM("Logical", [a,b,switch],
+                              [a_ingress,b_egress])
+
+        # A slightly more complicated physical network: 
+        '''
+            A /.*/-> Switch1 /.*/-> Switch2 /[^1.2.3.4]/-> B
+        '''
+        # "ingresss" vs. "egress" is defined wrt the network
+        a_ingress = Transition(".*", a, switch_1)
+        switch_1_to_2 = Transition(".*", switch_1, switch_2)
+        b_egress = Transition("[^1.2.3.4]", switch_2, b)
+        physical_network = FSM("Physical", [a,b,switch_1,switch_2],
+                               [a_ingress,switch_1_to_2,b_egress])
+
+        return find_bisimilarity(logical_network, physical_network,
+                                 language, verbose)
+
+    def test_differently_placed_ACL():
+        # I don't think it actually matters for correctness if the output is different, but
+        # out of curiosity, does the output change if we move the ACL?
+        # Put the ACL next to A 
+        '''
+            A /[^1.2.3.4]/-> Switch /.*/-> B
+        '''
+        # "ingresss" vs. "egress" is defined wrt the network
+        a_ingress = Transition(".*", a, switch)
+        b_egress = Transition("[^1.2.3.4]", switch, b)
+        logical_network = FSM("Logical", [a,b,switch],
+                              [a_ingress,b_egress])
+
+        '''
+            A /[^1.2.3.4]/-> Switch1 /.*/-> Switch2 /.*/-> B
+        '''
+        # "ingresss" vs. "egress" is defined wrt the network
+        a_ingress = Transition("[^1.2.3.4]", a, switch_1)
+        switch_1_to_2 = Transition(".*", switch_1, switch_2)
+        b_egress = Transition(".*", switch_2, b)
+        physical_network = FSM("Physical", [a,b,switch_1,switch_2],
+                               [a_ingress,switch_1_to_2,b_egress])
+
+        return find_bisimilarity(logical_network, physical_network,
+                                 language, verbose)
+
+    def test_broken_ACL():
+        # A simple ACL from A to B
+        '''
+            A /.*/-> Switch /[^1.2.3.4]/-> B
+        '''
+        # "ingresss" vs. "egress" is defined wrt the network
+        a_ingress = Transition(".*", a, switch)
+        b_egress = Transition("[^1.2.3.4]", switch, b)
+        logical_network = FSM("Logical", [a,b,switch],
+                              [a_ingress,b_egress])
+
+        # Now we implement the ACL incorrectly as a loop
+        '''
+            A /.*/-> Switch1 /.*/-> Switch2 /[^1.2.3.4]/-> B
+                       ^               |
+                       -----------------
+                            1.2.3.4 
+
+        '''
+        # "ingresss" vs. "egress" is defined wrt the network
+        a_ingress = Transition(".*", a, switch_1)
+        switch_1_to_2 = Transition(".*", switch_1, switch_2)
+        b_egress = Transition("[^1.2.3.4]", switch_2, b)
+        loop = Transition("1.2.3.4", switch_2, switch_1)
+        physical_network = FSM("Physical", [a,b,switch_1,switch_2],
+                               [a_ingress,switch_1_to_2,b_egress,loop])
+
+        return find_bisimilarity(logical_network, physical_network,
+                                 language, verbose)
+
+    print "----------------------------------------------------------------------"
+    print "test_basic:       %s" % test_simple_route()
+    print "----------------------------------------------------------------------"
+    print "test_ACL:         %s" % test_ACL()
+    print "----------------------------------------------------------------------"
+    print "test_d_place_ACL: %s" % test_differently_placed_ACL()
+    print "----------------------------------------------------------------------"
+    print "test_broken_ACL:  %s" % test_broken_ACL()
