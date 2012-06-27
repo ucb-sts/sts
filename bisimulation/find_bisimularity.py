@@ -93,6 +93,7 @@ def find_bisimilarity(fsm_a, fsm_b, language):
     TODO: this algorithm isn't the optimal O(NlogN) version
     '''
     union = FSM.merge(fsm_a, fsm_b)
+    print "Union: %s" % union
     # To initialize, we start out with three partitions:
     #  { start states, final_states, everything else }
     start_states = set([state for state in union.states if state.start_state])
@@ -102,6 +103,8 @@ def find_bisimilarity(fsm_a, fsm_b, language):
     quotient = []
     for paritition in [start_states, final_states, remainders]:
         quotient.append(paritition) 
+
+    print "Initial quotient: %s" % quotient
 
     # We continue "partitioning" the quotient until we're left only with
     # equivalence classes
@@ -143,6 +146,8 @@ def find_bisimilarity(fsm_a, fsm_b, language):
                 p2_pred = get_predecessor(union, p2, word)
                 intersection = p1.intersection(p2_pred)
                 if intersection != p1 and len(intersection) > 0:
+                    print "Choppable: P1: %s P2: %s" % (p1, p2)
+                    print "Pred(P2): %s" % p2_pred
                     return (p1, p2_pred)
         
         # If we got here, we're done!
@@ -150,11 +155,15 @@ def find_bisimilarity(fsm_a, fsm_b, language):
 
     choppable = choppable_partition(quotient)
     while choppable:
+        # Choppable: P1: set([Logical_A, Physical_A, Physical_B, Logical_B]) P2: set([Physical_Switch1, Physical_Switch2, Logical_Switch])
+        # Quotient is: [set([Physical_Switch1, Physical_Switch2, Logical_Switch]), set([Logical_A, Physical_A]), set([Physical_B, Logical_B])]
         (p1, p2_pred) = choppable
         chop1 = p1.intersection(p2_pred)
         chop2 = p1 - p2_pred
         quotient = [partition for partition in quotient if partition != p1]
         quotient += [chop1, chop2]
+        print "Quotient is: %s" % quotient
+
         choppable = choppable_partition(quotient)
 
     return quotient
@@ -189,4 +198,5 @@ if __name__ == '__main__':
 
     # Our language is very simple for now 
     language = ["1.2.3.4"]
-    print find_bisimilarity(logical_network, physical_network, language)
+    result = find_bisimilarity(logical_network, physical_network, language)
+    print "Result: %s" % result
