@@ -10,7 +10,7 @@
 
 import pox.openflow.libopenflow_01 as of
 from pox.lib.revent import EventMixin
-from debugger_entities import Link, Host
+from debugger_entities import Link, Host, Endpoint
 
 from traffic_generator import TrafficGenerator
 from invariant_checker import InvariantChecker
@@ -260,7 +260,7 @@ class FuzzTester (EventMixin):
         self.dropped_dp_events.append(dp_event)
       else:
         (next_hop, next_port) = self.panel.get_connected_port(dp_event.switch, dp_event.port)
-        if type(dp_event.node) == Host or type(next_hop) == Host: # TODO demux on something general to Host and NetnsHost
+        if isinstance(dp_event.node, Endpoint) or isinstance(next_hop, Endpoint):
           # TODO: model access link failures:
           self.panel.permit_dp_event(dp_event)
         else:

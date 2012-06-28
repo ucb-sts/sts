@@ -178,9 +178,21 @@ try:
   scheduler = Scheduler(daemon=True, useEpoll=False)
   scheduler.schedule(io_loop)
 
+  def create_worker(socket, deferred=True):
+    '''
+    Creates and returns an IOWorker for the given socket to schedule on the Select loop.
+
+    If deferred is True (default), a DeferredIOWorker object is returned instead.
+    '''
+    iow = io_loop.create_worker_for_socket(socket)
+
+    if deferred:
+      iow = DeferredIOWorker(iow, scheduler.callLater)
+
+    return iow
+
   #if hasattr(config, 'switches'):
   #  pass
-  create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket), scheduler.callLater)
 
   # TODO: need a better way to choose FatTree vs. Mesh vs. whatever
   # Also, abusing the "num_switches" command line arg -> num_pods

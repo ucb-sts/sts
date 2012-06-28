@@ -254,7 +254,7 @@ class NetworkNamespaceHost (EventMixin, Endpoint):
     ioworker should equal self.ioworker, based on duck type of IOWorker handler method call.'''
     eth_packet = ethernet(raw=ioworker.peek_receive_buf()) # would buf ever be shorter than an eth packet?
     ioworker.consume_receive_buf(len(eth_packet.pack())) # is this the correct way to slurp the bits used?
-    self.raiseEvent(DpPacketOut(self, eth_packet, self.interface))
+    self.raiseEvent(DpPacketOut(self, eth_packet, self.interfaces[0]))
 
   def receive(self, interface, packet):
     '''Receive a packet from the simulator's network. Pack it into bits and push
