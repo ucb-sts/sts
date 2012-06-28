@@ -102,7 +102,7 @@ def create_netns_host(io_worker_generator, ingress_switch, ip_addr=IPAddr("123.1
   soket, guest, guest_mac, guest_device_name = netns(cmd)
   io_worker = io_worker_generator(soket, deferred=False)
   interface = HostInterface(guest_mac, ip_addr, guest_device_name)
-  host = NetworkNamespaceHost(io_worker, interface, guest_device_name)
+  host = NetworkNamespaceHost(io_worker, interface, guest, guest_device_name)
   name = "host:" + str(interface.ips)
   access_link = AccessLink(host, interface, ingress_switch, get_switch_port(ingress_switch))
   return (host, [access_link]) # single item list to be consistent with create_host

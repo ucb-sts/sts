@@ -206,6 +206,8 @@ try:
                                                  if args.fattree else \
                    topology_generator.populate(controllers, create_worker, num_switches=args.num_switches, netns_hosts=args.netns_hosts, netns_cmd=args.netns_cmd)
 
+  child_processes.extend(h.sysproc for h in hosts if hasattr(h, 'sysproc'))
+
   # For instrumenting the controller
   # TODO: This ugly hack has to be cleaned up ASAP ASAP
   control_socket = None #connect_socket_with_backoff('', 6634)

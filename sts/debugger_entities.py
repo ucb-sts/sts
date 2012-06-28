@@ -236,11 +236,12 @@ class NetworkNamespaceHost (EventMixin, Endpoint):
 
   _eventMixin_events = set([DpPacketOut])
 
-  def __init__(self, ioworker, interface, name):
+  def __init__(self, ioworker, interface, proces, name):
     ''' guest = ioworker wrapping the socket of the guest in the netns
         interface = a HostInterface '''
     ioworker.set_receive_handler(self._send)
     self.ioworker = ioworker
+    self.sysproc = proces
     self.interfaces = [interface] # only makes sense to have 1 interface for now, but need to be compatible with Host
     self.name = name
 
