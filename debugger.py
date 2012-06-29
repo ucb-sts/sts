@@ -105,7 +105,7 @@ parser.add_argument("-c", "--config", help='optional experiment config file to l
 parser.add_argument("-z", "--netns-hosts", type=int, metavar="netns_hosts", default=0,
                     help="number of network namespace hosts to fire up (defaults to opening an xterm for each)")
 
-parser.add_argument("-Z", "--netns-cmd", type=str, metavar="netns_cmd", default='xterm', help='the command used to launch each network namespace host')
+parser.add_argument("-Z", "--netns-cmd", type=str, metavar="netns_cmd", default='xterm', help='the command used to launch each network namespace host (default: xterm)')
 
 parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
                    help='arguments to pass to the controller(s)')
@@ -135,6 +135,22 @@ if hasattr(config, 'controllers'):
 else:
   controllers = [Controller(args.controller_args, port=args.port)]
   boot_controllers = (len(args.controller_args)>0)
+
+if hasattr(config, 'netns_host_commands'):
+  # This should be a list of (str, int), where string is a command from the commandline
+  # and int is the number of netns hosts that should be launched from this command
+  #
+  # if an item of the list is just of type str, then we convert it to (str, 1)
+  def netns_map(n):
+    if isinstance(n, tuple) and len(n) == 2:
+      return str(n[0]), int(n[1])
+    else:
+      return str(n), 1
+  netns_cmds = map(netns_map, config.netns_host_commands)
+elif args.netns_hosts > 0:
+  netns_cmds = [(args.netns_cmd, args.netns_hosts)]
+else:
+  netns_cmds = None
 
 if hasattr(config, 'topology_generator'):
   topology_generator = config.topology_generator
@@ -204,7 +220,7 @@ try:
                                              create_worker,
                                              num_pods=args.num_switches) \
                                                  if args.fattree else \
-                   topology_generator.populate(controllers, create_worker, num_switches=args.num_switches, netns_hosts=args.netns_hosts, netns_cmd=args.netns_cmd)
+                   topology_generator.populate(controllers, create_worker, num_switches=args.num_switches, netns_cmds=netns_cmds)
 
   child_processes.extend(h.sysproc for h in hosts if hasattr(h, 'sysproc'))
 

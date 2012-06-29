@@ -112,20 +112,26 @@ class TopologyGenerator(object):
     self.connections_per_switch = 1
     self.fat_tree = False
 
-  def create_mesh(self, num_switches, netns_hosts, netns_cmd, io_worker_constructor):
+  def create_mesh(self, num_switches, netns_cmds, io_worker_constructor):
     ''' Returns (patch_panel, switches, network_links, hosts, access_links) '''
 
     # Every switch has a link to every other switch + 1 host, for N*(N-1)+N = N^2 total ports
     ports_per_switch = (num_switches - 1) + 1
-
     # Initialize switches
-    switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
-    if netns_hosts > 0:
-      host_access_link_pairs = [ create_host(switch) for switch in switches[:-1*netns_hosts] ]
-      netns_host_access_link_pairs = ( create_netns_host(io_worker_constructor, switch, cmd=netns_cmd) for switch in switches[-1*netns_hosts:] )
-      host_access_link_pairs += netns_host_access_link_pairs
-    else:
-      host_access_link_pairs = [ create_host(switch) for switch in switches ]
+    switches = sw = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
+    netns_access_link_pairs = []
+
+    if netns_cmds: # it is None if no netns hosts should be launched
+      total_hosts = reduce(lambda x,y: x+y, map(lambda z: z[1], netns_cmds), 0)
+
+      if total_hosts > num_switches:
+        raise Exception('attempting to launch %d netns_hosts with only %d switches in a mesh' % (total_hosts, num_switches))
+
+      sw, netns_sw = sw[total_hosts:], sw[:total_hosts]
+
+      netns_access_link_pairs = [ create_netns_host(io_worker_constructor, switch, cmd=netns_cmd) for netns_cmd, switch in itertools.izip(itertools.chain.from_iterable(itertools.repeat(x[0], x[1]) for x in netns_cmds), netns_sw) ]
+
+    host_access_link_pairs = [ create_host(switch) for switch in sw ] + netns_access_link_pairs
 
     hosts = map(lambda pair: pair[0], host_access_link_pairs)
     access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
@@ -173,13 +179,13 @@ class TopologyGenerator(object):
 
     logger.debug("Controller connections done")
 
-  def populate(self, controller_config_list, io_worker_constructor, num_switches=3, netns_hosts=0, netns_cmd='xterm'):
+  def populate(self, controller_config_list, io_worker_constructor, num_switches=3, netns_cmds=None):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers, and return
     (PatchPanel, switches, network_links, hosts, access_links)
     '''
-    (panel, switches, network_links, hosts, access_links) = self.create_mesh(num_switches, netns_hosts, netns_cmd, io_worker_constructor)
+    (panel, switches, network_links, hosts, access_links) = self.create_mesh(num_switches, netns_cmds, io_worker_constructor)
     self.connect_to_controllers(controller_config_list, io_worker_constructor, switches)
     return (panel, switches, network_links, hosts, access_links)
 
