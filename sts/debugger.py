@@ -40,8 +40,10 @@ class FuzzTester (EventMixin):
   their responses?)
   """
   def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True,
+               silence=False,
                check_interval=35, trace_interval=10, random_seed=0.0,
                delay=0.1, dataplane_trace=None, control_socket=None):
+    msg.enabled=not silence # no output. we don't need to store this here
     self.interactive = interactive
     self.check_interval = check_interval
     self.trace_interval = trace_interval

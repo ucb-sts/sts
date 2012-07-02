@@ -63,6 +63,9 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
 parser.add_argument("-n", "--non-interactive", help='run debugger non-interactively',
                     action="store_false", dest="interactive", default=True)
 
+parser.add_argument("-S", "--silence", help='when running non-interactively, produce no console output',
+                    action="store_true", dest="silence", default=False)
+
 parser.add_argument("-C", "--check-interval", type=int,
                     help='Run correspondence checking every C timesteps (assume -n)',
                     dest="check_interval", default=35)
@@ -147,7 +150,7 @@ if hasattr(config, 'netns_host_commands'):
     else:
       return str(n), 1
   netns_cmds = map(netns_map, config.netns_host_commands)
-elif args.netns_hosts > 0:
+elif args.netns_hosts > 0: # default to commandline arguments
   netns_cmds = [(args.netns_cmd, args.netns_hosts)]
 else:
   netns_cmds = None
@@ -177,6 +180,12 @@ def handle_int(signal, frame):
 
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
+
+silence = (not args.interactive) and args.silence
+
+if silence:
+  logging.disable(logging.DEBUG)
+  logging.disable(logging.INFO)
 
 try:
   # Boot the controllers
@@ -228,7 +237,7 @@ try:
   # TODO: This ugly hack has to be cleaned up ASAP ASAP
   control_socket = None #connect_socket_with_backoff('', 6634)
 
-  simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
+  simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive, silence=silence,
                         check_interval=args.check_interval,
                         random_seed=args.random_seed, delay=args.delay,
                         dataplane_trace=args.trace_file, control_socket=control_socket)
