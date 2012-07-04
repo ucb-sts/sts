@@ -5,7 +5,6 @@ from pox.openflow.libopenflow_01 import *
 from debugger_entities import *
 import headerspace.topology_loader.pox_topology_loader as hsa_topo
 import headerspace.headerspace.applications as hsa
-#import nom_snapshot_protobuf.nom_snapshot_pb2 as nom_snapshot
 import nom_snapshot_json as nom_snapshot
 import pickle
 import logging
