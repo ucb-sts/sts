@@ -10,9 +10,6 @@ from pox.openflow.libopenflow_01 import *
 from pox.openflow.flow_table import SwitchFlowTable, TableEntry
 from pox.openflow.switch_impl import SwitchImpl
 
-# TODO: bad separation of concerns
-#import nom_snapshot_protobuf.nom_snapshot_pb2 as nom_snapshot
-
 import re
 from collections import namedtuple
 
@@ -401,7 +398,8 @@ def get_kw_for_field_match(field_match):
     
   return "%s=%s" % (field_name, value)
 
-# TODO: wrong place for this:
+# TODO: wrong place for this
+# TODO: protobuf is deprecated -- use json instead
 def of_action_from_protobuf_action(protobuf_action):
   if protobuf_action.type == nom_snapshot.Action.output:
     return ofp_action_output(port=protobuf_action.port)
