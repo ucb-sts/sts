@@ -8,11 +8,14 @@ The code is quite nascent and still in flux.
 
 Requires python 2.7+
 
-You'll need to load the pox submodule to run pox applications.
+You'll need to link in the current 'debugger' branch of pox to run the debugger --
+it is used as an infrastructure framework.
 
-After cloning, run:
-  $ git submodule init
-  $ git submodule update
+Typical workflow:
+~/debugger $ cd ..
+~ $ git clone git://github.com/noxrepo/pox.git pox/
+~ $ cd debugger
+~/debugger $ ln -s ../pox pox
 
 To run, see:
   $ ./debugger.py -h
