@@ -191,7 +191,7 @@ class FuzzTester (EventMixin):
       msg.interactive("  'r' - routing consistency")
       msg.interactive("  'c' - connectivity")
       msg.interactive("  'o' - omega")
-      answer = msg.raw_input("  ")
+      answer = msg.raw_input("> ")
       result = None
       if answer.lower() == 'l':
         result = self.invariant_checker.check_loops()
