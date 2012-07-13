@@ -1,4 +1,1 @@
-[submodule "pox"]
-	path = pox
-	url = git://github.com/noxrepo/pox.git
-	ignore = all
+
