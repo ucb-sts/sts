@@ -21,6 +21,12 @@ class Context(object):
     except KeyError:
       pass
 
+  def kill_process(self, name):
+    try:
+      self.procs.pop(name).kill()
+    except KeyError:
+      pass
+
 def parse(trace_filename):
   ''' Parse a trace file name and return a dictionary of the following type:
   key: round number (int)
@@ -75,12 +81,18 @@ def start_process(strng, context):
   context.add_process(parsed.group('name'), proc)
 
 def stop_process(strng, context):
-  rgx = compile("^(?P<name>[\w-]+)$")
+  rgx = compile("^(?P<name>[\w-]+)(?: (?P<signal>SIG(?:(?:TERM)|(?:KILL))))?$")
   parsed = rgx.match(strng)
 
   if not parsed:
     raise ValueError("start_process could not parse string {}".format(strng))
-  context.stop_process(parsed.group('name'))
+
+  signal = parsed.group('signal')
+  name = parsed.group('name')
+  if signal == "TERM":
+    context.stop_process(name)
+  else:
+    context.kill_process(name)
 
 name2Command = {
   'start-process' : start_process,
