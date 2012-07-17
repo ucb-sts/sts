@@ -54,9 +54,14 @@ class Command(object):
 
   Commands that implement this class must have an operate method that takes the
   context (also in this module). The context holds the state that is passed
-  between the successive commands. '''
+  between the successive commands.
+
+  Subclasses must have their __init__ method take a single
+  argument. This will be the string parsed as the args (see method
+  parse in module), or None if it does not exist. '''
   __metaclass__ = abc.ABCMeta
 
   @abc.abstractmethod
   def operate(self, context):
-    pass # TODO operate on the context passed
+    """ Operate on the current context """
+    pass
