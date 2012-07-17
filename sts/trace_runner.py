@@ -1,14 +1,25 @@
 from collections import defaultdict
-
+from functools import partial
+from subprocess import Popen
+from re import compile, match
 import abc
-import re
 
 class Context(object):
-  # TODO add docstring
+  """ A class to hold state between calls. The commands that handle the parsed
+  data are essentially calls to this, but they handle the string parsing. """
   def __init__(self):
     # procs: A dictionary for mapping names to Popen instances. For controlling
     # external processes such as controllers (e.g. killing them).
     self.procs = {}
+
+  def add_process(self, name, proc):
+    self.procs[name] = proc # FIXME need to be safe in case process already exists!
+
+  def stop_process(self, name):
+    try:
+      self.procs.pop(name).terminate()
+    except KeyError:
+      pass
 
 def parse(trace_filename):
   ''' Parse a trace file name and return a dictionary of the following type:
@@ -24,18 +35,18 @@ def parse(trace_filename):
   executed in the simulator. These round numbers do *not* have to be strictly
   monotonically increasing, but within each round the actions will be sorted in file-order.
   '''
-  command_regex = re.compile("^(?P<round>\d+) (?P<command>[\w-]+)(?: (?P<args>.+))?$")
+  command_regex = compile("^(?P<round>\d+) (?P<command>[\w-]+)(?: (?P<args>.+))?$")
 
   round2Command = defaultdict(list)
 
   with open(trace_filename, 'r') as trace_file:
     for line in trace_file:
-      parsed = re.match(command_regex, line)
+      parsed = match(command_regex, line)
     if parsed:
       cmd_name = parsed.group('command')
       if cmd_name not in name2Command:
         raise Exception("unknown command", cmd_name)
-      cmd = name2Command[cmd_name](parsed.group('args'))
+      cmd = partial(name2Command[cmd_name],parsed.group('args'))
 
       round = int(parsed.group('round'))
       round2Command[round].append(cmd)
@@ -45,22 +56,33 @@ def parse(trace_filename):
 
   return round2Command
 
-name2Command = {} #TODO a dictionary to map name(string) to command subclass
+# Defining a command
+#
+# Every command takes 2 arguments: a string and a context instance. The string
+# is partially applied when parsing is done, and the context is passed in the
+# execution of the trace.
+#
+# Some of the commands may check their arguments with a regex. If they fail to
+# parse, many will throw a ValueError.
 
-class Command(object):
-  ''' The base class that represents an action in a the trace, as parsed by the
-  parse method above.
+def start_process(strng, context):
+  rgx = compile("^(?P<name>[\w-]+) (?P<cmd>.+)$")
+  parsed = rgx.match(strng)
 
-  Commands that implement this class must have an operate method that takes the
-  context (also in this module). The context holds the state that is passed
-  between the successive commands.
+  if not parsed:
+    raise ValueError("start_process could not parse string {}".format(strng))
+  proc = Popen(parsed.group('cmd').split())
+  context.add_process(parsed.group('name'), proc)
 
-  Subclasses must have their __init__ method take a single
-  argument. This will be the string parsed as the args (see method
-  parse in module), or None if it does not exist. '''
-  __metaclass__ = abc.ABCMeta
+def stop_process(strng, context):
+  rgx = compile("^(?P<name>[\w-]+)$")
+  parsed = rgx.match(strng)
 
-  @abc.abstractmethod
-  def operate(self, context):
-    """ Operate on the current context """
-    pass
+  if not parsed:
+    raise ValueError("start_process could not parse string {}".format(strng))
+  context.stop_process(parsed.group('name'))
+
+name2Command = {
+  'start-process' : start_process,
+  'stop-process' : stop_process
+}
