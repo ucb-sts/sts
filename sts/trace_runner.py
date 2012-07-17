@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import abc
 import re
 
@@ -24,7 +26,7 @@ def parse(trace_filename):
   '''
   command_regex = re.compile("^(?P<round>\d+) (?P<command>[\w-]+)(?: (?P<args>.+))?$")
 
-  round2Command = {}
+  round2Command = defaultdict(list)
 
   with open(trace_filename, 'r') as trace_file:
     for line in trace_file:
@@ -36,10 +38,7 @@ def parse(trace_filename):
       cmd = name2Command[cmd_name](parsed.group('args'))
 
       round = int(parsed.group('round'))
-      if round not in round2Command:
-        round2Command[round] = [cmd] # TODO is there a pythonic way to have a default dict value?
-      else:
-        round2Command[round].append(cmd)
+      round2Command[round].append(cmd)
     else:
       # FIXME use a logger instead, or maybe fail hard?
       print "unable to parse line:", line
