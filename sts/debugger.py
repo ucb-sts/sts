@@ -14,6 +14,7 @@ from debugger_entities import Link, Host
 
 from traffic_generator import TrafficGenerator
 from invariant_checker import InvariantChecker
+from trace_runner import Context
 
 import sys
 import threading
@@ -41,7 +42,7 @@ class FuzzTester (EventMixin):
   """
   def __init__(self, fuzzer_params="fuzzer_params.cfg", interactive=True,
                check_interval=35, trace_interval=10, random_seed=0.0,
-               delay=0.1, dataplane_trace=None, control_socket=None):
+               delay=0.1, dataplane_trace=None, control_socket=None, floodlight_port=8080):
     self.interactive = interactive
     self.check_interval = check_interval
     self.trace_interval = trace_interval
@@ -79,7 +80,7 @@ class FuzzTester (EventMixin):
     self.seed = random_seed
     self.random = random.Random(self.seed)
     self.traffic_generator = TrafficGenerator(self.random)
-    self.invariant_checker = InvariantChecker(control_socket)
+    self.invariant_checker = InvariantChecker(control_socket, floodlight_port)
 
     # TODO: future feature: log all events, and allow user to (interactively)
     # replay the execution
@@ -136,6 +137,48 @@ class FuzzTester (EventMixin):
     self.access_links = set(access_links)
     self.type_check_dataplane_trace()
     self.loop(steps)
+
+  def trace(round2Command, topology_generator, steps=None):
+    # HOTNETS HACK this is just the rewritten loop that we need for automation for the floodlight bug :P
+    # generate context
+    self.topology_generator = topology_generator # HACK called by setup_topology, which is called by Context.boot_topology
+    self.booted = False
+    context = Context(self)
+    end_time = self.logical_time + steps if steps else sys.maxint
+
+    # This loop is purely controlled by commands in the trace, for the most part
+    while self.running and self.logical_time < end_time:
+      self.logical_time += 1
+      if self.logical_time in round2Command:
+        for cmd in round2Command[self.logical_time]:
+          cmd(context)
+      self._trace_trigger_events()
+      msg.event("Round %d completed." % self.logical_time)
+
+      time.sleep(self.delay)
+
+  def setup_topology(self):
+    (panel, switch_impls, network_links, hosts, access_links) = self.topology_generator()
+    del self.topology_generator # don't want to call it twice :P
+    self.panel = panel
+    self.switch_impls = set(switch_impls)
+    self.switch_impls_ordered = switch_impls # HACK for toggling switch up/down
+    self.dataplane_links = set(network_links)
+    self.hosts = hosts
+    self.interface2host = {}
+    for host in hosts:
+      for interface in host.interfaces:
+        self.interface2host[interface] = host
+    self.booted = True
+
+  def check_correspondence(self,fl_port): # HACK this only works for floodlight -_-
+    if self.booted:
+      self.invariant_check.set_floodlight_port(fl_port)
+      result = self.invariant_checker.check_correspondence(self.live_switches, self.live_links, self.access_links)
+      if result:
+        msg.fail("There were policy violations!")
+      else:
+        msg.interactive("No policy violations!")
 
   def loop(self, steps=None):
     self.running = True
@@ -243,6 +286,13 @@ class FuzzTester (EventMixin):
     self.check_switch_crashes()
     self.check_timeouts()
     self.fuzz_traffic()
+
+  def _trace_trigger_events(self):
+    if self.booted:
+      self.check_dataplane()
+      self.check_controlplane()
+      self.check_switch_crashes()
+      self.check_timeouts()
 
   def check_dataplane(self):
     ''' Decide whether to delay, drop, or deliver packets '''

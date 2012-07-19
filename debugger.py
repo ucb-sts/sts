@@ -34,6 +34,7 @@ from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.lib.util import connect_socket_with_backoff
 from sts.experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
+from sts.trace_runner import parse
 
 import signal
 import sys
@@ -94,11 +95,13 @@ parser.add_argument("-F", "--fat-tree", type=bool, default=False,
 
 # Major TODO: need to type-check trace file (i.e., every host in the trace must be present in the network!)
 #              this has already wasted several hours of time...
-parser.add_argument("-t", "--trace-file", default=None,
+parser.add_argument("-t", "--trace-file",
                     help="optional dataplane trace file (see trace_generator.py)")
 
 parser.add_argument("-N", "--num-switches", type=int, default=2,
                     help="number of switches to create in the network")
+
+parser.add_argument("-W" "--action-trace-file", metavar="action_trace", help="trace file for commanding the actions of the simulator (see trace_runner.py)")
 
 parser.add_argument("-c", "--config", help='optional experiment config file to load')
 parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
@@ -120,7 +123,10 @@ else:
 
 boot_controllers = False
 
-if hasattr(config, 'controllers'):
+action_trace = config.action_trace if hasattr(config, 'action_trace') else args.action_trace
+round2Command = parse(action_trace) if action_trace else None
+
+if hasattr(config, 'controllers'): # HOTNETS the config should have the controllers
   if hasattr(config.controllers, '__call__'):
     controllers = config.controllers(args.controller_args)
   else:
@@ -178,15 +184,17 @@ try:
 
   # TODO: need a better way to choose FatTree vs. Mesh vs. whatever
   # Also, abusing the "num_switches" command line arg -> num_pods
-  (panel,
-   switch_impls,
-   network_links,
-   hosts,
-   access_links) = topology_generator.populate_fat_tree(controllers,
-                                             create_worker,
-                                             num_pods=args.num_switches) \
-                                                 if args.fattree else \
-                   topology_generator.populate(controllers, create_worker, num_switches=args.num_switches)
+  def start_topology():
+    a = (panel,
+         switch_impls,
+         network_links,
+         hosts,
+         access_links) = topology_generator.populate_fat_tree(controllers,
+                                                              create_worker,
+                                                              num_pods=args.num_switches) \
+                                                              if args.fattree else \
+                                                              topology_generator.populate(controllers, create_worker, num_switches=args.num_switches)
+    return a
 
   # For instrumenting the controller
   # TODO: This ugly hack has to be cleaned up ASAP ASAP
@@ -196,7 +204,11 @@ try:
                         check_interval=args.check_interval,
                         random_seed=args.random_seed, delay=args.delay,
                         dataplane_trace=args.trace_file, control_socket=control_socket)
-  simulator.simulate(panel, switch_impls, network_links, hosts, access_links, steps=args.steps)
+  if round2Command:
+    simulator.trace(round2Command, start_topology, steps=args.steps)
+  else:
+    a = start_topology()
+    simulator.simulate(*a, steps=args.steps)
 finally:
   kill_children()
   kill_scheduler()

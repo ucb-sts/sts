@@ -9,10 +9,11 @@ import json
 class Context(object):
   """ A class to hold state between calls. The commands that handle the parsed
   data are essentially calls to this, but they handle the string parsing. """
-  def __init__(self):
+  def __init__(self, simulator):
     # procs: A dictionary for mapping names to Popen instances. For controlling
     # external processes such as controllers (e.g. killing them).
     self.procs = {}
+    self.simulator = simulator # this should be a FuzzTester instance
 
   def add_process(self, name, proc):
     self.procs[name] = proc # HACK this should be made safe in case process already exists!
@@ -30,19 +31,19 @@ class Context(object):
       pass
 
   def start_switch(self, switch_index, ports=[]):
-    pass
+    self.simulator.start_switch(switch_index, ports)
 
   def stop_switch(self, switch_index):
-    pass
+    self.simulator.stop_switch(switch_index)
 
   def check_correspondence(self, port):
-    pass
+    self.simulator.check_correspondence(port)
 
   def exit_simulator(self):
-    pass
+    self.simulator.stop()
 
   def boot_topology(self):
-    pass
+    self.simulator.setup_topology()
 
 def parse(trace_filename):
   ''' Parse a trace file name and return a dictionary of the following type:

@@ -12,11 +12,12 @@ import collections
 log = logging.getLogger("invariant_checker")
 
 class InvariantChecker(object):
-  def __init__(self, control_url):
-    self.control_url = control_url
+  def __init__(self, control_socket, floodlight_port):
+    self.control_socket = control_socket # nothing happening here...
+    self.floodlight_url = "http://localhost:{0}/wm/core/proact".format(floodlight_port)
 
   def fetch_controller_snapshot(self):
-    req = urllib2.Request('http://localhost:8080/wm/core/proact')
+    req = urllib2.Request(self.floodlight_url)
     response = urllib2.urlopen(req)
     json_data = response.read()
     l = json.loads(json_data)
@@ -25,6 +26,8 @@ class InvariantChecker(object):
       res.append(nom_snapshot.Snapshot.from_json_map(m))
     return res
 
+  def set_floodlight_port(self, floodlight_port):
+    self.floodlight_url = "http://localhost:{0}/wm/core/proact".format(floodlight_port)
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
   # --------------------------------------------------------------#
