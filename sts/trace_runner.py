@@ -41,6 +41,9 @@ class Context(object):
   def exit_simulator(self):
     pass
 
+  def boot_topology(self):
+    pass
+
 def parse(trace_filename):
   ''' Parse a trace file name and return a dictionary of the following type:
   key: round number (int)
@@ -112,7 +115,7 @@ def stop_process(strng, context):
     context.stop_process(name)
 
 def boot_topology(strng=None, context):
-  pass # TODO put the topology in the context and boot it?
+  context.boot_topology()
 
 def stop_switch(strng, context):
   switch_index = int(strng) # let it crash
