@@ -27,10 +27,19 @@ class Context(object):
     except KeyError:
       pass
 
+  def stop_switch(self, name):
+    pass
+
+  def stop_switch(self, name):
+    pass
+
 def parse(trace_filename):
   ''' Parse a trace file name and return a dictionary of the following type:
   key: round number (int)
   value: list of actions to perform in that round
+
+  The idea is that every round, the simulator will check the returned dict to
+  see if there are any event in the round, and it will apply them in order.
 
   Command syntax: The commands must follow this rough syntax. See regex in
   source for more detail:
