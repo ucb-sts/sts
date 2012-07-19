@@ -1,5 +1,5 @@
-1 start-process fl_master java -jar target/floodlight.jar -cf src/main/resources/fl-server.properties
-2 start-process fl_slave java -jar target/floodlight.jar -cf src/main/resources/fl-client.properties 
+1 start-process fl_master java -jar /home/sam/code/floodlight-w3/target/floodlight.jar -cf /home/sam/code/floodlight-w3/src/main/resources/fl-server.properties
+2 start-process fl_slave java -jar /home/sam/code/floodlight-w3/target/floodlight.jar -cf /home/sam/code/floodlight-w3/src/main/resources/fl-client.properties
 10 boot-topology
 20 stop-switch 0
 25 stop-process fl_master

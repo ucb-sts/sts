@@ -203,9 +203,12 @@ try:
   # TODO: This ugly hack has to be cleaned up ASAP ASAP
   control_socket = None #connect_socket_with_backoff('', 6634)
 
+  delay = args.delay
+  if hasattr(config, 'delay'): delay = config.delay
+  
   simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
                         check_interval=args.check_interval,
-                        random_seed=args.random_seed, delay=args.delay,
+                        random_seed=args.random_seed, delay=delay,
                         dataplane_trace=args.trace_file, control_socket=control_socket)
   if round2Command:
     simulator.trace(round2Command, start_topology, steps=args.steps)
