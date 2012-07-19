@@ -115,7 +115,7 @@ def stop_process(strng, context):
   else:
     context.stop_process(name)
 
-def boot_topology(strng=None, context):
+def boot_topology(strng, context):
   context.boot_topology()
 
 def stop_switch(strng, context):
