@@ -154,7 +154,7 @@ def change_role(strng, context):
 def check_correspondence(strng, context):
   context.check_correspondence(int(strng))
 
-def exit(strng=None, context):
+def exit(strng, context):
   context.exit_simulator()
 
 name2Command = {
