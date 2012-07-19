@@ -5,5 +5,5 @@
 25 stop-process fl_master
 30 start-switch 0 6634
 35 change-role 8081 MASTER
-40 check-correspondence 8081
-41 exit
+45 check-correspondence 8081
+46 exit
