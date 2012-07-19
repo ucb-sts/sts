@@ -1,0 +1,8 @@
+1 start-process fl_master
+2 start-process fl_slave
+10 stop-switch 0
+15 stop-process fl_master
+18 start-switch 0 6634
+25 change-role fl_slave MASTER
+30 check-correspondence
+31 exit
