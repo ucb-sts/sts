@@ -143,6 +143,7 @@ class FuzzTester (EventMixin):
     # generate context
     self.topology_generator = topology_generator # HACK called by setup_topology, which is called by Context.boot_topology
     self.booted = False
+    self.running = True
     context = Context(self)
     end_time = self.logical_time + steps if steps else sys.maxint
 
