@@ -62,6 +62,7 @@ def parse(trace_filename):
   executed in the simulator. These round numbers do *not* have to be strictly
   monotonically increasing, but within each round the actions will be sorted in file-order.
   '''
+  from console import msg
   command_regex = compile("^(?P<round>\d+) (?P<command>[\w-]+)(?: (?P<args>.+))?$")
 
   round2Command = defaultdict(list)
@@ -69,17 +70,16 @@ def parse(trace_filename):
   with open(trace_filename, 'r') as trace_file:
     for line in trace_file:
       parsed = match(command_regex, line)
-    if parsed:
-      cmd_name = parsed.group('command')
-      if cmd_name not in name2Command:
-        raise Exception("unknown command", cmd_name)
-      cmd = partial(name2Command[cmd_name],parsed.group('args'))
-
-      round = int(parsed.group('round'))
-      round2Command[round].append(cmd)
-    else:
-      # FIXME use a logger instead, or maybe fail hard?
-      print "unable to parse line:", line
+      if parsed:
+        cmd_name = parsed.group('command')
+        if cmd_name not in name2Command:
+          raise Exception("unknown command", cmd_name)
+        cmd = partial(name2Command[cmd_name],parsed.group('args'))
+        round = int(parsed.group('round'))
+        round2Command[round].append(cmd)
+      else:
+        # FIXME use a logger instead, or maybe fail hard?
+        msg.fail("unable to parse line: {0}".format(line))
 
   return round2Command
 
@@ -136,7 +136,7 @@ def start_switch(strng, context):
                        ports=[port_number])
 
 def change_role(strng, context):
-  rgx = compile("^(?P<port>\d+) (?P<role>\[A-Z]+)$")
+  rgx = compile("^(?P<port>\d+) (?P<role>[A-Z]+)$")
   parsed = rgx.match(strng)
 
   if not parsed:

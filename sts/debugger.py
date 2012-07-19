@@ -15,6 +15,7 @@ from debugger_entities import Link, Host
 from traffic_generator import TrafficGenerator
 from invariant_checker import InvariantChecker
 from trace_runner import Context
+from sts.experiment_config_lib import Controller
 
 import sys
 import threading

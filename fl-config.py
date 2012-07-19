@@ -5,4 +5,4 @@ boot_controllers = False
 topology_generator = TopologyGenerator()
 topology_generator.connections_per_switch = 2
 floodlight_port = 8080
-delay = 1.0
+delay = 0.5
