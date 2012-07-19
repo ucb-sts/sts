@@ -123,7 +123,10 @@ else:
 
 boot_controllers = False
 
-action_trace = config.action_trace if hasattr(config, 'action_trace') else args.action_trace
+if hasattr(config, 'action_trace'):
+  action_trace = confic.action_trace
+else:
+  action_trace = args.action_trace # None by default
 round2Command = parse(action_trace) if action_trace else None
 
 if hasattr(config, 'controllers'): # HOTNETS the config should have the controllers
