@@ -3,6 +3,8 @@ from functools import partial
 from subprocess import Popen
 from re import compile, match
 import abc
+import urllib2
+import json
 
 class Context(object):
   """ A class to hold state between calls. The commands that handle the parsed
@@ -13,7 +15,7 @@ class Context(object):
     self.procs = {}
 
   def add_process(self, name, proc):
-    self.procs[name] = proc # FIXME need to be safe in case process already exists!
+    self.procs[name] = proc # HACK this should be made safe in case process already exists!
 
   def stop_process(self, name):
     try:
@@ -27,10 +29,16 @@ class Context(object):
     except KeyError:
       pass
 
-  def stop_switch(self, name):
+  def start_switch(self, switch_index, ports=[]):
     pass
 
-  def stop_switch(self, name):
+  def stop_switch(self, switch_index):
+    pass
+
+  def check_correspondence(self, port):
+    pass
+
+  def exit_simulator(self):
     pass
 
 def parse(trace_filename):
@@ -94,16 +102,64 @@ def stop_process(strng, context):
   parsed = rgx.match(strng)
 
   if not parsed:
-    raise ValueError("start_process could not parse string {}".format(strng))
+    raise ValueError("stop_process could not parse string {}".format(strng))
 
   signal = parsed.group('signal')
   name = parsed.group('name')
-  if signal == "TERM":
-    context.stop_process(name)
-  else:
+  if signal == "KILL": # use SIGTERM by default
     context.kill_process(name)
+  else:
+    context.stop_process(name)
+
+def boot_topology(strng=None, context):
+  pass # TODO put the topology in the context and boot it?
+
+def stop_switch(strng, context):
+  switch_index = int(strng) # let it crash
+  context.stop_switch(switch_index)
+
+def start_switch(strng, context):
+  rgx = compile("^(?P<switchidx>\d+) (?P<port>\d+)$") # FIXME this is a hack to get it out the door
+  parsed = rgx.match(strng)
+
+  if not parsed:
+    raise ValueError("start_switch could not parse string {}".format(strng))
+
+  switch_index = int(parsed.group('switchidx'))
+  port_number = int(parsed.group('port'))
+
+  context.start_switch(switch_index=switch_index,
+                       ports=[port_number])
+
+def change_role(strng, context):
+  rgx = compile("^(?P<port>\d+) (?P<role>\[A-Z]+)$")
+  parsed = rgx.match(strng)
+
+  if not parsed:
+    raise ValueError("change_role could not parse string {}".format(strng))
+
+  floodlight_port = int(parsed.group('port'))
+  floodlight_role = int(parsed.group('role'))
+
+  request_data = json.dumps({"role" : floodlight_role})
+  url = "http://localhost:{0}/wm/core/role/json".format(floodlight_port)
+  req = urllib2.Request(url, request_data, {'Content-Type': 'application/json',
+                                            'Accept': 'application/json'})
+  response = urllib2.urlopen(req) # HACK don't worry about the response
+
+def check_correspondence(strng, context):
+  context.check_correspondence(int(strng))
+
+def exit(strng=None, context):
+  context.exit_simulator()
 
 name2Command = {
   'start-process' : start_process,
-  'stop-process' : stop_process
+  'stop-process' : stop_process,
+  'boot-topology' : boot_topology,
+  'stop-switch' : stop_switch,
+  'start-switch' : start_switch,
+  'change-role' : change_role,
+  'check-correspondence' : check_correspondence,
+  'exit' : exit
 }
