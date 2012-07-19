@@ -51,6 +51,9 @@ class FuzzSwitchImpl (NXSwitchImpl):
   def add_controller_info(self, info):
     self.controller_info.append(info)
 
+  def clear_controller_info(self):
+    self.controller_info = []
+
   def _handle_ConnectionUp(self, event):
     self._setConnection(event.connection, event.ofp)
 

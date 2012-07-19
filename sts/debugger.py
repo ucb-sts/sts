@@ -180,6 +180,16 @@ class FuzzTester (EventMixin):
       else:
         msg.interactive("No policy violations!")
 
+  def stop_switch(self,switch_index):
+    self.switch_impls_ordered[switch_index].fail()
+
+  def start_switch(self,switch_index,ports=[]): # the ports that it should connect to
+    swtch = self.switch_impls_ordered[switch_index]
+    swtch.clear_controller_info()
+    for p in ports:
+      swtch.add_controller_info(Controller(port=p))
+    swtch.recover()
+
   def loop(self, steps=None):
     self.running = True
     end_time = self.logical_time + steps if steps else sys.maxint
