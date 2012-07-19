@@ -9,24 +9,30 @@ import json
 class Context(object):
   """ A class to hold state between calls. The commands that handle the parsed
   data are essentially calls to this, but they handle the string parsing. """
-  def __init__(self, simulator):
+  def __init__(self, simulator, proclist):
     # procs: A dictionary for mapping names to Popen instances. For controlling
     # external processes such as controllers (e.g. killing them).
     self.procs = {}
+    self.global_process_list = proclist
     self.simulator = simulator # this should be a FuzzTester instance
 
   def add_process(self, name, proc):
     self.procs[name] = proc # HACK this should be made safe in case process already exists!
+    self.global_process_list.append(proc)
 
   def stop_process(self, name):
     try:
-      self.procs.pop(name).terminate()
+      proc = self.procs.pop(name)
+      self.global_process_list.remove(proc)
+      proc.terminate()
     except KeyError:
       pass
 
   def kill_process(self, name):
     try:
-      self.procs.pop(name).kill()
+      proc = self.procs.pop(name)
+      self.global_process_list.remove(proc)
+      proc.kill()
     except KeyError:
       pass
 

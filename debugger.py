@@ -211,7 +211,7 @@ try:
                         random_seed=args.random_seed, delay=delay,
                         dataplane_trace=args.trace_file, control_socket=control_socket)
   if round2Command:
-    simulator.trace(round2Command, start_topology, steps=args.steps)
+    simulator.trace(round2Command, start_topology, steps=args.steps, procs=child_processes)
   else:
     a = start_topology()
     simulator.simulate(*a, steps=args.steps)

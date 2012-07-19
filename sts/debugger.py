@@ -139,13 +139,13 @@ class FuzzTester (EventMixin):
     self.type_check_dataplane_trace()
     self.loop(steps)
 
-  def trace(self, round2Command, topology_generator, steps=None):
+  def trace(self, round2Command, topology_generator, steps=None, procs=[]):
     # HOTNETS HACK this is just the rewritten loop that we need for automation for the floodlight bug :P
     # generate context
     self.topology_generator = topology_generator # HACK called by setup_topology, which is called by Context.boot_topology
     self.booted = False
     self.running = True
-    context = Context(self)
+    context = Context(self, procs)
     end_time = self.logical_time + steps if steps else sys.maxint
 
     # This loop is purely controlled by commands in the trace, for the most part
