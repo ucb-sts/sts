@@ -149,7 +149,7 @@ def change_role(strng, context):
     raise ValueError("change_role could not parse string {}".format(strng))
 
   floodlight_port = int(parsed.group('port'))
-  floodlight_role = int(parsed.group('role'))
+  floodlight_role = parsed.group('role')
 
   request_data = json.dumps({"role" : floodlight_role})
   url = "http://localhost:{0}/wm/core/role/json".format(floodlight_port)

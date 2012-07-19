@@ -167,6 +167,7 @@ class FuzzTester (EventMixin):
     self.switch_impls_ordered = switch_impls # HACK for toggling switch up/down
     self.dataplane_links = set(network_links)
     self.hosts = hosts
+    self.access_links = access_links
     self.interface2host = {}
     for host in hosts:
       for interface in host.interfaces:
@@ -175,7 +176,7 @@ class FuzzTester (EventMixin):
 
   def check_correspondence(self,fl_port): # HACK this only works for floodlight -_-
     if self.booted:
-      self.invariant_check.set_floodlight_port(fl_port)
+      self.invariant_checker.set_floodlight_port(fl_port)
       result = self.invariant_checker.check_correspondence(self.live_switches, self.live_links, self.access_links)
       if result:
         msg.fail("There were policy violations!")
