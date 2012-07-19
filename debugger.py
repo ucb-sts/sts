@@ -95,13 +95,13 @@ parser.add_argument("-F", "--fat-tree", type=bool, default=False,
 
 # Major TODO: need to type-check trace file (i.e., every host in the trace must be present in the network!)
 #              this has already wasted several hours of time...
-parser.add_argument("-t", "--trace-file",
+parser.add_argument("-t", "--trace-file", default=None,
                     help="optional dataplane trace file (see trace_generator.py)")
 
 parser.add_argument("-N", "--num-switches", type=int, default=2,
                     help="number of switches to create in the network")
 
-parser.add_argument("-W" "--action-trace-file", metavar="action_trace", help="trace file for commanding the actions of the simulator (see trace_runner.py)")
+parser.add_argument("-W", "--action-trace-file", metavar="action_trace_file", default=None, help="trace file for commanding the actions of the simulator (see trace_runner.py)")
 
 parser.add_argument("-c", "--config", help='optional experiment config file to load')
 parser.add_argument('controller_args', metavar='controller arg', nargs=argparse.REMAINDER,
@@ -123,10 +123,10 @@ else:
 
 boot_controllers = False
 
-if hasattr(config, 'action_trace'):
-  action_trace = confic.action_trace
+if hasattr(config, 'action_trace_file'):
+  action_trace = config.action_trace_file
 else:
-  action_trace = args.action_trace # None by default
+  action_trace = args.action_trace_file # None by default
 round2Command = parse(action_trace) if action_trace else None
 
 if hasattr(config, 'controllers'): # HOTNETS the config should have the controllers
