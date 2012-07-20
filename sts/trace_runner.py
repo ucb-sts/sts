@@ -36,7 +36,7 @@ class Context(object):
     except KeyError:
       pass
 
-  def start_switch(self, switch_index, ports=[]):
+  def start_switch(self, switch_index, ports=None):
     self.simulator.start_switch(switch_index, ports)
 
   def stop_switch(self, switch_index):
@@ -131,17 +131,20 @@ def stop_switch(strng, context):
   context.stop_switch(switch_index)
 
 def start_switch(strng, context):
-  rgx = compile("^(?P<switchidx>\d+) (?P<port>\d+)$") # FIXME this is a hack to get it out the door
+  rgx = compile("^(?P<switchidx>\d+)(?: (?P<port>\d+))?$") # FIXME this is a hack to get it out the door
   parsed = rgx.match(strng)
 
   if not parsed:
     raise ValueError("start_switch could not parse string {}".format(strng))
 
   switch_index = int(parsed.group('switchidx'))
-  port_number = int(parsed.group('port'))
-
-  context.start_switch(switch_index=switch_index,
+  port = parsed.group('port')
+  if port:
+    port_number = int(port)
+    context.start_switch(switch_index=switch_index,
                        ports=[port_number])
+  else:
+    context.start_switch(switch_index=switch_index)
 
 def change_role(strng, context):
   rgx = compile("^(?P<port>\d+) (?P<role>[A-Z]+)$")
