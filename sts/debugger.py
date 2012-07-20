@@ -188,7 +188,7 @@ class FuzzTester (EventMixin):
         msg.interactive("No policy violations!")
 
   def stop_switch(self,switch_index):
-    self.switch_impls_ordered[switch_index].fail()
+    self.switch_impls_ordered[switch_index].crash()
 
   def start_switch(self,switch_index,ports): # the ports that it should connect to
     swtch = self.switch_impls_ordered[switch_index]

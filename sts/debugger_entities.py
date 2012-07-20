@@ -78,6 +78,11 @@ class FuzzSwitchImpl (NXSwitchImpl):
       connection.close()
     self.connections = []
 
+  def crash(self):
+    ''' Fail, but also clear entries in the flow table '''
+    self.fail()
+    self.reset_flow_table()
+
   def recover(self):
     if not self.failed:
       self.log.warn("Switch already up")
