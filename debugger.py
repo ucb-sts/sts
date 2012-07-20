@@ -218,15 +218,25 @@ try:
     from itertools import *
     def remove_cmd(cmd):
       a = {}
+      removed_count = 0
       for round in round2Command:
         a[round] = filter(lambda x: x is not cmd, round2Command[round])
+        removed_count += len(round2Command[round]) - len(a[round])
+      if removed_count != 1:
+        raise Exception("removed {} things when it should've been 1".format(removed_count))
       return a
 
     mcs = []
     filtered_events = 0
-    for cmd in chain(round2Command.values()):
+    for cmd in chain.from_iterable(round2Command.values()): # chain is not flattening
       r2c = remove_cmd(cmd)
-      if not create_simulator().trace(r2c, start_topology, steps=args.steps, procs=child_processes):
+      corresponds = False # if it crashes, assume the event is needed
+      try:
+        corresponds = create_simulator().trace(r2c, start_topology, procs=child_processes,steps=max(round2Command.keys())+1)
+      except Exception: # in case socket backoff happens, or other things happen
+        pass
+
+      if not corresponds:
         mcs.append(cmd)
       else:
         msg.success("FILTERED AN EVENT")
