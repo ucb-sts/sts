@@ -233,7 +233,7 @@ try:
       # corresponds = True # if it crashes, assume the event is needed
       corresponds = create_simulator().trace(r2c, start_topology, procs=child_processes,steps=max(round2Command.keys())+1)
 
-      if corresponds: # if there was no violation, cmd filtering was not necessary to trigger it
+      if not corresponds: # if there was a violation, cmd filtering was not necessary to trigger it
         msg.success("FILTERED AN EVENT")
         mcs_filtered_cmds.append(rnd)
 

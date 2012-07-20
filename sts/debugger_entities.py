@@ -60,12 +60,26 @@ class FuzzSwitchImpl (NXSwitchImpl):
   def connect(self):
     # NOTE: create_io_worker is /not/ an instancemethod but just a function
     # so we have to pass in the self parameter explicitely
-    for info in self.controller_info:
-      io_worker = self.create_io_worker(self, info)
+    for info in self.controller_info: # TODO figure out what controller info is
+      io_worker = self.create_io_worker(self, info) # this is the one to swallow the timeout msg
       conn = self.set_io_worker(io_worker)
       # cause errors to be raised
       conn.error_handler = self.error_handler
 
+  def _soft_connect(self, mandatory_ports):
+    for info in self.controller_info:
+      if info.port not in mandatory_ports:
+        try:
+          io_worker = self.create_io_worker(self, info)
+          conn = self.set_io_worker(io_worker)
+          conn.error_handler = self.error_handler
+        except RuntimeError: # failed to connect. thrown by connect_socket_with_backoff
+          pass
+      else:
+        io_worker = self.create_io_worker(self, info)
+        conn = self.set_io_worker(io_worker)
+        conn.error_handler = self.error_handler
+    
   def fail(self):
     # TODO: depending on the type of failure, a real switch failure
     # might not lead to an immediate disconnect
@@ -83,11 +97,14 @@ class FuzzSwitchImpl (NXSwitchImpl):
     self.fail()
     self.reset_flow_table()
 
-  def recover(self):
+  def recover(self, mandatory_ports=None):
     if not self.failed:
       self.log.warn("Switch already up")
       return
-    self.connect()
+    if mandatory_ports:
+      self._soft_connect(mandatory_ports)
+    else:
+      self.connect()
     self.failed = False
 
   def serialize(self):

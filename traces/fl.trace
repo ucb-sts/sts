@@ -3,8 +3,8 @@ x 2 start-process fl_slave java -jar /home/sam/code/floodlight-w3/target/floodli
 x 10 boot-topology
 20 stop-switch 0
 21 stop-switch 1
-25 stop-process fl_master
+25 start-switch 1
+28 stop-process fl_master
 30 start-switch 0 6634
 x 35 change-role 8081 MASTER
-38 start-switch 1 6634
 x 45 exit 8081
