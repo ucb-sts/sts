@@ -35,6 +35,7 @@ from pox.lib.util import connect_socket_with_backoff
 from sts.experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
 from sts.trace_runner import parse
+from sts.console import msg
 
 import signal
 import sys
@@ -205,16 +206,36 @@ try:
 
   delay = args.delay
   if hasattr(config, 'delay'): delay = config.delay
-  
-  simulator = FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
-                        check_interval=args.check_interval,
-                        random_seed=args.random_seed, delay=delay,
-                        dataplane_trace=args.trace_file, control_socket=control_socket)
+
+  def create_simulator(): # closure for ease
+    return FuzzTester(fuzzer_params=args.fuzzer_params, interactive=args.interactive,
+                           check_interval=args.check_interval,
+                           random_seed=args.random_seed, delay=delay,
+                           dataplane_trace=args.trace_file, control_socket=control_socket)
+
   if round2Command:
-    simulator.trace(round2Command, start_topology, steps=args.steps, procs=child_processes)
+    # run MCS algorithm loop
+    from itertools import *
+    def remove_cmd(cmd):
+      a = {}
+      for round in round2Command:
+        a[round] = filter(lambda x: x is not cmd, round2Command[round])
+      return a
+
+    mcs = []
+    filtered_events = 0
+    for cmd in chain(round2Command.values()):
+      r2c = remove_cmd(cmd)
+      if not create_simulator().trace(r2c, start_topology, steps=args.steps, procs=child_processes):
+        mcs.append(cmd)
+      else:
+        msg.success("FILTERED AN EVENT")
+        filtered_events += 1
+      kill_children() # have to start over
+    msg.event("filtered {} events".format(filtered_events))
   else:
     a = start_topology()
-    simulator.simulate(*a, steps=args.steps)
+    create_simulator().simulate(*a, steps=args.steps)
 finally:
   kill_children()
   kill_scheduler()

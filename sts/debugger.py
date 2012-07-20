@@ -145,6 +145,7 @@ class FuzzTester (EventMixin):
     self.topology_generator = topology_generator # HACK called by setup_topology, which is called by Context.boot_topology
     self.booted = False
     self.running = True
+    self.correspondence_check = True # assume things correspond...
     context = Context(self, procs)
     end_time = self.logical_time + steps if steps else sys.maxint
 
@@ -158,6 +159,7 @@ class FuzzTester (EventMixin):
       msg.event("Round %d completed." % self.logical_time)
 
       time.sleep(self.delay)
+    return self.correspondence_check
 
   def setup_topology(self):
     (panel, switch_impls, network_links, hosts, access_links) = self.topology_generator()
@@ -180,7 +182,9 @@ class FuzzTester (EventMixin):
       result = self.invariant_checker.check_correspondence(self.live_switches, self.live_links, self.access_links)
       if result:
         msg.fail("There were policy violations!")
+        self.correspondence_check = False
       else:
+        self.correspondence_check = True
         msg.interactive("No policy violations!")
 
   def stop_switch(self,switch_index):
