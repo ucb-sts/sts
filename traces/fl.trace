@@ -1,12 +1,10 @@
-1 start-process fl_master java -jar /home/sam/code/floodlight-w3/target/floodlight.jar -cf /home/sam/code/floodlight-w3/src/main/resources/fl-server.properties
-2 start-process fl_slave java -jar /home/sam/code/floodlight-w3/target/floodlight.jar -cf /home/sam/code/floodlight-w3/src/main/resources/fl-client.properties
-10 boot-topology
+x 1 start-process fl_master java -jar /home/sam/code/floodlight-w3/target/floodlight.jar -cf /home/sam/code/floodlight-w3/src/main/resources/fl-server.properties
+x 2 start-process fl_slave java -jar /home/sam/code/floodlight-w3/target/floodlight.jar -cf /home/sam/code/floodlight-w3/src/main/resources/fl-client.properties
+x 10 boot-topology
 20 stop-switch 0
 21 stop-switch 1
-22 start-switch 1
 25 stop-process fl_master
 30 start-switch 0 6634
-35 change-role 8081 MASTER
-36 stop-switch 1
-37 start-switch 1 6634
-45 exit 8081
+x 35 change-role 8081 MASTER
+38 start-switch 1 6634
+x 45 exit 8081

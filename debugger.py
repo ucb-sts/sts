@@ -128,7 +128,7 @@ if hasattr(config, 'action_trace_file'):
   action_trace = config.action_trace_file
 else:
   action_trace = args.action_trace_file # None by default
-round2Command = parse(action_trace) if action_trace else None
+round2Command, mcs_cmds2Round = parse(action_trace) if action_trace else (None, None)
 
 if hasattr(config, 'controllers'): # HOTNETS the config should have the controllers
   if hasattr(config.controllers, '__call__'):
@@ -226,23 +226,19 @@ try:
         raise Exception("removed {} things when it should've been 1".format(removed_count))
       return a
 
-    mcs = []
-    filtered_events = 0
-    for cmd in chain.from_iterable(round2Command.values()): # chain is not flattening
+    mcs_filtered_cmds = [] # just assume mcs rounds are unique
+    for cmd,rnd in mcs_cmds2Round.iteritems():
       r2c = remove_cmd(cmd)
-      corresponds = False # if it crashes, assume the event is needed
-      try:
-        corresponds = create_simulator().trace(r2c, start_topology, procs=child_processes,steps=max(round2Command.keys())+1)
-      except Exception: # in case socket backoff happens, or other things happen
-        pass
+      # FIXME I think boolean logic is wrong
+      # corresponds = True # if it crashes, assume the event is needed
+      corresponds = create_simulator().trace(r2c, start_topology, procs=child_processes,steps=max(round2Command.keys())+1)
 
-      if not corresponds:
-        mcs.append(cmd)
-      else:
+      if corresponds: # if there was no violation, cmd filtering was not necessary to trigger it
         msg.success("FILTERED AN EVENT")
-        filtered_events += 1
+        mcs_filtered_cmds.append(rnd)
+
       kill_children() # have to start over
-    msg.event("filtered {} events".format(filtered_events))
+    msg.event("filtered {0} events at the following rounds:\n\t{1}".format(len(mcs_filtered_cmds), mcs_filtered_cmds))
   else:
     a = start_topology()
     create_simulator().simulate(*a, steps=args.steps)

@@ -192,11 +192,12 @@ class FuzzTester (EventMixin):
 
   def start_switch(self,switch_index,ports): # the ports that it should connect to
     swtch = self.switch_impls_ordered[switch_index]
-    if ports: # reset the ports only if it specifies a port. otherwise assume restart as originally configured
-      swtch.clear_controller_info()
-      for p in ports:
-        swtch.add_controller_info(Controller(port=p))
-    swtch.recover()
+    if swtch.failed: # idempotency
+      if ports: # reset the ports only if it specifies a port. otherwise assume restart as originally configured
+        swtch.clear_controller_info()
+        for p in ports:
+          swtch.add_controller_info(Controller(port=p))
+      swtch.recover()
 
   def loop(self, steps=None):
     self.running = True

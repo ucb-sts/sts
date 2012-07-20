@@ -71,10 +71,12 @@ def parse(trace_filename):
   monotonically increasing, but within each round the actions will be sorted in file-order.
   '''
   from console import msg
-  command_regex = compile("^(?P<round>\d+) (?P<command>[\w-]+)(?: (?P<args>.+))?$")
+  command_regex = compile("^((?P<x>x) )?(?P<round>\d+) (?P<command>[\w-]+)(?: (?P<args>.+))?$")
+  #more advanced version with causal groups...at least a hacky attempt for the future
+  #command_regex = compile("^(?:(?P<cd>x|(?:\[(?:\d+ ?)+\]) )(?P<round>\d+) (?P<command>[\w-]+)(?: (?P<args>.+))?$")
 
   round2Command = defaultdict(list)
-
+  mcs_cmds = {} # key = cmd, value = round, for printing out stuff
   with open(trace_filename, 'r') as trace_file:
     for line in trace_file:
       parsed = match(command_regex, line)
@@ -85,11 +87,13 @@ def parse(trace_filename):
         cmd = partial(name2Command[cmd_name],parsed.group('args'))
         round = int(parsed.group('round'))
         round2Command[round].append(cmd)
+        if not parsed.group('x'):
+          mcs_cmds[cmd] = round
       else:
         # FIXME use a logger instead, or maybe fail hard?
         msg.fail("unable to parse line: {0}".format(line))
 
-  return round2Command
+  return round2Command, mcs_cmds
 
 # Defining a command
 #
