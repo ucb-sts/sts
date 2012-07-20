@@ -7,4 +7,6 @@ x 10 boot-topology
 28 stop-process fl_master
 30 start-switch 0 6634
 x 35 change-role 8081 MASTER
-x 45 exit 8081
+37 stop-switch 1
+40 start-switch 1 6634
+x 50 exit 8081
