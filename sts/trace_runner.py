@@ -45,7 +45,9 @@ class Context(object):
   def check_correspondence(self, port):
     self.simulator.check_correspondence(port)
 
-  def exit_simulator(self):
+  def exit_simulator(self, port=None): # optional port to check correspondence
+    if port:
+      self.simulator.check_correspondence(port)
     self.simulator.stop()
 
   def boot_topology(self):
@@ -160,8 +162,14 @@ def change_role(strng, context):
 def check_correspondence(strng, context):
   context.check_correspondence(int(strng))
 
-def exit(strng, context):
-  context.exit_simulator()
+def exit_simulator(strng, context):
+  rgx = compile("^(?P<port>\d+)$")
+
+  parsed = rgx.match(strng)
+  if parsed:
+    context.exit_simulator(int(parsed.group('port')))
+  else:
+    context.exit_simulator()
 
 name2Command = {
   'start-process' : start_process,
@@ -171,5 +179,5 @@ name2Command = {
   'start-switch' : start_switch,
   'change-role' : change_role,
   'check-correspondence' : check_correspondence,
-  'exit' : exit
+  'exit' : exit_simulator
 }
