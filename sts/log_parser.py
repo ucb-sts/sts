@@ -4,12 +4,19 @@ from re import compile, match
 def parse_external_event(external_events, id, rest):
   '''Takes an external event line parsed from the global log file and returns a
   corresponding ExternalEvent object.'''
-  pass
+  if id in external_events:
+    raise Exception() # TODO raise a more informative exception
+
+  # TODO demux on the rest to create different external events later
+  external_events.add(id) # do last in case external event creation errors
 
 def parse_internal_event(external_events, dependency_id, rest):
   '''Takes an internal event line parsed from the global log file and returns
   a corresponding InternalEvent object.'''
-  pass
+  if id not in external_events:
+    raise Exception() # TODO raise a more informative exception
+
+  # TODO demux on the rest to create different internal events later
 
 event_rgx = compile("(?P<type>e|i) (?P<id>\S+) (?P<rest>.*?)$")
 def parse(logfile_path):
