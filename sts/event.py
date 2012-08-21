@@ -24,6 +24,12 @@ class InternalEvent(object):
   def __init__(self, external_event):
     self.dependency = external_event
 
+  def wait(self, external_events): # TODO this needs more arguments for later
+    if self.dependency in external_events:
+      self.operate()
+
   @abc.abstractmethod
-  def wait(self): # TODO this needs mor arguments for later
+  def operate(self):
+    '''Check whether the internal event has happend already. This method may
+    block until it is ready.'''
     pass
