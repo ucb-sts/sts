@@ -1,42 +1,50 @@
 # Parsing of global log files to create a list of Event objects
 from re import compile, match
 
-def parse_external_event(external_events, id, rest):
+# TODO make this decorate the event parsers
+def check_unique_id(event_id, all_ids):
+  '''Check to make sure that event_id is not in all_ids. Throw an exception if
+  this invariant does not hold.
+
+  If the invariant does hold, add event_id to all_ids.'''
+  if event_id in all_ids:
+    raise Exception() # TODO raise a more informative exception
+  all_ids.add(event_id)
+
+def parse_external_event(event_ids, event_id, rest):
   '''Takes an external event line parsed from the global log file and returns a
   corresponding ExternalEvent object.'''
-  if id in external_events:
-    raise Exception() # TODO raise a more informative exception
+  check_unique_id(event_id, event_ids)# TODO pull this out into a decorator
+  # TODO deal with other external events
 
-  # TODO demux on the rest to create different external events later
-  external_events.add(id) # do last in case external event creation errors
-
-def parse_internal_event(external_events, dependency_id, rest):
+def parse_internal_event(events_ids, event_id, rest):
   '''Takes an internal event line parsed from the global log file and returns
   a corresponding InternalEvent object.'''
-  if id not in external_events:
-    raise Exception() # TODO raise a more informative exception
-
-  # TODO demux on the rest to create different internal events later
+  check_unique_id(event_id, event_ids) # TODO pull this out into a decorator
+  # TODO deal with other internal events
 
 event_rgx = compile("(?P<type>e|i) (?P<id>\S+) (?P<rest>.*?)$")
 def parse(logfile_path):
   '''Input: path to a logfile.
 
   Output: A list of all the internal and external events in the order in which
-  they exist in the logfile. Each internal event is annotated with the single
-  (for now) external event that it depends on.
+  they exist in the logfile. Each internal event is annotated with the set of
+  source events that are necessary conditions for its occurence.
 
   Format for Logfile: Each line is either an internal or external event. Lines
   that do not match the following specification for either are ignored (with a
   warning issued).
 
   * External: ^e ID custom$
-  * Internal: ^i ID_of_external_dependency custom$
+  * Internal: ^i ID [list of source IDs] custom$
+  
+  ID can be any unique non-whitespace identifier.
 
-  ID can be any unique non-whitespace identifier.'''
+  The list of source IDs may be empty if the internal event is a source event
+  itself. The brackets are part of the literal syntax and not special regex characters.'''
 
   trace = [] # the return value of the parsed log
-  external_events = set() # a set of all external event ids
+  event_ids = set() # a set of all external event ids
 
   parse_function = {
     'e' : parse_external_event,
@@ -48,10 +56,11 @@ def parse(logfile_path):
       parsed = match(event_rgx, line)
       if parsed:
         parsed = parsed.groupdict()
-        trace.append(parse_function[parsed['type']](
-          external_events,
+        event = parse_function[parsed['type']](
+          event_ids,
           parsed['id'],
           parsed['rest']
           )
+        trace.append(event)
 
   return trace
