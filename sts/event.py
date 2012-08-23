@@ -8,8 +8,8 @@ class EventWatcher(object): #TODO docstrings for class
     self._pre()
 
     while not self.event.proceed(simulation):
-      simulation.increment_round()
-    
+      pass
+
     self._post()
 
   def _pre(self):
@@ -30,19 +30,15 @@ class Event(object):
     pass
 
 class InternalEvent(Event):
-  # TODO fingerprinting!
-  
-  def proceed(self, simulation):
-    pass
+  # TODO docstring
+  # TODO fingerprinting! this is why we need a separate class for internal events!
+  pass
 
 class ExternalEvent(Event):
-
+  # TODO docstring
   def __init__(self, event_id, dependent_events):
     super(ExternalEvent, self).__init__(event_id)
     self.dependent_events = dependent_events
-  
-  def proceed(self, simulation):
-    pass
 
 class Event_DAG(object):
   # TODO docstring
