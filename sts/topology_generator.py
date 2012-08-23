@@ -90,11 +90,19 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, ge
   access_links = [ AccessLink(host, interface, switch, get_switch_port(switch)) for interface, switch in interface_switch_pairs ]
   return (host, access_links)
 
+class Topology(object):
+  def __init__(self, patch_panel, switches, network_links, hosts, access_links)
+    self.patch_panel = patch_panel
+    self.switches = switches
+    self.network_links = network_links
+    self.hosts = hosts
+    self.access_links = access_links
+
+  # TODO add a bunch of other methods to kill switches and stuff like that
  
 class TopologyGenerator(object):
   def __init__(self):
     self.connections_per_switch = 1
-    self.fat_tree = False
 
   def create_mesh(self, num_switches):
     ''' Returns (patch_panel, switches, network_links, hosts, access_links) '''
