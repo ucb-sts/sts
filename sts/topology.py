@@ -26,6 +26,7 @@ from pox.openflow.libopenflow_01 import *
 from pox.lib.util import connect_socket_with_backoff
 from pox.lib.revent import EventMixin
 import socket
+import abc
 import time
 import errno
 import sys
@@ -91,41 +92,18 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, ge
   return (host, access_links)
 
 class Topology(object):
-  def __init__(self, patch_panel, switches, network_links, hosts, access_links)
+  __metaclass__ = abc.ABCMeta
+  
+  def __init__(self, patch_panel):
     self.patch_panel = patch_panel
-    self.switches = switches
-    self.network_links = network_links
-    self.hosts = hosts
-    self.access_links = access_links
+    # TODO other stuff that subclasses should generate in their init methods
+    # self.switches = switches
+    # self.network_links = network_links
+    # self.hosts = hosts
+    # self.access_links = access_links
 
   # TODO add a bunch of other methods to kill switches and stuff like that
- 
-class TopologyGenerator(object):
-  def __init__(self):
-    self.connections_per_switch = 1
-
-  def create_mesh(self, num_switches):
-    ''' Returns (patch_panel, switches, network_links, hosts, access_links) '''
-
-    # Every switch has a link to every other switch + 1 host, for N*(N-1)+N = N^2 total ports
-    ports_per_switch = (num_switches - 1) + 1
-
-    # Initialize switches
-    switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
-    host_access_link_pairs = [ create_host(switch) for switch in switches ]
-    hosts = map(lambda pair: pair[0], host_access_link_pairs)
-    access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
-    # this is python's .flatten:
-    access_links = list(itertools.chain.from_iterable(access_link_list_list))
-
-    # grab a fully meshed patch panel to wire up these guys
-    link_topology = FullyMeshedLinks(switches, access_links)
-    patch_panel = BufferedPatchPanel(switches, hosts, link_topology.get_connected_port)
-    network_links = link_topology.get_network_links()
-
-    return (patch_panel, switches, network_links, hosts, access_links)
-
-  def connect_to_controllers(self, controller_info_list, io_worker_generator, switch_impls):
+  def _connect_to_controllers(self, controller_info_list, io_worker_generator, switch_impls):
     '''
     Bind sockets from the switch_impls to the controllers. For now, assign each switch to the next
     controller in the list in a round robin fashion.
@@ -158,6 +136,36 @@ class TopologyGenerator(object):
       switch_impl.connect()
 
     logger.debug("Controller connections done")
+
+  @abc.abstractmethod
+  def populate(self, controller_config_list, io_worker_constructor):
+    pass # TODO maybe actually do something here?
+ 
+class TopologyGenerator(object):
+  def __init__(self):
+    self.connections_per_switch = 1
+
+  def create_mesh(self, num_switches):
+    ''' Returns (patch_panel, switches, network_links, hosts, access_links) '''
+
+    # Every switch has a link to every other switch + 1 host, for N*(N-1)+N = N^2 total ports
+    ports_per_switch = (num_switches - 1) + 1
+
+    # Initialize switches
+    switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
+    host_access_link_pairs = [ create_host(switch) for switch in switches ]
+    hosts = map(lambda pair: pair[0], host_access_link_pairs)
+    access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
+    # this is python's .flatten:
+    access_links = list(itertools.chain.from_iterable(access_link_list_list))
+
+    # grab a fully meshed patch panel to wire up these guys
+    link_topology = FullyMeshedLinks(switches, access_links)
+    patch_panel = BufferedPatchPanel(switches, hosts, link_topology.get_connected_port)
+    network_links = link_topology.get_network_links()
+
+    return (patch_panel, switches, network_links, hosts, access_links)
+
 
   def populate(self, controller_config_list, io_worker_constructor, num_switches=3):
     '''
