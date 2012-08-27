@@ -175,67 +175,14 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     ''' Return a set of all buffered SwitchDpPacketOut events '''
     return self.buffered_dp_out_events
 
-class FullyMeshedLinks(object):
-  """ A factory method for creating a fully meshed network. Connects every pair of switches. Ports are
-      in ascending order of the dpid of connected switch, while skipping the self-connections.
-      I.e., for (dpid, portno):
-      (0, 0) <-> (1,0)
-      (2, 1) <-> (1,1)
-  """
-  def __init__(self, switches, access_links=[]):
-    self.switches = sorted(switches, key=lambda(sw): sw.dpid)
-    self.switch_index_by_dpid = {}
-    for i, s in enumerate(switches):
-      self.switch_index_by_dpid[s.dpid] = i
-    self.port2access_link = {}
-    self.interface2access_link = {}
-    for access_link in access_links:
-      self.port2access_link[access_link.switch_port] = access_link
-      self.interface2access_link[access_link.interface] = access_link
-
-  def get_connected_port(self, node, port):
-    ''' Given a node and a port, return a tuple (node, port) that is directly connected to the port '''
-    if port in self.port2access_link:
-      access_link = self.port2access_link[port]
-      return (access_link.host, access_link.interface)
-    if port in self.interface2access_link:
-      access_link = self.interface2access_link[port]
-      return (access_link.switch, access_link.switch_port)
-    else:
-      switch_no = self.switch_index_by_dpid[node.dpid]
-      # when converting between switch and port, compensate for the skipped self port
-      port_no = port.port_no - 1
-      other_switch_no = port_no if port_no < switch_no else port_no + 1
-      other_port_no = switch_no if switch_no < other_switch_no else switch_no - 1
-
-      other_switch = self.switches[other_switch_no]
-      return (other_switch, other_switch.ports[other_port_no+1])
-
-  def get_network_links(self):
-    ''' Return a list of all directed Link objects in the mesh '''
-    # memoize the result
-    if hasattr(self, "all_network_links"):
-      return self.all_network_links
-    self.all_network_links = []
-    for switch in self.switches:
-      for port in set(switch.ports.values()) - set([get_switchs_host_port(switch)]):
-        (other_switch, other_port) =  self.get_connected_port(switch, port)
-        self.all_network_links.append(Link(switch, port, other_switch, other_port))
-    return self.all_network_links
-
 class Topology(object):
-  __metaclass__ = abc.ABCMeta
-  
-  def __init__(self, patch_panel):
-    self.patch_panel = patch_panel
-    # TODO other stuff that subclasses should generate in their init methods
-    # self.switches = switches
-    # self.network_links = network_links
-    # self.hosts = hosts
-    # self.access_links = access_links
-
+  '''
+  Abstract base class of all topology types. Wraps the edges and vertices of
+  the network.
+  '''
   # TODO add a bunch of other methods to kill switches and stuff like that
-  def _connect_to_controllers(self, controller_info_list, io_worker_generator, switch_impls):
+  def _connect_to_controllers(self, controller_info_list, io_worker_generator,
+          switch_impls):
     '''
     Bind sockets from the switch_impls to the controllers. For now, assign each switch to the next
     controller in the list in a round robin fashion.
@@ -245,8 +192,10 @@ class Topology(object):
     Return a list of socket objects
     '''
     controller_info_cycler = itertools.cycle(controller_info_list)
+    connections_per_switch = len(controller_info_list)
 
-    logger.debug("Connecting %d switches to %d controllers (setting up %d conns per switch)..." % (len(switch_impls), len(controller_info_list), self.connections_per_switch))
+    logger.debug("Connecting %d switches to %d controllers (setting up %d conns per switch)..." %
+            (len(switch_impls), len(controller_info_list), connections_per_switch))
 
     for (idx, switch_impl) in enumerate(switch_impls):
       if len(switch_impls) < 20 or not idx % 250:
@@ -261,19 +210,21 @@ class Topology(object):
 
       # TODO: what if the controller is slow to boot?
       # Socket from the switch_impl to the controller
-      for i in range(0, self.connections_per_switch):
+      for i in xrange(connections_per_switch):
         controller_info = controller_info_cycler.next()
         switch_impl.add_controller_info(controller_info)
 
       switch_impl.connect()
 
     logger.debug("Controller connections done")
- 
-class MeshTopology(Topology):
-  def __init__(self, patch_panel, num_switches):
-    super(MeshTopology, self).__init__(patch_panel)
-    # TODO move topology initialization here!
 
+class MeshTopology(Topology):
+  def __init__(self, patch_panel_class, controller_config_list,
+               io_worker_constructor, num_switches=3):
+    '''
+    Populate the topology as a mesh of switches, connect the switches
+    to the controllers
+    '''
     # Every switch has a link to every other switch + 1 host, for N*(N-1)+N = N^2 total ports
     ports_per_switch = (num_switches - 1) + 1
 
@@ -286,27 +237,66 @@ class MeshTopology(Topology):
     self.access_links = list(itertools.chain.from_iterable(access_link_list_list))
 
     # grab a fully meshed patch panel to wire up these guys
-    link_topology = FullyMeshedLinks(switches, access_links)
-    patch_panel = BufferedPatchPanel(switches, hosts, link_topology.get_connected_port)
+    link_topology = MeshTopology.FullyMeshedLinks(switches, access_links)
+    patch_panel = patch_panel_class(switches, hosts, link_topology.get_connected_port)
     self.network_links = link_topology.get_network_links()
+    self._connect_to_controllers(controller_config_list,
+            io_worker_constructor, switches)
 
-  def populate(self, controller_config_list, io_worker_constructor, num_switches=3):
-    '''
-    Populate the topology as a mesh of switches, connect the switches
-    to the controllers, and return
-    (PatchPanel, switches, network_links, hosts, access_links)
-    '''
-    (panel, switches, network_links, hosts, access_links) = self.create_mesh(num_switches)
-    self.connect_to_controllers(controller_config_list, io_worker_constructor, switches)
-    return (panel, switches, network_links, hosts, access_links)
+  class FullyMeshedLinks(object):
+    """ A factory method (inner class) for creating a fully meshed network. Connects every pair
+        of switches. Ports are in ascending order of the dpid of connected switch, while skipping
+        the self-connections. I.e., for (dpid, portno):
+        (0, 0) <-> (1,0)
+        (2, 1) <-> (1,1)
+    """
+    def __init__(self, switches, access_links=[]):
+      self.switches = sorted(switches, key=lambda(sw): sw.dpid)
+      self.switch_index_by_dpid = {}
+      for i, s in enumerate(switches):
+        self.switch_index_by_dpid[s.dpid] = i
+      self.port2access_link = {}
+      self.interface2access_link = {}
+      for access_link in access_links:
+        self.port2access_link[access_link.switch_port] = access_link
+        self.interface2access_link[access_link.interface] = access_link
+  
+    def get_connected_port(self, node, port):
+      ''' Given a node and a port, return a tuple (node, port) that is directly connected to the port '''
+      if port in self.port2access_link:
+        access_link = self.port2access_link[port]
+        return (access_link.host, access_link.interface)
+      if port in self.interface2access_link:
+        access_link = self.interface2access_link[port]
+        return (access_link.switch, access_link.switch_port)
+      else:
+        switch_no = self.switch_index_by_dpid[node.dpid]
+        # when converting between switch and port, compensate for the skipped self port
+        port_no = port.port_no - 1
+        other_switch_no = port_no if port_no < switch_no else port_no + 1
+        other_port_no = switch_no if switch_no < other_switch_no else switch_no - 1
+  
+        other_switch = self.switches[other_switch_no]
+        return (other_switch, other_switch.ports[other_port_no+1])
+  
+    def get_network_links(self):
+      ''' Return a list of all directed Link objects in the mesh '''
+      # memoize the result
+      if hasattr(self, "all_network_links"):
+        return self.all_network_links
+      self.all_network_links = []
+      for switch in self.switches:
+        for port in set(switch.ports.values()) - set([get_switchs_host_port(switch)]):
+          (other_switch, other_port) =  self.get_connected_port(switch, port)
+          self.all_network_links.append(Link(switch, port, other_switch, other_port))
+      return self.all_network_links
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
-  def __init__(self, patch_panel, num_pods=48):
+  def __init__(self, patch_panel_class, controller_config_list,
+               io_worker_constructor, num_pods=4):
     if num_pods < 2:
       raise "Can't handle Fat Trees with less than 2 pods"
-
-    super(FatTree, self).__init__(patch_panel)
     self.hosts = []
     self.cores = []
     self.aggs = []
@@ -314,39 +304,15 @@ class FatTree (Topology):
     # Note that access links are bi-directional
     self.access_links = set()
     # But internal links are uni-directional?
-    self.internal_links = set()
+    self.network_links = set()
 
+    self.switches = []
     self.construct_tree(num_pods)
-    
-    self.switches = self.cores + self.aggs + self.edges
 
-    # Auxiliary data to make get_connected_port efficient
-    self.port2internal_link = {}
-    for link in self.internal_links:
-      #if link.start_port in self.port2internal_link:
-        #raise RuntimeError("%s Already there %s" % (str(link), str(self.port2internal_link[link.start_port])))
-      self.port2internal_link[link.start_port] = link
-      
-    # TODO: this should be in a unit test, not here
-    #if len(self.port2internal_link) != len(self.internal_links):
-    #  raise RuntimeError("Not enough port2internal_links(%d s/b %d)" % \
-    #                    (len(self.port2internal_link), len(self.internal_links)))
-
-    self.port2access_link = {}
-    self.interface2access_link = {}
-    for access_link in self.access_links:
-      self.port2access_link[access_link.switch_port] = access_link
-      self.interface2access_link[access_link.interface] = access_link
-      
-    # TODO: this should be in a unit test, not here
-    #if len(self.port2access_link) != len(self.access_links):
-    #  raise RuntimeError("Not enough port2accesslinks (%d s/b %d)" % \
-    #                    (len(self.port2access_link), len(self.access_links)))
-      
-    # TODO: this should be in a unit test, not here
-    #if len(self.interface2access_link) != len(self.access_links):
-    #  raise RuntimeError("Not enough interface2accesslinks (%d s/b %d)" % \
-    #                    (len(self.interface2accesslinks), len(self.access_links)))
+    patch_panel = patch_panel_class(self.switches, self.hosts,
+            self.get_connected_port)
+    self._connect_to_controllers(controller_config_list,
+            io_worker_constructor, self.switches)
 
   def construct_tree(self, num_pods):
     '''
@@ -421,8 +387,8 @@ class FatTree (Topology):
       for edge in current_edges:
         current_edge_port_no = (k/2)+1
         for agg in current_aggs:
-          self.internal_links.add(Link(edge, edge.ports[current_edge_port_no], agg, agg.ports[current_agg_port_no]))
-          self.internal_links.add(Link(agg, agg.ports[current_agg_port_no], edge, edge.ports[current_edge_port_no]))
+          self.network_links.add(Link(edge, edge.ports[current_edge_port_no], agg, agg.ports[current_agg_port_no]))
+          self.network_links.add(Link(agg, agg.ports[current_agg_port_no], edge, edge.ports[current_edge_port_no]))
           current_edge_port_no += 1
         current_agg_port_no += 1
 
@@ -442,13 +408,44 @@ class FatTree (Topology):
       for agg_port_no in range(k/2+1, k+1):
         core = core_cycler.next()
         core_port_no = agg.pod_id + 1
-        self.internal_links.add(Link(agg, agg.ports[agg_port_no], core, core.ports[core_port_no]))
-        self.internal_links.add(Link(core, core.ports[core_port_no], agg, agg.ports[agg_port_no]))
+        self.network_links.add(Link(agg, agg.ports[agg_port_no], core, core.ports[core_port_no]))
+        self.network_links.add(Link(core, core.ports[core_port_no], agg, agg.ports[agg_port_no]))
 
+    self.switches = self.cores + self.aggs + self.edges
+    self.wire_tree()
     self._sanity_check_tree()
     logger.debug("Fat tree construction: done (%d cores, %d aggs, %d edges, %d hosts)" %
         (len(self.cores), len(self.aggs), len(self.edges), len(self.hosts)))
-    
+
+  def wire_tree(self):
+    # Auxiliary data to make get_connected_port efficient
+    self.port2internal_link = {}
+    for link in self.network_links:
+      #if link.start_port in self.port2internal_link:
+        #raise RuntimeError("%s Already there %s" % (str(link), str(self.port2internal_link[link.start_port])))
+      self.port2internal_link[link.start_port] = link
+      
+    # TODO: this should be in a unit test, not here
+    #if len(self.port2internal_link) != len(self.network_links):
+    #  raise RuntimeError("Not enough port2network_links(%d s/b %d)" % \
+    #                    (len(self.port2internal_link), len(self.network_links)))
+
+    self.port2access_link = {}
+    self.interface2access_link = {}
+    for access_link in self.access_links:
+      self.port2access_link[access_link.switch_port] = access_link
+      self.interface2access_link[access_link.interface] = access_link
+      
+    # TODO: this should be in a unit test, not here
+    #if len(self.port2access_link) != len(self.access_links):
+    #  raise RuntimeError("Not enough port2accesslinks (%d s/b %d)" % \
+    #                    (len(self.port2access_link), len(self.access_links)))
+      
+    # TODO: this should be in a unit test, not here
+    #if len(self.interface2access_link) != len(self.access_links):
+    #  raise RuntimeError("Not enough interface2accesslinks (%d s/b %d)" % \
+    #                    (len(self.interface2accesslinks), len(self.access_links)))
+
   def _sanity_check_tree(self):
     # TODO: this should be in a unit test, not here
     if len(self.access_links) != self.total_hosts:
@@ -462,10 +459,10 @@ class FatTree (Topology):
     total_switches = self.total_core + ((self.edge_per_pod + self.agg_per_pod) * self.k)
     print "total_switches: %d" % total_switches
     # uni-directional links (on in both directions):
-    total_internal_links = (total_switches * self.k) - self.total_hosts
-    if len(self.internal_links) != total_internal_links:
+    total_network_links = (total_switches * self.k) - self.total_hosts
+    if len(self.network_links) != total_network_links:
       raise RuntimeError("incorrect # of internal links (%d, s/b %d)" % \
-                          (len(self.internal_links),total_internal_links))  
+                          (len(self.network_links),total_network_links))  
 
   def install_default_routes(self):
     '''

@@ -19,3 +19,8 @@ Typical workflow:
 
 To run, see:
   $ ./debugger.py -h
+
+The configs directory contains sample topology configurations. You can specify
+a particular config file with:
+
+  $ ./debugger.py -c configs/my_config.cfg

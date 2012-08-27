@@ -1,24 +1,19 @@
 import itertools
 
-
 class Controller (object):
   _port_gen = itertools.count(8888)
   
-  def __init__(self, cmdline=[], address="127.0.0.1", port=None):
+  def __init__(self, cmdline="", address="127.0.0.1", port=None):
     ''' cmdline is an array of command line tokens '''
-    self.cmdline = cmdline
+    # TODO: document the __address__ and __port__ semantics
+    self.cmdline = cmdline.split()
     self.address = address
-    if not port:
-        port = self._port_gen.next()
+    if not port and not self.needs_boot:
+      raise RuntimeError("Need to specify port for already booted controllers")
+    else if not port:
+      port = self._port_gen.next()
     self.port = port
 
-class Link (object):
-  def __init__(self, switch1, switch2):
-    self.switch1 = switch1
-    self.switch2 = switch2
-
-class Switch (object):
-  def __init__(self, parent_controller, links):
-    self.parent_controller = parent_controller 
-    self.links = links
-
+  @property
+  def needs_boot(self):
+    return self.cmdline != []
