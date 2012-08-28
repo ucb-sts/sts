@@ -220,6 +220,20 @@ class Topology(object):
 
     logger.debug("Controller connections done")
 
+  @staticmethod
+  def populate_from_topology(graph):
+     """
+     Take a pox.lib.graph.graph.Graph and generate arguments needed for the simulator
+     """
+     topology = Topology()
+     topology.hosts = graph.find(is_a=Host)
+     topology.switches = graph.find(is_a=SwitchImpl)
+     topology.access_links = [AccessLink(host, switch[0], switch[1][0], switch[1][1])
+                              for host in hosts
+                              for switch in filter(lambda n: isinstance(n[1][0], SwitchImpl),
+                              graph.ports_for_node(host).iteritems())]
+     return topology
+
 class MeshTopology(Topology):
   def __init__(self, num_switches=3):
     '''
@@ -231,14 +245,14 @@ class MeshTopology(Topology):
 
     # Initialize switches
     self.switches = [ create_switch(switch_id, ports_per_switch) for switch_id in range(1, num_switches+1) ]
-    host_access_link_pairs = [ create_host(switch) for switch in switches ]
+    host_access_link_pairs = [ create_host(switch) for switch in self.switches ]
     self.hosts = map(lambda pair: pair[0], host_access_link_pairs)
     access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
     # this is python's .flatten:
     self.access_links = list(itertools.chain.from_iterable(access_link_list_list))
 
     # grab a fully meshed patch panel to wire up these guys
-    link_topology = MeshTopology.FullyMeshedLinks(switches, access_links)
+    link_topology = MeshTopology.FullyMeshedLinks(self.switches, self.access_links)
     self.get_connected_port = link_topology.get_connected_port
     self.network_links = link_topology.get_network_links()
 

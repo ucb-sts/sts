@@ -21,7 +21,7 @@ class DeferredIOWorkerTest(unittest.TestCase):
   def call_later(func):
       # call now!
       func()
-      
+
   def test_not_sent_until_permitted(self):
     i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
     i.send("foo")
