@@ -19,7 +19,7 @@ class Controller (object):
     self.address = address
     if not port and not self.needs_boot:
       raise RuntimeError("Need to specify port for already booted controllers")
-    else if not port:
+    elif not port:
       port = self._port_gen.next()
     self.port = port
     self.nom_port = nom_port

@@ -118,8 +118,8 @@ class Fuzzer(ControlFlow):
             switch.send(of.ofp_echo_request().pack())
           thread.join(2.0)
 
-      if self.simulation.dataplane_trace and
-          (self.logical_time % self.trace_interval) == 0:
+      if (self.simulation.dataplane_trace and
+          (self.logical_time % self.trace_interval) == 0):
         self.inject_trace_event()
 
       time.sleep(self.delay)
