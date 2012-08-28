@@ -53,7 +53,7 @@ class FuzzSwitchImpl (NXSwitchImpl):
       self.log.warn("Switch already failed")
       return
     self.failed = True
-  
+
     for connection in self.connections:
       connection.close()
     self.connections = []
@@ -79,9 +79,9 @@ class FuzzSwitchImpl (NXSwitchImpl):
 class Link (object):
   """
   A network link between two switches
-  
+
   Temporary stand in for Murphy's graph-library for the NOM.
-  
+
   Note: Directed!
   """
   def __init__(self, start_switch_impl, start_port, end_switch_impl, end_port):
@@ -91,7 +91,7 @@ class Link (object):
     self.start_port = start_port
     self.end_switch_impl = end_switch_impl
     self.end_port = end_port
-    
+
   def __eq__(self, other):
     if not type(other) == Link:
       return False
@@ -99,13 +99,13 @@ class Link (object):
            self.start_port == other.start_port and
            self.end_switch_impl == other.end_switch_impl and
            self.end_port == other.end_port)
-  
+
   def __hash__(self):
-    return (self.start_switch_impl.__hash__() +  self.start_port.__hash__() + 
+    return (self.start_switch_impl.__hash__() +  self.start_port.__hash__() +
            self.end_switch_impl.__hash__() +  self.end_port.__hash__())
-    
+
   def __repr__(self):
-    return "(%d:%d) -> (%d:%d)" % (self.start_switch_impl.dpid, self.start_port.port_no, 
+    return "(%d:%d) -> (%d:%d)" % (self.start_switch_impl.dpid, self.start_port.port_no,
                                    self.end_switch_impl.dpid, self.end_port.port_no)
 
 class AccessLink (object):
@@ -119,7 +119,7 @@ class AccessLink (object):
     self.interface = interface
     self.switch = switch
     self.switch_port = switch_port
-    
+
 class HostInterface (object):
   ''' Represents a host's interface (e.g. eth0) '''
   def __init__(self, mac, ip_or_ips=[], name=""):
@@ -128,7 +128,7 @@ class HostInterface (object):
       ip_or_ips = [ip_or_ips]
     self.ips = ip_or_ips
     self.name = name
-    
+
   def __eq__(self, other):
     if type(other) != HostInterface:
       return False
@@ -143,20 +143,20 @@ class HostInterface (object):
     if self.name != other.name:
       return False
     return True
-  
+
   def __hash__(self):
     hash_code = self.mac.toInt().__hash__()
     for ip in self.ips:
       hash_code += ip.toUnsignedN().__hash__()
     hash_code += self.name.__hash__()
     return hash_code
-  
+
   def __str__(self, *args, **kwargs):
     return "HostInterface:" + self.name + ":" + str(self.mac) + ":" + str(self.ips)
-  
+
   def __repr__(self, *args, **kwargs):
     return self.__str__()
-    
+
 #                Host
 #          /      |       \
 #  interface   interface  interface
@@ -168,9 +168,9 @@ class HostInterface (object):
 class Host (EventMixin):
   '''
   A very simple Host entity.
-  
+
   For more sophisticated hosts, we should spawn a separate VM!
-  
+
   If multiple host VMs are too heavy-weight for a single machine, run the
   hosts on their own machines!
   '''
@@ -183,19 +183,19 @@ class Host (EventMixin):
     self.interfaces = interfaces
     self.log = logging.getLogger(name)
     self.name = name
-    
+
   def send(self, interface, packet):
     ''' Send a packet out a given interface '''
     self.raiseEvent(DpPacketOut(self, packet, interface))
-  
+
   def receive(self, interface, packet):
     '''
     Process an incoming packet from a switch
-    
+
     Called by PatchPanel
     '''
     self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
-  
+
   def __str__(self):
     return self.name
-    
+

@@ -78,7 +78,7 @@ class Fuzzer(ControlFlow):
     if os.path.exists(fuzzer_params_path):
       self.params = __import__(fuzzer_params_path)
     else:
-      # TODO: default values in case fuzzer_config is not present / missing directives
+      # TODO(cs): default values in case fuzzer_config is not present / missing directives
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
 
@@ -177,7 +177,7 @@ class Fuzzer(ControlFlow):
           self.simulation.recover_switch(switch_impl)
 
     def sever_links():
-      # TODO: model administratively down links? (OFPPC_PORT_DOWN)
+      # TODO(cs): model administratively down links? (OFPPC_PORT_DOWN)
       cut_this_round = set()
       for link in self.simulation.live_links:
         if self.random.random() < self.params.link_failure_rate:

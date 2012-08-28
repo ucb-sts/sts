@@ -45,4 +45,4 @@ class TrafficGenerator (object):
     ipp.payload = ping
     e.payload = ipp
     return e
-   
+

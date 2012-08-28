@@ -83,7 +83,7 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, ge
     interface_switch_pairs.append((interface, switch))
     interfaces.append(interface)
 
-  name = "host:" + ",".join(map(lambda interface: "%s" % str(interface.ips), interfaces)) 
+  name = "host:" + ",".join(map(lambda interface: "%s" % str(interface.ips), interfaces))
   host = Host(interfaces, name)
   access_links = [ AccessLink(host, interface, switch, get_switch_port(switch)) for interface, switch in interface_switch_pairs ]
   return (host, access_links)
@@ -259,7 +259,7 @@ class MeshTopology(Topology):
       for access_link in access_links:
         self.port2access_link[access_link.switch_port] = access_link
         self.interface2access_link[access_link.interface] = access_link
-  
+
     def get_connected_port(self, node, port):
       ''' Given a node and a port, return a tuple (node, port) that is directly connected to the port '''
       if port in self.port2access_link:
@@ -274,10 +274,10 @@ class MeshTopology(Topology):
         port_no = port.port_no - 1
         other_switch_no = port_no if port_no < switch_no else port_no + 1
         other_port_no = switch_no if switch_no < other_switch_no else switch_no - 1
-  
+
         other_switch = self.switches[other_switch_no]
         return (other_switch, other_switch.ports[other_port_no+1])
-  
+
     def get_network_links(self):
       ''' Return a list of all directed Link objects in the mesh '''
       # memoize the result
@@ -417,7 +417,7 @@ class FatTree (Topology):
       #if link.start_port in self.port2internal_link:
         #raise RuntimeError("%s Already there %s" % (str(link), str(self.port2internal_link[link.start_port])))
       self.port2internal_link[link.start_port] = link
-      
+
     # TODO(cs): this should be in a unit test, not here
     #if len(self.port2internal_link) != len(self.network_links):
     #  raise RuntimeError("Not enough port2network_links(%d s/b %d)" % \
@@ -428,12 +428,12 @@ class FatTree (Topology):
     for access_link in self.access_links:
       self.port2access_link[access_link.switch_port] = access_link
       self.interface2access_link[access_link.interface] = access_link
-      
+
     # TODO(cs): this should be in a unit test, not here
     #if len(self.port2access_link) != len(self.access_links):
     #  raise RuntimeError("Not enough port2accesslinks (%d s/b %d)" % \
     #                    (len(self.port2access_link), len(self.access_links)))
-      
+
     # TODO(cs): this should be in a unit test, not here
     #if len(self.interface2access_link) != len(self.access_links):
     #  raise RuntimeError("Not enough interface2accesslinks (%d s/b %d)" % \
@@ -443,8 +443,8 @@ class FatTree (Topology):
     # TODO(cs): this should be in a unit test, not here
     if len(self.access_links) != self.total_hosts:
       raise RuntimeError("incorrect # of access links (%d, s/b %d)" % \
-                          (len(self.access_links),len(self.total_hosts)))  
-    
+                          (len(self.access_links),len(self.total_hosts)))
+
     # k = number of ports per switch = number of pods
     # number core switches =  (k/2)^2
     # number of edge switches per pod = k / 2
@@ -455,7 +455,7 @@ class FatTree (Topology):
     total_network_links = (total_switches * self.k) - self.total_hosts
     if len(self.network_links) != total_network_links:
       raise RuntimeError("incorrect # of internal links (%d, s/b %d)" % \
-                          (len(self.network_links),total_network_links))  
+                          (len(self.network_links),total_network_links))
 
   def install_default_routes(self):
     '''

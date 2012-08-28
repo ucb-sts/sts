@@ -40,7 +40,7 @@ class InvariantChecker(object):
   def check_routing_consistency(self, simulation):
     pass
 
-  def check_correspondence(self, simulation): 
+  def check_correspondence(self, simulation):
     ''' Return if there were any policy-violations '''
     log.debug("Snapshotting controller...")
     controller_snapshot = self.fetch_controller_snapshot(simulation)
