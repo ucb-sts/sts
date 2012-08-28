@@ -2,10 +2,10 @@ import itertools
 
 class Controller (object):
   _port_gen = itertools.count(8888)
-  
+
   def __init__(self, cmdline="", address="127.0.0.1", port=None):
     ''' cmdline is an array of command line tokens '''
-    # TODO: document the __address__ and __port__ semantics
+    # TODO(cs): document the __address__ and __port__ semantics
     self.cmdline = cmdline.split()
     self.address = address
     if not port and not self.needs_boot:
