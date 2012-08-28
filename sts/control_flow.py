@@ -1,76 +1,78 @@
 '''
 Three control flow types for running the simulation forward.
+  - Replayer: takes as input a `superlog` with causal dependencies, and
+    iteratively prunes until the MCS has been found
+  - Fuzzer: injects input events at random intervals, periodically checking
+    for invariant violations
+  - Interactive: presents an interactive prompt for injecting events and
+    checking for invariants at the users' discretion
 '''
 
+import pox.openflow.libopenflow_01 as of
+from invariant_checker import InvariantChecker
+from traffic_generator import TrafficGenerator
+from sts.console import msg
+
+import os
+import time
+import sys
+import threading
 import random
+import logging
+
+log = logging.getLogger("control_flow")
 
 class ControlFlow(object):
-  def __init__(self, topology, control_socket=None):
-    self.topology = topology
-    self.control_socket = control_socket
-    self.invariant_checker = InvariantChecker(control_socket)
+  ''' Superclass of ControlFlow types '''
+  def __init__(self):
+    self.invariant_checker = InvariantChecker()
 
-  def simulate(self):
+  def simulate(self, simulation):
     pass
 
 class Replayer(ControlFlow):
   '''
-  Replay events from a `superlog`, pruning as we go
+  Replay events from a `superlog` with causal dependencies, pruning as we go
   '''
-  def __init__(self, topology, dag, control_socket=None):
-    ControlFlow.__init__(topology, control_socket=control_socket)
+  def __init__(self, dag):
+    ControlFlow.__init__()
     self.dag = dag
 
-  def simulate(self):
+  def simulate(self, simulation):
+    self.simulation = simulation
+
     def increment_round():
       simulation.forward_data()
-      # TODO(cs): more stuff to forward round?
+      # TODO(cs): complete this method
     for pruned_event in dag.events():
       for event in dag.events(pruned_event):
         event.run(simulation)
         self.increment_round(simulation)
 
-class InjectionBasedControlFlow(ControlFlow):
-  def __init__(self, topology, control_socket=None, random_seed=0.0,
-               dataplane_trace=None, steps=None):
-    ControlFlow.__init__(topology, control_socket=control_socket)
+class Fuzzer(ControlFlow):
+  '''
+  Injects input events at random intervals, periodically checking
+  for invariant violations. (Not the proper use of the word `Fuzzer`)
+  '''
+  def __init__(self, fuzzer_params="configs/fuzzer_params.cfg",
+               check_interval=35, trace_interval=10, random_seed=0.0,
+               delay=0.1, steps=None):
+    ControlFlow.__init__()
 
-    self.running = False
+    self.check_interval = check_interval
+    self.trace_interval = trace_interval
+    self.delay = delay
+    self.steps = steps
+    self.params = object()
+    self._load_fuzzer_params(fuzzer_params)
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
-    # How many logical rounds to execute before halting (None -> infinity) 
-    self.steps = None
 
     # Make execution deterministic to allow the user to easily replay
     self.seed = random_seed
     self.random = random.Random(self.seed)
     self.traffic_generator = TrafficGenerator(self.random)
-
-    # Format of trace file is a pickled array of DataplaneEvent objects
-    self.dataplane_trace = None
-    if dataplane_trace:
-      self.dataplane_trace = pickle.load(file(dataplane_trace))
-
-  def stop(self):
-    self.running = False
-
-class Fuzzer(InjectionBasedControlFlow):
-  '''
-  Inject random events. (Not the proper use of the word `Fuzzer`)
-  '''
-  def __init__(self, topology, fuzzer_params="configs/fuzzer_params.cfg",
-               check_interval=35, trace_interval=10, random_seed=0.0, delay=0.1,
-               dataplane_trace=None, control_socket=None):
-    InjectionBasedControlFlow.__init__(topology, control_socket=control_socket,
-                                       random_seed=random_seed,
-                                       dataplane_trace=dataplane_trace)
-    self.check_interval = check_interval
-    self.trace_interval = trace_interval
-
-    self.delay = delay
-
-    self._load_fuzzer_params(fuzzer_params)
 
   def _load_fuzzer_params(self, fuzzer_params_path):
     if os.path.exists(fuzzer_params_path):
@@ -79,29 +81,29 @@ class Fuzzer(InjectionBasedControlFlow):
       # TODO: default values in case fuzzer_config is not present / missing directives
       raise IOError("Could not find logging config file: %s" % fuzzer_params)
 
-  def simulate(self):
-     self.loop()
+  def simulate(self, simulation):
+    self.simulation = simulation
+    self.loop()
 
   def loop(self):
-    self.running = True
     if self.steps:
-      end_time = self.logical_time + self.steps 
+      end_time = self.logical_time + self.steps
     else:
       end_time = sys.maxint
-    while self.running and self.logical_time < end_time:
+
+    while self.logical_time < end_time:
       self.logical_time += 1
       self.trigger_events()
       msg.event("Round %d completed." % self.logical_time)
 
       if (self.logical_time % self.check_interval) == 0:
         # Time to run correspondence!
-        # spawn a thread for running correspondence. Make sure the controller doesn't 
+        # spawn a thread for running correspondence. Make sure the controller doesn't
         # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
-        # TODO: this is a HACK
+        # TODO(cs): this is a HACK
         def do_correspondence():
-          any_policy_violations = self.invariant_checker.check_correspondence(
-                                    self.live_switches, self.live_links,
-                                    self.topology.access_links)
+          any_policy_violations = self.invariant_checker\
+                                      .check_correspondence(self.simulation)
 
           if any_policy_violations:
             msg.fail("There were policy-violations!")
@@ -114,22 +116,115 @@ class Fuzzer(InjectionBasedControlFlow):
             # connection -> deferred io worker -> io worker
             switch.send(of.ofp_echo_request().pack())
           thread.join(2.0)
-     
-      if self.dataplane_trace and (self.logical_time % self.trace_interval) == 0:
+
+      if self.simulation.dataplane_trace and
+          (self.logical_time % self.trace_interval) == 0:
         self.inject_trace_event()
-        
+
       time.sleep(self.delay)
 
+  def trigger_events(self):
+    self.check_dataplane()
+    self.check_controlplane()
+    self.check_switch_crashes()
+    self.check_timeouts()
+    self.fuzz_traffic()
 
-class Interactive(InjectionBasedControlFlow):
+  def check_dataplane(self):
+    ''' Decide whether to delay, drop, or deliver packets '''
+    for dp_event in self.simulation.queued_dataplane_events:
+      if self.random.random() < self.params.dataplane_delay_rate:
+        self.simulation.delay_dp_event(dp_event)
+      elif self.random.random() < self.params.dataplane_drop_rate:
+        self.simulation.drop_dp_event(dp_event)
+      else:
+        self.simulation.forward_dp_event(dp_event)
+
+  def check_controlplane(self):
+    ''' Decide whether to delay or deliver packets '''
+    def check_deliver(switch_impl, type, give_permission):
+      if self.random.random() < self.params.controlplane_delay_rate:
+        log.debug("Delaying control plane %s for %s" % (type, str(switch_impl)))
+      else:
+        log.debug("Giving permission for control plane %s for %s" % (type, str(switch_impl)))
+        give_permission()
+
+    for switch_impl in self.simulation.live_switches:
+      # Check reads
+      # TODO: shouldn't be sticking our hands into switch_impl._connection
+      for c in switch_impl.connections:
+        if c.io_worker.has_pending_receives():
+          check_deliver(switch_impl, "receive", c.io_worker.permit_receive)
+
+      # Check writes
+      for c in switch_impl.connections:
+        if c.io_worker.has_pending_sends():
+          check_deliver(switch_impl, "send", c.io_worker.permit_send)
+
+  def check_switch_crashes(self):
+    ''' Decide whether to crash or restart switches, links and controllers '''
+    def crash_switches():
+      crashed_this_round = set()
+      for switch_impl in self.simulation.live_switches:
+        if self.random.random() < self.params.switch_failure_rate:
+          crashed_this_round.add(switch_impl)
+          self.simulation.crash_switch(switch_impl)
+      return crashed_this_round
+
+    def restart_switches(crashed_this_round):
+      for switch_impl in self.simulation.failed_switches:
+        if switch_impl in crashed_this_round:
+          continue
+        if self.random.random() < self.params.switch_recovery_rate:
+          self.simulation.recover_switch(switch_impl)
+
+    def sever_links():
+      # TODO: model administratively down links? (OFPPC_PORT_DOWN)
+      cut_this_round = set()
+      for link in self.simulation.live_links:
+        if self.random.random() < self.params.link_failure_rate:
+          cut_this_round.add(link)
+          self.simulation.sever_link(link)
+      return cut_this_round
+
+    def repair_links(cut_this_round):
+      for link in set(self.cut_links):
+        if link in cut_this_round:
+          continue
+        if self.random.random() < self.params.link_recovery_rate:
+          self.simulation.repair_link(link)
+
+    crashed_this_round = crash_switches()
+    restart_switches(crashed_this_round)
+    cut_this_round = sever_links()
+    repair_links(cut_this_round)
+
+  def check_timeouts(self):
+    # Interpose on timeouts
+    pass
+
+  def fuzz_traffic(self):
+    if not self.simulation.dataplane_trace:
+      # randomly generate messages from switches
+      for switch_impl in self.simulation.live_switches:
+        if self.random.random() < self.params.traffic_generation_rate:
+          if len(switch_impl.ports) > 0:
+            msg.event("injecting a random packet")
+            traffic_type = "icmp_ping"
+            # Generates a packet, and feeds it to the switch_impl
+            self.traffic_generator.generate(traffic_type, switch_impl)
+
+class Interactive(ControlFlow):
   '''
-  Interactively inject inputs
+  Presents an interactive prompt for injecting events and
+  checking for invariants at the users' discretion
   '''
   # TODO(cs): rather than just prompting "Continue to next round? [Yn]", allow
   #           the user to examine the state of the network interactively (i.e.,
   #           provide them with the normal POX cli + the simulated events
-  def __init__(self, topology, control_socket=None):
-    InjectionBasedControlFlow.__init__(topology, control_socket=control_socket)
+  def __init__(self):
+    ControlFlow.__init__()
+    self.logical_time = 0
     # TODO(cs): future feature: allow the user to interactively choose the order
     # events occur for each round, whether to delay, drop packets, fail nodes,
     # etc.
@@ -141,16 +236,22 @@ class Interactive(InjectionBasedControlFlow):
     #   EVERYTHING  # The user controls everything, including message ordering
     # ]
 
-  def incremement_round():
-    # TODO(cs): print out the state of the network at each timestep? Take a
-    # verbose flag..
-    self.invariant_check_prompt()
-    self.dataplane_trace_prompt()
-    answer = msg.raw_input('Continue to next round? [Yn]').strip()
-    if answer != '' and answer.lower() != 'y':
-      self.stop()
-      break
-  
+  def simulate(self, simulation):
+    self.simulation = simulation
+    self.loop()
+
+  def loop(self):
+    while True:
+      # TODO(cs): print out the state of the network at each timestep? Take a
+      # verbose flag..
+      self.logical_time += 1
+      self.invariant_check_prompt()
+      self.dataplane_trace_prompt()
+      answer = msg.raw_input('Continue to next round? [Yn]').strip()
+      if answer != '' and answer.lower() != 'y':
+        self.stop()
+        break
+
   def invariant_check_prompt(self):
     answer = msg.raw_input('Check Invariants? [Ny]')
     if answer != '' and answer.lower() != 'n':
@@ -163,17 +264,15 @@ class Interactive(InjectionBasedControlFlow):
       answer = msg.raw_input("> ")
       result = None
       if answer.lower() == 'l':
-        result = self.invariant_checker.check_loops()
+        result = self.invariant_checker.check_loops(self.simulation)
       elif answer.lower() == 'b':
-        result = self.invariant_checker.check_blackholes()
+        result = self.invariant_checker.check_blackholes(self.simulation)
       elif answer.lower() == 'r':
-        result = self.invariant_checker.check_routing_consistency()
+        result = self.invariant_checker.check_routing_consistency(self.simulation)
       elif answer.lower() == 'c':
-        result = self.invariant_checker.check_connectivity()
+        result = self.invariant_checker.check_connectivity(self.simulation)
       elif answer.lower() == 'o':
-        result = self.invariant_checker.check_correspondence(self.live_switches,
-                                                             self.live_links,
-                                                             self.access_links)
+        result = self.invariant_checker.check_correspondence(self.simulation)
       else:
         log.warn("Unknown input...")
 
@@ -183,27 +282,10 @@ class Interactive(InjectionBasedControlFlow):
         msg.interactive("Result: %s" % str(result))
 
   def dataplane_trace_prompt(self):
-    if self.dataplane_trace:
+    if self.simulation.dataplane_trace:
       while True:
         answer = msg.raw_input('Feed in next dataplane event? [Ny]')
         if answer != '' and answer.lower() != 'n':
-          self.inject_trace_event()
+          self.simulation.inject_trace_event()
         else:
           break
-
-# ----------- Old command line args ----------------
-# TODO(cs): add argument for trace injection interval
-#parser.add_argument("-C", "--check-interval", type=int,
-#                    help='Run correspondence checking every C timesteps (assume -n)',
-#                    dest="check_interval", default=35)
-#parser.add_argument("-D", "--delay", type=float, metavar="time",
-#                    default=0.1,
-#                    help="delay in seconds for non-interactive simulation steps")
-#
-#parser.add_argument("-R", "--random-seed", type=float, metavar="rnd",
-#                    help="Seed for the pseduo random number generator", default=0.0)
-#
-#parser.add_argument("-s", "--steps", type=int, metavar="nsteps",
-#                    help="number of steps to simulate", default=None)
-#parser.add_argument("-f", "--fuzzer-params", default="fuzzer_params.cfg",
-#                    help="optional parameters for the fuzzer (e.g. fail rate)")

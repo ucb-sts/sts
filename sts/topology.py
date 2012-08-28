@@ -184,7 +184,6 @@ class Topology(object):
   def __init__(self):
     self.switches = []
 
-  # TODO(cs): add a bunch of other methods to kill switches and stuff like that
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
     Bind sockets from the switch_impls to the controllers. For now, assign each switch to the next
@@ -222,7 +221,7 @@ class Topology(object):
     logger.debug("Controller connections done")
 
 class MeshTopology(Topology):
-  def __init__(self, patch_panel_class, num_switches=3):
+  def __init__(self, num_switches=3):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers
@@ -240,7 +239,7 @@ class MeshTopology(Topology):
 
     # grab a fully meshed patch panel to wire up these guys
     link_topology = MeshTopology.FullyMeshedLinks(switches, access_links)
-    self.panel = patch_panel_class(switches, hosts, link_topology.get_connected_port)
+    self.get_connected_port = link_topology.get_connected_port
     self.network_links = link_topology.get_network_links()
 
   class FullyMeshedLinks(object):
@@ -293,7 +292,7 @@ class MeshTopology(Topology):
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
-  def __init__(self, patch_panel_class, num_pods=4):
+  def __init__(self, num_pods=4):
     if num_pods < 2:
       raise "Can't handle Fat Trees with less than 2 pods"
     self.hosts = []
@@ -307,9 +306,6 @@ class FatTree (Topology):
 
     self.switches = []
     self.construct_tree(num_pods)
-
-    self.panel = patch_panel_class(self.switches, self.hosts,
-                                   self.get_connected_port)
 
   def construct_tree(self, num_pods):
     '''

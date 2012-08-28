@@ -31,7 +31,7 @@ from sts.topology import FatTree
 from sts.control_flow import Fuzzer
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.lib.util import connect_socket_with_backoff
-from sts.experiment_config_lib import Controller
+from configs.experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
 
 import signal
@@ -43,16 +43,18 @@ import argparse
 import logging
 logging.basicConfig(level=logging.DEBUG)
 
-logger = logging.getLogger("sts")
+log = logging.getLogger("sts")
 
-# We use python as our DSL for specifying experiment configuration  
+# We use python as our DSL for specifying experiment configuration
 # The module must define the following attribute:
-#   controllers    => a list of pox.sts.experiment_config_info.ControllerInfo objects
+#   controllers     => a list of pox.sts.experiment_config_info.ControllerInfo objects
 # The module can optionally define the following attributes:
-#   topology       => a sts.topology.Topology object
+#   topology        => a sts.topology.Topology object
 #                                        defining the switches and links
-#   patch_panel    => a sts.topology.PatchPanel class
-#   control_flow   => a sts.control_flow.ControlModule class
+#   patch_panel     => a sts.topology.PatchPanel class (not object!)
+#   control_flow    => a sts.control_flow.ControlModule object
+#   dataplane_trace => a path to a dataplane trace file
+#                     (e.g. traces/ping_pong_same_subnet.trace)
 
 description = """
 Run a debugger experiment.
@@ -64,25 +66,14 @@ $ %s -c config/fat_tree.cfg
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  description=description)
 
-# TODO(cs): move the next two to config file
-parser.add_argument("-l", "--snapshotport", type=int, metavar="snapshotport",
-                    help="port to use for controllers for snapshotting", default=6634)
-
-# Major TODO: need to type-check trace file (i.e., every host in the trace must be present in the network!)
-#              this has already wasted several hours of time...
-parser.add_argument("-t", "--trace-file", default=None,
-                    help="optional dataplane trace file (see trace_generator.py)")
-
 parser.add_argument("-c", "--config", required=True,
-                    default="configs/fat_tree.cfg", help='experiment config file to load')
+                    default="configs/fat_tree.cfg",
+                    help='experiment config file to load')
 
 args = parser.parse_args()
 config = __import__(args.config)
 
 # For instrumenting the controller
-# TODO(aw): This ugly hack has to be cleaned up ASAP ASAP
-control_socket = None #connect_socket_with_backoff('', 6634)
-
 if hasattr(config, 'controllers'):
   controllers = config.controllers
 else:
@@ -95,16 +86,23 @@ else:
   patch_panel_class = BufferedPatchPanel
 
 if hasattr(config, 'topology'):
-  topology = config.topology(patch_panel_class)
+  topology = config.topology
 else:
   # We default to a FatTree with 4 pods
-  topology = FatTree(patch_panel_class)
+  topology = FatTree()
 
 if hasattr(config, 'control_flow'):
-  simulator = config.control_flow(topology, control_socket)
+  simulator = config.control_flow
 else:
   # We default to a Fuzzer
-  simulator = Fuzzer(topology, control_socket)
+  simulator = Fuzzer()
+
+if hasattr(config, 'dataplane_trace'):
+  dataplane_trace = config.dataplane_trace
+else:
+  # We default to no dataplane trace
+  dataplane_trace = None
+
 
 child_processes = []
 scheduler = None
@@ -132,22 +130,34 @@ try:
   for (i, c) in enumerate(controllers):
     if c.needs_boot:
       command_line_args = map(lambda(x): string.replace(x, "__port__", str(c.port)),
-                          map(lambda(x): string.replace(x, "__address__", str(c.address)), c.cmdline))
+                          map(lambda(x): string.replace(x, "__address__",
+                                                str(c.address)), c.cmdline))
       print command_line_args
       child = popen_filtered("c%d" % i, command_line_args)
-      logger.info("Launched controller c%d: %s [PID %d]" % (i, " ".join(command_line_args), child.pid))
+      log.info("Launched controller c%d: %s [PID %d]" %
+               (i, " ".join(command_line_args), child.pid))
       child_processes.append(child)
 
+    if c.nom_port:
+      # Monkey wrench on a socket for pulling down the nom
+      # TODO(cs): alternatively, convert the Controller `metadata` object into
+      # a Controller `state` object for internal use
+      c.nom_socket = connect_socket_with_backoff(c.address, c.nom_port)
+
   io_loop = RecocoIOLoop()
-  
+
   scheduler = Scheduler(daemon=True, useEpoll=False)
   scheduler.schedule(io_loop)
 
-  create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket), scheduler.callLater)
+  create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket),
+                                                   scheduler.callLater)
 
   topology.connect_to_controllers(controllers, create_worker)
-  
-  simulator.simulate()
+
+  simulation = Simulation(controllers, topology, patch_panel_class,
+                          dataplane_trace=dataplane_trace)
+
+  simulator.simulate(simulation)
 finally:
   kill_children()
   kill_scheduler()
