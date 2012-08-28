@@ -85,6 +85,20 @@ class Simulation (object):
     return set(self.failed_switches)
 
   @property
+  def cp_connections_with_pending_receives(self):
+    for switch_impl in self.live_switches:
+      for c in switch_impl.connections:
+        if c.io_worker.has_pending_receives():
+          yield c
+
+  @property
+  def cp_connections_with_pending_sends(self):
+    for switch_impl in self.live_switches:
+      for c in switch_impl.connections:
+        if c.io_worker.has_pending_sends():
+          yield c
+
+  @property
   def live_links(self):
     return self.topology.network_links - self.cut_links
 
@@ -130,6 +144,24 @@ class Simulation (object):
        # Forward the message
        self.patch_panel.permit_dp_event(dp_event)
 
+  def permit_cp_send(self, connection):
+    # pre: switch_impl.io_worker.has_pending_sends()
+    msg.event("Giving permission for control plane send for %s" % connection)
+    connection.permit_send()
+
+  def delay_cp_send(self, connection):
+    msg.event("Delaying control plane send for %s" % connection)
+    # update # delayed rounds?
+
+  def permit_cp_receive(self, connection):
+    # pre: switch_impl.io_worker.has_pending_sends()
+    msg.event("Giving permission for control plane receive for %s" % connection)
+    connection.permit_receive()
+
+  def delay_cp_receive(self, connection):
+    msg.event("Delaying control plane receive for %s" % connection)
+    # update # delayed rounds?
+
   def crash_switch(self, switch_impl):
     msg.event("Crashing switch_impl %s" % str(switch_impl))
     switch_impl.fail()
@@ -151,8 +183,7 @@ class Simulation (object):
     self.cut_links.remove(link)
 
   def inject_trace_event(self):
-    ''' Precondition: --trace is set '''
-    if len(self.dataplane_trace) == 0:
+    if not self.dataplane_trace or len(self.dataplane_trace) == 0:
       log.warn("No more trace inputs to inject!")
       return
     else:

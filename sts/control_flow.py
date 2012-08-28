@@ -52,7 +52,7 @@ class Replayer(ControlFlow):
 class Fuzzer(ControlFlow):
   '''
   Injects input events at random intervals, periodically checking
-  for invariant violations. (Not the proper use of the word `Fuzzer`)
+  for invariant violations. (Not the proper use of the term `Fuzzer`)
   '''
   def __init__(self, fuzzer_params="configs/fuzzer_params.cfg",
                check_interval=35, trace_interval=10, random_seed=0.0,
@@ -61,6 +61,11 @@ class Fuzzer(ControlFlow):
 
     self.check_interval = check_interval
     self.trace_interval = trace_interval
+    # Make execution deterministic to allow the user to easily replay
+    self.seed = random_seed
+    self.random = random.Random(self.seed)
+    self.traffic_generator = TrafficGenerator(self.random)
+
     self.delay = delay
     self.steps = steps
     self.params = object()
@@ -69,17 +74,13 @@ class Fuzzer(ControlFlow):
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
 
-    # Make execution deterministic to allow the user to easily replay
-    self.seed = random_seed
-    self.random = random.Random(self.seed)
-    self.traffic_generator = TrafficGenerator(self.random)
-
   def _load_fuzzer_params(self, fuzzer_params_path):
     if os.path.exists(fuzzer_params_path):
-        self.params = __import__(fuzzer_params_path)
+      self.params = __import__(fuzzer_params_path)
     else:
       # TODO: default values in case fuzzer_config is not present / missing directives
-      raise IOError("Could not find logging config file: %s" % fuzzer_params)
+      raise IOError("Could not find logging config file: %s" %
+                    fuzzer_params_path)
 
   def simulate(self, simulation):
     self.simulation = simulation
@@ -112,7 +113,7 @@ class Fuzzer(ControlFlow):
         thread = threading.Thread(target=do_correspondence)
         thread.start()
         while thread.isAlive():
-          for switch in self.live_switches:
+          for switch in self.simulation.live_switches:
             # connection -> deferred io worker -> io worker
             switch.send(of.ofp_echo_request().pack())
           thread.join(2.0)
@@ -142,24 +143,21 @@ class Fuzzer(ControlFlow):
 
   def check_controlplane(self):
     ''' Decide whether to delay or deliver packets '''
-    def check_deliver(switch_impl, type, give_permission):
+    def check_deliver(connection, delay_function, permit_function):
       if self.random.random() < self.params.controlplane_delay_rate:
-        log.debug("Delaying control plane %s for %s" % (type, str(switch_impl)))
+        delay_function(connection)
       else:
-        log.debug("Giving permission for control plane %s for %s" % (type, str(switch_impl)))
-        give_permission()
+        permit_function(connection)
 
-    for switch_impl in self.simulation.live_switches:
-      # Check reads
-      # TODO: shouldn't be sticking our hands into switch_impl._connection
-      for c in switch_impl.connections:
-        if c.io_worker.has_pending_receives():
-          check_deliver(switch_impl, "receive", c.io_worker.permit_receive)
+    # Check reads
+    for connection in self.simulation.cp_connections_with_pending_receives:
+      check_deliver(connection, self.simulation.delay_cp_receive,
+                    self.simulation.permit_cp_recieve)
 
-      # Check writes
-      for c in switch_impl.connections:
-        if c.io_worker.has_pending_sends():
-          check_deliver(switch_impl, "send", c.io_worker.permit_send)
+    # Check writes
+    for connection in self.simulation.cp_connections_with_pending_sends:
+      check_deliver(connection, self.simulation.delay_cp_send,
+                    self.simulation.permit_cp_send)
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
