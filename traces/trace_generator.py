@@ -1,15 +1,15 @@
 '''
 Created on Mar 15, 2012
 
-@author: rcs
+@author: cs
 '''
 
 from pox.lib.packet.ethernet import *
 from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
 from pox.lib.util import assert_type
-import topology_generator as topo_gen
-from debugger_entities import HostInterface
+import sts.topology_generator as topo_gen
+from sts.debugger_entities import HostInterface
 from collections import defaultdict
 import pickle
 
@@ -59,7 +59,7 @@ def generate_example_trace():
   write_trace_log(trace, "traces/ping_pong.trace")
   
 def generate_example_trace_same_subnet():
-  # TODO: highly redundant
+  # TODO(cs): highly redundant
   trace = []
   
   (patch_panel, switches, network_links, hosts, access_links) = topo_gen.create_mesh(num_switches=2)
@@ -87,7 +87,7 @@ def generate_example_trace_same_subnet():
   write_trace_log(trace, "traces/ping_pong_same_subnet.trace")
    
 def generate_example_trace_fat_tree(num_pods=4):
-  # TODO: highly redundant
+  # TODO(cs): highly redundant
   
   fat_tree = topo_gen.FatTree(num_pods)
   patch_panel = topo_gen.BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
@@ -108,7 +108,7 @@ def generate_example_trace_fat_tree(num_pods=4):
       host2pings[host].append(DataplaneEvent(access_link.interface, eth))
     
   # ping pong (no responses) between fake hosts
-  # (Some large number: TODO: serialize a generator to disk)
+  # (Some large number: TODO(cs): serialize a generator to disk)
   # Trace is [one ping from every host to a random other host] * 50000
   trace = []
   for _ in range(50000):
