@@ -61,7 +61,7 @@ class InvariantChecker(object):
   def compute_controller_omega(self, controller_snapshot, live_switches, live_links, edge_links):
     NTF = hsa_topo.NTF_from_snapshot(controller_snapshot, live_switches)
     # Frenetic doesn't store any link or host information.
-    # No virtualization though, so we can assume the same TTF. TODO: for now...
+    # No virtualization though, so we can assume the same TTF. TODO(cs): for now...
     TTF = hsa_topo.generate_TTF(live_links)
     return hsa.compute_omega(NTF, TTF, edge_links)
 
@@ -80,7 +80,7 @@ class InvariantChecker(object):
     print "# entries in controller omega: %d" % len(controller_omega)
 
     def get_simple_dict(omega):
-      # TODO: ignoring original hs means that we don't account for
+      # TODO(cs): ignoring original hs means that we don't account for
       # field modifications, e.g. TTL decreases
       #
       # Omegas are { (original hs, original port) -> [(final hs1, final port1), (final hs2, final port2)...] }

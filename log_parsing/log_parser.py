@@ -1,40 +1,40 @@
-# Parsing of global log files to create a list of Event objects
+# Parsing global log files to create a list of Event objects
 from re import compile, match
 
-# TODO make this decorate the event parsers
+# TODO(sw): make this decorate the event parsers
 def check_unique_id(event_id, all_ids):
   '''Check to make sure that event_id is not in all_ids. Throw an exception if
   this invariant does not hold.
 
   If the invariant does hold, add event_id to all_ids.'''
   if event_id in all_ids:
-    raise Exception() # TODO raise a more informative exception
+    raise Exception() # TODO(sw): raise a more informative exception
   all_ids.add(event_id)
 
 def parse_external_event(existing_event_ids, dependent_ids, event_id, rest):
   '''Takes an external event line parsed from the global log file and returns a
   corresponding ExternalEvent object.'''
-  check_unique_id(event_id, existing_event_ids)# TODO pull this out into a decorator
-  # TODO parse 'rest' to extract dependent IDs
+  check_unique_id(event_id, existing_event_ids)# TODO(sw): pull this out into a decorator
+  # TODO(sw): parse 'rest' to extract dependent IDs
   rgx = compile("^\[(?P<dependent_ids>\S+(?: +\S+)*)\] (?P<rest>.*?)$")
   # ensure that dependent IDs haven't occurred yet
   parsed = rgx.match(rest)
 
   if not parsed:
-    raise Exception() # TODO raise a more informative exception
+    raise Exception() # TODO(sw): raise a more informative exception
 
   dependents = set(parsed.group('dependent_ids').split()) # 2 dependent ids could be the same on accident. deal with it!
   assert(dependents.isdisjoint(existing_event_ids)) # can't have dependencies that have already happened!
   dependent_ids.update(dependents)
 
-  # TODO deal with other external events
+  # TODO(sw): deal with other external events
 
 def parse_internal_event(events_ids, dependent_ids, event_id, rest):
   '''Takes an internal event line parsed from the global log file and returns
   a corresponding InternalEvent object.'''
-  check_unique_id(event_id, existing_event_ids) # TODO pull this out into a decorator
+  check_unique_id(event_id, existing_event_ids) # TODO(sw): pull this out into a decorator
   dependent_ids.discard(event_id)
-  # TODO deal with other internal events
+  # TODO(sw): deal with other internal events
 
 def parse(logfile_path):
   '''Input: path to a logfile.

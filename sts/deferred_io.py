@@ -1,7 +1,7 @@
 '''
 Created on Feb 25, 2012
 
-@author: rcs
+@author: aw, cs
 '''
 import exceptions
 import sys
@@ -45,7 +45,7 @@ class DeferredIOWorker(object):
     raises an exception if the write queue is empty
     '''
     message = self._send_queue.get()
-    # TODO: will recoco guarentee in-order delivery of a sequence of these send requests?
+    # TODO(cs): will recoco guarentee in-order delivery of a sequence of these send requests?
     self._call_later(lambda: self._io_worker.send(message))
 
   def send(self, data):
@@ -93,7 +93,7 @@ class DeferredIOWorker(object):
     return not self._receive_queue.empty()
   
   # ------- Delegation functions. ---------
-  # TODO: is there a more pythonic way to implement delegation?
+  # TODO(cs): is there a more pythonic way to implement delegation?
   
   def fileno(self):
     # thread safety shoudn't matter here

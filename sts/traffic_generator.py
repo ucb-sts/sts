@@ -20,7 +20,7 @@ class TrafficGenerator (object):
       raise AttributeError("Unknown event type %s" % str(packet_type))
 
     # Feed the packet to the switch_impl
-    # TODO: just use access links for packet ins -- not packets from within the network
+    # TODO(cs): just use access links for packet ins -- not packets from within the network
     in_port = self.random.choice(switch_impl.ports.values())
     packet = self._packet_generators[packet_type](switch_impl, in_port)
     return switch_impl.process_packet(packet, in_port=in_port.port_no)
@@ -29,9 +29,9 @@ class TrafficGenerator (object):
   def icmp_ping(self, switch_impl, in_port):
     # randomly choose an in_port.
     if len(switch_impl.ports) == 0:
-      raise RuntimeError("No Ports Registered on switch_impl! %s" % str(switch_impl)) # TODO:
+      raise RuntimeError("No Ports Registered on switch_impl! %s" % str(switch_impl))
     e = ethernet()
-    # TODO: need a better way to create random MAC addresses
+    # TODO(cs): need a better way to create random MAC addresses
     e.src = EthAddr(struct.pack("Q",self.random.randint(1,0xFF))[:6])
     e.dst = in_port.hw_addr
     e.type = ethernet.IP_TYPE

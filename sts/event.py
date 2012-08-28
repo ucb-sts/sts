@@ -1,6 +1,12 @@
+'''
+Classes for tracking replayed events.
+
+Author: sw
+'''
+
 import abc
 
-class EventWatcher(object): #TODO docstrings for class
+class EventWatcher(object): # TODO(sw): docstrings for class
   def __init__(self, event):
     self.event = event
 
@@ -30,20 +36,20 @@ class Event(object):
     pass
 
 class InternalEvent(Event):
-  # TODO docstring
-  # TODO fingerprinting! this is why we need a separate class for internal events!
+  # TODO(sw): docstring
+  # TODO(sw): fingerprinting! this is why we need a separate class for internal events!
   pass
 
 class ExternalEvent(Event):
-  # TODO docstring
+   # TODO(sw): docstring
   def __init__(self, event_id, dependent_events):
     super(ExternalEvent, self).__init__(event_id)
     self.dependent_events = dependent_events
 
 class Event_DAG(object):
-  # TODO docstring
+  # TODO(sw): docstring
   def __init__(self, events):
-    # TODO docstring
+    # TODO(sw): docstring
     self.events = events # events is just a list of EventWatcher objecs
 
   def events(self, pruned_event=None):

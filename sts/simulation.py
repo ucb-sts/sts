@@ -1,13 +1,6 @@
 #!/usr/bin/env python
 # Nom nom nom nom
 
-# TODO: future feature: colored cli prompts to make packets vs. crashes
-#       vs. whatever easy to distinguish
-
-# TODO: rather than just prompting "Continue to next round? [Yn]", allow
-#       the user to examine the state of the network interactively (i.e.,
-#       provide them with the normal POX cli + the simulated events
-
 import pox.openflow.libopenflow_01 as of
 from pox.lib.revent import EventMixin
 from debugger_entities import Link, Host

@@ -158,7 +158,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
 
   def permit_dp_event(self, event):
     ''' Given a SwitchDpPacketOut event, permit it to be forwarded  '''
-    # TODO: self.forward_packet should not be externally visible!
+    # TODO(cs): self.forward_packet should not be externally visible!
     # Superclass DpPacketOut handler
     self.handle_DpPacketOut(event)
     self.buffered_dp_out_events.remove(event)
@@ -180,7 +180,7 @@ class Topology(object):
   Abstract base class of all topology types. Wraps the edges and vertices of
   the network.
   '''
-  # TODO add a bunch of other methods to kill switches and stuff like that
+  # TODO(cs): add a bunch of other methods to kill switches and stuff like that
   def _connect_to_controllers(self, controller_info_list, io_worker_generator,
           switch_impls):
     '''
@@ -208,7 +208,7 @@ class Topology(object):
         return io_worker_generator(controller_socket)
       switch_impl.create_io_worker = create_io_worker
 
-      # TODO: what if the controller is slow to boot?
+      # TODO(cs): what if the controller is slow to boot?
       # Socket from the switch_impl to the controller
       for i in xrange(connections_per_switch):
         controller_info = controller_info_cycler.next()
@@ -425,7 +425,7 @@ class FatTree (Topology):
         #raise RuntimeError("%s Already there %s" % (str(link), str(self.port2internal_link[link.start_port])))
       self.port2internal_link[link.start_port] = link
       
-    # TODO: this should be in a unit test, not here
+    # TODO(cs): this should be in a unit test, not here
     #if len(self.port2internal_link) != len(self.network_links):
     #  raise RuntimeError("Not enough port2network_links(%d s/b %d)" % \
     #                    (len(self.port2internal_link), len(self.network_links)))
@@ -436,18 +436,18 @@ class FatTree (Topology):
       self.port2access_link[access_link.switch_port] = access_link
       self.interface2access_link[access_link.interface] = access_link
       
-    # TODO: this should be in a unit test, not here
+    # TODO(cs): this should be in a unit test, not here
     #if len(self.port2access_link) != len(self.access_links):
     #  raise RuntimeError("Not enough port2accesslinks (%d s/b %d)" % \
     #                    (len(self.port2access_link), len(self.access_links)))
       
-    # TODO: this should be in a unit test, not here
+    # TODO(cs): this should be in a unit test, not here
     #if len(self.interface2access_link) != len(self.access_links):
     #  raise RuntimeError("Not enough interface2accesslinks (%d s/b %d)" % \
     #                    (len(self.interface2accesslinks), len(self.access_links)))
 
   def _sanity_check_tree(self):
-    # TODO: this should be in a unit test, not here
+    # TODO(cs): this should be in a unit test, not here
     if len(self.access_links) != self.total_hosts:
       raise RuntimeError("incorrect # of access links (%d, s/b %d)" % \
                           (len(self.access_links),len(self.total_hosts)))  
@@ -529,7 +529,7 @@ class FatTree (Topology):
 
   def get_connected_port(self, node, port):
     ''' Given a node and a port, return a tuple (node, port) that is directly connected to the port '''
-    # TODO: use a $@#*$! graph library
+    # TODO(cs): use a $@#*$! graph library
     if port in self.port2access_link:
       access_link = self.port2access_link[port]
       return (access_link.host, access_link.interface)

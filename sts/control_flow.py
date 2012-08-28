@@ -1,27 +1,31 @@
 class Replayer(object):
-  # TODO docstring
+  # TODO(cs): docstring
   def __init__(self, dag):
     self.dag = dag
 
   def run(self, simulation):
     def increment_round():
       simulation.forward_data()
-      # TODO more stuff to forward round?
+      # TODO(cs): more stuff to forward round?
     for pruned_event in dag.events():
       for event in dag.events(pruned_event):
         event.run(simulation)
         self.increment_round(simulation)
 
-class Exerciser(object):
-  # TODO docstring
+class Fuzzer(object):
+  # TODO(sw): docstring
   def increment_round(self):
-    pass # TODO do something fancy here!
+    pass # TODO(sw): do something fancy here!
 
 class Interactive(object):
+  # TODO: rather than just prompting "Continue to next round? [Yn]", allow
+  #       the user to examine the state of the network interactively (i.e.,
+  #       provide them with the normal POX cli + the simulated events
+
   pass
 
 
-# TODO: add argument for trace injection interval
+# TODO(cs): add argument for trace injection interval
 #parser.add_argument("-C", "--check-interval", type=int,
 #                    help='Run correspondence checking every C timesteps (assume -n)',
 #                    dest="check_interval", default=35)
