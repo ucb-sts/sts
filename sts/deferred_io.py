@@ -19,11 +19,11 @@ log = logging.getLogger()
 class DeferredIOWorker(object):
   '''
   Wrapper class for RecocoIOWorkers.
-  
+
   Rather than actually sending/receiving right away, queue the messages.
   Then there are separate methods for actually sending the messages via
   the wrapped io_worker
-  
+
   io_worker: io_worker to wrap
   call_later: recoco.Scheduler's call_later factory method for scheduling/thread-safety
   '''
@@ -41,7 +41,7 @@ class DeferredIOWorker(object):
     '''
     deque()s the first element of the write queue, and actually sends it
     across the wire.
-    
+
     raises an exception if the write queue is empty
     '''
     message = self._send_queue.get()
@@ -60,7 +60,7 @@ class DeferredIOWorker(object):
     '''
     deque()s the first element of the read queue, and notifies the client
     that there is data to be read.
-    
+
     raises an exception if the read queue is empty
     '''
     data = self._receive_queue.get()
@@ -70,7 +70,7 @@ class DeferredIOWorker(object):
   def set_receive_handler(self, block):
     ''' Called by client '''
     self._client_receive_handler = block
-    
+
   def peek_receive_buf(self):
     ''' Called by client '''
     return self._receive_buf
@@ -79,7 +79,7 @@ class DeferredIOWorker(object):
     ''' called by client to consume receive buffer '''
     assert(len(self._receive_buf) >= l)
     self._receive_buf = self._receive_buf[l:]
-    
+
   def io_worker_receive_handler(self, io_worker):
     ''' called from io_worker (recoco thread, after the Select loop pushes onto io_worker) '''
     # Consume everything immediately
@@ -87,14 +87,14 @@ class DeferredIOWorker(object):
     io_worker.consume_receive_buf(len(message))
     # thread-safe queue
     self._receive_queue.put(message)
-      
+
   def has_pending_receives(self):
     ''' called by the "arbitrator" in charge of deferal '''
     return not self._receive_queue.empty()
-  
+
   # ------- Delegation functions. ---------
   # TODO(cs): is there a more pythonic way to implement delegation?
-  
+
   def fileno(self):
     # thread safety shoudn't matter here
     return self._io_worker.fileno()
