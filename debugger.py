@@ -24,7 +24,6 @@ fi
 exec python $OPT "$0" $FLG "$@"
 '''
 
-from sts.debugger import FuzzTester
 from sts.deferred_io import DeferredIOWorker
 from sts.procutils import kill_procs, popen_filtered
 
@@ -47,12 +46,13 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("sts")
 
 # We use python as our DSL for specifying experiment configuration  
-# The module can (optionally) define the following attributes:
+# The module must define the following attribute:
 #   controllers    => a list of pox.sts.experiment_config_info.ControllerInfo objects
+# The module can optionally define the following attributes:
 #   topology       => a sts.topology.Topology object
 #                                        defining the switches and links
-#   patch_panel    => a sts.topology.PatchPanel object
-#   control_flow   => a sts.control_flow.ControlModule object
+#   patch_panel    => a sts.topology.PatchPanel class
+#   control_flow   => a sts.control_flow.ControlModule class
 
 description = """
 Run a debugger experiment.
@@ -79,28 +79,32 @@ parser.add_argument("-c", "--config", required=True,
 args = parser.parse_args()
 config = __import__(args.config)
 
+# For instrumenting the controller
+# TODO(aw): This ugly hack has to be cleaned up ASAP ASAP
+control_socket = None #connect_socket_with_backoff('', 6634)
+
 if hasattr(config, 'controllers'):
   controllers = config.controllers
 else:
   raise RuntimeError("Must specify controllers in config file")
 
-if hasattr(config, 'topology'):
-  topology = config.topology
-else:
-  # We default to a FatTree with 4 pods
-  topology = FatTree()
-
 if hasattr(config, 'patch_panel'):
-  patch_panel = config.patch_panel
+  patch_panel_class = config.patch_panel
 else:
   # We default to a BufferedPatchPanel
-  patch_panel = BufferedPatchPanel
+  patch_panel_class = BufferedPatchPanel
+
+if hasattr(config, 'topology'):
+  topology = config.topology(patch_panel_class)
+else:
+  # We default to a FatTree with 4 pods
+  topology = FatTree(patch_panel_class)
 
 if hasattr(config, 'control_flow'):
-  simulator = config.control_flow(patch_panel)
+  simulator = config.control_flow(topology, control_socket)
 else:
   # We default to a Fuzzer
-  simulator = Fuzzer(patch_panel)
+  simulator = Fuzzer(topology, control_socket)
 
 child_processes = []
 scheduler = None
@@ -141,11 +145,9 @@ try:
 
   create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket), scheduler.callLater)
 
-  # For instrumenting the controller
-  # TODO(aw): This ugly hack has to be cleaned up ASAP ASAP
-  control_socket = None #connect_socket_with_backoff('', 6634)
-
-  simulator.simulate(topology) # XXX steps=args.steps)
+  topology.connect_to_controllers(controllers, create_worker)
+  
+  simulator.simulate()
 finally:
   kill_children()
   kill_scheduler()

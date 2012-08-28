@@ -133,7 +133,8 @@ def BufferedPatchPanelForTopology(topology):
   Given a pox.lib.graph.graph object with hosts, switches, and other things,
   produce an appropriate BufferedPatchPanel
   """
-  return BufferedPatchPanel(topology.find(is_a=SwitchImpl), topology.find(is_a=Host), lambda node, port:topology.port_for_node(node, port))
+  return BufferedPatchPanel(topology.find(is_a=SwitchImpl), topology.find(is_a=Host), \
+                            lambda node, port:topology.port_for_node(node, port))
 
 class BufferedPatchPanel(PatchPanel, EventMixin):
   '''
@@ -180,9 +181,11 @@ class Topology(object):
   Abstract base class of all topology types. Wraps the edges and vertices of
   the network.
   '''
+  def __init__(self):
+    self.switches = []
+
   # TODO(cs): add a bunch of other methods to kill switches and stuff like that
-  def _connect_to_controllers(self, controller_info_list, io_worker_generator,
-          switch_impls):
+  def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
     Bind sockets from the switch_impls to the controllers. For now, assign each switch to the next
     controller in the list in a round robin fashion.
@@ -197,9 +200,9 @@ class Topology(object):
     logger.debug("Connecting %d switches to %d controllers (setting up %d conns per switch)..." %
             (len(switch_impls), len(controller_info_list), connections_per_switch))
 
-    for (idx, switch_impl) in enumerate(switch_impls):
-      if len(switch_impls) < 20 or not idx % 250:
-        logger.debug("Connecting switch %d / %d" % (idx, len(switch_impls)))
+    for (idx, switch_impl) in enumerate(self.switches):
+      if len(self.switches) < 20 or not idx % 250:
+        logger.debug("Connecting switch %d / %d" % (idx, len(self.switches)))
 
       def create_io_worker(switch, controller_info):
         controller_socket = connect_socket_with_backoff(controller_info.address, controller_info.port)
@@ -219,8 +222,7 @@ class Topology(object):
     logger.debug("Controller connections done")
 
 class MeshTopology(Topology):
-  def __init__(self, patch_panel_class, controller_config_list,
-               io_worker_constructor, num_switches=3):
+  def __init__(self, patch_panel_class, num_switches=3):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers
@@ -238,10 +240,8 @@ class MeshTopology(Topology):
 
     # grab a fully meshed patch panel to wire up these guys
     link_topology = MeshTopology.FullyMeshedLinks(switches, access_links)
-    patch_panel = patch_panel_class(switches, hosts, link_topology.get_connected_port)
+    self.panel = patch_panel_class(switches, hosts, link_topology.get_connected_port)
     self.network_links = link_topology.get_network_links()
-    self._connect_to_controllers(controller_config_list,
-            io_worker_constructor, switches)
 
   class FullyMeshedLinks(object):
     """ A factory method (inner class) for creating a fully meshed network. Connects every pair
@@ -293,8 +293,7 @@ class MeshTopology(Topology):
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
-  def __init__(self, patch_panel_class, controller_config_list,
-               io_worker_constructor, num_pods=4):
+  def __init__(self, patch_panel_class, num_pods=4):
     if num_pods < 2:
       raise "Can't handle Fat Trees with less than 2 pods"
     self.hosts = []
@@ -309,10 +308,8 @@ class FatTree (Topology):
     self.switches = []
     self.construct_tree(num_pods)
 
-    patch_panel = patch_panel_class(self.switches, self.hosts,
-            self.get_connected_port)
-    self._connect_to_controllers(controller_config_list,
-            io_worker_constructor, self.switches)
+    self.panel = patch_panel_class(self.switches, self.hosts,
+                                   self.get_connected_port)
 
   def construct_tree(self, num_pods):
     '''
