@@ -54,7 +54,7 @@ class Fuzzer(ControlFlow):
   Injects input events at random intervals, periodically checking
   for invariant violations. (Not the proper use of the term `Fuzzer`)
   '''
-  def __init__(self, fuzzer_params="configs.fuzzer_params",
+  def __init__(self, fuzzer_params="config.fuzzer_params",
                check_interval=35, trace_interval=10, random_seed=0.0,
                delay=0.1, steps=None):
     ControlFlow.__init__(self)

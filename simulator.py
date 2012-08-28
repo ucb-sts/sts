@@ -32,7 +32,7 @@ from sts.control_flow import Fuzzer
 from sts.simulation import Simulation
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.lib.util import connect_socket_with_backoff
-from configs.experiment_config_lib import Controller
+from config.experiment_config_lib import Controller
 from pox.lib.recoco.recoco import Scheduler
 
 import signal
@@ -57,9 +57,9 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
                                  description=description)
 
 parser.add_argument('-c', '--config',
-                    default='configs.fat_tree',
-                    help='''experiment config module in the configs/ '''
-                         '''subdirectory, e.g. configs.fat_tree''')
+                    default='config.fat_tree',
+                    help='''experiment config module in the config/ '''
+                         '''subdirectory, e.g. config.fat_tree''')
 
 args = parser.parse_args()
 config = __import__(args.config, globals(), locals(), ["*"])
