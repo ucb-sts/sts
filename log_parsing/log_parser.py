@@ -49,7 +49,7 @@ def parse(logfile_path):
 
   * External: ^e ID [list of dependent IDs] custom$
   * Internal: ^i ID custom$
-  
+
   ID can be any unique non-whitespace identifier.
 
   The list of source IDs may be empty if the internal event is a source event

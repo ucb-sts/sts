@@ -21,7 +21,7 @@ class DataplaneEvent (object):
   def __init__ (self, interface, packet):
     assert_type("interface", interface, HostInterface, none_ok=False)
     assert_type("packet", packet, ethernet, none_ok=False)
-    self.interface = interface 
+    self.interface = interface
     self.packet = packet
 
 def write_trace_log(dataplane_events, filename):
@@ -30,12 +30,12 @@ def write_trace_log(dataplane_events, filename):
   For manual trace generation rather than replay logging
   '''
   pickle.dump(dataplane_events, file(filename, "w"))
-  
+
 def generate_example_trace():
   trace = []
-  
+
   (patch_panel, switches, network_links, hosts, access_links) = topo_gen.create_mesh(num_switches=2)
-  
+
   packet_events = []
   ping_or_pong = "ping"
   for access_link in access_links:
@@ -47,23 +47,23 @@ def generate_example_trace():
       ping = icmp(type=TYPE_ECHO_REQUEST, payload=ping_or_pong)
     else:
       ping = icmp(type=TYPE_ECHO_REPLY, payload=ping_or_pong)
-    ipp.payload = ping 
+    ipp.payload = ping
     eth.payload = ipp
     packet_events.append(DataplaneEvent(access_link.interface, eth))
-    
+
   # ping ping (no responses) between fake hosts
   for _ in range(40):
     trace.append(packet_events[0])
     trace.append(packet_events[1])
-    
+
   write_trace_log(trace, "traces/ping_pong.trace")
-  
+
 def generate_example_trace_same_subnet():
   # TODO(cs): highly redundant
   trace = []
-  
+
   (patch_panel, switches, network_links, hosts, access_links) = topo_gen.create_mesh(num_switches=2)
-  
+
   packet_events = []
   ping_or_pong = "ping"
   for access_link in access_links:
@@ -75,24 +75,24 @@ def generate_example_trace_same_subnet():
       ping = icmp(type=TYPE_ECHO_REQUEST, payload=ping_or_pong)
     else:
       ping = icmp(type=TYPE_ECHO_REPLY, payload=ping_or_pong)
-    ipp.payload = ping 
+    ipp.payload = ping
     eth.payload = ipp
     packet_events.append(DataplaneEvent(access_link.interface, eth))
-    
+
   # ping ping (no responses) between fake hosts
   for _ in range(40):
     trace.append(packet_events[0])
     trace.append(packet_events[1])
-    
+
   write_trace_log(trace, "traces/ping_pong_same_subnet.trace")
-   
+
 def generate_example_trace_fat_tree(num_pods=4):
   # TODO(cs): highly redundant
-  
+
   fat_tree = topo_gen.FatTree(num_pods)
   patch_panel = topo_gen.BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
   (switches, network_links, hosts, access_links) = (fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
-  
+
   host2pings = defaultdict(lambda: [])
   payload = "ping"
   for access_link in access_links:
@@ -103,19 +103,19 @@ def generate_example_trace_fat_tree(num_pods=4):
       dst_ip_addr = other_host.interfaces[0].ips[0]
       ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
       ping = icmp(type=TYPE_ECHO_REQUEST, payload=payload)
-      ipp.payload = ping 
+      ipp.payload = ping
       eth.payload = ipp
       host2pings[host].append(DataplaneEvent(access_link.interface, eth))
-    
+
   # ping pong (no responses) between fake hosts
   # (Some large number: TODO(cs): serialize a generator to disk)
   # Trace is [one ping from every host to a random other host] * 50000
   trace = []
   for _ in range(50000):
     for host, pings in host2pings.iteritems():
-      trace.append(random.choice(pings)) 
-    
+      trace.append(random.choice(pings))
+
   write_trace_log(trace, "traces/ping_pong_fat_tree.trace")
-  
+
 if __name__ == '__main__':
   generate_example_trace()
