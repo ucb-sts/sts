@@ -60,7 +60,7 @@ class Event_DAG(object):
       should_yield = lambda event: event not in pruned_events
     else:
       should_yield = lambda x: True
-    
+
     for event in self.events:
       if should_yield(event):
         yield event
