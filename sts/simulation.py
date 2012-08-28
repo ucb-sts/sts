@@ -51,6 +51,7 @@ class Simulation (object):
     self._type_check_dataplane_trace()
 
     # Metatdata for simulated failures
+    # TODO(cs): move these into topology
     # sts.debugger_entities.Link objects
     self.cut_links = set()
     # SwitchOutDpEvent objects
