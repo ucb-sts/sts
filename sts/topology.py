@@ -197,7 +197,7 @@ class Topology(object):
     connections_per_switch = len(controller_info_list)
 
     logger.debug("Connecting %d switches to %d controllers (setting up %d conns per switch)..." %
-            (len(switch_impls), len(controller_info_list), connections_per_switch))
+            (len(self.switches), len(controller_info_list), connections_per_switch))
 
     for (idx, switch_impl) in enumerate(self.switches):
       if len(self.switches) < 20 or not idx % 250:

@@ -78,11 +78,7 @@ class Simulation (object):
   @property
   def live_switches(self):
     """ Return the switch_impls which are currently up """
-    return self.topology.switches - self.failed_switches
-
-  @property
-  def failed_switches(self):
-    return set(self.failed_switches)
+    return set(self.topology.switches) - self.failed_switches
 
   @property
   def cp_connections_with_pending_receives(self):
@@ -147,7 +143,7 @@ class Simulation (object):
   def permit_cp_send(self, connection):
     # pre: switch_impl.io_worker.has_pending_sends()
     msg.event("Giving permission for control plane send for %s" % connection)
-    connection.permit_send()
+    connection.io_worker.permit_send()
 
   def delay_cp_send(self, connection):
     msg.event("Delaying control plane send for %s" % connection)
@@ -156,7 +152,7 @@ class Simulation (object):
   def permit_cp_receive(self, connection):
     # pre: switch_impl.io_worker.has_pending_sends()
     msg.event("Giving permission for control plane receive for %s" % connection)
-    connection.permit_receive()
+    connection.io_worker.permit_receive()
 
   def delay_cp_receive(self, connection):
     msg.event("Delaying control plane receive for %s" % connection)

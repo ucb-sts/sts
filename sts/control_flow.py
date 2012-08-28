@@ -35,7 +35,7 @@ class Replayer(ControlFlow):
   Replay events from a `superlog` with causal dependencies, pruning as we go
   '''
   def __init__(self, dag):
-    ControlFlow.__init__()
+    ControlFlow.__init__(self)
     self.dag = dag
 
   def simulate(self, simulation):
@@ -54,10 +54,10 @@ class Fuzzer(ControlFlow):
   Injects input events at random intervals, periodically checking
   for invariant violations. (Not the proper use of the term `Fuzzer`)
   '''
-  def __init__(self, fuzzer_params="configs/fuzzer_params.cfg",
+  def __init__(self, fuzzer_params="configs.fuzzer_params",
                check_interval=35, trace_interval=10, random_seed=0.0,
                delay=0.1, steps=None):
-    ControlFlow.__init__()
+    ControlFlow.__init__(self)
 
     self.check_interval = check_interval
     self.trace_interval = trace_interval
@@ -75,9 +75,9 @@ class Fuzzer(ControlFlow):
     self.logical_time = 0
 
   def _load_fuzzer_params(self, fuzzer_params_path):
-    if os.path.exists(fuzzer_params_path):
-      self.params = __import__(fuzzer_params_path)
-    else:
+    try:
+      self.params = __import__(fuzzer_params_path, globals(), locals(), ["*"])
+    except:
       # TODO(cs): default values in case fuzzer_config is not present / missing directives
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
@@ -152,7 +152,7 @@ class Fuzzer(ControlFlow):
     # Check reads
     for connection in self.simulation.cp_connections_with_pending_receives:
       check_deliver(connection, self.simulation.delay_cp_receive,
-                    self.simulation.permit_cp_recieve)
+                    self.simulation.permit_cp_receive)
 
     # Check writes
     for connection in self.simulation.cp_connections_with_pending_sends:
@@ -186,7 +186,7 @@ class Fuzzer(ControlFlow):
       return cut_this_round
 
     def repair_links(cut_this_round):
-      for link in set(self.cut_links):
+      for link in self.simulation.cut_links:
         if link in cut_this_round:
           continue
         if self.random.random() < self.params.link_recovery_rate:
@@ -221,7 +221,7 @@ class Interactive(ControlFlow):
   #           the user to examine the state of the network interactively (i.e.,
   #           provide them with the normal POX cli + the simulated events
   def __init__(self):
-    ControlFlow.__init__()
+    ControlFlow.__init__(self)
     self.logical_time = 0
     # TODO(cs): future feature: allow the user to interactively choose the order
     # events occur for each round, whether to delay, drop packets, fail nodes,

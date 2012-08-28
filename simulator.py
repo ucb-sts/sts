@@ -29,6 +29,7 @@ from sts.procutils import kill_procs, popen_filtered
 
 from sts.topology import FatTree
 from sts.control_flow import Fuzzer
+from sts.simulation import Simulation
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.lib.util import connect_socket_with_backoff
 from configs.experiment_config_lib import Controller
@@ -55,12 +56,13 @@ $ %s -c config/fat_tree.cfg
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  description=description)
 
-parser.add_argument("-c", "--config", required=True,
-                    default="configs/fat_tree.cfg",
-                    help='experiment config file to load')
+parser.add_argument('-c', '--config',
+                    default='configs.fat_tree',
+                    help='''experiment config module in the configs/ '''
+                         '''subdirectory, e.g. configs.fat_tree''')
 
 args = parser.parse_args()
-config = __import__(args.config)
+config = __import__(args.config, globals(), locals(), ["*"])
 
 # For instrumenting the controller
 if hasattr(config, 'controllers'):
