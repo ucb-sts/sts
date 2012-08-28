@@ -1,0 +1,12 @@
+We use python as our DSL for specifying experiment configuration
+
+The module must define the following attribute:
+  controllers     => a list of pox.sts.experiment_config_info.ControllerInfo objects
+
+The module can optionally define the following attributes:
+  topology        => a sts.topology.Topology object
+                                       defining the switches and links
+  patch_panel     => a sts.topology.PatchPanel class (not object!)
+  control_flow    => a sts.control_flow.ControlModule object
+  dataplane_trace => a path to a dataplane trace file
+                    (e.g. traces/ping_pong_same_subnet.trace)

@@ -45,17 +45,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 log = logging.getLogger("sts")
 
-# We use python as our DSL for specifying experiment configuration
-# The module must define the following attribute:
-#   controllers     => a list of pox.sts.experiment_config_info.ControllerInfo objects
-# The module can optionally define the following attributes:
-#   topology        => a sts.topology.Topology object
-#                                        defining the switches and links
-#   patch_panel     => a sts.topology.PatchPanel class (not object!)
-#   control_flow    => a sts.control_flow.ControlModule object
-#   dataplane_trace => a path to a dataplane trace file
-#                     (e.g. traces/ping_pong_same_subnet.trace)
-
 description = """
 Run a debugger experiment.
 Example usage:
@@ -79,30 +68,33 @@ if hasattr(config, 'controllers'):
 else:
   raise RuntimeError("Must specify controllers in config file")
 
+# For forwarding packets
 if hasattr(config, 'patch_panel'):
   patch_panel_class = config.patch_panel
 else:
   # We default to a BufferedPatchPanel
   patch_panel_class = BufferedPatchPanel
 
+# For tracking the edges and vertices in our network
 if hasattr(config, 'topology'):
   topology = config.topology
 else:
   # We default to a FatTree with 4 pods
   topology = FatTree()
 
+# For controlling the simulation
 if hasattr(config, 'control_flow'):
   simulator = config.control_flow
 else:
   # We default to a Fuzzer
   simulator = Fuzzer()
 
+# For injecting dataplane packets into the simulated network
 if hasattr(config, 'dataplane_trace'):
   dataplane_trace = config.dataplane_trace
 else:
   # We default to no dataplane trace
   dataplane_trace = None
-
 
 child_processes = []
 scheduler = None
