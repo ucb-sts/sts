@@ -48,23 +48,23 @@ logger = logging.getLogger("sts")
 
 # We use python as our DSL for specifying experiment configuration  
 # The module can (optionally) define the following attributes:
-#   controllers    => returns a list of pox.sts.experiment_config_info.ControllerInfo objects
-#   topology       => return a sts.topology.Topology object
+#   controllers    => a list of pox.sts.experiment_config_info.ControllerInfo objects
+#   topology       => a sts.topology.Topology object
 #                                        defining the switches and links
-#   patch_panel    => return a sts.topology.PatchPanel object
-#   control_flow   => return a sts.control_flow.ControlModule object
+#   patch_panel    => a sts.topology.PatchPanel object
+#   control_flow   => a sts.control_flow.ControlModule object
 
 description = """
 Run a debugger experiment.
 Example usage:
 
-$ %s ./pox/pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__
+$ %s -c config/fat_tree.cfg
 """ % (sys.argv[0])
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
-             description=description)
+                                 description=description)
 
-# TODO: move the next two to config file
+# TODO(cs): move the next two to config file
 parser.add_argument("-l", "--snapshotport", type=int, metavar="snapshotport",
                     help="port to use for controllers for snapshotting", default=6634)
 
@@ -142,7 +142,7 @@ try:
   create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket), scheduler.callLater)
 
   # For instrumenting the controller
-  # TODO: This ugly hack has to be cleaned up ASAP ASAP
+  # TODO(aw): This ugly hack has to be cleaned up ASAP ASAP
   control_socket = None #connect_socket_with_backoff('', 6634)
 
   simulator.simulate(topology) # XXX steps=args.steps)
