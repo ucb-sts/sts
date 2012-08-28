@@ -1,4 +1,3 @@
-[fuzzer]
 switch_failure_rate = 0.0
 switch_recovery_rate = 0.0
 control_channel_failure_rate = 0.0

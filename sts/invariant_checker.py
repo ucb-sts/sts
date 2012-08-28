@@ -9,13 +9,13 @@ import nom_snapshot_json as nom_snapshot
 import pickle
 import logging
 import collections
+
 log = logging.getLogger("invariant_checker")
 
 class InvariantChecker(object):
-  def __init__(self, control_url):
-    self.control_url = control_url
-
-  def fetch_controller_snapshot(self):
+  def fetch_controller_snapshot(self, simulation):
+    # TODO(cs): grab url from simulation.controller_info_list rather than
+    # hard-code
     req = urllib2.Request('http://localhost:8080/wm/core/proact')
     response = urllib2.urlopen(req)
     json_data = response.read()
@@ -28,26 +28,31 @@ class InvariantChecker(object):
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
   # --------------------------------------------------------------#
-  def check_loops(self):
+  def check_loops(self, simulation):
     pass
 
-  def check_blackholes(self):
+  def check_blackholes(self, simulation):
     pass
 
-  def check_connectivity(self):
+  def check_connectivity(self, simulation):
     pass
 
-  def check_routing_consistency(self):
+  def check_routing_consistency(self, simulation):
     pass
 
-  def check_correspondence(self, live_switches, live_links, edge_links):
+  def check_correspondence(self, simulation):
     ''' Return if there were any policy-violations '''
     log.debug("Snapshotting controller...")
-    controller_snapshot = self.fetch_controller_snapshot()
+    controller_snapshot = self.fetch_controller_snapshot(simulation)
     log.debug("Computing physical omega...")
-    physical_omega = self.compute_physical_omega(live_switches, live_links, edge_links)
+    physical_omega = self.compute_physical_omega(simulation.live_switches,
+                                                 simulation.live_links,
+                                                 simulation.edge_links)
     log.debug("Computing controller omega...")
-    controller_omega = self.compute_controller_omega(controller_snapshot, live_switches, live_links, edge_links)
+    controller_omega = self.compute_controller_omega(controller_snapshot,
+                                                     simulation.live_switches,
+                                                     simulation.live_links,
+                                                     simulation.edge_links)
     return self.infer_policy_violations(physical_omega, controller_omega)
 
   # --------------------------------------------------------------#
@@ -61,7 +66,7 @@ class InvariantChecker(object):
   def compute_controller_omega(self, controller_snapshot, live_switches, live_links, edge_links):
     NTF = hsa_topo.NTF_from_snapshot(controller_snapshot, live_switches)
     # Frenetic doesn't store any link or host information.
-    # No virtualization though, so we can assume the same TTF. TODO: for now...
+    # No virtualization though, so we can assume the same TTF. TODO(cs): for now...
     TTF = hsa_topo.generate_TTF(live_links)
     return hsa.compute_omega(NTF, TTF, edge_links)
 
@@ -80,7 +85,7 @@ class InvariantChecker(object):
     print "# entries in controller omega: %d" % len(controller_omega)
 
     def get_simple_dict(omega):
-      # TODO: ignoring original hs means that we don't account for
+      # TODO(cs): ignoring original hs means that we don't account for
       # field modifications, e.g. TTL decreases
       #
       # Omegas are { (original hs, original port) -> [(final hs1, final port1), (final hs2, final port2)...] }
