@@ -84,22 +84,28 @@ class Event_DAG(object): # TODO(sw): change to CamelCase
 # Concrete classes of InputEvents
 
 class SwitchFailure(InputEvent):
-  pass
+  def __init__(self, event_id, dependent_events, dpid):
+    InputEvent.__init__(event_id, dependent_events)
 
 class SwitchRecovery(InputEvent):
-  pass
+  def __init__(self, event_id, dependent_events, dpid):
+    InputEvent.__init__(event_id, dependent_events)
 
 class LinkFailure(InputEvent):
-  pass
+  def __init__(self, event_id, dependent_events, dpid, port_no):
+    InputEvent.__init__(event_id, dependent_events)
 
 class LinkRecovery(InputEvent):
-  pass
+  def __init__(self, event_id, dependent_events, dpid, port_no):
+    InputEvent.__init__(event_id, dependent_events)
 
 class ControllerFailure(InputEvent):
-  pass
+  def __init__(self, event_id, dependent_events, pid):
+    InputEvent.__init__(event_id, dependent_events)
 
 class ControllerRecovery(InputEvent):
-  pass
+  def __init__(self, event_id, dependent_events, pid):
+    InputEvent.__init__(event_id, dependent_events)
 
 class HostMigration(InputEvent):
   pass
