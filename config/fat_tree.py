@@ -4,7 +4,7 @@ from sts.control_flow import Fuzzer
 
 # Use POX as our controller
 command_line = "./pox/pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__"
-controllers = [Controller(command_line)]
+controllers = [ControllerConfig(command_line)]
 
 # Use a FatTree with 4 pods (already the default)
 topology = FatTree()

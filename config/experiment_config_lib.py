@@ -1,6 +1,7 @@
 import itertools
+import string
 
-class Controller (object):
+class ControllerConfig(object):
   _port_gen = itertools.count(8888)
 
   def __init__(self, cmdline="", address="127.0.0.1", port=None, nom_port=None):
@@ -15,15 +16,13 @@ class Controller (object):
       - address and nom_port is the socket the simulator will use to grab the
         NOM from (None for no correspondence checking)
     '''
-    self.cmdline = cmdline.split()
     self.address = address
-    if not port and not self.needs_boot:
-      raise RuntimeError("Need to specify port for already booted controllers")
-    elif not port:
+    if cmdline == []:
+      raise RuntimeError("Must specify boot parameters.")
+    if not port:
       port = self._port_gen.next()
     self.port = port
     self.nom_port = nom_port
-
-  @property
-  def needs_boot(self):
-    return self.cmdline != []
+    self.cmdline = map(lambda(x): string.replace(x, "__port__", str(port)),
+                       map(lambda(x): string.replace(x, "__address__",
+                                                     str(address)), cmdline))

@@ -31,9 +31,9 @@ class Simulation (object):
   Also provides functionality for triggering failures,
   causing packet delays, etc.
   """
-  def __init__(self, controller_info_list, topology, patch_panel_class,
+  def __init__(self, controllers, topology, patch_panel_class,
                dataplane_trace=None):
-    self.controller_info_list = controller_info_list
+    self.controllers = controllers
     self.topology = topology
     self.patch_panel = patch_panel_class(topology.switches, topology.hosts,
                                          topology.get_connected_port)

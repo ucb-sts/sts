@@ -7,9 +7,11 @@ from pox.openflow.nx_switch_impl import NXSwitchImpl
 from pox.lib.util import connect_socket_with_backoff, assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
+from sts.procutils import popen_filtered, kill_procs
 
 import logging
 import pickle
+import signal
 
 class FuzzSwitchImpl (NXSwitchImpl):
   """
@@ -198,4 +200,35 @@ class Host (EventMixin):
 
   def __str__(self):
     return self.name
+
+class Controller(object):
+  '''Encapsulates the state of a running controller.'''
+
+  def __init__(self, controller_config, idx):
+    '''idx is the unique index for the controller used mostly for logging purposes.'''
+    self.idx = idx
+    self.config = controller_config
+    self.start()
+
+    # handle interrupts by shutting down the process if it was booted
+    signal.signal(signal.SIGTERM, self.kill)
+    signal.signal(signal.SIGINT, self.kill)
+
+  @property
+  def pid(self):
+    return self.process.pid
+
+  def kill(self):
+    kill_procs([self.process])
+
+  def start(self):
+    self.process = popen_filtered("c%d" % self.idx, self.config.cmdline)
+
+    if self.config.nom_port:
+      self.nom_socket = connect_socket_with_backoff(self.config.address,
+                                                    self.config.nom_port)
+
+  def restart(self):
+    self.kill()
+    self.start()
 
