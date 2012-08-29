@@ -6,7 +6,11 @@ Author: sw
 
 import abc
 
-class EventWatcher(object): # TODO(sw): docstrings for class
+
+class EventWatcher(object):
+  '''EventWatchers watch events. This class can be used to wrap either
+  InternalEvents or ExternalEvents to do pre and post functionality.'''
+
   def __init__(self, event):
     self.event = event
 
@@ -35,26 +39,37 @@ class Event(object):
     '''Returns a boolean that is true if the Replayer may continue to the next round.'''
     pass
 
+# TODO(sw): box this comment!
+# Semi-abstract classes for internal and external events
+
 class InternalEvent(Event):
-  # TODO(sw): docstring
+  '''An InternalEvent is one that happens within the controller(s) under
+  simulation. Derivatives of this class verify that the internal event has
+  occured in its proceed method before it returns.'''
+
   # TODO(sw): fingerprinting! this is why we need a separate class for internal events!
   pass
 
-class ExternalEvent(Event):
-   # TODO(sw): docstring
+class InputEvent(Event):
+   '''An event that the simulator injects into the simulation. These events are
+   assumed to be causally independent.
+
+   Each InputEvent has a list of dependent InternalEvents that it takes in its
+  constructor. This enables the pruning of events.'''
   def __init__(self, event_id, dependent_events):
-    super(ExternalEvent, self).__init__(event_id)
+    super(InputEvent, self).__init__(event_id)
     self.dependent_events = dependent_events
 
-class Event_DAG(object):
-  # TODO(sw): docstring
+class Event_DAG(object): # TODO(sw): change to CamelCase
+  '''A set of events that have a total order (e.g. a list).'''
   def __init__(self, events):
-    # TODO(sw): docstring
-    self.events = events # events is just a list of EventWatcher objecs
+    '''events is a list of EventWatcher objects. Refer to log_parser.parse to
+    see how this is assembled.'''
+    self.events = events
 
   def events(self, pruned_event=None):
     if pruned_event is None:
-      assert(isinstance(pruned_event,ExternalEvent))
+      assert(isinstance(pruned_event,InputEvent))
       pruned_events = set(pruned_event.dependant_events)
       pruned_events.add(pruned_event)
       should_yield = lambda event: event not in pruned_events
@@ -64,3 +79,6 @@ class Event_DAG(object):
     for event in self.events:
       if should_yield(event):
         yield event
+
+# TODO(sw): box this comment!
+# Concrete classes of Internal/InputEvents
