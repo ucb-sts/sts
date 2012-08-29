@@ -25,4 +25,4 @@ class ControllerConfig(object):
     self.nom_port = nom_port
     self.cmdline = map(lambda(x): string.replace(x, "__port__", str(port)),
                        map(lambda(x): string.replace(x, "__address__",
-                                                     str(address)), cmdline))
+                                                     str(address)), cmdline.split()))
