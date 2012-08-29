@@ -81,4 +81,35 @@ class Event_DAG(object): # TODO(sw): change to CamelCase
         yield event
 
 # TODO(sw): box this comment!
-# Concrete classes of Internal/InputEvents
+# Concrete classes of InputEvents
+
+class SwitchFailure(InputEvent):
+  pass
+
+class SwitchRecovery(InputEvent):
+  pass
+
+class LinkFailure(InputEvent):
+  pass
+
+class LinkRecovery(InputEvent):
+  pass
+
+class ControllerFailure(InputEvent):
+  pass
+
+class ControllerRecovery(InputEvent):
+  pass
+
+class HostMigration(InputEvent):
+  pass
+
+class PolicyChange(InputEvent):
+  pass
+
+# Concrete classes of InternalEvents
+class MastershipChange(InternalEvent):
+  pass
+
+class TimerEvent(InternalEvent):
+  pass
