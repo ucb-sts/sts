@@ -9,7 +9,7 @@ from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
 from pox.lib.util import assert_type
 import sts.topology_generator as topo_gen
-from sts.debugger_entities import HostInterface
+from sts.entities import HostInterface
 from collections import defaultdict
 import pickle
 

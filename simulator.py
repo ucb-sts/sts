@@ -34,7 +34,7 @@ from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.lib.util import connect_socket_with_backoff
 from config.experiment_config_lib import ControllerConfig
 from pox.lib.recoco.recoco import Scheduler
-from sts.debugger_entities import Controller
+from sts.entities import Controller
 
 import signal
 import sys

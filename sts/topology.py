@@ -16,7 +16,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
                   host3
 '''
 
-from debugger_entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink
+from entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink
 from pox.openflow.switch_impl import ofp_phy_port, DpPacketOut, SwitchImpl
 from pox.lib.addresses import EthAddr, IPAddr
 from pox.openflow.libopenflow_01 import *

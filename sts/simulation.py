@@ -10,7 +10,7 @@ Encapsulates the state of the simulation, including:
   - Metadata (e.g. # of failures)
 '''
 
-from debugger_entities import Link, Host
+from entities import Link, Host
 
 import logging
 import pickle
@@ -52,7 +52,7 @@ class Simulation (object):
 
     # Metatdata for simulated failures
     # TODO(cs): move these into topology
-    # sts.debugger_entities.Link objects
+    # sts.entities.Link objects
     self.cut_links = set()
     # SwitchOutDpEvent objects
     self.dropped_dp_events = []

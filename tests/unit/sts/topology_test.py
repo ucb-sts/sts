@@ -14,7 +14,7 @@ from sts.traffic_generator import *
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from pox.openflow.switch_impl import SwitchImpl
 from pox.lib.graph.graph import Graph
-from sts.debugger_entities import Host, HostInterface
+from sts.entities import Host, HostInterface
 
 class topology_test(unittest.TestCase):
   _io_loop = RecocoIOLoop()

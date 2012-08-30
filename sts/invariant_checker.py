@@ -2,7 +2,7 @@ import json
 import urllib2
 
 from pox.openflow.libopenflow_01 import *
-from debugger_entities import *
+from entities import *
 import headerspace.topology_loader.pox_topology_loader as hsa_topo
 import headerspace.headerspace.applications as hsa
 import nom_snapshot_json as nom_snapshot

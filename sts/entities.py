@@ -1,5 +1,6 @@
 """
-This module mocks out openflow switches, links, and hosts.
+This module mocks out openflow switches, links, and hosts. These are all the
+'entities' that exist within our simulated environment.
 """
 
 from pox.openflow.switch_impl import SwitchImpl, DpPacketOut

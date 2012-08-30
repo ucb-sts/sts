@@ -15,7 +15,7 @@ def find(f, seq):
       return item
 
 def generate_TTF(all_links):
-  ''' Takes a list of sts.debugger_entities.Link objects (directed) '''
+  ''' Takes a list of sts.entities.Link objects (directed) '''
   ttf = tf.TF(of.HS_FORMAT())
   
   for link in all_links:
