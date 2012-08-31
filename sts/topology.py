@@ -31,7 +31,7 @@ import sys
 import itertools
 import logging
 
-logger = logging.getLogger("sts.topology_generator")
+logger = logging.getLogger("sts.topology")
 
 def create_switch(switch_id, num_ports):
   ports = []
@@ -109,6 +109,10 @@ class PatchPanel(object):
     for host in self.hosts:
       host.addListener(DpPacketOut, self.handle_DpPacketOut)
 
+  @property
+  def queued_dataplane_events(self):
+    return set(self.get_buffered_dp_events())
+
   def handle_DpPacketOut(self, event):
     (node, port) = self.get_connected_port(event.node, event.port)
     if type(node) == Host:
@@ -150,6 +154,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     self.switches = sorted(switches, key=lambda(sw): sw.dpid)
     self.hosts = hosts
     self.buffered_dp_out_events = set()
+    self.dropped_dp_events = []
     def handle_DpPacketOut(event):
       self.buffered_dp_out_events.add(event)
       self.raiseEventNoErrors(event)
@@ -162,6 +167,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     ''' Given a SwitchDpPacketOut event, permit it to be forwarded  '''
     # TODO(cs): self.forward_packet should not be externally visible!
     # Superclass DpPacketOut handler
+    msg.event("Forwarding dataplane event")
     self.handle_DpPacketOut(event)
     self.buffered_dp_out_events.remove(event)
 
@@ -170,8 +176,17 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     Given a SwitchDpPacketOut event, remove it from our buffer, and do not forward.
     Return the dropped event.
     '''
+    msg.event("Dropping dataplane event")
     self.buffered_dp_out_events.remove(event)
+    self.dropped_dp_events.append(dp_event)
     return event
+
+  def delay_dp_event(self, dp_event):
+    msg.event("Delaying dataplane event")
+    # (Monkey patch on a delay counter)
+    if not hasattr(dp_event, "delayed_rounds"):
+      dp_event.delayed_rounds = 0
+    dp_event.delayed_rounds += 1
 
   def get_buffered_dp_events(self):
     ''' Return a set of all buffered SwitchDpPacketOut events '''
@@ -196,6 +211,19 @@ class Topology(object):
   def live_switches(self):
     """ Return the switch_impls which are currently up """
     return set(self.switches) - self.failed_switches
+
+  def ok_to_send(self, dp_event):
+    """Returns True if it is ok to send the dp_event arg."""
+    (next_hop, next_port) = self.get_connected_port(dp_event.switch,
+                                                               dp_event.port)
+    if type(dp_event.node) == Host or type(next_hop) == Host:
+      # TODO(cs): model access link failures:
+      return True
+    else:
+      link = Link(dp_event.switch, dp_event.port, next_hop, next_port)
+      if not link in self.cut_links:
+        return True
+      return False
 
   def crash_switch(self, switch_impl):
     msg.event("Crashing switch_impl %s" % str(switch_impl))

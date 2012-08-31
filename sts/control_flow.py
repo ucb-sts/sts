@@ -10,6 +10,7 @@ Three control flow types for running the simulation forward.
 
 import pox.openflow.libopenflow_01 as of
 from invariant_checker import InvariantChecker
+from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.console import msg
 
@@ -83,6 +84,8 @@ class Fuzzer(ControlFlow):
                     fuzzer_params_path)
 
   def simulate(self, simulation):
+    """Precondition: simulation.patch_panel is a buffered patch panel"""
+    assert(isinstance(simulation.patch_panel, BufferedPatchPanel))
     self.simulation = simulation
     self.loop()
 
@@ -133,13 +136,13 @@ class Fuzzer(ControlFlow):
 
   def check_dataplane(self):
     ''' Decide whether to delay, drop, or deliver packets '''
-    for dp_event in self.simulation.queued_dataplane_events:
+    for dp_event in self.simulation.patch_panel.queued_dataplane_events:
       if self.random.random() < self.params.dataplane_delay_rate:
         self.simulation.delay_dp_event(dp_event)
       elif self.random.random() < self.params.dataplane_drop_rate:
         self.simulation.drop_dp_event(dp_event)
-      else:
-        self.simulation.forward_dp_event(dp_event)
+      elif self.topology.ok_to_send(dp_event):
+        self.simulation.patch_panel.permit_dp_event(dp_event)
 
   def check_controlplane(self):
     ''' Decide whether to delay or deliver packets '''
