@@ -205,25 +205,54 @@ class Host (EventMixin):
 class Controller(object):
   '''Encapsulates the state of a running controller.'''
 
+  _active_processes = set() # set of processes that are currently running. These are all killed upon signal reception
+
+  @staticmethod
+  def kill_active_procs():
+    '''Kill the active processes. Used by the simulator module to shut down the
+    controllers because python can only have a single method to handle SIG* stuff.'''
+    kill_procs(Controller._active_processes)
+
+  def _register_proc(self, proc):
+    '''Register a Popen instance that a controller is running in for the cleanup
+    that happens when the simulator receives a signal. This method is idempotent.'''
+    self._active_processes.add(proc)
+
+  def _unregister_proc(self, proc):
+    '''Remove a process from the set of this to be killed when a signal is
+    received. This is for use when the Controller process is stopped. This
+    method is idempotent.'''
+    self._active_processes.discard(proc)
+
+  def __del__(self):
+    if hasattr(self, 'process'): # if it fails in __init__, process may not have been assigned
+      if self.process.poll():
+        self._unregister_proc(self.process) # don't let this happen for shutdown
+      else:
+        self.kill() # make sure it is killed if this was started errantly
+
   def __init__(self, controller_config, idx):
     '''idx is the unique index for the controller used mostly for logging purposes.'''
     self.idx = idx
     self.config = controller_config
     self.start()
 
-    # handle interrupts by shutting down the process if it was booted
-    signal.signal(signal.SIGTERM, self.kill)
-    signal.signal(signal.SIGINT, self.kill)
-
   @property
   def pid(self):
+    '''Return the PID of the Popen instance the controller was started with.'''
     return self.process.pid
 
   def kill(self):
+    '''Kill the process the controller is running in.'''
     kill_procs([self.process])
+    self._unregister_proc(self.process)
 
   def start(self):
+    '''Start a new controller process based on the config's cmdline
+    attribute. Registers the Popen member variable for deletion upon a SIG*
+    received in the simulator process.'''
     self.process = popen_filtered("c%d" % self.idx, self.config.cmdline)
+    self._register_proc(self.process)
 
     if self.config.nom_port:
       self.nom_socket = connect_socket_with_backoff(self.config.address,

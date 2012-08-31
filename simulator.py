@@ -106,6 +106,9 @@ def kill_scheduler():
     scheduler.quit()
     sys.stderr.write(" OK\n")
 
+def kill_active_processes():
+  Controller.kill_active_procs()
+
 def handle_int(signal, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
   kill_scheduler()
