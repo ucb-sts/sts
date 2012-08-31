@@ -27,10 +27,6 @@ class Simulation (object):
     - The topology
     - Dataplane forwarding
     - (Optionally) the dataplane trace
-    - Metadata (e.g. # of failures)
-
-  Also provides functionality for triggering failures,
-  causing packet delays, etc.
   """
   def __init__(self, controllers, topology, patch_panel_class,
                dataplane_trace=None):
