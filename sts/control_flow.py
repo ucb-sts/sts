@@ -113,7 +113,7 @@ class Fuzzer(ControlFlow):
         thread = threading.Thread(target=do_correspondence)
         thread.start()
         while thread.isAlive():
-          for switch in self.simulation.live_switches:
+          for switch in self.simulation.topology.live_switches:
             # connection -> deferred io worker -> io worker
             switch.send(of.ofp_echo_request().pack())
           thread.join(2.0)
@@ -163,34 +163,34 @@ class Fuzzer(ControlFlow):
     ''' Decide whether to crash or restart switches, links and controllers '''
     def crash_switches():
       crashed_this_round = set()
-      for switch_impl in self.simulation.live_switches:
+      for switch_impl in self.simulation.topology.live_switches:
         if self.random.random() < self.params.switch_failure_rate:
           crashed_this_round.add(switch_impl)
-          self.simulation.crash_switch(switch_impl)
+          self.simulation.topology.crash_switch(switch_impl)
       return crashed_this_round
 
     def restart_switches(crashed_this_round):
-      for switch_impl in self.simulation.failed_switches:
+      for switch_impl in self.simulation.topology.failed_switches:
         if switch_impl in crashed_this_round:
           continue
         if self.random.random() < self.params.switch_recovery_rate:
-          self.simulation.recover_switch(switch_impl)
+          self.simulation.topology.recover_switch(switch_impl)
 
     def sever_links():
       # TODO(cs): model administratively down links? (OFPPC_PORT_DOWN)
       cut_this_round = set()
-      for link in self.simulation.live_links:
+      for link in self.simulation.topology.live_links:
         if self.random.random() < self.params.link_failure_rate:
           cut_this_round.add(link)
-          self.simulation.sever_link(link)
+          self.simulation.topology.sever_link(link)
       return cut_this_round
 
     def repair_links(cut_this_round):
-      for link in self.simulation.cut_links:
+      for link in self.simulation.topology.cut_links:
         if link in cut_this_round:
           continue
         if self.random.random() < self.params.link_recovery_rate:
-          self.simulation.repair_link(link)
+          self.simulation.topology.repair_link(link)
 
     crashed_this_round = crash_switches()
     restart_switches(crashed_this_round)
@@ -204,7 +204,7 @@ class Fuzzer(ControlFlow):
   def fuzz_traffic(self):
     if not self.simulation.dataplane_trace:
       # randomly generate messages from switches
-      for switch_impl in self.simulation.live_switches:
+      for switch_impl in self.simulation.topology.live_switches:
         if self.random.random() < self.params.traffic_generation_rate:
           if len(switch_impl.ports) > 0:
             msg.event("injecting a random packet")

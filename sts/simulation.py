@@ -54,14 +54,13 @@ class Simulation (object):
     # TODO(cs): move these into topology
     # sts.entities.Link objects
     self.cut_links = set()
-    # SwitchOutDpEvent objects
-    self.dropped_dp_events = []
     # SwitchImpl objects
     self.failed_switches = set()
     # topology.Controller objects
     self.failed_controllers = set()
-    # ?
-    self.cancelled_timeouts = set()
+
+    # SwitchOutDpEvent objects
+    self.dropped_dp_events = []
 
     # Statistics to print on exit
     self.packets_sent = 0

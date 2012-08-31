@@ -22,6 +22,7 @@ from pox.lib.addresses import EthAddr, IPAddr
 from pox.openflow.libopenflow_01 import *
 from pox.lib.util import connect_socket_with_backoff
 from pox.lib.revent import EventMixin
+from console import msg
 import socket
 import abc
 import time
@@ -183,6 +184,44 @@ class Topology(object):
   '''
   def __init__(self):
     self.switches = []
+    self.network_links = set()
+
+    # Metatdata for simulated failures
+    # sts.entities.Link objects
+    self.cut_links = set()
+    # SwitchImpl objects
+    self.failed_switches = set()
+    # topology.Controller objects
+    self.failed_controllers = set()
+
+  @property
+  def live_switches(self):
+    """ Return the switch_impls which are currently up """
+    return set(self.switches) - self.failed_switches
+
+  def crash_switch(self, switch_impl):
+    msg.event("Crashing switch_impl %s" % str(switch_impl))
+    switch_impl.fail()
+    self.failed_switches.add(switch_impl)
+
+  def recover_switch(self, switch_impl):
+    msg.event("Rebooting switch_impl %s" % str(switch_impl))
+    switch_impl.recover()
+    self.failed_switches.remove(switch_impl)
+
+  @property
+  def live_links(self):
+    return self.network_links - self.cut_links
+
+  def sever_link(self, link):
+    msg.event("Cutting link %s" % str(link))
+    self.cut_links.add(link)
+    link.start_switch_impl.take_port_down(link.start_port)
+
+  def repair_link(self, link):
+    msg.event("Restoring link %s" % str(link))
+    link.start_switch_impl.bring_port_up(link.start_port)
+    self.cut_links.remove(link)
 
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
@@ -240,6 +279,8 @@ class MeshTopology(Topology):
     Populate the topology as a mesh of switches, connect the switches
     to the controllers
     '''
+    Topology.__init__(self)
+
     # Every switch has a link to every other switch + 1 host, for N*(N-1)+N = N^2 total ports
     ports_per_switch = (num_switches - 1) + 1
 
@@ -309,6 +350,7 @@ class FatTree (Topology):
   def __init__(self, num_pods=4):
     if num_pods < 2:
       raise "Can't handle Fat Trees with less than 2 pods"
+    Topology.__init__(self)
     self.hosts = []
     self.cores = []
     self.aggs = []
