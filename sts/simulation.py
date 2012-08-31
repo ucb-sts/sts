@@ -22,7 +22,8 @@ log = logging.getLogger("simulation")
 class Simulation (object):
   """
   Maintains the current state of:
-    - The controllers
+    - The controllers: a map from the controller uuid to the Controller
+      object. See ControllerConfig for more details.
     - The topology
     - Dataplane forwarding
     - (Optionally) the dataplane trace
@@ -33,7 +34,10 @@ class Simulation (object):
   """
   def __init__(self, controllers, topology, patch_panel_class,
                dataplane_trace=None):
-    self.controllers = controllers
+    self.uuid2controller = {
+      controller.uuid : controller
+      for controller in controllers
+      }
     self.topology = topology
     self.patch_panel = patch_panel_class(topology.switches, topology.hosts,
                                          topology.get_connected_port)

@@ -121,10 +121,10 @@ signal.signal(signal.SIGTERM, handle_int)
 try:
   # Boot the controllers
   controllers = []
-  for (i, c) in enumerate(controller_configs):
-    controller = Controller(c, i)
-    log.info("Launched controller c%d: %s [PID %d]" %
-             (i, " ".join(c.cmdline), controller.pid))
+  for c in controller_configs:
+    controller = Controller(c)
+    log.info("Launched controller c%s: %s [PID %d]" %
+             (str(c.uuid), " ".join(c.cmdline), controller.pid))
     controllers.append(controller)
 
   io_loop = RecocoIOLoop()

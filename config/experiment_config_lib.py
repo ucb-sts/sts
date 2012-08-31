@@ -26,3 +26,7 @@ class ControllerConfig(object):
     self.cmdline = map(lambda(x): string.replace(x, "__port__", str(port)),
                        map(lambda(x): string.replace(x, "__address__",
                                                      str(address)), cmdline.split()))
+
+  @property
+  def uuid(self):
+    return (self.address, self.port)
