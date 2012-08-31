@@ -35,6 +35,7 @@ from pox.lib.util import connect_socket_with_backoff
 from config.experiment_config_lib import ControllerConfig
 from pox.lib.recoco.recoco import Scheduler
 from sts.entities import Controller
+from traces.trace import Trace
 
 import signal
 import sys
@@ -93,8 +94,8 @@ else:
   simulator = Fuzzer()
 
 # For injecting dataplane packets into the simulated network
-if hasattr(config, 'dataplane_trace'):
-  dataplane_trace = config.dataplane_trace
+if hasattr(config, 'dataplane_trace') and config.dataplane_trace:
+  dataplane_trace = Trace(config.dataplane_trace, topology)
 else:
   # We default to no dataplane trace
   dataplane_trace = None

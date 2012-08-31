@@ -231,9 +231,9 @@ class Controller(object):
       else:
         self.kill() # make sure it is killed if this was started errantly
 
-  def __init__(self, controller_config, idx):
+  def __init__(self, controller_config, uuid):
     '''idx is the unique index for the controller used mostly for logging purposes.'''
-    self.idx = idx
+    self.uuid = uuid
     self.config = controller_config
     self.start()
 
@@ -251,7 +251,7 @@ class Controller(object):
     '''Start a new controller process based on the config's cmdline
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process.'''
-    self.process = popen_filtered("c%d" % self.idx, self.config.cmdline)
+    self.process = popen_filtered("c%d" % self.uuid, self.config.cmdline)
     self._register_proc(self.process)
 
     if self.config.nom_port:

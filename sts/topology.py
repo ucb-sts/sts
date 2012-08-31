@@ -191,8 +191,6 @@ class Topology(object):
     self.cut_links = set()
     # SwitchImpl objects
     self.failed_switches = set()
-    # topology.Controller objects
-    self.failed_controllers = set()
 
   @property
   def live_switches(self):
