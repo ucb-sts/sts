@@ -249,6 +249,38 @@ class Topology(object):
     link.start_switch_impl.bring_port_up(link.start_port)
     self.cut_links.remove(link)
 
+  def permit_cp_send(self, connection):
+    # pre: switch_impl.io_worker.has_pending_sends()
+    msg.event("Giving permission for control plane send for %s" % connection)
+    connection.io_worker.permit_send()
+
+  def delay_cp_send(self, connection):
+    msg.event("Delaying control plane send for %s" % connection)
+    # update # delayed rounds?
+
+  def permit_cp_receive(self, connection):
+    # pre: switch_impl.io_worker.has_pending_sends()
+    msg.event("Giving permission for control plane receive for %s" % connection)
+    connection.io_worker.permit_receive()
+
+  def delay_cp_receive(self, connection):
+    msg.event("Delaying control plane receive for %s" % connection)
+    # update # delayed rounds?
+
+  @property
+  def cp_connections_with_pending_receives(self):
+    for switch_impl in self.live_switches:
+      for c in switch_impl.connections:
+        if c.io_worker.has_pending_receives():
+          yield c
+
+  @property
+  def cp_connections_with_pending_sends(self):
+    for switch_impl in self.live_switches:
+      for c in switch_impl.connections:
+        if c.io_worker.has_pending_sends():
+          yield c
+
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
     Bind sockets from the switch_impls to the controllers. For now, assign each switch to the next

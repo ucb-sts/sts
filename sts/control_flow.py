@@ -153,14 +153,14 @@ class Fuzzer(ControlFlow):
         permit_function(connection)
 
     # Check reads
-    for connection in self.simulation.cp_connections_with_pending_receives:
-      check_deliver(connection, self.simulation.delay_cp_receive,
-                    self.simulation.permit_cp_receive)
+    for connection in self.simulation.topology.cp_connections_with_pending_receives:
+      check_deliver(connection, self.simulation.topology.delay_cp_receive,
+                    self.simulation.topology.permit_cp_receive)
 
     # Check writes
-    for connection in self.simulation.cp_connections_with_pending_sends:
-      check_deliver(connection, self.simulation.delay_cp_send,
-                    self.simulation.permit_cp_send)
+    for connection in self.simulation.topology.cp_connections_with_pending_sends:
+      check_deliver(connection, self.simulation.topology.delay_cp_send,
+                    self.simulation.topology.permit_cp_send)
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
