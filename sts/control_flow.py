@@ -13,6 +13,7 @@ from invariant_checker import InvariantChecker
 from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.console import msg
+import log_parsing.superlog_parser as superlog_parser
 
 import os
 import time
@@ -35,9 +36,9 @@ class Replayer(ControlFlow):
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
   '''
-  def __init__(self, dag):
+  def __init__(self, superlog_path):
     ControlFlow.__init__(self)
-    self.dag = dag
+    self.dag = superlog_parser.parse(superlog_path)
 
   def simulate(self, simulation):
     self.simulation = simulation
