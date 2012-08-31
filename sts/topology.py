@@ -95,7 +95,7 @@ class PatchPanel(object):
   """
   def __init__(self, switches, hosts, connected_port_mapping):
     '''
-    Constructor.
+    Constructor
      - switches: a list of the switches in the network
      - hosts: a list of hosts in the network
      - connected_port_mapping: a function which takes (switch_no, port_no, dpid2switch),
@@ -104,7 +104,7 @@ class PatchPanel(object):
     self.switches = sorted(switches, key=lambda(sw): sw.dpid)
     self.get_connected_port = connected_port_mapping
     self.hosts = hosts
-    for i, s in enumerate(self.switches):
+    for s in self.switches:
       s.addListener(DpPacketOut, self.handle_DpPacketOut)
     for host in self.hosts:
       host.addListener(DpPacketOut, self.handle_DpPacketOut)
