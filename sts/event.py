@@ -6,7 +6,6 @@ Author: sw
 
 import abc
 
-
 class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either
   InternalEvents or ExternalEvents to do pre and post functionality.'''
