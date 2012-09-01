@@ -163,23 +163,23 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     for host in self.hosts:
       host.addListener(DpPacketOut, handle_DpPacketOut)
 
-  def permit_dp_event(self, event):
+  def permit_dp_event(self, dp_event):
     ''' Given a SwitchDpPacketOut event, permit it to be forwarded  '''
     # TODO(cs): self.forward_packet should not be externally visible!
     # Superclass DpPacketOut handler
     msg.event("Forwarding dataplane event")
-    self.handle_DpPacketOut(event)
-    self.buffered_dp_out_events.remove(event)
+    self.handle_DpPacketOut(dp_event)
+    self.buffered_dp_out_events.remove(dp_event)
 
-  def drop_dp_event(self, event):
+  def drop_dp_event(self, dp_event):
     '''
     Given a SwitchDpPacketOut event, remove it from our buffer, and do not forward.
     Return the dropped event.
     '''
     msg.event("Dropping dataplane event")
-    self.buffered_dp_out_events.remove(event)
+    self.buffered_dp_out_events.remove(dp_event)
     self.dropped_dp_events.append(dp_event)
-    return event
+    return dp_event
 
   def delay_dp_event(self, dp_event):
     msg.event("Delaying dataplane event")
