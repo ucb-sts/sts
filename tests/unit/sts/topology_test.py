@@ -12,7 +12,7 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 from sts.topology import *
 from sts.traffic_generator import *
 from pox.lib.ioworker.io_worker import RecocoIOLoop
-from pox.openflow.switch_impl import SwitchImpl
+from pox.openflow.software_switch import SoftwareSwitch
 from pox.lib.graph.graph import Graph
 from sts.entities import Host, HostInterface
 
@@ -91,8 +91,8 @@ class topology_test(unittest.TestCase):
     # Make sure that all network links are accounted for
     self.assertTrue(len(mesh.network_links) == len(mesh.switches) * (len(mesh.switches) - 1))
     for link in mesh.network_links:
-      self.assertTrue((link.start_switch_impl, link.start_port) in sw_port_pairs)
-      self.assertTrue((link.end_switch_impl, link.end_port) in sw_port_pairs)
+      self.assertTrue((link.start_software_switch, link.start_port) in sw_port_pairs)
+      self.assertTrue((link.end_software_switch, link.end_port) in sw_port_pairs)
 
 class FullyMeshedLinkTest(unittest.TestCase):
   _io_loop = RecocoIOLoop()
@@ -121,7 +121,7 @@ class TopologyUnitTest(unittest.TestCase):
   _io_ctor = _io_loop.create_worker_for_socket
 
   def setUp(self):
-    class MockSwitch(SwitchImpl):
+    class MockSwitch(SoftwareSwitch):
       _eventMixin_events = set([DpPacketOut])
 
       def __init__(self, dpid, ports):
@@ -170,7 +170,7 @@ class BufferedPanelTest(unittest.TestCase):
   _io_ctor = _io_loop.create_worker_for_socket
 
   def setUp(self):
-    class MockSwitch(SwitchImpl):
+    class MockSwitch(SoftwareSwitch):
       _eventMixin_events = set([DpPacketOut])
 
       def __init__(self, dpid, ports):

@@ -45,13 +45,15 @@ class Replayer(ControlFlow):
 
   def simulate(self, simulation):
     self.simulation = simulation
+    logical_round = 0
 
     def increment_round():
-      simulation.forward_data()
       # TODO(cs): complete this method
+      logical_round += 1
+
     for pruned_event in dag.events():
-      for event in dag.events(pruned_event):
-        event.run(simulation)
+      for event_watcher in dag.event_watchers(pruned_event):
+        event_watcher.run(simulation)
         self.increment_round(simulation)
 
 class Fuzzer(ControlFlow):
@@ -83,7 +85,6 @@ class Fuzzer(ControlFlow):
     try:
       self.params = __import__(fuzzer_params_path, globals(), locals(), ["*"])
     except:
-      # TODO(cs): default values in case fuzzer_config is not present / missing directives
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
 
@@ -170,18 +171,18 @@ class Fuzzer(ControlFlow):
     ''' Decide whether to crash or restart switches, links and controllers '''
     def crash_switches():
       crashed_this_round = set()
-      for switch_impl in self.simulation.topology.live_switches:
+      for software_switch in self.simulation.topology.live_switches:
         if self.random.random() < self.params.switch_failure_rate:
-          crashed_this_round.add(switch_impl)
-          self.simulation.topology.crash_switch(switch_impl)
+          crashed_this_round.add(software_switch)
+          self.simulation.topology.crash_switch(software_switch)
       return crashed_this_round
 
     def restart_switches(crashed_this_round):
-      for switch_impl in self.simulation.topology.failed_switches:
-        if switch_impl in crashed_this_round:
+      for software_switch in self.simulation.topology.failed_switches:
+        if software_switch in crashed_this_round:
           continue
         if self.random.random() < self.params.switch_recovery_rate:
-          self.simulation.topology.recover_switch(switch_impl)
+          self.simulation.topology.recover_switch(software_switch)
 
     def sever_links():
       # TODO(cs): model administratively down links? (OFPPC_PORT_DOWN)
@@ -211,13 +212,13 @@ class Fuzzer(ControlFlow):
   def fuzz_traffic(self):
     if not self.simulation.dataplane_trace:
       # randomly generate messages from switches
-      for switch_impl in self.simulation.topology.live_switches:
+      for software_switch in self.simulation.topology.live_switches:
         if self.random.random() < self.params.traffic_generation_rate:
-          if len(switch_impl.ports) > 0:
+          if len(software_switch.ports) > 0:
             msg.event("injecting a random packet")
             traffic_type = "icmp_ping"
-            # Generates a packet, and feeds it to the switch_impl
-            self.traffic_generator.generate(traffic_type, switch_impl)
+            # Generates a packet, and feeds it to the software_switch
+            self.traffic_generator.generate(traffic_type, software_switch)
 
 class Interactive(ControlFlow):
   '''

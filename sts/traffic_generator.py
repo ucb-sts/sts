@@ -15,21 +15,21 @@ class TrafficGenerator (object):
       "icmp_ping" : self.icmp_ping
     }
 
-  def generate(self, packet_type, switch_impl):
+  def generate(self, packet_type, software_switch):
     if packet_type not in self._packet_generators:
       raise AttributeError("Unknown event type %s" % str(packet_type))
 
-    # Feed the packet to the switch_impl
+    # Feed the packet to the software_switch
     # TODO(cs): just use access links for packet ins -- not packets from within the network
-    in_port = self.random.choice(switch_impl.ports.values())
-    packet = self._packet_generators[packet_type](switch_impl, in_port)
-    return switch_impl.process_packet(packet, in_port=in_port.port_no)
+    in_port = self.random.choice(software_switch.ports.values())
+    packet = self._packet_generators[packet_type](software_switch, in_port)
+    return software_switch.process_packet(packet, in_port=in_port.port_no)
 
-  # Generates an ICMP ping, and feeds it to the switch_impl_impl
-  def icmp_ping(self, switch_impl, in_port):
+  # Generates an ICMP ping, and feeds it to the software_switch
+  def icmp_ping(self, software_switch, in_port):
     # randomly choose an in_port.
-    if len(switch_impl.ports) == 0:
-      raise RuntimeError("No Ports Registered on switch_impl! %s" % str(switch_impl))
+    if len(software_switch.ports) == 0:
+      raise RuntimeError("No Ports Registered on software_switch! %s" % str(software_switch))
     e = ethernet()
     # TODO(cs): need a better way to create random MAC addresses
     e.src = EthAddr(struct.pack("Q",self.random.randint(1,0xFF))[:6])

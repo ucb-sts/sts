@@ -31,6 +31,10 @@ class EventDag(object):
       if should_yield(event):
         yield event
 
+  def event_watchers(self, pruned_event=None):
+    for event in self.events(pruned_event):
+      yield EventWatcher(event)
+
 class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either
   InternalEvents or ExternalEvents to perform pre and post functionality.'''
@@ -56,13 +60,14 @@ class Event(object):
   __metaclass__ = abc.ABCMeta
 
   def __init__(self, json_hash):
-   assert('label' in json_hash)
-   assert('class' in json_hash)
+    assert('label' in json_hash)
+    self.label = json_hash['label']
 
-  # TODO(cs): uncomment me
-  #@abc.abstractmethod
+  @abc.abstractmethod
   def proceed(self, simulation):
-    '''Returns a boolean that is true if the Replayer may continue to the next round.'''
+    '''Executes a single `round'. Returns a boolean that is true if the
+    Replayer may continue to the next Event, otherwise proceed() again
+    later.'''
     pass
 
 # -------------------------------------------------------- #
@@ -76,6 +81,9 @@ class InternalEvent(Event):
   def __init__(self, json_hash):
     super(InternalEvent, self).__init__(json_hash)
     # TODO(sw): fingerprinting! this is why we need a separate class for internal events!
+
+  def proceed(self, simulation):
+    pass
 
 class InputEvent(Event):
   '''An event that the simulator injects into the simulation. These events are
@@ -106,44 +114,83 @@ class SwitchFailure(InputEvent):
   def __init__(self, json_hash):
     super(InputEvent, self).__init__(json_hash)
     assert_switch(json_hash)
+    self.dpid = json_hash['dpid']
+
+  def proceed(self, simulation):
+    software_switch = self.simulation.topology.dpid2switch[self.dpid]
+    return True
 
 class SwitchRecovery(InputEvent):
   def __init__(self, json_hash):
     super(InputEvent, self).__init__(json_hash)
     assert_switch(json_hash)
+    self.dpid = json_hash['dpid']
+
+  def proceed(self, simulation):
+    pass
 
 class LinkFailure(InputEvent):
   def __init__(self, json_hash):
     super(InputEvent, self).__init__(json_hash)
     assert_link(json_hash)
+    self.dpid = json_hash['dpid']
+    self.port_no = json_hash['port_no']
+
+  def proceed(self, simulation):
+    pass
 
 class LinkRecovery(InputEvent):
   def __init__(self, json_hash):
     super(InputEvent, self).__init__(json_hash)
     assert_link(json_hash)
+    self.dpid = json_hash['dpid']
+    self.port_no = json_hash['port_no']
+
+  def proceed(self, simulation):
+    pass
 
 class ControllerFailure(InputEvent):
   def __init__(self, json_hash):
     super(InputEvent, self).__init__(json_hash)
     assert_controller(json_hash)
+    self.dpid = json_hash['dpid']
+    self.port_no = json_hash['port_no']
+
+  def proceed(self, simulation):
+    pass
 
 class ControllerRecovery(InputEvent):
   def __init__(self, json_hash):
     super(InputEvent, self).__init__(json_hash)
     assert_controller(json_hash)
+    self.uuid = json_hash['uuid']
+
+  def proceed(self, simulation):
+    pass
 
 class HostMigration(InputEvent):
   def __init__(self, json_hash):
     super(InputEvent, self).__init__(json_hash)
     assert('old_ingress_dpid' in json_hash)
+    self.old_ingress_dpid = json_hash['old_ingress_dpid']
     assert('old_ingress_port_no' in json_hash)
+    self.old_ingress_port_no = json_hash['old_ingress_port_no']
     assert('new_ingress_dpid' in json_hash)
+    self.new_ingress_dpid = json_hash['new_ingress_dpid']
     assert('new_ingress_port_no' in json_hash)
+    self.new_ingress_port_no = json_hash['new_ingress_port_no']
+
+  def proceed(self, simulation):
+    pass
 
 class PolicyChange(InputEvent):
   def __init__(self, json_hash):
     super(InputEvent, self).__init__(json_hash)
     assert('request_type' in json_hash)
+    self.request_type = json_hash['request_type']
+
+  def proceed(self, simulation):
+    pass
 
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,

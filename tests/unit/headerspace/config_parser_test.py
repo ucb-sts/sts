@@ -10,7 +10,7 @@ import types
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 from sts.topology import *
-from pox.openflow.switch_impl import SwitchImpl
+from pox.openflow.software_switch import SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
 from headerspace.config_parser.openflow_parser import generate_transfer_function, HS_FORMAT
 from headerspace.headerspace.tf import *

@@ -8,7 +8,7 @@ from headerspace.headerspace.tf import *
 from headerspace.headerspace.hs import *
 from pox.openflow.libopenflow_01 import *
 from pox.openflow.flow_table import SwitchFlowTable, TableEntry
-from pox.openflow.switch_impl import SwitchImpl
+from pox.openflow.software_switch import SoftwareSwitch
 
 import re
 from collections import namedtuple
@@ -257,7 +257,7 @@ def ofp_actions_to_hsa_rewrite(ofp_actions):
     set_field(mask, "vlan_pcp", 0)
     set_field(rewrite, "vlan_pcp", action.vlan_pcp)
   def strip_vlan(action):
-    # TODO: Is this a bug in switch_impl? Two pcps...
+    # TODO: Is this a bug in software_switch? Two pcps...
     set_field(mask, "vlan", 0)
     set_field(rewrite, "vlan", 0)
   def set_dl_src(action):
@@ -409,7 +409,7 @@ def of_action_from_protobuf_action(protobuf_action):
 def tf_from_protobuf_switch(ntf, rules, real_switch):
   # clone the real switch, insert flow entries from policy, run
   # generate_transfer_function()
-  dummy_switch = SwitchImpl(real_switch.dpid, ports=real_switch.ports.values())
+  dummy_switch = SoftwareSwitch(real_switch.dpid, ports=real_switch.ports.values())
   for rule in rules:
     flow_entry = rule.to_entry()
 

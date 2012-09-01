@@ -16,8 +16,8 @@ of switches, with one host connected to each switch. For example, with N = 3:
                   host3
 '''
 
-from entities import FuzzSwitchImpl, Link, Host, HostInterface, AccessLink
-from pox.openflow.switch_impl import ofp_phy_port, DpPacketOut, SwitchImpl
+from entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink
+from pox.openflow.software_switch import ofp_phy_port, DpPacketOut, SoftwareSwitch
 from pox.lib.addresses import EthAddr, IPAddr
 from pox.openflow.libopenflow_01 import *
 from pox.lib.util import connect_socket_with_backoff
@@ -45,7 +45,7 @@ def create_switch(switch_id, num_ports):
   def unitialized_io_worker(switch):
     raise SystemError("Not initialialized")
 
-  return FuzzSwitchImpl(create_io_worker=unitialized_io_worker,
+  return FuzzSoftwareSwitch(create_io_worker=unitialized_io_worker,
                         dpid=switch_id, name="SoftSwitch(%d)" % switch_id,
                         ports=ports)
 
@@ -142,7 +142,7 @@ def BufferedPatchPanelForTopology(topology):
   Given a pox.lib.graph.graph object with hosts, switches, and other things,
   produce an appropriate BufferedPatchPanel
   """
-  return BufferedPatchPanel(topology.find(is_a=SwitchImpl), topology.find(is_a=Host), \
+  return BufferedPatchPanel(topology.find(is_a=SoftwareSwitch), topology.find(is_a=Host), \
                             lambda node, port:topology.port_for_node(node, port))
 
 class BufferedPatchPanel(PatchPanel, EventMixin):
@@ -202,18 +202,28 @@ class Topology(object):
   the network.
   '''
   def __init__(self):
-    self.switches = []
+    self.dpid2switch = {}
     self.network_links = set()
 
     # Metatdata for simulated failures
     # sts.entities.Link objects
     self.cut_links = set()
-    # SwitchImpl objects
+    # SoftwareSwitch objects
     self.failed_switches = set()
+
+  def _populate_dpid2switch(self, switches):
+    self.dpid2switch = {
+      switch.dpid : switch
+      for switch in switches
+    }
+
+  @property
+  def switches(self):
+    return self.dpid2switch.values()
 
   @property
   def live_switches(self):
-    """ Return the switch_impls which are currently up """
+    """ Return the software_switchs which are currently up """
     return set(self.switches) - self.failed_switches
 
   def ok_to_send(self, dp_event):
@@ -229,15 +239,15 @@ class Topology(object):
         return True
       return False
 
-  def crash_switch(self, switch_impl):
-    msg.event("Crashing switch_impl %s" % str(switch_impl))
-    switch_impl.fail()
-    self.failed_switches.add(switch_impl)
+  def crash_switch(self, software_switch):
+    msg.event("Crashing software_switch %s" % str(software_switch))
+    software_switch.fail()
+    self.failed_switches.add(software_switch)
 
-  def recover_switch(self, switch_impl):
-    msg.event("Rebooting switch_impl %s" % str(switch_impl))
-    switch_impl.recover()
-    self.failed_switches.remove(switch_impl)
+  def recover_switch(self, software_switch):
+    msg.event("Rebooting software_switch %s" % str(software_switch))
+    software_switch.recover()
+    self.failed_switches.remove(software_switch)
 
   @property
   def live_links(self):
@@ -246,15 +256,15 @@ class Topology(object):
   def sever_link(self, link):
     msg.event("Cutting link %s" % str(link))
     self.cut_links.add(link)
-    link.start_switch_impl.take_port_down(link.start_port)
+    link.start_software_switch.take_port_down(link.start_port)
 
   def repair_link(self, link):
     msg.event("Restoring link %s" % str(link))
-    link.start_switch_impl.bring_port_up(link.start_port)
+    link.start_software_switch.bring_port_up(link.start_port)
     self.cut_links.remove(link)
 
   def permit_cp_send(self, connection):
-    # pre: switch_impl.io_worker.has_pending_sends()
+    # pre: software_switch.io_worker.has_pending_sends()
     msg.event("Giving permission for control plane send for %s" % connection)
     connection.io_worker.permit_send()
 
@@ -263,7 +273,7 @@ class Topology(object):
     # update # delayed rounds?
 
   def permit_cp_receive(self, connection):
-    # pre: switch_impl.io_worker.has_pending_sends()
+    # pre: software_switch.io_worker.has_pending_sends()
     msg.event("Giving permission for control plane receive for %s" % connection)
     connection.io_worker.permit_receive()
 
@@ -273,21 +283,21 @@ class Topology(object):
 
   @property
   def cp_connections_with_pending_receives(self):
-    for switch_impl in self.live_switches:
-      for c in switch_impl.connections:
+    for software_switch in self.live_switches:
+      for c in software_switch.connections:
         if c.io_worker.has_pending_receives():
           yield c
 
   @property
   def cp_connections_with_pending_sends(self):
-    for switch_impl in self.live_switches:
-      for c in switch_impl.connections:
+    for software_switch in self.live_switches:
+      for c in software_switch.connections:
         if c.io_worker.has_pending_sends():
           yield c
 
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
-    Bind sockets from the switch_impls to the controllers. For now, assign each
+    Bind sockets from the software_switchs to the controllers. For now, assign each
     switch to the next controller in the list in a round robin fashion.
 
     Controller info list is a list of
@@ -302,7 +312,7 @@ class Topology(object):
                  ''' conns per switch)...''' %
                 (len(self.switches), len(controller_info_list), connections_per_switch))
 
-    for (idx, switch_impl) in enumerate(self.switches):
+    for (idx, software_switch) in enumerate(self.switches):
       if len(self.switches) < 20 or not idx % 250:
         logger.debug("Connecting switch %d / %d" % (idx, len(self.switches)))
 
@@ -312,15 +322,15 @@ class Topology(object):
         # Set non-blocking
         controller_socket.setblocking(0)
         return io_worker_generator(controller_socket)
-      switch_impl.create_io_worker = create_io_worker
+      software_switch.create_io_worker = create_io_worker
 
       # TODO(cs): what if the controller is slow to boot?
-      # Socket from the switch_impl to the controller
+      # Socket from the software_switch to the controller
       for i in xrange(connections_per_switch):
         controller_info = controller_info_cycler.next()
-        switch_impl.add_controller_info(controller_info)
+        software_switch.add_controller_info(controller_info)
 
-      switch_impl.connect()
+      software_switch.connect()
 
     logger.debug("Controller connections done")
 
@@ -332,11 +342,11 @@ class Topology(object):
      """
      topology = Topology()
      topology.hosts = graph.find(is_a=Host)
-     topology.switches = graph.find(is_a=SwitchImpl)
+     topology.switches = graph.find(is_a=SoftwareSwitch)
      topology.access_links = [AccessLink(host, switch[0], switch[1][0], switch[1][1])
                               for host in hosts
                               for switch in filter(
-                                  lambda n: isinstance(n[1][0], SwitchImpl),
+                                  lambda n: isinstance(n[1][0], SoftwareSwitch),
                                   graph.ports_for_node(host).iteritems())]
      return topology
 
@@ -353,8 +363,9 @@ class MeshTopology(Topology):
     ports_per_switch = (num_switches - 1) + 1
 
     # Initialize switches
-    self.switches = [ create_switch(switch_id, ports_per_switch)
-                      for switch_id in range(1, num_switches+1) ]
+    switches = [ create_switch(switch_id, ports_per_switch)
+                  for switch_id in range(1, num_switches+1) ]
+    self._populate_dpid2switch(switches)
     host_access_link_pairs = [ create_host(switch) for switch in self.switches ]
     self.hosts = map(lambda pair: pair[0], host_access_link_pairs)
     access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
@@ -432,7 +443,7 @@ class FatTree (Topology):
     # But internal links are uni-directional?
     self.network_links = set()
 
-    self.switches = []
+    self.dpid2switch = {}
     self.construct_tree(num_pods)
 
   def construct_tree(self, num_pods):
@@ -541,7 +552,8 @@ class FatTree (Topology):
         self.network_links.add(Link(core, core.ports[core_port_no], agg,
                                     agg.ports[agg_port_no]))
 
-    self.switches = self.cores + self.aggs + self.edges
+    switches = self.cores + self.aggs + self.edges
+    self._populate_dpid2switch(switches)
     self.wire_tree()
     self._sanity_check_tree()
     logger.debug('''Fat tree construction: done (%d cores, %d aggs,'''
@@ -674,5 +686,5 @@ class FatTree (Topology):
       return (access_link.switch, access_link.switch_port)
     if port in self.port2internal_link:
       link = self.port2internal_link[port]
-      return (link.end_switch_impl, link.end_port)
+      return (link.end_software_switch, link.end_port)
     raise RuntimeError("Node %s Port %s not in network" % (str(node), str(port)))

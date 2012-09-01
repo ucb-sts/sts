@@ -3,8 +3,8 @@ This module mocks out openflow switches, links, and hosts. These are all the
 'entities' that exist within our simulated environment.
 """
 
-from pox.openflow.switch_impl import SwitchImpl, DpPacketOut
-from pox.openflow.nx_switch_impl import NXSwitchImpl
+from pox.openflow.software_switch import SoftwareSwitch, DpPacketOut
+from pox.openflow.nx_software_switch import NXSoftwareSwitch
 from pox.lib.util import connect_socket_with_backoff, assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
@@ -14,18 +14,18 @@ import logging
 import pickle
 import signal
 
-class FuzzSwitchImpl (NXSwitchImpl):
+class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
   A mock switch implementation for testing purposes. Can simulate dropping dead.
   """
   def __init__ (self, create_io_worker, dpid, name=None, ports=4, miss_send_len=128,
                 n_buffers=100, n_tables=1, capabilities=None):
-    NXSwitchImpl.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
+    NXSoftwareSwitch.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
 
     self.create_io_worker = create_io_worker
 
     self.failed = False
-    self.log = logging.getLogger("FuzzSwitchImpl(%d)" % dpid)
+    self.log = logging.getLogger("FuzzSoftwareSwitch(%d)" % dpid)
 
     def error_handler(e):
       self.log.exception(e)
@@ -75,8 +75,8 @@ class FuzzSwitchImpl (NXSwitchImpl):
     # Can't serialize files
     serializable.log = None
     # TODO(cs): need a cleaner way to add in the NOM port representation
-    if self.switch_impl:
-      serializable.ofp_phy_ports = self.switch_impl.ports.values()
+    if self.software_switch:
+      serializable.ofp_phy_ports = self.software_switch.ports.values()
     return pickle.dumps(serializable, protocol=0)
 
 class Link (object):
@@ -87,29 +87,29 @@ class Link (object):
 
   Note: Directed!
   """
-  def __init__(self, start_switch_impl, start_port, end_switch_impl, end_port):
+  def __init__(self, start_software_switch, start_port, end_software_switch, end_port):
     assert_type("start_port", start_port, ofp_phy_port, none_ok=False)
     assert_type("end_port", end_port, ofp_phy_port, none_ok=False)
-    self.start_switch_impl = start_switch_impl
+    self.start_software_switch = start_software_switch
     self.start_port = start_port
-    self.end_switch_impl = end_switch_impl
+    self.end_software_switch = end_software_switch
     self.end_port = end_port
 
   def __eq__(self, other):
     if not type(other) == Link:
       return False
-    return (self.start_switch_impl == other.start_switch_impl and
+    return (self.start_software_switch == other.start_software_switch and
            self.start_port == other.start_port and
-           self.end_switch_impl == other.end_switch_impl and
+           self.end_software_switch == other.end_software_switch and
            self.end_port == other.end_port)
 
   def __hash__(self):
-    return (self.start_switch_impl.__hash__() +  self.start_port.__hash__() +
-           self.end_switch_impl.__hash__() +  self.end_port.__hash__())
+    return (self.start_software_switch.__hash__() +  self.start_port.__hash__() +
+           self.end_software_switch.__hash__() +  self.end_port.__hash__())
 
   def __repr__(self):
-    return "(%d:%d) -> (%d:%d)" % (self.start_switch_impl.dpid, self.start_port.port_no,
-                                   self.end_switch_impl.dpid, self.end_port.port_no)
+    return "(%d:%d) -> (%d:%d)" % (self.start_software_switch.dpid, self.start_port.port_no,
+                                   self.end_software_switch.dpid, self.end_port.port_no)
 
 class AccessLink (object):
   '''
