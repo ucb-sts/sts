@@ -1,12 +1,11 @@
 '''
-Parses `superlog`s and returns a list of Event objects, each with their
-dependencies filled in.
+Parses `superlog's and returns a list of sts.event.Event objects
 
-`superlog` format: Each line is a json hash representing either an internal
+`superlog' format: Each line is a json hash representing either an internal
 event or an external input event.
 
 Event hashes must have at least the following keys:
-  'label':            any unique non-whitespace identifier
+  'label':            any unique identifier
   'class':            the name of the corresponding python class that
                       encapsulates this event type, e.g. 'LinkFailure'.
                       These classes can be found in sts/event.py
@@ -27,7 +26,7 @@ input_name_to_class = {
   for klass in event.all_input_events
 }
 
-internal_event_name_to_class {
+internal_event_name_to_class = {
   klass.__name__ : klass
   for klass in event.all_internal_events
 }
@@ -43,8 +42,8 @@ def check_unique_label(event_label, existing_event_labels):
 
 def sanity_check_external_input_event(existing_event_labels, dependent_labels,
                                       json_hash):
-  '''Takes an external event json hash and checks that invariants hold.
-  Raises an exception if they do not hold. Otherwise populates
+  '''Takes an external event json hash and checks that no dependents have
+  already occured. Raises an exception if any have, otherwise populates
   dependent_labels'''
   dependents = set(json_hash['dependent_labels'])
   # can't have dependents that have already happened!
@@ -53,12 +52,16 @@ def sanity_check_external_input_event(existing_event_labels, dependent_labels,
 
 def sanity_check_internal_event(existing_event_labels, dependent_labels,
                                 json_hash):
-  '''Takes an internal event json hash and checks that invariants hold.
-  Raises an exception if they do not hold. Otherwise updates
-  dependent_labels'''
+  '''Takes an internal event json hash and removes it from the set of
+  dependent labels that must be present before the end of the log.
+  '''
   dependent_labels.discard(json_hash['label'])
 
-def parse(logfile_path):
+def parse_path(logfile_path):
+  with open(logfile_path) as logfile:
+    return parse(logfile)
+
+def parse(logfile):
   '''Input: path to a logfile.
 
   Output: A list of all the internal and external events in the order in which
@@ -69,29 +72,29 @@ def parse(logfile_path):
   trace = []
   # a set of all event labels
   event_labels = set()
-  # dependent labels that have to be satisfied by future internal events
+  # dependent labels that must be present somewhere in the log.
   dependent_labels = set()
 
-  with open(logfile_path, 'r') as log_file:
-    for line in log_file:
-      try:
-        json_hash = json.loads(line.rstrip())
-        check_unique_label(json_hash['label'], event_labels)
-        if json_hash['class'] in input_name_to_class:
-          sanity_check_external_input_event(existing_event_labels,
-                                            dependent_labels,
-                                            json_hash)
-          event = input_name_to_class[json['class']](json_hash)
-         elif json_hash['class'] in internal_event_name_to_class:
-           sanity_check_internal_event(existing_event_labels, dependent_labels,
-                                       json_hash)
-           event = internal_event_name_to_class[json['class']](json_hash)
-         else:
-           log.warn("Unknown class type %s" % json_hash['class'])
-         trace.append(event)
-      else:
-       log.warn("Ignoring unknown line format: " % line)
+  line_count = 0
+  for line in logfile:
+    line_count += 1
+    json_hash = json.loads(line.rstrip())
+    check_unique_label(json_hash['label'], event_labels)
+    if json_hash['class'] in input_name_to_class:
+      sanity_check_external_input_event(event_labels,
+                                        dependent_labels,
+                                        json_hash)
+      event = input_name_to_class[json_hash['class']](json_hash)
+    elif json_hash['class'] in internal_event_name_to_class:
+      sanity_check_internal_event(event_labels, dependent_labels,
+                                  json_hash)
+      event = internal_event_name_to_class[json_hash['class']](json_hash)
+    else:
+      log.warn("Unknown class type %s" % json_hash['class'])
+      continue
+    trace.append(event)
 
+  assert(line_count != 0)
   # all the foward dependencies should be satisfied!
   assert(len(dependent_labels) == 0)
 

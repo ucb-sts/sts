@@ -13,6 +13,7 @@ from invariant_checker import InvariantChecker
 from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.console import msg
+from sts.event import EventDag
 import log_parsing.superlog_parser as superlog_parser
 
 import os
@@ -40,7 +41,7 @@ class Replayer(ControlFlow):
     ControlFlow.__init__(self)
     # The dag is codefied as a list, where each element has
     # a list of its dependents
-    self.dag = superlog_parser.parse(superlog_path)
+    self.dag = EventDag(superlog_parser.parse(superlog_path))
 
   def simulate(self, simulation):
     self.simulation = simulation
