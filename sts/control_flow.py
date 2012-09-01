@@ -38,6 +38,8 @@ class Replayer(ControlFlow):
   '''
   def __init__(self, superlog_path):
     ControlFlow.__init__(self)
+    # The dag is codefied as a list, where each element has
+    # a list of its dependents
     self.dag = superlog_parser.parse(superlog_path)
 
   def simulate(self, simulation):

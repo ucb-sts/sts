@@ -112,9 +112,15 @@ class HostMigration(InputEvent):
 class PolicyChange(InputEvent):
   pass
 
+all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
+                    ControllerFailure, ControllerRecover, HostMigration,
+                    PolicyChange]
+
 # Concrete classes of InternalEvents
 class MastershipChange(InternalEvent):
   pass
 
 class TimerEvent(InternalEvent):
   pass
+
+all_internal_events = [MastershipChange, TimerEvent]
