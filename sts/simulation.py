@@ -40,6 +40,10 @@ class Simulation (object):
 
     self.dataplane_trace = dataplane_trace
 
+  @property
+  def controllers(self):
+    return self.uuid2controller.values()
+
   # TODO(sw): put me in the Controller class
   def send_policy_request(self, controller, api_call):
     pass

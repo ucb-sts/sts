@@ -88,6 +88,12 @@ class Link (object):
   Note: Directed!
   """
   def __init__(self, start_software_switch, start_port, end_software_switch, end_port):
+    if type(start_port) == int:
+      assert(start_port in start_software_switch.ports)
+      start_port = start_software_switch.ports[start_port]
+    if type(end_port) == int:
+      assert(end_port in start_software_switch.ports)
+      end_port = end_software_switch.ports[end_port]
     assert_type("start_port", start_port, ofp_phy_port, none_ok=False)
     assert_type("end_port", end_port, ofp_phy_port, none_ok=False)
     self.start_software_switch = start_software_switch

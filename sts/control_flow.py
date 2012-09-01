@@ -41,20 +41,25 @@ class Replayer(ControlFlow):
     ControlFlow.__init__(self)
     # The dag is codefied as a list, where each element has
     # a list of its dependents
-    self.dag = EventDag(superlog_parser.parse(superlog_path))
+    self.dag = EventDag(superlog_parser.parse_path(superlog_path))
 
   def simulate(self, simulation):
     self.simulation = simulation
-    logical_round = 0
 
     def increment_round():
       # TODO(cs): complete this method
-      logical_round += 1
+      pass
 
-    for pruned_event in dag.events():
-      for event_watcher in dag.event_watchers(pruned_event):
+    # First, run through without pruning to verify that the violation exists
+    for event_watcher in self.dag.event_watchers():
+      event_watcher.run(simulation)
+      increment_round()
+
+    # Now start pruning
+    for pruned_event in self.dag.events():
+      for event_watcher in self.dag.event_watchers(pruned_event):
         event_watcher.run(simulation)
-        self.increment_round(simulation)
+        increment_round()
 
 class Fuzzer(ControlFlow):
   '''

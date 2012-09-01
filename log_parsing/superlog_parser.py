@@ -49,6 +49,9 @@ def sanity_check_external_input_event(existing_event_labels, dependent_labels,
   # can't have dependents that have already happened!
   assert(dependents.isdisjoint(existing_event_labels))
   dependent_labels.update(dependents)
+  # External input events can be dependents too (e.g. link recoveries are
+  # dependents of link failures)
+  dependent_labels.discard(json_hash['label'])
 
 def sanity_check_internal_event(existing_event_labels, dependent_labels,
                                 json_hash):
@@ -58,11 +61,16 @@ def sanity_check_internal_event(existing_event_labels, dependent_labels,
   dependent_labels.discard(json_hash['label'])
 
 def parse_path(logfile_path):
+  '''Input: path to a logfile.
+
+  Output: A list of all the internal and external events in the order in which
+  they exist in the logfile. Each internal event is annotated with the set of
+  source events that are necessary conditions for its occurence.'''
   with open(logfile_path) as logfile:
     return parse(logfile)
 
 def parse(logfile):
-  '''Input: path to a logfile.
+  '''Input: logfile.
 
   Output: A list of all the internal and external events in the order in which
   they exist in the logfile. Each internal event is annotated with the set of

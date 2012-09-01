@@ -31,7 +31,7 @@ import sys
 import itertools
 import logging
 
-logger = logging.getLogger("sts.topology")
+log = logging.getLogger("sts.topology")
 
 def create_switch(switch_id, num_ports):
   ports = []
@@ -255,13 +255,24 @@ class Topology(object):
 
   def sever_link(self, link):
     msg.event("Cutting link %s" % str(link))
+    if link not in self.network_links:
+      raise ValueError("unknown link %s" % str(link))
+    if link in self.cut_links:
+      raise RuntimeError("link %s already cut!" % str(link))
     self.cut_links.add(link)
     link.start_software_switch.take_port_down(link.start_port)
+    # TODO(cs): the switch on the other end of the link should eventually
+    # notice that the link has gone down!
 
   def repair_link(self, link):
     msg.event("Restoring link %s" % str(link))
+    if link not in self.network_links:
+      raise ValueError("Unknown link %s" % str(link))
+    port = ofp_phy_port(port_no=link.start_port)
     link.start_software_switch.bring_port_up(link.start_port)
     self.cut_links.remove(link)
+    # TODO(cs): the switch on the other end of the link should eventually
+    # notice that the link has come back up!
 
   def permit_cp_send(self, connection):
     # pre: software_switch.io_worker.has_pending_sends()
@@ -308,13 +319,13 @@ class Topology(object):
     controller_info_cycler = itertools.cycle(controller_info_list)
     connections_per_switch = len(controller_info_list)
 
-    logger.debug('''Connecting %d switches to %d controllers (setting up %d'''
-                 ''' conns per switch)...''' %
-                (len(self.switches), len(controller_info_list), connections_per_switch))
+    log.debug('''Connecting %d switches to %d controllers (setting up %d'''
+              ''' conns per switch)...''' %
+              (len(self.switches), len(controller_info_list), connections_per_switch))
 
     for (idx, software_switch) in enumerate(self.switches):
       if len(self.switches) < 20 or not idx % 250:
-        logger.debug("Connecting switch %d / %d" % (idx, len(self.switches)))
+        log.debug("Connecting switch %d / %d" % (idx, len(self.switches)))
 
       def create_io_worker(switch, controller_info):
         controller_socket = connect_socket_with_backoff(controller_info.address,
@@ -332,7 +343,7 @@ class Topology(object):
 
       software_switch.connect()
 
-    logger.debug("Controller connections done")
+    log.debug("Controller connections done")
 
   @staticmethod
   def populate_from_topology(graph):
@@ -457,7 +468,7 @@ class FatTree (Topology):
     number of hosts per pod = (k/2)^2
     total number of hosts  = k^3 / 4
     '''
-    logger.debug("Constructing fat tree with %d pods" % num_pods)
+    log.debug("Constructing fat tree with %d pods" % num_pods)
 
     # self == store these numbers for later
     k = self.k = self.ports_per_switch = self.num_pods = num_pods
@@ -471,7 +482,7 @@ class FatTree (Topology):
     # We construct it from bottom up, starting at host <-> edge
     for i in range(self.total_hosts):
       if not i % 1000:
-        logger.debug("Host %d / %d" % (i, self.total_hosts))
+        log.debug("Host %d / %d" % (i, self.total_hosts))
 
       if (i % self.hosts_per_pod) == 0:
         current_pod_id += 1
@@ -508,7 +519,7 @@ class FatTree (Topology):
     # Now edge <-> agg
     for pod_id in range(num_pods):
       if not pod_id % 10:
-        logger.debug("edge<->agg for pod %d / %d" % (pod_id, num_pods))
+        log.debug("edge<->agg for pod %d / %d" % (pod_id, num_pods))
       current_aggs = []
       for _ in  range(self.agg_per_pod):
         current_dpid += 1
@@ -536,7 +547,7 @@ class FatTree (Topology):
     # Finally, agg <-> core
     for i in range(self.total_core):
       if not i % 100:
-        logger.debug("agg<->core %d / %d" % (i, self.total_core))
+        log.debug("agg<->core %d / %d" % (i, self.total_core))
       current_dpid += 1
       self.cores.append(create_switch(current_dpid, self.ports_per_switch))
 
@@ -556,9 +567,9 @@ class FatTree (Topology):
     self._populate_dpid2switch(switches)
     self.wire_tree()
     self._sanity_check_tree()
-    logger.debug('''Fat tree construction: done (%d cores, %d aggs,'''
-                 '''%d edges, %d hosts)''' %
-                 (len(self.cores), len(self.aggs), len(self.edges), len(self.hosts)))
+    log.debug('''Fat tree construction: done (%d cores, %d aggs,'''
+              '''%d edges, %d hosts)''' %
+              (len(self.cores), len(self.aggs), len(self.edges), len(self.hosts)))
 
   def wire_tree(self):
     # Auxiliary data to make get_connected_port efficient
