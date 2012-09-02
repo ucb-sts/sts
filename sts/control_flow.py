@@ -45,25 +45,32 @@ class Replayer(ControlFlow):
     # a list of its dependents
     self.dag = EventDag(superlog_parser.parse_path(superlog_path))
 
+  def increment_round(self):
+    # TODO(cs): complete this method
+    pass
+
   def simulate(self, simulation):
     self.simulation = simulation
 
-    def increment_round():
-      # TODO(cs): complete this method
-      pass
-
     # First, run through without pruning to verify that the violation exists
-    simulation.bootstrap()
+    self.simulation.bootstrap()
     for event_watcher in self.dag.event_watchers():
       event_watcher.run(simulation)
-      increment_round()
+      self.increment_round()
+      # TODO(cs): check correspondence
 
     # Now start pruning
+    return self.find_mcs()
+
+  def find_mcs(self):
+    mcs = []
     for pruned_event in self.dag.events():
-      simulation.bootstrap()
+      self.simulation.bootstrap()
       for event_watcher in self.dag.event_watchers(pruned_event):
-        event_watcher.run(simulation)
-        increment_round()
+        event_watcher.run(self.simulation)
+        # TODO(cs): check correspondence
+        self.increment_round()
+    return mcs
 
 class Fuzzer(ControlFlow):
   '''
