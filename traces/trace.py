@@ -29,8 +29,8 @@ class Trace(object):
     else:
       log.info("Injecting trace input")
       dp_event = self.dataplane_trace.pop(0)
-      host = self.interface2host[dp_event.interface]
-      if not host:
-        log.warn("Host %s not present" % str(host))
+      if dp_event.interface not in self.interface2host:
+        log.warn("Interface %s not present" % str(dp_event.interface))
         return
+      host = self.interface2host[dp_event.interface]
       host.send(dp_event.interface, dp_event.packet)
