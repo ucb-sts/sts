@@ -31,6 +31,8 @@ class ControlFlow(object):
     self.invariant_checker = InvariantChecker()
 
   def simulate(self, simulation):
+    ''' Move the simulation forward! Take the state of the system as a
+    parameter'''
     pass
 
 class Replayer(ControlFlow):
