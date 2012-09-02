@@ -272,3 +272,6 @@ class Controller(object):
     self.kill()
     self.start()
 
+  def send_policy_request(self, controller, api_call):
+    pass
+

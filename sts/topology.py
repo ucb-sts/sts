@@ -335,7 +335,6 @@ class Topology(object):
         return io_worker_generator(controller_socket)
       software_switch.create_io_worker = create_io_worker
 
-      # TODO(cs): what if the controller is slow to boot?
       # Socket from the software_switch to the controller
       for i in xrange(connections_per_switch):
         controller_info = controller_info_cycler.next()
@@ -361,11 +360,15 @@ class Topology(object):
                                   graph.ports_for_node(host).iteritems())]
      return topology
 
+
 class MeshTopology(Topology):
   def __init__(self, num_switches=3):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers
+
+    Optional argument(s):
+      - num_switches. The total number of switches to include in the mesh
     '''
     Topology.__init__(self)
 

@@ -24,18 +24,12 @@ fi
 exec python $OPT "$0" $FLG "$@"
 '''
 
-from sts.deferred_io import DeferredIOWorker
 from sts.procutils import kill_procs
 
-from sts.topology import FatTree
+from sts.topology import FatTree, BufferedPatchPanel
 from sts.control_flow import Fuzzer
 from sts.simulation import Simulation
-from pox.lib.ioworker.io_worker import RecocoIOLoop
-from pox.lib.util import connect_socket_with_backoff
-from config.experiment_config_lib import ControllerConfig
 from pox.lib.recoco.recoco import Scheduler
-from sts.entities import Controller
-from traces.trace import Trace
 
 import signal
 import sys
@@ -73,18 +67,25 @@ else:
   raise RuntimeError("Must specify controllers in config file")
 
 # For forwarding packets
-if hasattr(config, 'patch_panel'):
-  patch_panel_class = config.patch_panel
+if hasattr(config, 'patch_panel_class'):
+  patch_panel_class = config.patch_panel_class
 else:
   # We default to a BufferedPatchPanel
   patch_panel_class = BufferedPatchPanel
 
 # For tracking the edges and vertices in our network
-if hasattr(config, 'topology'):
-  topology = config.topology
+if hasattr(config, 'topology_class'):
+  topology_class = config.topology_class
 else:
-  # We default to a FatTree with 4 pods
-  topology = FatTree()
+  # We default to a FatTree
+  topology_class = FatTree
+
+# For constructing the topology object
+if hasattr(config, 'topology_params'):
+  topology_params = config.topology_params
+else:
+  # We default to no parameters
+  topology_params = ""
 
 # For controlling the simulation
 if hasattr(config, 'control_flow'):
@@ -95,10 +96,10 @@ else:
 
 # For injecting dataplane packets into the simulated network
 if hasattr(config, 'dataplane_trace') and config.dataplane_trace:
-  dataplane_trace = Trace(config.dataplane_trace, topology)
+  dataplane_trace_path = config.dataplane_trace
 else:
   # We default to no dataplane trace
-  dataplane_trace = None
+  dataplane_trace_path = None
 
 scheduler = None
 def kill_scheduler():
@@ -106,9 +107,6 @@ def kill_scheduler():
     sys.stderr.write("Stopping Recoco Scheduler...")
     scheduler.quit()
     sys.stderr.write(" OK\n")
-
-def kill_active_processes():
-  Controller.kill_active_procs()
 
 def handle_int(signal, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
@@ -118,31 +116,14 @@ def handle_int(signal, frame):
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
 
+simulation = None
 try:
-  # Boot the controllers
-  controllers = []
-  for c in controller_configs:
-    controller = Controller(c)
-    log.info("Launched controller c%s: %s [PID %d]" %
-             (str(c.uuid), " ".join(c.cmdline), controller.pid))
-    controllers.append(controller)
-
-  io_loop = RecocoIOLoop()
-
   scheduler = Scheduler(daemon=True, useEpoll=False)
-  scheduler.schedule(io_loop)
-
-  create_worker = lambda(socket): DeferredIOWorker(io_loop.create_worker_for_socket(socket),
-                                                   scheduler.callLater)
-
-  topology.connect_to_controllers(controller_configs, create_worker)
-
-  simulation = Simulation(controllers, topology, patch_panel_class,
-                          dataplane_trace=dataplane_trace)
-
+  simulation = Simulation(scheduler, controller_configs, topology_class,
+                          topology_params, patch_panel_class,
+                          dataplane_trace_path=dataplane_trace_path)
   simulator.simulate(simulation)
 finally:
-  for c in controllers:
-    c.kill()
-
+  if simulation is not None:
+    simulation.clean_up()
   kill_scheduler()

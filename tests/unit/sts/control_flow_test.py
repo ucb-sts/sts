@@ -11,6 +11,7 @@ import tempfile
 from sts.control_flow import Replayer
 from sts.topology import FatTree, BufferedPatchPanel
 from sts.simulation import Simulation
+from pox.lib.recoco.recoco import Scheduler
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
@@ -30,9 +31,11 @@ class ReplayerTest(unittest.TestCase):
 
   def setup_simulation(self):
     controllers = []
-    topology = FatTree()
+    topology_class = FatTree
+    topology_params = ""
     patch_panel_class = BufferedPatchPanel
-    return Simulation(controllers, topology, patch_panel_class)
+    scheduler = Scheduler(daemon=True, useEpoll=False)
+    return Simulation(scheduler, controllers, topology_class, topology_params, patch_panel_class)
 
   def test_basic(self):
     try:

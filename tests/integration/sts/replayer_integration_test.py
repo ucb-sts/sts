@@ -11,15 +11,11 @@ import tempfile
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 simple_cfg = '''
-from sts.topology import FatTree, BufferedPatchPanel
 from sts.control_flow import Replayer
 
 # Don't use a controller
 controllers = []
-topology = FatTree()
-patch_panel = BufferedPatchPanel
 control_flow = Replayer("%s")
-dataplane_trace = None
 '''
 
 class ReplayerTest(unittest.TestCase):

@@ -51,12 +51,14 @@ class Replayer(ControlFlow):
       pass
 
     # First, run through without pruning to verify that the violation exists
+    simulation.bootstrap()
     for event_watcher in self.dag.event_watchers():
       event_watcher.run(simulation)
       increment_round()
 
     # Now start pruning
     for pruned_event in self.dag.events():
+      simulation.bootstrap()
       for event_watcher in self.dag.event_watchers(pruned_event):
         event_watcher.run(simulation)
         increment_round()
@@ -97,6 +99,7 @@ class Fuzzer(ControlFlow):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     assert(isinstance(simulation.patch_panel, BufferedPatchPanel))
     self.simulation = simulation
+    self.simulation.bootstrap()
     self.loop()
 
   def loop(self):
@@ -249,6 +252,7 @@ class Interactive(ControlFlow):
 
   def simulate(self, simulation):
     self.simulation = simulation
+    self.simulation.bootstrap()
     self.loop()
 
   def loop(self):
