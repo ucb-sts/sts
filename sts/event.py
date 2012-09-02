@@ -15,14 +15,12 @@ class EventDag(object):
   def __init__(self, events):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
+    # we need to the events to be ordered, so we keep a copy of the list
+    self._events = events
     self.label2event = {
       event.label : event
       for event in events
     }
-
-  @property
-  def _events(self):
-    return self.label2event.values()
 
   def events(self, pruned_event_or_label=None):
     '''Return a generator of the events in the DAG with pruned event and all of its
@@ -136,10 +134,10 @@ class SwitchFailure(InputEvent):
     self.dpid = int(json_hash['dpid'])
 
   def proceed(self, simulation):
-    software_switch = self.simulation.topology.dpid2switch[self.dpid]
-    if not software_switch:
+    if not self.dpid in simulation.topology.dpid2switch:
       raise RuntimeError("dpid %d not found" % self.dpid)
-    self.simulation.topology.crash_switch(software_switch)
+    software_switch = simulation.topology.dpid2switch[self.dpid]
+    simulation.topology.crash_switch(software_switch)
     return True
 
 class SwitchRecovery(InputEvent):
@@ -149,10 +147,10 @@ class SwitchRecovery(InputEvent):
     self.dpid = int(json_hash['dpid'])
 
   def proceed(self, simulation):
-    software_switch = self.simulation.topology.dpid2switch[self.dpid]
-    if not software_switch:
+    if not self.dpid in simulation.topology.dpid2switch:
       raise RuntimeError("dpid %d not found" % self.dpid)
-    self.simulation.topology.recover_switch(software_switch)
+    software_switch = simulation.topology.dpid2switch[self.dpid]
+    simulation.topology.recover_switch(software_switch)
     return True
 
 def get_link(link_event, simulation):

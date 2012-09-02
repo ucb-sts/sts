@@ -246,6 +246,9 @@ class Topology(object):
 
   def recover_switch(self, software_switch):
     msg.event("Rebooting software_switch %s" % str(software_switch))
+    if software_switch not in self.failed_switches:
+      raise RuntimeError("Switch %s not currently down. (Currently down: %s)" %
+                         (str(software_switch), str(self.failed_switches)))
     software_switch.recover()
     self.failed_switches.remove(software_switch)
 

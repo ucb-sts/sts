@@ -27,6 +27,12 @@ class ReplayerTest(unittest.TestCase):
     e2 = str('''{"dependent_labels": [], "start_dpid": 8, "class": "LinkRecovery",'''
              ''' "start_port_no": 3, "end_dpid": 15, "end_port_no": 2, "label": "e2"}''')
     superlog.write(e2 + '\n')
+    e3 = str('''{"dependent_labels": ["e4"], "dpid": 8, "class": "SwitchFailure",'''
+             ''' "label": "e3"}''')
+    superlog.write(e3 + '\n')
+    e4 = str('''{"dependent_labels": [], "dpid": 8, "class": "SwitchRecovery",'''
+             ''' "label": "e4"}''')
+    superlog.write(e4 + '\n')
     superlog.close()
 
   def setup_simulation(self):
