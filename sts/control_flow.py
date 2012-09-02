@@ -121,33 +121,36 @@ class Fuzzer(ControlFlow):
       self.logical_time += 1
       self.trigger_events()
       msg.event("Round %d completed." % self.logical_time)
-
-      if (self.logical_time % self.check_interval) == 0:
-        # Time to run correspondence!
-        # spawn a thread for running correspondence. Make sure the controller doesn't
-        # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
-        # TODO(cs): this is a HACK
-        def do_correspondence():
-          any_policy_violations = self.invariant_checker\
-                                      .check_correspondence(self.simulation)
-
-          if any_policy_violations:
-            msg.fail("There were policy-violations!")
-          else:
-            msg.interactive("No policy-violations!")
-        thread = threading.Thread(target=do_correspondence)
-        thread.start()
-        while thread.isAlive():
-          for switch in self.simulation.topology.live_switches:
-            # connection -> deferred io worker -> io worker
-            switch.send(of.ofp_echo_request().pack())
-          thread.join(2.0)
-
-      if (self.simulation.dataplane_trace and
-          (self.logical_time % self.trace_interval) == 0):
-        self.inject_trace_event()
-
+      self.maybe_check_correspondence()
+      self.maybe_inject_trace_event()
       time.sleep(self.delay)
+
+  def maybe_check_correspondence(self):
+    if (self.logical_time % self.check_interval) == 0:
+      # Time to run correspondence!
+      # spawn a thread for running correspondence. Make sure the controller doesn't
+      # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
+      # TODO(cs): this is a HACK
+      def do_correspondence():
+        any_policy_violations = self.invariant_checker\
+                                    .check_correspondence(self.simulation)
+
+        if any_policy_violations:
+          msg.fail("There were policy-violations!")
+        else:
+          msg.interactive("No policy-violations!")
+      thread = threading.Thread(target=do_correspondence)
+      thread.start()
+      while thread.isAlive():
+        for switch in self.simulation.topology.live_switches:
+          # connection -> deferred io worker -> io worker
+          switch.send(of.ofp_echo_request().pack())
+        thread.join(2.0)
+
+  def maybe_inject_trace_event(self):
+    if (self.simulation.dataplane_trace and
+        (self.logical_time % self.trace_interval) == 0):
+      self.inject_trace_event()
 
   def trigger_events(self):
     self.check_dataplane()
