@@ -14,7 +14,7 @@ from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.console import msg
 from sts.event import EventDag
-import log_parsing.superlog_parser as superlog_parser
+import log_processing.superlog_parser as superlog_parser
 
 import os
 import time
