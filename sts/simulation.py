@@ -13,12 +13,11 @@ Encapsulates the state of the simulation, including:
 from pox.lib.ioworker.io_worker import RecocoIOLoop
 from sts.deferred_io import DeferredIOWorker
 from traces.trace import Trace
-from entities import Link, Host
+from entities import Link, Host, Controller
 from sts.topology import *
 
 import logging
 import pickle
-from sts.console import msg
 
 log = logging.getLogger("simulation")
 

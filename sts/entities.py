@@ -9,6 +9,7 @@ from pox.lib.util import connect_socket_with_backoff, assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
 from sts.procutils import popen_filtered, kill_procs
+from sts.console import msg
 
 import logging
 import pickle
@@ -254,6 +255,7 @@ class Controller(object):
 
   def kill(self):
     '''Kill the process the controller is running in.'''
+    msg.event("Killing controller %s" % (str(self.uuid)))
     kill_procs([self.process])
     self._unregister_proc(self.process)
 
@@ -261,6 +263,7 @@ class Controller(object):
     '''Start a new controller process based on the config's cmdline
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process.'''
+    msg.event("Starting controller %s" % (str(self.uuid)))
     self.process = popen_filtered("c%s" % str(self.uuid), self.config.cmdline)
     self._register_proc(self.process)
 

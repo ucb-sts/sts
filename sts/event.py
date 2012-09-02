@@ -196,7 +196,9 @@ class ControllerFailure(InputEvent):
     self.uuid = (uuid[0], int(uuid[1]))
 
   def proceed(self, simulation):
-    controller = self.simulation.uuid2controller[self.uuid]
+    if self.uuid not in simulation.uuid2controller:
+      raise RuntimeError("Controller UUID %s not found" % self.uuid)
+    controller = simulation.uuid2controller[self.uuid]
     controller.kill()
     return True
 
@@ -208,7 +210,9 @@ class ControllerRecovery(InputEvent):
     self.uuid = (uuid[0], int(uuid[1]))
 
   def proceed(self, simulation):
-    controller = self.simulation.uuid2controller[self.uuid]
+    if self.uuid not in simulation.uuid2controller:
+      raise RuntimeError("Controller UUID %s not found" % self.uuid)
+    controller = simulation.uuid2controller[self.uuid]
     controller.start()
     return True
 
