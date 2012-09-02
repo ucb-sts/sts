@@ -101,6 +101,7 @@ else:
   # We default to no dataplane trace
   dataplane_trace_path = None
 
+simulation = None
 scheduler = None
 def kill_scheduler():
   if scheduler and not scheduler._hasQuit:
@@ -111,12 +112,13 @@ def kill_scheduler():
 def handle_int(signal, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
   kill_scheduler()
+  if simulation is not None:
+    simulation.clean_up()
   sys.exit(0)
 
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
 
-simulation = None
 try:
   scheduler = Scheduler(daemon=True, useEpoll=False)
   simulation = Simulation(scheduler, controller_configs, topology_class,
