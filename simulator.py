@@ -46,7 +46,7 @@ description = """
 Run a simulation.
 Example usage:
 
-$ %s -c config/fat_tree.cfg
+$ %s -c config.fat_tree
 """ % (sys.argv[0])
 
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,

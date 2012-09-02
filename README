@@ -2,7 +2,7 @@ This is a troubleshooting framework for software-defined networks. It is
 useful for both network operators seeking to track down network policy-violations,
 and platform developers seeking to test and debug control software.
 
-The code is quite nascent and still in flux.
+The code is under heavy development.
 
  == Notes ==
 
@@ -21,6 +21,6 @@ To run, see:
   $ ./debugger.py -h
 
 The config/ directory contains sample topology configurations. You can specify
-a particular config file with:
+a particular config file by specifing the module name of your configuration:
 
-  $ ./debugger.py -c config/my_config.cfg
+  $ ./debugger.py -c config.my_config
