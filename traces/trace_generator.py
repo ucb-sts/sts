@@ -7,22 +7,11 @@ Created on Mar 15, 2012
 from pox.lib.packet.ethernet import *
 from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
-from pox.lib.util import assert_type
-import sts.topology_generator as topo_gen
+import sts.topology as topo
 from sts.entities import HostInterface
 from collections import defaultdict
 import pickle
-
-class DataplaneEvent (object):
-  '''
-  Encapsulates a packet injected at a (switch.dpid, port) pair in the network
-  Used for trace generation or replay debugging
-  '''
-  def __init__ (self, interface, packet):
-    assert_type("interface", interface, HostInterface, none_ok=False)
-    assert_type("packet", packet, ethernet, none_ok=False)
-    self.interface = interface
-    self.packet = packet
+from trace import DataplaneEvent
 
 def write_trace_log(dataplane_events, filename):
   '''
@@ -34,7 +23,11 @@ def write_trace_log(dataplane_events, filename):
 def generate_example_trace():
   trace = []
 
-  (patch_panel, switches, network_links, hosts, access_links) = topo_gen.create_mesh(num_switches=2)
+  mesh = topo.MeshTopology(num_switches=2)
+  switches = mesh.switches
+  network_links = mesh.network_links
+  hosts = mesh.hosts
+  access_links = mesh.access_links
 
   packet_events = []
   ping_or_pong = "ping"
@@ -62,7 +55,11 @@ def generate_example_trace_same_subnet():
   # TODO(cs): highly redundant
   trace = []
 
-  (patch_panel, switches, network_links, hosts, access_links) = topo_gen.create_mesh(num_switches=2)
+  mesh = topo.MeshTopology(num_switches=2)
+  switches = mesh.switches
+  network_links = mesh.network_links
+  hosts = mesh.hosts
+  access_links = mesh.access_links
 
   packet_events = []
   ping_or_pong = "ping"
@@ -89,9 +86,10 @@ def generate_example_trace_same_subnet():
 def generate_example_trace_fat_tree(num_pods=4):
   # TODO(cs): highly redundant
 
-  fat_tree = topo_gen.FatTree(num_pods)
-  patch_panel = topo_gen.BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
-  (switches, network_links, hosts, access_links) = (fat_tree.switches, fat_tree.internal_links, fat_tree.hosts, fat_tree.access_links)
+  fat_tree = topo.FatTree(num_pods)
+  patch_panel = topo.BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
+  (switches, network_links, hosts, access_links) = (fat_tree.switches,
+          fat_tree.network_links, fat_tree.hosts, fat_tree.access_links)
 
   host2pings = defaultdict(lambda: [])
   payload = "ping"
@@ -118,4 +116,4 @@ def generate_example_trace_fat_tree(num_pods=4):
   write_trace_log(trace, "traces/ping_pong_fat_tree.trace")
 
 if __name__ == '__main__':
-  generate_example_trace()
+  generate_example_trace_same_subnet()

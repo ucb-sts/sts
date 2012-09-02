@@ -10,7 +10,7 @@ import tempfile
 
 from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import Replayer
-from sts.topology import FatTree, PatchPanel
+from sts.topology import FatTree, PatchPanel, MeshTopology
 from sts.simulation import Simulation
 from pox.lib.recoco.recoco import Scheduler
 
@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 class ReplayerTest(unittest.TestCase):
   tmp_basic_superlog = '/tmp/superlog_basic.tmp'
   tmp_controller_superlog = '/tmp/superlog_controller.tmp'
+  tmp_dataplane_superlog = '/tmp/superlog_dataplane.tmp'
 
   # ------------------------------------------ #
   #        Basic Test                          #
@@ -89,6 +90,39 @@ class ReplayerTest(unittest.TestCase):
       replayer.simulate(simulation)
     finally:
       os.unlink(self.tmp_controller_superlog)
+
+  # ------------------------------------------ #
+  #        Dataplane Trace Test                #
+  # ------------------------------------------ #
+
+  def write_dataplane_trace_superlog(self):
+    superlog = open(self.tmp_dataplane_superlog, 'w')
+    e1 = str('''{"dependent_labels": [],  "class": "TrafficInjection",'''
+             ''' "label": "e1"}''')
+    superlog.write(e1 + '\n')
+    e2 = str('''{"dependent_labels": [],  "class": "TrafficInjection",'''
+             ''' "label": "e2"}''')
+    superlog.write(e2 + '\n')
+    superlog.close()
+
+  def setup_dataplane_simulation(self):
+    controllers = []
+    topology_class = MeshTopology
+    topology_params = "num_switches=2"
+    patch_panel_class = PatchPanel
+    scheduler = Scheduler(daemon=True, useEpoll=False)
+    dataplane_trace_path = "./traces/ping_pong_same_subnet.trace"
+    return Simulation(scheduler, controllers, topology_class, topology_params,
+                      patch_panel_class, dataplane_trace_path=dataplane_trace_path)
+
+  def test_controller_crash(self):
+    try:
+      self.write_dataplane_trace_superlog()
+      replayer = Replayer(self.tmp_dataplane_superlog)
+      simulation = self.setup_dataplane_simulation()
+      replayer.simulate(simulation)
+    finally:
+      os.unlink(self.tmp_dataplane_superlog)
 
 if __name__ == '__main__':
   unittest.main()

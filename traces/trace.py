@@ -1,4 +1,21 @@
 import pickle
+from pox.lib.util import assert_type
+from pox.lib.packet.ethernet import *
+from sts.entities import HostInterface
+
+import logging
+log = logging.getLogger("dataplane_trace")
+
+class DataplaneEvent (object):
+  '''
+  Encapsulates a packet injected at a (switch.dpid, port) pair in the network
+  Used for trace generation or replay debugging
+  '''
+  def __init__ (self, interface, packet):
+    assert_type("interface", interface, HostInterface, none_ok=False)
+    assert_type("packet", packet, ethernet, none_ok=False)
+    self.interface = interface
+    self.packet = packet
 
 class Trace(object):
   '''Encapsulates a sequence of dataplane events to inject into a simulated network.'''

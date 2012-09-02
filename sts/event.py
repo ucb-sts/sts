@@ -229,6 +229,7 @@ class HostMigration(InputEvent):
     self.new_ingress_port_no = int(json_hash['new_ingress_port_no'])
 
   def proceed(self, simulation):
+    # TODO(cs): implement me
     pass
 
 class PolicyChange(InputEvent):
@@ -238,11 +239,22 @@ class PolicyChange(InputEvent):
     self.request_type = json_hash['request_type']
 
   def proceed(self, simulation):
+    # TODO(cs): implement me
     pass
+
+class TrafficInjection(InputEvent):
+  def __init__(self, json_hash):
+    super(TrafficInjection, self).__init__(json_hash)
+
+  def proceed(self, simulation):
+    if simulation.dataplane_trace is None:
+      raise RuntimeError("No dataplane trace specified!")
+    simulation.dataplane_trace.inject_trace_event()
+    return True
 
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
-                    PolicyChange]
+                    PolicyChange, TrafficInjection]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
