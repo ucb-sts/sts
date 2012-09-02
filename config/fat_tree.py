@@ -22,5 +22,5 @@ control_flow = Fuzzer()
 
 # Specify None as the dataplane trace (already the default)
 # Otherwise, specify the path to the trace file
-# (e.g. "traces/ping_ping_same_subnet.trace")
+# (e.g. "dataplane_traces/ping_ping_same_subnet.trace")
 dataplane_trace = None

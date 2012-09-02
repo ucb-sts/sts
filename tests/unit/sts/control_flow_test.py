@@ -111,7 +111,7 @@ class ReplayerTest(unittest.TestCase):
     topology_params = "num_switches=2"
     patch_panel_class = PatchPanel
     scheduler = Scheduler(daemon=True, useEpoll=False)
-    dataplane_trace_path = "./traces/ping_pong_same_subnet.trace"
+    dataplane_trace_path = "./dataplane_traces/ping_pong_same_subnet.trace"
     return Simulation(scheduler, controllers, topology_class, topology_params,
                       patch_panel_class, dataplane_trace_path=dataplane_trace_path)
 

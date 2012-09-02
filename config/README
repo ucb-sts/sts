@@ -12,4 +12,4 @@ The module can optionally define the following attributes:
   patch_panel_class => a sts.topology.PatchPanel class (not object!)
   control_flow      => a sts.control_flow.ControlModule object
   dataplane_trace   => a path to a dataplane trace file
-                       (e.g. traces/ping_pong_same_subnet.trace)
+                       (e.g. dataplane_traces/ping_pong_same_subnet.trace)
