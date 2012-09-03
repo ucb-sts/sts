@@ -316,17 +316,25 @@ class Topology(object):
 
   def migrate_host(self, old_ingress_dpid, old_ingress_portno,
                    new_ingress_dpid, new_ingress_portno):
-    '''Migrate the host from the old ingress switch, port to the new ingess
-    switch, port'''
+    '''Migrate the host from the old (ingress switch, port) to the new
+    (ingress switch, port)'''
     # Temporary hack!: instead of changing the underlying get_connected_port()
     # mapping, wrap it in another function.
     # TODO(cs): a long-term solution would be to stop using a function
     # (get_connected_port) to encapsulate edges, and instead use a general graph
     # object to store edges and vertices.
     old_ingress = self.get_switch(old_ingress_dpid)
-    old_access_link = self.get_connected_port()
+    old_port = old_ingress.ports[old_ingress_portno]
+    old_access_link = self.get_connected_port(old_ingress, old_port)
     new_ingress = self.get_switch(new_ingress_dpid)
+    new_port = new_ingress.ports[new_ingress_portno]
     new_access_link = AccessLink(host, interface, switch, switch_port)
+    # TODO(cs): need to allow switches to have multiple attached hosts
+    #           define a v-switch class?
+    def get_connected_port_wrapper(node, port):
+      # TODO(cs): not done!
+      pass
+    self.get_connected_port = get_connected_port_wrapper
 
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
