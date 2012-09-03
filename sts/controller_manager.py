@@ -22,7 +22,7 @@ class ControllerManager(object):
     down = [controller for controller in self.controllers if not controller.alive]
     return set(down)
 
-  def get_controller(uuid):
+  def get_controller(self, uuid):
     if uuid not in self.uuid2controller:
       raise ValueError("unknown uuid %s" % str(uuid))
     return self.uuid2controller[uuid]
@@ -32,11 +32,11 @@ class ControllerManager(object):
       c.kill()
     self.uuid2controller = {}
 
-  def kill_controller(controller):
+  def kill_controller(self, controller):
     msg.event("Killing controller %s" % str(controller))
     controller.kill()
 
-  def reboot_controller(controller):
+  def reboot_controller(self, controller):
     msg.event("Restarting controller %s" % str(controller))
     controller.start()
 

@@ -88,6 +88,7 @@ class Simulation (object):
     controllers = []
     for c in self.controller_configs:
       controller = Controller(c)
+      controller.start()
       log.info("Launched controller c%s: %s [PID %d]" %
                (str(c.uuid), " ".join(c.cmdline), controller.pid))
       controllers.append(controller)

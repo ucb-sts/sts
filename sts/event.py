@@ -225,7 +225,11 @@ class HostMigration(InputEvent):
 
   def proceed(self, simulation):
     # TODO(cs): add HostMigrations to Fuzzer
-    self.simulation.topology.migrate_host(self.XXX)
+    self.simulation.topology.migrate_host(self.old_ingress_dpid,
+                                          self.old_ingress_port_no,
+                                          self.new_ingress_dpid,
+                                          self.new_ingress_port_no)
+    return True
 
 class PolicyChange(InputEvent):
   def __init__(self, json_hash):

@@ -317,23 +317,43 @@ class Topology(object):
   def migrate_host(self, old_ingress_dpid, old_ingress_portno,
                    new_ingress_dpid, new_ingress_portno):
     '''Migrate the host from the old (ingress switch, port) to the new
-    (ingress switch, port)'''
+    (ingress switch, port). Note that the new port must not already be
+    present, otherwise an exception will be thrown (we treat all switches as
+    configurable software switches for convenience, rather than hardware switches
+    with a fixed number of ports)'''
     # Temporary hack!: instead of changing the underlying get_connected_port()
     # mapping, wrap it in another function.
     # TODO(cs): a long-term solution would be to stop using a function
     # (get_connected_port) to encapsulate edges, and instead use a general graph
     # object to store edges and vertices.
     old_ingress = self.get_switch(old_ingress_dpid)
+    if old_ingress_portno not in old_ingress.ports:
+      raise ValueError("unknown old_ingress_portno %d" % old_ingress_portno)
     old_port = old_ingress.ports[old_ingress_portno]
     old_access_link = self.get_connected_port(old_ingress, old_port)
+    host = old_access_link.host
+    interface = old_access_link.interface
     new_ingress = self.get_switch(new_ingress_dpid)
-    new_port = new_ingress.ports[new_ingress_portno]
-    new_access_link = AccessLink(host, interface, switch, switch_port)
-    # TODO(cs): need to allow switches to have multiple attached hosts
-    #           define a v-switch class?
+    if new_ingress_portno in new_ingress.ports:
+      raise RuntimeError("new ingress port %d already exists!" %
+                         new_ingress_portno)
+    # Temporary hack: manually insert a new ofp_phy_port. For now, assign it
+    # the same mac address as the old ingress's now-defunct port.
+    hw_addr = old_port.hw_addr
+    new_port = ofp_phy_port(port_no=new_ingress_portno, hw_addr=hw_addr)
+    new_access_link = AccessLink(host, interface, new_ingress, new_port)
+
+    # Now take down the old port and bring up (add) the new one
+    old_ingress.take_down_port(old_port)
+    new_ingress.bring_port_up(new_port)
+
+    # Now override self.get_connected_port
+    # TODO(cs): does python's closure behavior not work this way?
+    old_get_connected_port = self.get_connected_port
     def get_connected_port_wrapper(node, port):
-      # TODO(cs): not done!
-      pass
+      if node == new_ingress and port == new_port:
+        return (host, interface)
+      return old_get_connected_port(node, port)
     self.get_connected_port = get_connected_port_wrapper
 
   def connect_to_controllers(self, controller_info_list, io_worker_generator):

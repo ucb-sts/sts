@@ -242,6 +242,7 @@ class Controller(object):
     '''idx is the unique index for the controller used mostly for logging purposes.'''
     self.config = controller_config
     self.alive = False
+    self.process = None
 
   @property
   def pid(self):

@@ -20,6 +20,7 @@ class ReplayerTest(unittest.TestCase):
   tmp_basic_superlog = '/tmp/superlog_basic.tmp'
   tmp_controller_superlog = '/tmp/superlog_controller.tmp'
   tmp_dataplane_superlog = '/tmp/superlog_dataplane.tmp'
+  tmp_migration_superlog = '/tmp/superlog_migration.tmp'
 
   # ------------------------------------------ #
   #        Basic Test                          #
@@ -115,7 +116,7 @@ class ReplayerTest(unittest.TestCase):
     return Simulation(scheduler, controllers, topology_class, topology_params,
                       patch_panel_class, dataplane_trace_path=dataplane_trace_path)
 
-  def test_controller_crash(self):
+  def test_dataplane_injection(self):
     try:
       self.write_dataplane_trace_superlog()
       replayer = Replayer(self.tmp_dataplane_superlog)
@@ -123,6 +124,38 @@ class ReplayerTest(unittest.TestCase):
       replayer.simulate(simulation)
     finally:
       os.unlink(self.tmp_dataplane_superlog)
+
+  # ------------------------------------------ #
+  #        Host Migration Test                 #
+  # ------------------------------------------ #
+
+  def write_migration_superlog(self):
+    superlog = open(self.tmp_migration_superlog, 'w')
+    e1 = str('''{"dependent_labels": [], "start_dpid": 8, "class": "HostMigration",'''
+             ''' "start_port_no": 3, "end_dpid": 15, "end_port_no": 2, "label": "e1"}''')
+    superlog.write(e1 + '\n')
+    e2 = str('''{"dependent_labels": [], "start_dpid": 15, "class": "HostMigration",'''
+             ''' "start_port_no": 2, "end_dpid": 8, "end_port_no": 3, "label": "e2"}''')
+    superlog.write(e2 + '\n')
+    superlog.close()
+
+  def setup_migration_simulation(self):
+    controllers = []
+    topology_class = FatTree
+    topology_params = ""
+    patch_panel_class = PatchPanel
+    scheduler = Scheduler(daemon=True, useEpoll=False)
+    return Simulation(scheduler, controllers, topology_class, topology_params,
+                      patch_panel_class)
+
+  def test_migration(self):
+    try:
+      self.write_migration_superlog()
+      replayer = Replayer(self.tmp_migration_superlog)
+      simulation = self.setup_migration_simulation()
+      replayer.simulate(simulation)
+    finally:
+      os.unlink(self.tmp_migration_superlog)
 
 if __name__ == '__main__':
   unittest.main()
