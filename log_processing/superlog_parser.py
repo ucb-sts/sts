@@ -83,9 +83,7 @@ def parse(logfile):
   # dependent labels that must be present somewhere in the log.
   dependent_labels = set()
 
-  line_count = 0
   for line in logfile:
-    line_count += 1
     json_hash = json.loads(line.rstrip())
     check_unique_label(json_hash['label'], event_labels)
     if json_hash['class'] in input_name_to_class:
@@ -102,7 +100,6 @@ def parse(logfile):
       continue
     trace.append(event)
 
-  assert(line_count != 0)
   # all the foward dependencies should be satisfied!
   assert(len(dependent_labels) == 0)
 
