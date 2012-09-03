@@ -249,10 +249,6 @@ class Fuzzer(ControlFlow):
     cut_this_round = sever_links()
     repair_links(cut_this_round)
 
-  def check_timeouts(self):
-    # Interpose on timeouts
-    pass
-
   def fuzz_traffic(self):
     if not self.simulation.dataplane_trace:
       # randomly generate messages from switches
@@ -266,8 +262,27 @@ class Fuzzer(ControlFlow):
             self._log_input_event(klass="TrafficInjection", dp_event=dp_event)
 
   def check_controllers(self):
-    # TODO(cs): implement me
-    pass
+    def crash_controllers():
+      crashed_this_round = set()
+      for controller in self.self.simulation.live_controllers:
+        if self.random.random() < self.params.controller_crash_rate:
+          crashed_this_round.add(controller)
+          controller.kill()
+          self._log_input_event(klass="ControllerCrash",
+                                uuid=controller.uuid)
+      return crashed_this_round
+
+    def reboot_controllers(crashed_this_round):
+      for controller in self.self.simulation.down_controllers:
+        if controller in crashed_this_round:
+          continue
+        if self.random.random() < self.params.controller_recovery_rate:
+          controller.start()
+          self._log_input_event(klass="ControllerRecovery",
+                                uuid=controller.uuid)
+
+    crashed_this_round = crash_controllers()
+    reboot_controllers(crashed_this_round)
 
 class Interactive(ControlFlow):
   '''

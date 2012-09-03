@@ -241,7 +241,7 @@ class Controller(object):
   def __init__(self, controller_config):
     '''idx is the unique index for the controller used mostly for logging purposes.'''
     self.config = controller_config
-    self.start()
+    self.alive = False
 
   @property
   def pid(self):
@@ -258,6 +258,7 @@ class Controller(object):
     msg.event("Killing controller %s" % (str(self.uuid)))
     kill_procs([self.process])
     self._unregister_proc(self.process)
+    self.alive = False
 
   def start(self):
     '''Start a new controller process based on the config's cmdline
@@ -270,6 +271,7 @@ class Controller(object):
     if self.config.nom_port:
       self.nom_socket = connect_socket_with_backoff(self.config.address,
                                                     self.config.nom_port)
+    self.alive = True
 
   def restart(self):
     self.kill()

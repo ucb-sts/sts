@@ -46,9 +46,21 @@ class Simulation (object):
     self.dataplane_trace = None
     self._dataplane_trace_path = dataplane_trace_path
 
+  # TODO(cs): the next three next methods should go in a separate
+  #           ControllerContainer class
   @property
   def controllers(self):
     return self.uuid2controller.values()
+
+  @property
+  def live_controllers(self):
+    alive = [controller for controller in self.controllers if controller.alive]
+    return set(alive)
+
+  @property
+  def down_controllers(self):
+    down = [controller for controller in self.controllers if not controller.alive]
+    return set(down)
 
   def _instantiate_topology(self):
     '''construct a clean topology object from topology_class and
