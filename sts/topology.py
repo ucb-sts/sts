@@ -221,7 +221,7 @@ class Topology(object):
   def switches(self):
     return self.dpid2switch.values()
 
-  def get_switch(dpid):
+  def get_switch(self, dpid):
     if dpid not in self.dpid2switch:
       raise RuntimeError("unknown dpid %d" % dpid)
     return self.dpid2switch[dpid]
