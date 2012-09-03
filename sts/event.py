@@ -137,7 +137,7 @@ class SwitchFailure(InputEvent):
     self.dpid = int(json_hash['dpid'])
 
   def proceed(self, simulation):
-    software_switch = simulation.topology.get(self.dpid)
+    software_switch = simulation.topology.get_switch(self.dpid)
     simulation.topology.crash_switch(software_switch)
     return True
 
@@ -148,13 +148,13 @@ class SwitchRecovery(InputEvent):
     self.dpid = int(json_hash['dpid'])
 
   def proceed(self, simulation):
-    software_switch = simulation.topology.get(self.dpid)
+    software_switch = simulation.topology.get_switch(self.dpid)
     simulation.topology.recover_switch(software_switch)
     return True
 
 def get_link(link_event, simulation):
-  start_software_switch = simulation.topology.get(link_event.start_dpid)
-  end_software_switch = simulation.topology.get(link_event.end_dpid)
+  start_software_switch = simulation.topology.get_switch(link_event.start_dpid)
+  end_software_switch = simulation.topology.get_switch(link_event.end_dpid)
   link = Link(start_software_switch, link_event.start_port_no,
               end_software_switch, link_event.end_port_no)
   return link
