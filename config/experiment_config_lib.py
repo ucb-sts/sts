@@ -17,8 +17,9 @@ class ControllerConfig(object):
         NOM from (None for no correspondence checking)
     '''
     self.address = address
-    if cmdline == []:
+    if cmdline == "":
       raise RuntimeError("Must specify boot parameters.")
+    self.cmdline_string = cmdline
     if not port:
       port = self._port_gen.next()
     self.port = port
@@ -30,3 +31,8 @@ class ControllerConfig(object):
   @property
   def uuid(self):
     return (self.address, self.port)
+
+  def __repr__(self):
+    return self.__class__.__name__  + "(cmdline=\"" + self.cmdline_string +\
+           "\",address=\"" + self.address + "\",port=" + self.port.__repr__() +\
+           ",nom_port=" + self.nom_port.__repr__() +  ")"

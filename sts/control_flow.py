@@ -111,9 +111,9 @@ class Fuzzer(ControlFlow):
 
   def simulate(self, simulation):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
-    assert(isinstance(simulation.patch_panel, BufferedPatchPanel))
     self.simulation = simulation
     self.simulation.bootstrap()
+    assert(isinstance(simulation.patch_panel, BufferedPatchPanel))
     self.loop()
 
   def loop(self):
@@ -122,13 +122,17 @@ class Fuzzer(ControlFlow):
     else:
       end_time = sys.maxint
 
-    while self.logical_time < end_time:
-      self.logical_time += 1
-      self.trigger_events()
-      msg.event("Round %d completed." % self.logical_time)
-      self.maybe_check_correspondence()
-      self.maybe_inject_trace_event()
-      time.sleep(self.delay)
+    try:
+      while self.logical_time < end_time:
+        self.logical_time += 1
+        self.trigger_events()
+        msg.event("Round %d completed." % self.logical_time)
+        self.maybe_check_correspondence()
+        self.maybe_inject_trace_event()
+        time.sleep(self.delay)
+    finally:
+      if self._input_logger is not None:
+        self._input_logger.close(self.simulation)
 
   def maybe_check_correspondence(self):
     if (self.logical_time % self.check_interval) == 0:

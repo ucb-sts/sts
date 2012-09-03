@@ -1,6 +1,7 @@
 from experiment_config_lib import ControllerConfig
 from sts.topology import FatTree, BufferedPatchPanel
 from sts.control_flow import Fuzzer
+from input_traces.input_logger import InputLogger
 
 # Use POX as our controller
 command_line = "./pox/pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__"
@@ -18,7 +19,7 @@ topology_params = "num_pods=4"
 patch_panel_class = BufferedPatchPanel
 
 # Use a Fuzzer (already the default)
-control_flow = Fuzzer()
+control_flow = Fuzzer(input_logger=InputLogger(), steps=20)
 
 # Specify None as the dataplane trace (already the default)
 # Otherwise, specify the path to the trace file
