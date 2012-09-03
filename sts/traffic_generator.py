@@ -2,6 +2,7 @@
 from pox.lib.packet.ethernet import *
 from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
+from dataplane_traces.trace import DataplaneEvent
 
 class TrafficGenerator (object):
   """
@@ -15,29 +16,35 @@ class TrafficGenerator (object):
       "icmp_ping" : self.icmp_ping
     }
 
-  def generate(self, packet_type, software_switch):
+  def generate(self, packet_type, host):
     if packet_type not in self._packet_generators:
       raise AttributeError("Unknown event type %s" % str(packet_type))
 
-    # Feed the packet to the software_switch
-    # TODO(cs): just use access links for packet ins -- not packets from within the network
-    in_port = self.random.choice(software_switch.ports.values())
-    packet = self._packet_generators[packet_type](software_switch, in_port)
-    return software_switch.process_packet(packet, in_port=in_port.port_no)
+    # Inject the packet through one of the hosts' interfaces
+    if len(host.interfaces) < 1:
+      raise RuntimeError("No interfaces to choose from on host %s!" %
+                         (str(host)))
 
-  # Generates an ICMP ping, and feeds it to the software_switch
-  def icmp_ping(self, software_switch, in_port):
+    interface = self.random.choice(host.interfaces)
+    packet = self._packet_generators[packet_type](interface)
+    host.send(interface, packet)
+    return DataplaneEvent(interface, packet)
+
+  # Generates an ICMP ping, and injects it through the interface
+  def icmp_ping(self, interface):
     # randomly choose an in_port.
-    if len(software_switch.ports) == 0:
-      raise RuntimeError("No Ports Registered on software_switch! %s" % str(software_switch))
     e = ethernet()
+    e.src = interface.hw_addr
     # TODO(cs): need a better way to create random MAC addresses
-    e.src = EthAddr(struct.pack("Q",self.random.randint(1,0xFF))[:6])
-    e.dst = in_port.hw_addr
+    # TODO(cs): allow the user to specify a non-random dst address
+    e.dst = EthAddr(struct.pack("Q",self.random.randint(1,0xFF))[:6])
     e.type = ethernet.IP_TYPE
     ipp = ipv4()
     ipp.protocol = ipv4.ICMP_PROTOCOL
-    ipp.srcip = IPAddr(self.random.randint(0,0xFFFFFFFF))
+    if hasattr(interface, 'ips'):
+      ipp.srcip = self.random.choice(interface.ips)
+    else:
+      ipp.srcip = IPAddr(self.random.randint(0,0xFFFFFFFF))
     ipp.dstip = IPAddr(self.random.randint(0,0xFFFFFFFF))
     ping = icmp()
     ping.type = TYPE_ECHO_REQUEST

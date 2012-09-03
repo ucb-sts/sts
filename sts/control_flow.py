@@ -79,7 +79,7 @@ class Fuzzer(ControlFlow):
   '''
   def __init__(self, fuzzer_params="config.fuzzer_params",
                check_interval=35, trace_interval=10, random_seed=0.0,
-               delay=0.1, steps=None):
+               delay=0.1, steps=None, input_logger=None):
     ControlFlow.__init__(self)
 
     self.check_interval = check_interval
@@ -93,9 +93,14 @@ class Fuzzer(ControlFlow):
     self.steps = steps
     self.params = object()
     self._load_fuzzer_params(fuzzer_params)
+    self._input_logger = input_logger
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
+
+  def _log_input_event(self, **kws):
+    if self._input_logger is not None:
+      self._input_logger.log_input_event(**kws)
 
   def _load_fuzzer_params(self, fuzzer_params_path):
     try:
@@ -158,6 +163,7 @@ class Fuzzer(ControlFlow):
     self.check_switch_crashes()
     self.check_timeouts()
     self.fuzz_traffic()
+    self.check_controllers()
 
   def check_dataplane(self):
     ''' Decide whether to delay, drop, or deliver packets '''
@@ -195,6 +201,7 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.switch_failure_rate:
           crashed_this_round.add(software_switch)
           self.simulation.topology.crash_switch(software_switch)
+          self._log_input_event(klass="SwitchFailure",dpid=software_switch.dpid)
       return crashed_this_round
 
     def restart_switches(crashed_this_round):
@@ -203,6 +210,7 @@ class Fuzzer(ControlFlow):
           continue
         if self.random.random() < self.params.switch_recovery_rate:
           self.simulation.topology.recover_switch(software_switch)
+          self._log_input_event(klass="SwitchRecovery",dpid=software_switch.dpid)
 
     def sever_links():
       # TODO(cs): model administratively down links? (OFPPC_PORT_DOWN)
@@ -211,6 +219,11 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.link_failure_rate:
           cut_this_round.add(link)
           self.simulation.topology.sever_link(link)
+          self._log_input_event(klass="LinkFailure",
+                                start_dpid=link.start_software_switch.dpid,
+                                start_port_no=link.start_software_switch.port.port_no,
+                                end_dpid=link.end_software_switch.dpid,
+                                end_port_no=link.end_software_switch.port.port_no)
       return cut_this_round
 
     def repair_links(cut_this_round):
@@ -219,6 +232,11 @@ class Fuzzer(ControlFlow):
           continue
         if self.random.random() < self.params.link_recovery_rate:
           self.simulation.topology.repair_link(link)
+          self._log_input_event(klass="LinkRecovery",
+                                start_dpid=link.start_software_switch.dpid,
+                                start_port_no=link.start_software_switch.port.port_no,
+                                end_dpid=link.end_software_switch.dpid,
+                                end_port_no=link.end_software_switch.port.port_no)
 
     crashed_this_round = crash_switches()
     restart_switches(crashed_this_round)
@@ -232,13 +250,18 @@ class Fuzzer(ControlFlow):
   def fuzz_traffic(self):
     if not self.simulation.dataplane_trace:
       # randomly generate messages from switches
-      for software_switch in self.simulation.topology.live_switches:
+      for host in self.simulation.topology.hosts:
         if self.random.random() < self.params.traffic_generation_rate:
-          if len(software_switch.ports) > 0:
+          if len(host.interfaces) > 0:
             msg.event("injecting a random packet")
             traffic_type = "icmp_ping"
             # Generates a packet, and feeds it to the software_switch
-            self.traffic_generator.generate(traffic_type, software_switch)
+            dp_event = self.traffic_generator.generate(traffic_type, host)
+            self._log_input_event(klass="TrafficInjection", dp_event=dp_event)
+
+  def check_controllers(self):
+    # TODO(cs): implement me
+    pass
 
 class Interactive(ControlFlow):
   '''

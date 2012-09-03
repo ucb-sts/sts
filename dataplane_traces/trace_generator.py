@@ -33,7 +33,7 @@ def generate_example_trace():
   ping_or_pong = "ping"
   for access_link in access_links:
     other_host = (set(hosts) - set([access_link.host])).pop()
-    eth = ethernet(src=access_link.host.interfaces[0].mac,dst=access_link.switch_port.hw_addr,type=ethernet.IP_TYPE)
+    eth = ethernet(src=access_link.host.interfaces[0].hw_addr,dst=access_link.switch_port.hw_addr,type=ethernet.IP_TYPE)
     dst_ip_addr = other_host.interfaces[0].ips[0]
     ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
     if ping_or_pong == "ping":
@@ -65,7 +65,7 @@ def generate_example_trace_same_subnet():
   ping_or_pong = "ping"
   for access_link in access_links:
     other_host = (set(hosts) - set([access_link.host])).pop()
-    eth = ethernet(src=access_link.host.interfaces[0].mac,dst=other_host.interfaces[0].mac,type=ethernet.IP_TYPE)
+    eth = ethernet(src=access_link.host.interfaces[0].hw_addr,dst=other_host.interfaces[0].hw_addr,type=ethernet.IP_TYPE)
     dst_ip_addr = other_host.interfaces[0].ips[0]
     ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
     if ping_or_pong == "ping":
@@ -97,7 +97,7 @@ def generate_example_trace_fat_tree(num_pods=4):
     host = access_link.host
     other_hosts = list((set(hosts) - set([access_link.host])))
     for other_host in other_hosts:
-      eth = ethernet(src=access_link.host.interfaces[0].mac,dst=other_host.interfaces[0].mac,type=ethernet.IP_TYPE)
+      eth = ethernet(src=access_link.host.interfaces[0].hw_addr,dst=other_host.interfaces[0].hw_addr,type=ethernet.IP_TYPE)
       dst_ip_addr = other_host.interfaces[0].ips[0]
       ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
       ping = icmp(type=TYPE_ECHO_REQUEST, payload=payload)

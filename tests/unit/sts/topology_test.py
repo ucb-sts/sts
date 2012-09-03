@@ -199,7 +199,7 @@ class BufferedPanelTest(unittest.TestCase):
     self.switch1 = self.switches[0]
     self.switch2 = self.switches[1]
     self.port = self.switch1.ports.values()[0]
-    self.icmp_packet = self.traffic_generator.icmp_ping(self.switch1, self.port)
+    self.icmp_packet = self.traffic_generator.icmp_ping(self.port)
     self.dp_out_event = DpPacketOut(self.switch1, self.icmp_packet, self.port)
 
   def test_buffering(self):
@@ -218,7 +218,6 @@ class BufferedPanelTest(unittest.TestCase):
     self.m.drop_dp_event(self.dp_out_event)
     self.assertTrue(len(self.m.get_buffered_dp_events()) == 0, "should have cleared buffer")
     self.assertFalse(self.switch2.has_forwarded, "should not have forwarded")
-
 
 if __name__ == '__main__':
   unittest.main()

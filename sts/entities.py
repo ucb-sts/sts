@@ -132,8 +132,8 @@ class AccessLink (object):
 
 class HostInterface (object):
   ''' Represents a host's interface (e.g. eth0) '''
-  def __init__(self, mac, ip_or_ips=[], name=""):
-    self.mac = mac
+  def __init__(self, hw_addr, ip_or_ips=[], name=""):
+    self.hw_addr = hw_addr
     if type(ip_or_ips) != list:
       ip_or_ips = [ip_or_ips]
     self.ips = ip_or_ips
@@ -142,7 +142,7 @@ class HostInterface (object):
   def __eq__(self, other):
     if type(other) != HostInterface:
       return False
-    if self.mac.toInt() != other.mac.toInt():
+    if self.hw_addr.toInt() != other.hw_addr.toInt():
       return False
     other_ip_ints = map(lambda ip: ip.toUnsignedN(), other.ips)
     for ip in self.ips:
@@ -155,14 +155,14 @@ class HostInterface (object):
     return True
 
   def __hash__(self):
-    hash_code = self.mac.toInt().__hash__()
+    hash_code = self.hw_addr.toInt().__hash__()
     for ip in self.ips:
       hash_code += ip.toUnsignedN().__hash__()
     hash_code += self.name.__hash__()
     return hash_code
 
   def __str__(self, *args, **kwargs):
-    return "HostInterface:" + self.name + ":" + str(self.mac) + ":" + str(self.ips)
+    return "HostInterface:" + self.name + ":" + str(self.hw_addr) + ":" + str(self.ips)
 
   def __repr__(self, *args, **kwargs):
     return self.__str__()

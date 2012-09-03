@@ -105,7 +105,7 @@ p46
 I0
 sS'id'
 p47
-I55860
+I62240
 sS'iplen'
 p48
 I20
@@ -162,7 +162,7 @@ sS'ips'
 p65
 (lp66
 g40
-asS'mac'
+asS'hw_addr'
 p67
 g16
 sbsbag1
@@ -210,7 +210,7 @@ I0
 sg46
 I0
 sg47
-I55861
+I62241
 sg48
 I20
 sg49

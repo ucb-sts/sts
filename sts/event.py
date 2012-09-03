@@ -229,7 +229,7 @@ class HostMigration(InputEvent):
     self.new_ingress_port_no = int(json_hash['new_ingress_port_no'])
 
   def proceed(self, simulation):
-    # TODO(cs): implement me
+    # TODO(cs): implement me, and add HostMigrations to Fuzzer
     pass
 
 class PolicyChange(InputEvent):
@@ -239,7 +239,7 @@ class PolicyChange(InputEvent):
     self.request_type = json_hash['request_type']
 
   def proceed(self, simulation):
-    # TODO(cs): implement me
+    # TODO(cs): implement me, and add PolicyChanges to Fuzzer
     pass
 
 class TrafficInjection(InputEvent):
