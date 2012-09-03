@@ -34,6 +34,9 @@ class EventDag(object):
         assert(isinstance(pruned_event_or_label,Event))
         pruned_event = pruned_event_or_label
         pruned_label = pruned_event.label
+      if not hasattr(pruned_event, 'dependent_labels'):
+        raise RuntimeError("Pruned Event %s does not specify dependent_labels" %
+                           str(pruned_event))
       pruned_labels = set(pruned_event.dependent_labels)
       pruned_labels.add(pruned_label)
       should_yield = lambda event: event.label not in pruned_labels
@@ -108,8 +111,8 @@ class InputEvent(Event):
   constructor. This enables the pruning of events.'''
   def __init__(self, json_hash):
     super(InputEvent, self).__init__(json_hash)
-    assert('dependent_labels' in json_hash)
-    self.dependent_labels = json_hash['dependent_labels']
+    if 'dependent_labels' in json_hash:
+      self.dependent_labels = json_hash['dependent_labels']
 
 # --------------------------------- #
 #  Concrete classes of InputEvents  #

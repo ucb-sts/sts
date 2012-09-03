@@ -52,17 +52,18 @@ class Replayer(ControlFlow):
   def simulate(self, simulation):
     self.simulation = simulation
 
-    # First, run through without pruning to verify that the violation exists
     self.simulation.bootstrap()
     for event_watcher in self.dag.event_watchers():
       event_watcher.run(simulation)
       self.increment_round()
       # TODO(cs): check correspondence
 
-    # Now start pruning
-    return self.find_mcs()
+class MCSFinder(Replayer):
+  def simulate(self, simulation):
+    # First, run through without pruning to verify that the violation exists
+    Replayer.simulate(self, simulation)
 
-  def find_mcs(self):
+    # Now start pruning
     mcs = []
     for pruned_event in self.dag.events():
       self.simulation.bootstrap()

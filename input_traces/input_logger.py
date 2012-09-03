@@ -17,7 +17,7 @@ patch_panel_class = %s
 # - find_mcs() mode, with causal dependency info
 # - simple() mode, without causal dependencies
 control_flow = Replayer("%s")
-dataplane_trace = "%s"
+dataplane_trace = %s
 '''
 
 class InputLogger(object):
@@ -30,7 +30,7 @@ class InputLogger(object):
     if one is not provided.
     '''
     if output_path is None:
-      now = time.strftime("%Y.%m.%d.%H.%M.%S", time.localtime())
+      now = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
       output_path = "input_traces/" + now + ".trace"
     self.output_path = output_path
     self.output = open(output_path, 'a')
@@ -61,10 +61,13 @@ class InputLogger(object):
 
     # Grab the dataplane trace path (might be pre-defined, or Fuzzed)
     if simulation._dataplane_trace_path is not None:
-      self.dp_trace_path = simulation._dataplane_trace_path
+      self.dp_trace_path = "\"" + simulation._dataplane_trace_path + "\""
     elif self.dp_events != []:
       # If the Fuzzer was injecting random traffic, write the dataplane trace
       tg.write_trace_log(self.dp_events, self.dp_trace_path)
+      self.dp_trace_path = "\"" + self.dp_trace_path + "\""
+    else:
+      self.dp_trace_path = None
 
     # Write the config file
     with open(self.cfg_path, 'w') as cfg_out:
