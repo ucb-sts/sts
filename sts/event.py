@@ -137,9 +137,7 @@ class SwitchFailure(InputEvent):
     self.dpid = int(json_hash['dpid'])
 
   def proceed(self, simulation):
-    if not self.dpid in simulation.topology.dpid2switch:
-      raise RuntimeError("dpid %d not found" % self.dpid)
-    software_switch = simulation.topology.dpid2switch[self.dpid]
+    software_switch = simulation.topology.get(self.dpid)
     simulation.topology.crash_switch(software_switch)
     return True
 
@@ -150,15 +148,13 @@ class SwitchRecovery(InputEvent):
     self.dpid = int(json_hash['dpid'])
 
   def proceed(self, simulation):
-    if not self.dpid in simulation.topology.dpid2switch:
-      raise RuntimeError("dpid %d not found" % self.dpid)
-    software_switch = simulation.topology.dpid2switch[self.dpid]
+    software_switch = simulation.topology.get(self.dpid)
     simulation.topology.recover_switch(software_switch)
     return True
 
 def get_link(link_event, simulation):
-  start_software_switch = simulation.topology.dpid2switch[link_event.start_dpid]
-  end_software_switch = simulation.topology.dpid2switch[link_event.end_dpid]
+  start_software_switch = simulation.topology.get(link_event.start_dpid)
+  end_software_switch = simulation.topology.get(link_event.end_dpid)
   link = Link(start_software_switch, link_event.start_port_no,
               end_software_switch, link_event.end_port_no)
   return link
@@ -228,8 +224,8 @@ class HostMigration(InputEvent):
     self.new_ingress_port_no = int(json_hash['new_ingress_port_no'])
 
   def proceed(self, simulation):
-    # TODO(cs): implement me, and add HostMigrations to Fuzzer
-    pass
+    # TODO(cs): add HostMigrations to Fuzzer
+    self.simulation.topology.migrate_host(self.XXX)
 
 class PolicyChange(InputEvent):
   def __init__(self, json_hash):

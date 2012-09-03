@@ -221,6 +221,11 @@ class Topology(object):
   def switches(self):
     return self.dpid2switch.values()
 
+  def get_switch(dpid):
+    if dpid not in self.dpid2switch:
+      raise RuntimeError("unknown dpid %d" % dpid)
+    return self.dpid2switch[dpid]
+
   @property
   def live_switches(self):
     """ Return the software_switchs which are currently up """
@@ -231,7 +236,7 @@ class Topology(object):
     (next_hop, next_port) = self.get_connected_port(dp_event.switch,
                                                     dp_event.port)
     if type(dp_event.node) == Host or type(next_hop) == Host:
-      # TODO(cs): model access link failures:
+      # TODO(cs): model access link failures
       return True
     else:
       link = Link(dp_event.switch, dp_event.port, next_hop, next_port)
@@ -308,6 +313,20 @@ class Topology(object):
       for c in software_switch.connections:
         if c.io_worker.has_pending_sends():
           yield c
+
+  def migrate_host(self, old_ingress_dpid, old_ingress_portno,
+                   new_ingress_dpid, new_ingress_portno):
+    '''Migrate the host from the old ingress switch, port to the new ingess
+    switch, port'''
+    # Temporary hack!: instead of changing the underlying get_connected_port()
+    # mapping, wrap it in another function.
+    # TODO(cs): a long-term solution would be to stop using a function
+    # (get_connected_port) to encapsulate edges, and instead use a general graph
+    # object to store edges and vertices.
+    old_ingress = self.get_switch(old_ingress_dpid)
+    old_access_link = self.get_connected_port()
+    new_ingress = self.get_switch(new_ingress_dpid)
+    new_access_link = AccessLink(host, interface, switch, switch_port)
 
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
