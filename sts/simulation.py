@@ -15,6 +15,7 @@ from sts.deferred_io import DeferredIOWorker
 from dataplane_traces.trace import Trace
 from entities import Link, Host, Controller
 from sts.topology import *
+from sts.controller_manager import ControllerManager
 
 import logging
 import pickle
@@ -35,8 +36,7 @@ class Simulation (object):
     self._scheduler = scheduler
     self._io_loop = None
     self.controller_configs = controller_configs
-    # uuid -> instantiated entities.Controller objects
-    self.uuid2controller = {}
+    self.controller_manager = None
     self.topology = None
     # keep around topology_class and topology_params so we can construct
     # clean topology objects for (multiple invocations of) bootstrapping later
@@ -48,20 +48,6 @@ class Simulation (object):
 
   # TODO(cs): the next three next methods should go in a separate
   #           ControllerContainer class
-  @property
-  def controllers(self):
-    return self.uuid2controller.values()
-
-  @property
-  def live_controllers(self):
-    alive = [controller for controller in self.controllers if controller.alive]
-    return set(alive)
-
-  @property
-  def down_controllers(self):
-    down = [controller for controller in self.controllers if not controller.alive]
-    return set(down)
-
   def _instantiate_topology(self):
     '''construct a clean topology object from topology_class and
     topology_params'''
@@ -74,9 +60,8 @@ class Simulation (object):
     sockets, IOLoop object) are cleaned before the next time we
     bootstrap'''
     # kill controllers
-    for c in self.controllers:
-      c.kill()
-    self.uuid2controller = {}
+    if self.controller_manager is not None:
+      self.controller_manager.kill_all()
 
     # Garbage collect sockets
     if self.topology is not None:
@@ -107,10 +92,7 @@ class Simulation (object):
                (str(c.uuid), " ".join(c.cmdline), controller.pid))
       controllers.append(controller)
 
-    self.uuid2controller = {
-      controller.uuid : controller
-      for controller in controllers
-    }
+    self.controller_manager = ControllerManager(controllers)
 
     # Instantiate network
     self._instantiate_topology()
