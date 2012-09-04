@@ -1,5 +1,5 @@
 from experiment_config_lib import ControllerConfig
-from sts.topology import MeshTopology, BufferedPatchPanel
+from sts.topology import MeshTopology, PatchPanel
 from sts.control_flow import Interactive
 from input_traces.input_logger import InputLogger
 
@@ -16,7 +16,7 @@ topology_params = "num_switches=2"
 
 # Use a BufferedPatchPanel (already the default)
 # (specify the class, but don't instantiate the object)
-patch_panel_class = BufferedPatchPanel
+patch_panel_class = PatchPanel
 
 # Use a Fuzzer (already the default)
 control_flow = Interactive()
