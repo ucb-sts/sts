@@ -178,7 +178,7 @@ class Fuzzer(ControlFlow):
         self.simulation.delay_dp_event(dp_event)
       elif self.random.random() < self.params.dataplane_drop_rate:
         self.simulation.drop_dp_event(dp_event)
-      elif self.topology.ok_to_send(dp_event):
+      elif self.simulation.topology.ok_to_send(dp_event):
         self.simulation.patch_panel.permit_dp_event(dp_event)
 
   def check_controlplane(self):
@@ -318,6 +318,8 @@ class Interactive(ControlFlow):
       self.logical_time += 1
       self.invariant_check_prompt()
       self.dataplane_trace_prompt()
+      self.check_controlplane()
+      self.check_dataplane()
       answer = msg.raw_input('Continue to next round? [Yn]').strip()
       if answer != '' and answer.lower() != 'y':
         self.stop()
@@ -357,6 +359,43 @@ class Interactive(ControlFlow):
       while True:
         answer = msg.raw_input('Feed in next dataplane event? [Ny]')
         if answer != '' and answer.lower() != 'n':
-          self.simulation.inject_trace_event()
+          self.simulation.dataplane_trace.inject_trace_event()
         else:
           break
+
+  def check_controlplane(self):
+    ''' Decide whether to delay or deliver packets '''
+    # Check reads
+    for connection in self.simulation.topology.cp_connections_with_pending_receives:
+      answer = msg.raw_input('Allow control plane receive %s? [Yn]' % connection)
+      if answer != '' and answer.lower() != 'y':
+        self.simulation.topology.delay_cp_receive(connection)
+      else:
+        self.simulation.topology.permit_cp_receive(connection)
+
+    # Check write
+    for connection in self.simulation.topology.cp_connections_with_pending_sends:
+      answer = msg.raw_input('Allow control plane send %s? [Yn]' % connection)
+      if answer != '' and answer.lower() != 'y':
+        self.simulation.topology.delay_cp_send(connection)
+      else:
+        self.simulation.topology.permit_cp_send(connection)
+
+  def check_dataplane(self):
+    ''' Decide whether to delay, drop, or deliver packets '''
+    if type(self.simulation.patch_panel) == BufferedPatchPanel:
+      for dp_event in self.simulation.patch_panel.queued_dataplane_events:
+        answer = msg.raw_input('Allow [a], Drop [d], or Delay [e] dataplane packet %s? [Ade]' %
+                               dp_event)
+        if ((answer == '' or answer.lower() == 'a') and
+                self.simulation.topology.ok_to_send(dp_event)):
+          self.simulation.patch_panel.permit_dp_event(dp_event)
+        elif answer.lower() == 'd':
+          self.simulation.drop_dp_event(dp_event)
+        elif answer.lower() == 'e':
+          self.simulation.delay_dp_event(dp_event)
+        else:
+          log.warn("Unknown input...")
+          self.simulation.delay_dp_event(dp_event)
+
+  # TODO(cs): add support for switch, link, controller failures

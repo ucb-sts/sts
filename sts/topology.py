@@ -417,7 +417,6 @@ class Topology(object):
                                   graph.ports_for_node(host).iteritems())]
      return topology
 
-
 class MeshTopology(Topology):
   def __init__(self, num_switches=3):
     '''
