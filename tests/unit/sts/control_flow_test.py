@@ -13,6 +13,7 @@ from sts.control_flow import Replayer
 from sts.topology import FatTree, PatchPanel, MeshTopology
 from sts.simulation import Simulation
 from pox.lib.recoco.recoco import Scheduler
+from sts.entities import Host
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
@@ -131,11 +132,13 @@ class ReplayerTest(unittest.TestCase):
 
   def write_migration_superlog(self):
     superlog = open(self.tmp_migration_superlog, 'w')
-    e1 = str('''{"dependent_labels": [], "start_dpid": 8, "class": "HostMigration",'''
-             ''' "start_port_no": 3, "end_dpid": 15, "end_port_no": 2, "label": "e1"}''')
+    e1 = str('''{"dependent_labels": ["e2"], "old_ingress_dpid": 7, "class": "HostMigration",'''
+             ''' "old_ingress_port_no": 1, "new_ingress_dpid": 8, '''
+             ''' "new_ingress_port_no": 99, "label": "e1"}''')
     superlog.write(e1 + '\n')
-    e2 = str('''{"dependent_labels": [], "start_dpid": 15, "class": "HostMigration",'''
-             ''' "start_port_no": 2, "end_dpid": 8, "end_port_no": 3, "label": "e2"}''')
+    e2 = str('''{"dependent_labels": [], "old_ingress_dpid": 8, "class": "HostMigration",'''
+             ''' "old_ingress_port_no": 99, "new_ingress_dpid": 7, '''
+             ''' "new_ingress_port_no": 101, "label": "e2"}''')
     superlog.write(e2 + '\n')
     superlog.close()
 
@@ -154,6 +157,11 @@ class ReplayerTest(unittest.TestCase):
       replayer = Replayer(self.tmp_migration_superlog)
       simulation = self.setup_migration_simulation()
       replayer.simulate(simulation)
+      latest_switch = simulation.topology.get_switch(7)
+      latest_port = latest_switch.ports[101]
+      host = simulation.topology.get_connected_port(latest_switch,
+                                                    latest_port)
+      self.assertTrue(type(host) == Host)
     finally:
       os.unlink(self.tmp_migration_superlog)
 

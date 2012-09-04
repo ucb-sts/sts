@@ -329,10 +329,13 @@ class Topology(object):
     old_ingress = self.get_switch(old_ingress_dpid)
     if old_ingress_portno not in old_ingress.ports:
       raise ValueError("unknown old_ingress_portno %d" % old_ingress_portno)
+
     old_port = old_ingress.ports[old_ingress_portno]
-    old_access_link = self.get_connected_port(old_ingress, old_port)
-    host = old_access_link.host
-    interface = old_access_link.interface
+    (host, interface) = self.get_connected_port(old_ingress, old_port)
+    if type(host) != Host or type(interface) != HostInterface:
+      raise ValueError("(%s,%s) does not connect to a host!" %
+                       (str(old_ingress), str(old_port)))
+
     new_ingress = self.get_switch(new_ingress_dpid)
     if new_ingress_portno in new_ingress.ports:
       raise RuntimeError("new ingress port %d already exists!" %
@@ -341,15 +344,19 @@ class Topology(object):
     # the same mac address as the old ingress's now-defunct port.
     hw_addr = old_port.hw_addr
     new_port = ofp_phy_port(port_no=new_ingress_portno, hw_addr=hw_addr)
-    new_access_link = AccessLink(host, interface, new_ingress, new_port)
 
     # Now take down the old port and bring up (add) the new one
-    old_ingress.take_down_port(old_port)
+    old_ingress.take_port_down(old_port)
     new_ingress.bring_port_up(new_port)
 
     # Now override self.get_connected_port
-    # TODO(cs): does python's closure behavior not work this way?
-    old_get_connected_port = self.get_connected_port
+    # We need to avoid python's lexical scope though (we need to bind
+    # the old self.get_connected_port so that isn't overwritten)
+    def bind(original_get_connected_port):
+      def bound(node, port): return original_get_connected_port(node, port)
+      return bound
+    old_get_connected_port = bind(self.get_connected_port)
+    # Now define our new connected_port mapping
     def get_connected_port_wrapper(node, port):
       if node == new_ingress and port == new_port:
         return (host, interface)
