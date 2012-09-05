@@ -105,8 +105,14 @@ class Wirer(object):
     in the args is connected to.'''
     return NotImplemented
 
-  #TODO(cs): define empty methods (with pass) for migration methods. This should
-  #be a no-op if the child class doesn't want to implement it.
+  def migrate_host(self, old_ingress_dpid, old_ingress_portno,
+                   new_ingress_dpid, new_ingress_portno):
+    '''Migrate the host from the old (ingress switch, port) to the new
+    (ingress switch, port). Note that the new port must not already be
+    present, otherwise an exception will be thrown (we treat all switches as
+    configurable software switches for convenience, rather than hardware switches
+    with a fixed number of ports)'''
+    pass
 
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
