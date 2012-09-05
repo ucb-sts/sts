@@ -93,6 +93,21 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
                    for interface, switch in interface_switch_pairs ]
   return (host, access_links)
 
+class Wirer(object):
+  __metaclass__ = abc.ABCMeta
+
+  @abc.abstractmethod
+  def __call__(self, node, port):
+    '''Takes a node and a port.
+
+    Returns a (node, port) tuple is directly connected to the port. This tuple
+    is the node N and the port on node N that the link on the (node, port) tuple
+    in the args is connected to.'''
+    return NotImplemented
+
+  #TODO(cs): define empty methods (with pass) for migration methods. This should
+  #be a no-op if the child class doesn't want to implement it.
+
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
       Listens to the SwitchDPPacketOut event on the switches.
@@ -124,7 +139,7 @@ class PatchPanel(object):
     else:
       self.forward_packet(node, event.packet, port)
 
-  def get_connected_port(self, node, port):
+  def get_connected_port(self, node, port): # TODO(sw): is this actually necessary?
     return self.get_connected_port(node, port)
 
   def forward_packet(self, next_switch, packet, next_port):
@@ -447,7 +462,7 @@ class MeshTopology(Topology):
     self.get_connected_port = link_topology.get_connected_port
     self.network_links = link_topology.get_network_links()
 
-  class FullyMeshedLinks(object):
+  class FullyMeshedLinks(Wirer):
     """
     A factory method (inner class) for creating a fully meshed network.
     Connects every pair of switches. Ports are in ascending order of
@@ -467,7 +482,7 @@ class MeshTopology(Topology):
         self.port2access_link[access_link.switch_port] = access_link
         self.interface2access_link[access_link.interface] = access_link
 
-    def get_connected_port(self, node, port):
+    def __call__(self, node, port):
       ''' Given a node and a port, return a tuple (node, port) that is directly
       connected to the port '''
       if port in self.port2access_link:
@@ -632,23 +647,26 @@ class FatTree (Topology):
 
   def wire_tree(self):
     # Auxiliary data to make get_connected_port efficient
-    self.port2internal_link = {}
-    for link in self.network_links:
+    port2internal_link = { link.start_port: link
+                           for link in self.network_links }
+    # for link in self.network_links:
       #if link.start_port in self.port2internal_link:
         #raise RuntimeError("%s Already there %s" % (str(link),
         #                   str(self.port2internal_link[link.start_port])))
-      self.port2internal_link[link.start_port] = link
+    #  port2internal_link[link.start_port] = link
 
     # TODO(cs): this should be in a unit test, not here
     #if len(self.port2internal_link) != len(self.network_links):
     #  raise RuntimeError("Not enough port2network_links(%d s/b %d)" % \
     #                    (len(self.port2internal_link), len(self.network_links)))
 
-    self.port2access_link = {}
-    self.interface2access_link = {}
-    for access_link in self.access_links:
-      self.port2access_link[access_link.switch_port] = access_link
-      self.interface2access_link[access_link.interface] = access_link
+    port2access_link = { access_link.switch_port: access_link
+                         for access_link in self.access_links }
+    interface2access_link = { access_link.interface: access_link
+                              for access_link in self.access_links }
+    # for access_link in self.access_links:
+    #   self.port2access_link[access_link.switch_port] = access_link
+    #   self.interface2access_link[access_link.interface] = access_link
 
     # TODO(cs): this should be in a unit test, not here
     #if len(self.port2access_link) != len(self.access_links):
@@ -659,6 +677,7 @@ class FatTree (Topology):
     #if len(self.interface2access_link) != len(self.access_links):
     #  raise RuntimeError("Not enough interface2accesslinks (%d s/b %d)" % \
     #                    (len(self.interface2accesslinks), len(self.access_links)))
+    self.get_connected_port = self.FatTreeWirer(port2access_link, interface2access_link, port2internal_link)
 
   def _sanity_check_tree(self):
     # TODO(cs): this should be in a unit test, not here
@@ -744,17 +763,23 @@ class FatTree (Topology):
       flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
       edge._receive_flow_mod(flow_mod)
 
-  def get_connected_port(self, node, port):
-    ''' Given a node and a port, return a tuple (node, port) that is directly
-    connected to the port '''
-    # TODO(cs): use a $@#*$! graph library
-    if port in self.port2access_link:
-      access_link = self.port2access_link[port]
-      return (access_link.host, access_link.interface)
-    if port in self.interface2access_link:
-      access_link = self.interface2access_link[port]
-      return (access_link.switch, access_link.switch_port)
-    if port in self.port2internal_link:
-      link = self.port2internal_link[port]
-      return (link.end_software_switch, link.end_port)
-    raise RuntimeError("Node %s Port %s not in network" % (str(node), str(port)))
+  class FatTreeWirer(Wirer):
+    def __init__(self, port2access_link, interface2access_link, port2internal_link):
+      self.port2access_link = port2access_link
+      self.interface2access_link = interface2access_link
+      self.port2internal_link = port2internal_link
+
+    def __call__(self, node, port):
+      ''' Given a node and a port, return a tuple (node, port) that is directly
+      connected to the port '''
+      # TODO(cs): use a $@#*$! graph library
+      if port in self.port2access_link:
+        access_link = self.port2access_link[port]
+        return (access_link.host, access_link.interface)
+      if port in self.interface2access_link:
+        access_link = self.interface2access_link[port]
+        return (access_link.switch, access_link.switch_port)
+      if port in self.port2internal_link:
+        link = self.port2internal_link[port]
+        return (link.end_software_switch, link.end_port)
+        raise RuntimeError("Node %s Port %s not in network" % (str(node), str(port)))
