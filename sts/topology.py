@@ -417,7 +417,7 @@ class MeshTopology(Topology):
 
     # grab a fully meshed patch panel to wire up these guys
     link_topology = MeshTopology.FullyMeshedLinks(self.switches, self.access_links)
-    self.get_connected_port = link_topology.get_connected_port
+    self.get_connected_port = link_topology
     self.network_links = link_topology.get_network_links()
 
   class FullyMeshedLinks(Wirer):
@@ -510,7 +510,7 @@ class MeshTopology(Topology):
       all_network_links = []
       for switch in self.switches:
         for port in set(switch.ports.values()) - set([get_switchs_host_port(switch)]):
-          (other_switch, other_port) =  self.get_connected_port(switch, port)
+          (other_switch, other_port) =  self(switch, port)
           all_network_links.append(Link(switch, port, other_switch, other_port))
       self.all_network_links = all_network_links
       return all_network_links

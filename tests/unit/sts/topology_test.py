@@ -101,7 +101,7 @@ class FullyMeshedLinkTest(unittest.TestCase):
   def setUp(self):
     self.switches = [ create_switch(switch_id, 2) for switch_id in range(1, 4) ]
     self.links = MeshTopology.FullyMeshedLinks(self.switches)
-    self.get_connected_port = self.links.get_connected_port
+    self.get_connected_port = self.links
 
   def test_connected_ports(self):
     def check_pair(a, b):
@@ -194,7 +194,7 @@ class BufferedPanelTest(unittest.TestCase):
       return MockSwitch(switch_id, ports)
 
     self.switches = [create_mock_switch(1,1), create_mock_switch(1,2)]
-    self.m = BufferedPatchPanel(self.switches, [], MeshTopology.FullyMeshedLinks(self.switches).get_connected_port)
+    self.m = BufferedPatchPanel(self.switches, [], MeshTopology.FullyMeshedLinks(self.switches))
     self.traffic_generator = TrafficGenerator()
     self.switch1 = self.switches[0]
     self.switch2 = self.switches[1]
