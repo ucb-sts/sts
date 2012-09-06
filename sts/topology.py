@@ -662,28 +662,11 @@ class FatTree (Topology):
         #                   str(self.port2internal_link[link.start_port])))
     #  port2internal_link[link.start_port] = link
 
-    # TODO(cs): this should be in a unit test, not here
-    #if len(self.port2internal_link) != len(self.network_links):
-    #  raise RuntimeError("Not enough port2network_links(%d s/b %d)" % \
-    #                    (len(self.port2internal_link), len(self.network_links)))
-
     port2access_link = { access_link.switch_port: access_link
                          for access_link in self.access_links }
     interface2access_link = { access_link.interface: access_link
                               for access_link in self.access_links }
-    # for access_link in self.access_links:
-    #   self.port2access_link[access_link.switch_port] = access_link
-    #   self.interface2access_link[access_link.interface] = access_link
 
-    # TODO(cs): this should be in a unit test, not here
-    #if len(self.port2access_link) != len(self.access_links):
-    #  raise RuntimeError("Not enough port2accesslinks (%d s/b %d)" % \
-    #                    (len(self.port2access_link), len(self.access_links)))
-
-    # TODO(cs): this should be in a unit test, not here
-    #if len(self.interface2access_link) != len(self.access_links):
-    #  raise RuntimeError("Not enough interface2accesslinks (%d s/b %d)" % \
-    #                    (len(self.interface2accesslinks), len(self.access_links)))
     self.get_connected_port = self.FatTreeWirer(port2access_link, interface2access_link, port2internal_link)
 
   def _sanity_check_tree(self):
