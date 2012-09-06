@@ -512,12 +512,13 @@ class MeshTopology(Topology):
       # memoize the result
       if hasattr(self, "all_network_links"):
         return self.all_network_links
-      self.all_network_links = []
+      all_network_links = []
       for switch in self.switches:
         for port in set(switch.ports.values()) - set([get_switchs_host_port(switch)]):
           (other_switch, other_port) =  self.get_connected_port(switch, port)
-          self.all_network_links.append(Link(switch, port, other_switch, other_port))
-      return self.all_network_links
+          all_network_links.append(Link(switch, port, other_switch, other_port))
+      self.all_network_links = all_network_links
+      return all_network_links
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
