@@ -95,21 +95,34 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
   return (host, access_links)
 
 class LinkTracker(object):
-  __metaclass__ = abc.ABCMeta
-
   def __init__(self, dpid2switch, port2access_link, interface2access_link):
     self.dpid2switch = dpid2switch
     self.port2access_link = port2access_link
     self.interface2access_link = interface2access_link
+    self.port2internal_link = {}
 
-  @abc.abstractmethod
+  @property
+  def network_links(self):
+    return self.port2internal_link.values()
+
   def __call__(self, node, port):
-    '''Takes a node and a port.
+    ''' Given a node and a port, return a tuple (node, port) that is directly
+    connected to the port.
 
-    Returns a (node, port) tuple is directly connected to the port. This tuple
-    is the node N and the port on node N that the link on the (node, port) tuple
-    in the args is connected to.'''
-    return NotImplemented
+    This can be used in 2 ways
+    - node is a Host type and port is a HostInterface type
+    - node is a Switch type and port is a ofp_phy_port type.'''
+    if port in self.port2access_link:
+      access_link = self.port2access_link[port]
+      return (access_link.host, access_link.interface)
+    if port in self.interface2access_link:
+      access_link = self.interface2access_link[port]
+      return (access_link.switch, access_link.switch_port)
+    elif port in self.port2internal_link:
+      network_link = self.port2internal_link[port]
+      return (network_link.end_software_switch, network_link.end_port)
+    else:
+      raise ValueError("Unknown port: %s" % str(port))
 
   def _get_switch_by_dpid(self, dpid):
     if dpid not in self.dpid2switch:
@@ -142,15 +155,19 @@ class LinkTracker(object):
     if new_ingress_portno in new_ingress_switch.ports:
       raise RuntimeError("new ingress port %d already exists!" % new_ingress_portno)
 
-    new_ingress_port = new_ingress_switch.ports[new_ingress_portno]
-
     # now that we've verified everything, actually make the change!
     # first, drop the old mappings
     del self.port2access_link[old_port]
-    old_ingress_switch.bring_port_down(old_port)
+    del self.interface2access_link[interface]
+    old_ingress_switch.take_port_down(old_port)
 
     # now add new mappings
-    new_ingress_switch.ports[new_ingress_portno] = new_ingress_port
+    # For now, make the new port have the same ip address as the old port.
+    # TODO(cs): this would break PORTLAND routing! Need to specify the
+    #           new mac and IP addresses
+    new_ingress_port = ofp_phy_port(hw_addr=old_port.hw_addr,
+                                    port_no=new_ingress_portno)
+    new_ingress_switch.bring_port_up(new_ingress_port)
     new_access_link = AccessLink(host, interface, new_ingress_switch, new_ingress_port)
     self.port2access_link[new_ingress_port] = new_access_link
     self.interface2access_link[interface] = new_access_link
@@ -498,29 +515,6 @@ class MeshTopology(Topology):
           port2internal_link[switch_j_port] = link_j2i
       self.port2internal_link = port2internal_link
 
-    @property
-    def network_links(self):
-      return self.port2internal_link.values()
-
-    def __call__(self, node, port):
-      ''' Given a node and a port, return a tuple (node, port) that is directly
-      connected to the port.
-
-      This can be used in 2 ways
-      - node is a Host type and port is a HostInterface type
-      - node is a Switch type and port is a ofp_phy_port type.'''
-      if port in self.port2access_link:
-        access_link = self.port2access_link[port]
-        return (access_link.host, access_link.interface)
-      if port in self.interface2access_link:
-        access_link = self.interface2access_link[port]
-        return (access_link.switch, access_link.switch_port)
-      elif port in self.port2internal_link:
-        network_link = self.port2internal_link[port]
-        return (network_link.end_software_switch, network_link.end_port)
-      else:
-        raise ValueError("Unknown port: %s" % str(port))
-
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
   def __init__(self, num_pods=4):
@@ -754,24 +748,8 @@ class FatTree (Topology):
       flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
       edge._receive_flow_mod(flow_mod)
 
+  # TODO(cs): rename to FatTreeLinks
   class FatTreeWirer(LinkTracker):
     def __init__(self, port2access_link, interface2access_link, port2internal_link, dpid2switch):
-      self.port2access_link = port2access_link
-      self.interface2access_link = interface2access_link
+      LinkTracker.__init__(self, dpid2switch, port2access_link, interface2access_link)
       self.port2internal_link = port2internal_link
-      self.dpid2switch = dpid2switch
-
-    def __call__(self, node, port):
-      ''' Given a node and a port, return a tuple (node, port) that is directly
-      connected to the port '''
-      # TODO(cs): use a $@#*$! graph library
-      if port in self.port2access_link:
-        access_link = self.port2access_link[port]
-        return (access_link.host, access_link.interface)
-      if port in self.interface2access_link:
-        access_link = self.interface2access_link[port]
-        return (access_link.switch, access_link.switch_port)
-      if port in self.port2internal_link:
-        link = self.port2internal_link[port]
-        return (link.end_software_switch, link.end_port)
-      raise RuntimeError("Node %s Port %s not in network" % (str(node), str(port)))
