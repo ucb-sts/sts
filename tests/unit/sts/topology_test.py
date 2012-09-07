@@ -105,17 +105,10 @@ class FullyMeshedLinkTest(unittest.TestCase):
     self.get_connected_port = self.links
 
   def test_connected_ports(self):
-    def check_pair(a, b):
-      a_switch = self.switches[a[0]-1]
-      a_port = a_switch.ports[a[1]]
-      b_switch = self.switches[b[0]-1]
-      b_port = b_switch.ports[b[1]]
-      self.assertEqual(self.get_connected_port(a_switch, a_port), (b_switch, b_port))
-      self.assertEqual(self.get_connected_port(b_switch, b_port), (a_switch, a_port))
-
-    check_pair( (1,1), (2,1))
-    check_pair( (1,2), (3,1))
-    check_pair( (3,2), (2,2))
+    # this is the sum of i from i=1 to i=n-1, *2 because links are unidirectional
+    expected_link_length = 2*reduce(lambda x,y: x+y, xrange(1,len(self.switches)), 0)
+    self.assertEqual(expected_link_length,
+                     len(set(self.links.network_links)))
 
 class TopologyUnitTest(unittest.TestCase):
   _io_loop = RecocoIOLoop()

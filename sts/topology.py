@@ -484,10 +484,8 @@ class MeshTopology(Topology):
       switch2unclaimed_ports = { switch: switch.ports.values()
                                  for switch in switches }
       port2internal_link = {}
-      for i in xrange(1, len(switches)):
-        for j in xrange(i+1, len(switches)):
-          switch_i = switches[i]
-          switch_j = switches[j]
+      for i, switch_i in enumerate(switches):
+        for switch_j in switches[i+1:]:
           switch_i_port = switch2unclaimed_ports[switch_i].pop()
           switch_j_port = switch2unclaimed_ports[switch_j].pop()
           link_i2j = Link(switch_i, switch_i_port, switch_j, switch_j_port)
@@ -518,39 +516,6 @@ class MeshTopology(Topology):
         return (network_link.end_software_switch, network_link.end_port)
       else:
         raise ValueError("Unknown port: %s" % str(port))
-
-    def migrate_host(self, old_ingress_dpid, old_ingress_portno,
-                     new_ingress_dpid, new_ingress_portno):
-      old_ingress_switch = self._get_switch_by_dpid(old_ingress_dpid)
-
-      if old_ingress_portno not in old_ingress_switch.ports:
-        raise ValueError("unknown old_ingress_portno %d" % old_ingress_portno)
-
-      old_port = old_ingress_switch.ports[old_ingress_portno]
-
-      (host, interface) = self(old_ingress_switch, old_port) # using __call__
-
-      if not (isinstance(host, Host) and isinstance(interface, HostInterface)):
-        raise ValueError("(%s,%s) does not connect to a host!" %
-                         (str(old_ingress_switch), str(old_port)))
-
-      new_ingress_switch = self._get_switch_by_dpid(new_ingress_dpid)
-
-      if new_ingress_portno in new_ingress_switch.ports:
-        raise RuntimeError("new ingress port %d already exists!" % new_ingress_portno)
-
-      new_ingress_port = new_ingress_switch.ports[new_ingress_portno]
-
-      # now that we've verified everything, actually make the change!
-      # first, drop the old mappings
-      del self.port2access_link[old_port]
-      old_ingress_switch.bring_port_down(old_port)
-
-      # now add new mappings
-      new_ingress_switch.ports[new_ingress_portno] = new_ingress_port
-      new_access_link = AccessLink(host, interface, new_ingress_switch, new_ingress_port)
-      self.port2access_link[new_ingress_port] = new_access_link
-      self.interface2access_link[interface] = new_access_link
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
@@ -806,23 +771,3 @@ class FatTree (Topology):
         link = self.port2internal_link[port]
         return (link.end_software_switch, link.end_port)
       raise RuntimeError("Node %s Port %s not in network" % (str(node), str(port)))
-
-    def migrate_host(self, old_ingress_dpid, old_ingress_portno,
-                     new_ingress_dpid, new_ingress_portno):
-      old_ingress_switch = self._get_switch_by_dpid(old_ingress_dpid)
-
-      if old_ingress_portno not in old_ingress_switch.ports:
-        raise ValueError("unknown old_ingress_portno %d" % old_ingress_portno)
-
-      old_port = old_ingress_switch.ports[old_ingress_portno]
-
-      (host, interface) = self(old_ingress_switch, old_port) # using __call__
-
-      if not (isinstance(host, Host) and isinstance(interface, HostInterface)):
-        raise ValueError("(%s,%s) does not connect to a host!" %
-                         (str(old_ingress_switch), str(old_port)))
-
-      new_ingress_switch = self._get_switch_by_dpid(new_ingress_dpid)
-
-      if new_ingress_portno in new_ingress_switch.ports:
-        raise RuntimeError("new ingress port %d already exists!" % new_ingress_portno)
