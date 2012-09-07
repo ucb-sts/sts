@@ -662,7 +662,7 @@ class FatTree (Topology):
     interface2access_link = { access_link.interface: access_link
                               for access_link in self.access_links }
 
-    self.get_connected_port = self.FatTreeWirer(port2access_link, interface2access_link, port2internal_link, self.dpid2switch)
+    self.get_connected_port = self.FatTreeLinks(port2access_link, interface2access_link, port2internal_link, self.dpid2switch)
 
   def _sanity_check_tree(self):
     # TODO(cs): this should be in a unit test, not here
@@ -748,8 +748,7 @@ class FatTree (Topology):
       flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
       edge._receive_flow_mod(flow_mod)
 
-  # TODO(cs): rename to FatTreeLinks
-  class FatTreeWirer(LinkTracker):
+  class FatTreeLinks(LinkTracker):
     def __init__(self, port2access_link, interface2access_link, port2internal_link, dpid2switch):
       LinkTracker.__init__(self, dpid2switch, port2access_link, interface2access_link)
       self.port2internal_link = port2internal_link
