@@ -651,12 +651,6 @@ class FatTree (Topology):
     # Auxiliary data to make get_connected_port efficient
     port2internal_link = { link.start_port: link
                            for link in self.network_links }
-    # for link in self.network_links:
-      #if link.start_port in self.port2internal_link:
-        #raise RuntimeError("%s Already there %s" % (str(link),
-        #                   str(self.port2internal_link[link.start_port])))
-    #  port2internal_link[link.start_port] = link
-
     port2access_link = { access_link.switch_port: access_link
                          for access_link in self.access_links }
     interface2access_link = { access_link.interface: access_link
