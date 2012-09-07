@@ -50,7 +50,8 @@ class ReplayerTest(unittest.TestCase):
     finally:
       os.unlink(self.tmpsuperlog)
       os.unlink(self.tmpcfg)
-      os.unlink(self.tmpcfgpyc)
+      if os.path.exists(self.tmpcfgpyc):
+        os.unlink(self.tmpcfgpyc)
 
 if __name__ == '__main__':
   unittest.main()
