@@ -52,6 +52,7 @@ def create_switch(switch_id, num_ports):
 def get_switchs_host_port(switch):
   ''' return the switch's ofp_phy_port connected to the host '''
   # We wire up the last port of the switch to the host
+  # TODO(cs): this is arbitrary and hacky
   return switch.ports[sorted(switch.ports.keys())[-1]]
 
 def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
@@ -481,7 +482,10 @@ class MeshTopology(Topology):
       LinkTracker.__init__(self, dpid2switch, port2access_link, interface2access_link)
 
       switches = dpid2switch.values()
-      switch2unclaimed_ports = { switch: switch.ports.values()
+      # Access links to hosts are already claimed, all other internal links
+      # are not yet claimed
+      switch2unclaimed_ports = { switch : filter(lambda p: p not in port2access_link,
+                                                 switch.ports.values())
                                  for switch in switches }
       port2internal_link = {}
       for i, switch_i in enumerate(switches):
