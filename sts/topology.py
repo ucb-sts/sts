@@ -452,11 +452,15 @@ class MeshTopology(Topology):
 
     def __call__(self, node, port):
       ''' Given a node and a port, return a tuple (node, port) that is directly
-      connected to the port '''
+      connected to the port.
+
+      This can be used in 2 ways
+      - node is a Host type and port is a HostInterface type
+      - node is a Switch type and port is a ofp_phy_port type.'''
       if port in self.port2access_link:
         access_link = self.port2access_link[port]
         return (access_link.host, access_link.interface)
-      if port in self.interface2access_link: #TODO(cs): this is populated with access_links. shouldn't ports never be in here?
+      if port in self.interface2access_link:
         access_link = self.interface2access_link[port]
         return (access_link.switch, access_link.switch_port)
       else:
