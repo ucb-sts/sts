@@ -93,7 +93,7 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
                    for interface, switch in interface_switch_pairs ]
   return (host, access_links)
 
-class Wirer(object):
+class LinkTracker(object):
   __metaclass__ = abc.ABCMeta
 
   @abc.abstractmethod
@@ -420,7 +420,7 @@ class MeshTopology(Topology):
     self.get_connected_port = link_topology
     self.network_links = link_topology.get_network_links()
 
-  class FullyMeshedLinks(Wirer):
+  class FullyMeshedLinks(LinkTracker):
     """
     A factory method (inner class) for creating a fully meshed network.
     Connects every pair of switches. Ports are in ascending order of
@@ -752,7 +752,7 @@ class FatTree (Topology):
       flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
       edge._receive_flow_mod(flow_mod)
 
-  class FatTreeWirer(Wirer):
+  class FatTreeWirer(LinkTracker):
     def __init__(self, port2access_link, interface2access_link, port2internal_link):
       self.port2access_link = port2access_link
       self.interface2access_link = interface2access_link
