@@ -14,7 +14,7 @@ log = logging.getLogger("invariant_checker")
 
 class InvariantChecker(object):
   def fetch_controller_snapshot(self, simulation):
-    # TODO(cs): grab url from simulation.controller_info_list rather than
+    # TODO(cs): grab url from simulation.controller_configs rather than
     # hard-code
     req = urllib2.Request('http://localhost:8080/wm/core/proact')
     response = urllib2.urlopen(req)
@@ -45,14 +45,14 @@ class InvariantChecker(object):
     log.debug("Snapshotting controller...")
     controller_snapshot = self.fetch_controller_snapshot(simulation)
     log.debug("Computing physical omega...")
-    physical_omega = self.compute_physical_omega(simulation.live_switches,
-                                                 simulation.live_links,
-                                                 simulation.edge_links)
+    physical_omega = self.compute_physical_omega(simulation.topology.live_switches,
+                                                 simulation.topology.live_links,
+                                                 simulation.topology.edge_links)
     log.debug("Computing controller omega...")
     controller_omega = self.compute_controller_omega(controller_snapshot,
-                                                     simulation.live_switches,
-                                                     simulation.live_links,
-                                                     simulation.edge_links)
+                                                     simulation.topology.live_switches,
+                                                     simulation.topology.live_links,
+                                                     simulation.topology.edge_links)
     return self.infer_policy_violations(physical_omega, controller_omega)
 
   # --------------------------------------------------------------#
