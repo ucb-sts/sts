@@ -743,6 +743,9 @@ class FatTree (Topology):
       edge._receive_flow_mod(flow_mod)
 
   class FatTreeLinks(LinkTracker):
+    # TODO(cs): perhaps we should not use inheritance here, since it is
+    # essentially entirely trivial. Alternatively, we could just have an
+    # overloaded constructor in the LinkTracker class?
     def __init__(self, port2access_link, interface2access_link, port2internal_link, dpid2switch):
       LinkTracker.__init__(self, dpid2switch, port2access_link, interface2access_link)
       self.port2internal_link = port2internal_link
