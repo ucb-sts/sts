@@ -398,22 +398,12 @@ def get_kw_for_field_match(field_match):
     
   return "%s=%s" % (field_name, value)
 
-# TODO: wrong place for this
-# TODO: protobuf is deprecated -- use json instead
-def of_action_from_protobuf_action(protobuf_action):
-  if protobuf_action.type == nom_snapshot.Action.output:
-    return ofp_action_output(port=protobuf_action.port)
-  else:
-    raise RuntimeError("Unsupported Action %s" % protobuf_action.type)
-
-def tf_from_protobuf_switch(ntf, rules, real_switch):
+def tf_from_switch(ntf, switch, real_switch):
   # clone the real switch, insert flow entries from policy, run
   # generate_transfer_function()
   dummy_switch = SoftwareSwitch(real_switch.dpid, ports=real_switch.ports.values())
-  for rule in rules:
-    flow_entry = rule.to_entry()
-
-    dummy_switch.table.add_entry(flow_entry)
+  for entry in switch.flow_table.entries:
+    dummy_switch.table.add_entry(entry)
   return generate_transfer_function(ntf, dummy_switch)
 
 def get_uniq_port_id(switch, port):
