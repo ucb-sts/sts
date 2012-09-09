@@ -52,7 +52,8 @@
 
 <p>sts depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install sts, you'll just need to set up a symlink to pox:</p>
 
-<p><code>
+<p>
+<code>
     $ git clone git://github.com/colin-scott/sts.git <br/>
     $ git clone -b debugger git://github.com/noxrepo/pox.git pox/ <br />
     $ cd sts <br />
@@ -61,14 +62,14 @@
 
 <h3>Running</h3>
 
-<p>Take sts for drive with:</p>
+<p>Take sts for test drive with:</p>
 
 <p><code>$ ./simulator.py</code></p>
 
-<p>This will boot up pox, generate a FatTree network with 16 hosts, and start feeding in random inputs.</p>
+<p>This will boot up pox, generate a FatTree network with 16 hosts, and begin feeding in random inputs.</p>
 
 <p>The config/ directory contains sample configurations. You can specify
-a particular config file by specifing the module name of your configuration:</p>
+a particular config file by specifing a module name:</p>
 
 <p><code>$ ./simulator.py -c config.my_config<code></p>
 
