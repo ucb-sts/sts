@@ -28,6 +28,7 @@ from sts.procutils import kill_procs
 
 from sts.topology import FatTree, BufferedPatchPanel
 from sts.control_flow import Fuzzer
+from sts.invariant_checker import InvariantChecker
 from sts.simulation import Simulation
 from pox.lib.recoco.recoco import Scheduler
 
@@ -87,6 +88,7 @@ else:
   # We default to no parameters
   topology_params = ""
 
+
 # For controlling the simulation
 if hasattr(config, 'control_flow'):
   simulator = config.control_flow
@@ -94,6 +96,18 @@ else:
   # We default to a Fuzzer
   simulator = Fuzzer()
 
+# For snapshot service
+from sts.snapshot import *
+# Read from config what controller we are using
+if controller_configs[0].name == "pox":
+  snapshotService = PoxSnapshotService()
+if controller_configs[0].name == "floodlight":
+  snapshotService = FloodlightSnapshotService()
+# We default snapshotService to POX
+snapshotService = PoxSnapshotService()
+# Hacky way to pass the right snapshot service to the invariantchecker  
+simulator.invariant_checker.snapshotService = snapshotService
+  
 # For injecting dataplane packets into the simulated network
 if hasattr(config, 'dataplane_trace') and config.dataplane_trace:
   dataplane_trace_path = config.dataplane_trace
