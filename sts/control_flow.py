@@ -320,7 +320,7 @@ class Interactive(ControlFlow):
       self.dataplane_trace_prompt()
       answer = msg.raw_input('Continue to next round? [Yn]').strip()
       if answer != '' and answer.lower() != 'y':
-        self.stop()
+        #self.stop()
         break
 
   def invariant_check_prompt(self):
@@ -357,6 +357,6 @@ class Interactive(ControlFlow):
       while True:
         answer = msg.raw_input('Feed in next dataplane event? [Ny]')
         if answer != '' and answer.lower() != 'n':
-          self.simulation.inject_trace_event()
+          self.simulation.dataplane_trace.inject_trace_event()
         else:
           break
