@@ -81,7 +81,7 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
     if ips:
       ip_addr = ips.pop(0)
     else:
-      ip_addr = IPAddr("123.123.2.2") #hard coded for measurement (irrelevant)
+      ip_addr = IPAddr("123.123.%d.%d" % (switch.dpid, port.port_no))
 
     name = "eth%d" % switch.dpid
     interface = HostInterface(mac, ip_addr, name)
