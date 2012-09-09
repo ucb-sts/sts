@@ -322,7 +322,6 @@ class Interactive(ControlFlow):
       self.check_dataplane()
       answer = msg.raw_input('Continue to next round? [Yn]').strip()
       if answer != '' and answer.lower() != 'y':
-        self.stop()
         break
 
   def invariant_check_prompt(self):

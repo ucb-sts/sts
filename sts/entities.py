@@ -201,6 +201,7 @@ class Host (EventMixin):
 
   def send(self, interface, packet):
     ''' Send a packet out a given interface '''
+    self.log.info("sending packet on interface %s: %s" % (interface.name, str(packet)))
     self.raiseEvent(DpPacketOut(self, packet, interface))
 
   def receive(self, interface, packet):
