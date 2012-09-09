@@ -259,7 +259,7 @@ class Topology(object):
 
   @property
   def live_links(self):
-    return self.network_links - self.cut_links
+    return set(self.network_links) - self.cut_links
 
   def sever_link(self, link):
     msg.event("Cutting link %s" % str(link))
