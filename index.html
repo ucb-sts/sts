@@ -40,25 +40,23 @@
 
         <h3>Welcome to the homepage of sts.</h3>
 
-<p>Ever had to painstakingly dig through logs to find the one or two inputs that lead your software to break? sts seeks to eliminate this need, thereby freeing you to debug the problematic code itself. </p>
+<p>Ever had to painstakingly dig through production logs to find the one or two inputs that lead your software to break? sts seeks to eliminate this need, thereby freeing you to debug the problematic code itself. </p>
 
-<p>sts is intended for distributed SDN control software such as <a href="http://floodlight.openflowhub.org/">Floodlight</a>. sts simulates networks in a deterministic runtime environment, allowing fine-grained control over the inputs to  unmodified* controllers. </p>
+<p>sts is intended for distributed SDN control software such as <a href="http://floodlight.openflowhub.org/">Floodlight</a>.  sts simulates networks in a deterministic runtime environment, allowing fine-grained control over the inputs to  unmodified* controllers. </p>
 
 <p><img src="http://www.eecs.berkeley.edu/%7Ercs/research/sts_arch.jpg" alt="sts architecture"></p>
 
-<p>Beyond helping developers troubleshoot problems, sts is useful as a standalone integration test framework.</p>
+<p>Beyond helping developers troubleshoot problems found in production, sts is useful as a standalone integration test framework.</p>
 
 <h3>Installation</h3>
 
 <p>sts depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install sts, you'll just need to set up a symlink to pox:</p>
 
-<p>
-<code>
-    $ git clone git://github.com/colin-scott/sts.git <br/>
-    $ git clone -b debugger git://github.com/noxrepo/pox.git pox/ <br />
-    $ cd sts <br />
-    $ ln -s ../pox pox <br />
-</code></p>
+<pre><code>$ git clone git://github.com/colin-scott/sts.git
+$ git clone -b debugger git://github.com/noxrepo/pox.git pox/
+$ cd sts
+$ ln -s ../pox pox
+</code></pre>
 
 <h3>Running</h3>
 
@@ -69,17 +67,17 @@
 <p>This will boot up pox, generate a FatTree network with 16 hosts, and begin feeding in random inputs.</p>
 
 <p>The config/ directory contains sample configurations. You can specify
-a particular config file by specifing a module name:</p>
+a particular config file by specifing the module name of your configuration:</p>
 
-<p><code>$ ./simulator.py -c config.my_config<code></p>
+<p><code>$ ./simulator.py -c config.my_config</code></p>
 
-<p>See config/README for more information. </p>
+<p>See <a href="https://github.com/colin-scott/sts/blob/master/config/README">config/README</a> for more information. </p>
 
 <h3>Version Notes</h3>
 
 <p>sts requires python 2.7+</p>
 
-<p>sts will automatically use pypy as its interpreter if you place a pypy/ directory at the top-level of the repository.</p>
+<p>sts will automatically use <a href="http://pypy.org/">pypy</a> as its interpreter if you place a pypy/ directory at the top-level of the repository.</p>
 
 <h3>Research</h3>
 
@@ -90,5 +88,6 @@ a particular config file by specifing a module name:</p>
 
     </div>
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
   </body>
 </html>
