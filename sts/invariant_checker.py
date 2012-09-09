@@ -3,9 +3,8 @@ import urllib2
 
 from pox.openflow.libopenflow_01 import *
 from entities import *
-import headerspace.topology_loader.pox_topology_loader as hsa_topo
+import headerspace.topology_loader.topology_loader as hsa_topo
 import headerspace.headerspace.applications as hsa
-import nom_snapshot_json as nom_snapshot
 import pickle
 import logging
 import collections
@@ -14,16 +13,8 @@ log = logging.getLogger("invariant_checker")
 
 class InvariantChecker(object):
   def fetch_controller_snapshot(self, simulation):
-    # TODO(cs): grab url from simulation.controller_info_list rather than
-    # hard-code
-    req = urllib2.Request('http://localhost:8080/wm/core/proact')
-    response = urllib2.urlopen(req)
-    json_data = response.read()
-    l = json.loads(json_data)
-    res = []
-    for m in l:
-      res.append(nom_snapshot.Snapshot.from_json_map(m))
-    return res
+    self.snapshotService.fetchSnapshot()
+    return self.snapshotService.snapshot
 
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
@@ -45,14 +36,14 @@ class InvariantChecker(object):
     log.debug("Snapshotting controller...")
     controller_snapshot = self.fetch_controller_snapshot(simulation)
     log.debug("Computing physical omega...")
-    physical_omega = self.compute_physical_omega(simulation.live_switches,
-                                                 simulation.live_links,
-                                                 simulation.edge_links)
+    physical_omega = self.compute_physical_omega(simulation.topology.live_switches,
+                                                 simulation.topology.live_links,
+                                                 simulation.topology.access_links)
     log.debug("Computing controller omega...")
     controller_omega = self.compute_controller_omega(controller_snapshot,
-                                                     simulation.live_switches,
-                                                     simulation.live_links,
-                                                     simulation.edge_links)
+                                                     simulation.topology.live_switches,
+                                                     simulation.topology.live_links,
+                                                     simulation.topology.access_links)
     return self.infer_policy_violations(physical_omega, controller_omega)
 
   # --------------------------------------------------------------#
