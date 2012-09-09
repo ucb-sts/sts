@@ -5,7 +5,7 @@ This module mocks out openflow switches, links, and hosts. These are all the
 
 from pox.openflow.software_switch import SoftwareSwitch, DpPacketOut
 from pox.openflow.nx_software_switch import NXSoftwareSwitch
-from pox.lib.util import connect_socket_with_backoff, assert_type
+from pox.lib.util import assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
 from sts.procutils import popen_filtered, kill_procs
@@ -269,9 +269,6 @@ class Controller(object):
     self.process = popen_filtered("c%s" % str(self.uuid), self.config.cmdline)
     self._register_proc(self.process)
 
-    if self.config.nom_port:
-      self.nom_socket = connect_socket_with_backoff(self.config.address,
-                                                    self.config.nom_port)
     self.alive = True
 
   def restart(self):
