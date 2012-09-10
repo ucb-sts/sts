@@ -1,6 +1,6 @@
 from experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology, BufferedPatchPanel
-from sts.control_flow import Interactive
+from sts.control_flow import Interactive, Fuzzer
 from input_traces.input_logger import InputLogger
 
 # Use POX as our controller
@@ -19,7 +19,7 @@ topology_params = "num_switches=2"
 patch_panel_class = BufferedPatchPanel
 
 # Use a Fuzzer (already the default)
-control_flow = Interactive()
+control_flow = Fuzzer(check_interval=80)
 
 # Specify None as the dataplane trace (already the default)
 # Otherwise, specify the path to the trace file
