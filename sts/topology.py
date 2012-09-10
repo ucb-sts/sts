@@ -52,6 +52,7 @@ def create_switch(switch_id, num_ports):
 def get_switchs_host_port(switch):
   ''' return the switch's ofp_phy_port connected to the host '''
   # We wire up the last port of the switch to the host
+  # TODO(cs): this is arbitrary and hacky
   return switch.ports[sorted(switch.ports.keys())[-1]]
 
 def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
@@ -80,7 +81,7 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
     if ips:
       ip_addr = ips.pop(0)
     else:
-      ip_addr = IPAddr("123.123.2.2") #hard coded for measurement (irrelevant)
+      ip_addr = IPAddr("123.123.%d.%d" % (switch.dpid, port.port_no))
 
     name = "eth%d" % switch.dpid
     interface = HostInterface(mac, ip_addr, name)
@@ -92,6 +93,84 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
   access_links = [ AccessLink(host, interface, switch, get_switch_port(switch))
                    for interface, switch in interface_switch_pairs ]
   return (host, access_links)
+
+class LinkTracker(object):
+  def __init__(self, dpid2switch, port2access_link, interface2access_link):
+    self.dpid2switch = dpid2switch
+    self.port2access_link = port2access_link
+    self.interface2access_link = interface2access_link
+    self.port2internal_link = {}
+
+  @property
+  def network_links(self):
+    return self.port2internal_link.values()
+
+  def __call__(self, node, port):
+    ''' Given a node and a port, return a tuple (node, port) that is directly
+    connected to the port.
+
+    This can be used in 2 ways
+    - node is a Host type and port is a HostInterface type
+    - node is a Switch type and port is a ofp_phy_port type.'''
+    if port in self.port2access_link:
+      access_link = self.port2access_link[port]
+      return (access_link.host, access_link.interface)
+    if port in self.interface2access_link:
+      access_link = self.interface2access_link[port]
+      return (access_link.switch, access_link.switch_port)
+    elif port in self.port2internal_link:
+      network_link = self.port2internal_link[port]
+      return (network_link.end_software_switch, network_link.end_port)
+    else:
+      raise ValueError("Unknown port: %s" % str(port))
+
+  def _get_switch_by_dpid(self, dpid):
+    if dpid not in self.dpid2switch:
+      raise ValueError("Unknown switch dpid: %s" % str(dpid))
+
+    return self.dpid2switch[dpid]
+
+  def migrate_host(self, old_ingress_dpid, old_ingress_portno,
+                   new_ingress_dpid, new_ingress_portno):
+    '''Migrate the host from the old (ingress switch, port) to the new
+    (ingress switch, port). Note that the new port must not already be
+    present, otherwise an exception will be thrown (we treat all switches as
+    configurable software switches for convenience, rather than hardware switches
+    with a fixed number of ports)'''
+    old_ingress_switch = self._get_switch_by_dpid(old_ingress_dpid)
+
+    if old_ingress_portno not in old_ingress_switch.ports:
+      raise ValueError("unknown old_ingress_portno %d" % old_ingress_portno)
+
+    old_port = old_ingress_switch.ports[old_ingress_portno]
+
+    (host, interface) = self(old_ingress_switch, old_port) # using __call__
+
+    if not (isinstance(host, Host) and isinstance(interface, HostInterface)):
+      raise ValueError("(%s,%s) does not connect to a host!" %
+                       (str(old_ingress_switch), str(old_port)))
+
+    new_ingress_switch = self._get_switch_by_dpid(new_ingress_dpid)
+
+    if new_ingress_portno in new_ingress_switch.ports:
+      raise RuntimeError("new ingress port %d already exists!" % new_ingress_portno)
+
+    # now that we've verified everything, actually make the change!
+    # first, drop the old mappings
+    del self.port2access_link[old_port]
+    del self.interface2access_link[interface]
+    old_ingress_switch.take_port_down(old_port)
+
+    # now add new mappings
+    # For now, make the new port have the same ip address as the old port.
+    # TODO(cs): this would break PORTLAND routing! Need to specify the
+    #           new mac and IP addresses
+    new_ingress_port = ofp_phy_port(hw_addr=old_port.hw_addr,
+                                    port_no=new_ingress_portno)
+    new_ingress_switch.bring_port_up(new_ingress_port)
+    new_access_link = AccessLink(host, interface, new_ingress_switch, new_ingress_port)
+    self.port2access_link[new_ingress_port] = new_access_link
+    self.interface2access_link[interface] = new_access_link
 
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
@@ -124,7 +203,7 @@ class PatchPanel(object):
     else:
       self.forward_packet(node, event.packet, port)
 
-  def get_connected_port(self, node, port):
+  def get_connected_port(self, node, port): # TODO(sw): is this actually necessary?
     return self.get_connected_port(node, port)
 
   def forward_packet(self, next_switch, packet, next_port):
@@ -314,55 +393,6 @@ class Topology(object):
         if c.io_worker.has_pending_sends():
           yield c
 
-  def migrate_host(self, old_ingress_dpid, old_ingress_portno,
-                   new_ingress_dpid, new_ingress_portno):
-    '''Migrate the host from the old (ingress switch, port) to the new
-    (ingress switch, port). Note that the new port must not already be
-    present, otherwise an exception will be thrown (we treat all switches as
-    configurable software switches for convenience, rather than hardware switches
-    with a fixed number of ports)'''
-    # Temporary hack!: instead of changing the underlying get_connected_port()
-    # mapping, wrap it in another function.
-    # TODO(cs): a long-term solution would be to stop using a function
-    # (get_connected_port) to encapsulate edges, and instead use a general graph
-    # object to store edges and vertices.
-    old_ingress = self.get_switch(old_ingress_dpid)
-    if old_ingress_portno not in old_ingress.ports:
-      raise ValueError("unknown old_ingress_portno %d" % old_ingress_portno)
-
-    old_port = old_ingress.ports[old_ingress_portno]
-    (host, interface) = self.get_connected_port(old_ingress, old_port)
-    if type(host) != Host or type(interface) != HostInterface:
-      raise ValueError("(%s,%s) does not connect to a host!" %
-                       (str(old_ingress), str(old_port)))
-
-    new_ingress = self.get_switch(new_ingress_dpid)
-    if new_ingress_portno in new_ingress.ports:
-      raise RuntimeError("new ingress port %d already exists!" %
-                         new_ingress_portno)
-    # Temporary hack: manually insert a new ofp_phy_port. For now, assign it
-    # the same mac address as the old ingress's now-defunct port.
-    hw_addr = old_port.hw_addr
-    new_port = ofp_phy_port(port_no=new_ingress_portno, hw_addr=hw_addr)
-
-    # Now take down the old port and bring up (add) the new one
-    old_ingress.take_port_down(old_port)
-    new_ingress.bring_port_up(new_port)
-
-    # Now override self.get_connected_port
-    # We need to avoid python's lexical scope though (we need to bind
-    # the old self.get_connected_port so that isn't overwritten)
-    def bind(original_get_connected_port):
-      def bound(node, port): return original_get_connected_port(node, port)
-      return bound
-    old_get_connected_port = bind(self.get_connected_port)
-    # Now define our new connected_port mapping
-    def get_connected_port_wrapper(node, port):
-      if node == new_ingress and port == new_port:
-        return (host, interface)
-      return old_get_connected_port(node, port)
-    self.get_connected_port = get_connected_port_wrapper
-
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
     Bind sockets from the software_switchs to the controllers. For now, assign each
@@ -401,6 +431,11 @@ class Topology(object):
 
     log.debug("Controller connections done")
 
+  def migrate_host(self, old_ingress_dpid, old_ingress_portno,
+                   new_ingress_dpid, new_ingress_portno):
+    self.get_connected_port.migrate_host(old_ingress_dpid, old_ingress_portno,
+                                         new_ingress_dpid, new_ingress_portno)
+
   @staticmethod
   def populate_from_topology(graph):
      """
@@ -416,7 +451,6 @@ class Topology(object):
                                   lambda n: isinstance(n[1][0], SoftwareSwitch),
                                   graph.ports_for_node(host).iteritems())]
      return topology
-
 
 class MeshTopology(Topology):
   def __init__(self, num_switches=3):
@@ -444,11 +478,11 @@ class MeshTopology(Topology):
     self.access_links = list(itertools.chain.from_iterable(access_link_list_list))
 
     # grab a fully meshed patch panel to wire up these guys
-    link_topology = MeshTopology.FullyMeshedLinks(self.switches, self.access_links)
-    self.get_connected_port = link_topology.get_connected_port
-    self.network_links = link_topology.get_network_links()
+    link_topology = MeshTopology.FullyMeshedLinks(self.dpid2switch, self.access_links)
+    self.get_connected_port = link_topology
+    self.network_links = link_topology.network_links
 
-  class FullyMeshedLinks(object):
+  class FullyMeshedLinks(LinkTracker):
     """
     A factory method (inner class) for creating a fully meshed network.
     Connects every pair of switches. Ports are in ascending order of
@@ -457,47 +491,29 @@ class MeshTopology(Topology):
         (0, 0) <-> (1,0)
         (2, 1) <-> (1,1)
     """
-    def __init__(self, switches, access_links=[]):
-      self.switches = sorted(switches, key=lambda(sw): sw.dpid)
-      self.switch_index_by_dpid = {}
-      for i, s in enumerate(switches):
-        self.switch_index_by_dpid[s.dpid] = i
-      self.port2access_link = {}
-      self.interface2access_link = {}
-      for access_link in access_links:
-        self.port2access_link[access_link.switch_port] = access_link
-        self.interface2access_link[access_link.interface] = access_link
+    def __init__(self, dpid2switch, access_links=[]):
+      port2access_link = { access_link.switch_port: access_link
+                           for access_link in access_links }
+      interface2access_link = { access_link.interface: access_link
+                                for access_link in access_links }
+      LinkTracker.__init__(self, dpid2switch, port2access_link, interface2access_link)
 
-    def get_connected_port(self, node, port):
-      ''' Given a node and a port, return a tuple (node, port) that is directly
-      connected to the port '''
-      if port in self.port2access_link:
-        access_link = self.port2access_link[port]
-        return (access_link.host, access_link.interface)
-      if port in self.interface2access_link:
-        access_link = self.interface2access_link[port]
-        return (access_link.switch, access_link.switch_port)
-      else:
-        switch_no = self.switch_index_by_dpid[node.dpid]
-        # when converting between switch and port, compensate for the skipped self port
-        port_no = port.port_no - 1
-        other_switch_no = port_no if port_no < switch_no else port_no + 1
-        other_port_no = switch_no if switch_no < other_switch_no else switch_no - 1
-
-        other_switch = self.switches[other_switch_no]
-        return (other_switch, other_switch.ports[other_port_no+1])
-
-    def get_network_links(self):
-      ''' Return a list of all directed Link objects in the mesh '''
-      # memoize the result
-      if hasattr(self, "all_network_links"):
-        return self.all_network_links
-      self.all_network_links = []
-      for switch in self.switches:
-        for port in set(switch.ports.values()) - set([get_switchs_host_port(switch)]):
-          (other_switch, other_port) =  self.get_connected_port(switch, port)
-          self.all_network_links.append(Link(switch, port, other_switch, other_port))
-      return self.all_network_links
+      switches = dpid2switch.values()
+      # Access links to hosts are already claimed, all other internal links
+      # are not yet claimed
+      switch2unclaimed_ports = { switch : filter(lambda p: p not in port2access_link,
+                                                 switch.ports.values())
+                                 for switch in switches }
+      port2internal_link = {}
+      for i, switch_i in enumerate(switches):
+        for switch_j in switches[i+1:]:
+          switch_i_port = switch2unclaimed_ports[switch_i].pop()
+          switch_j_port = switch2unclaimed_ports[switch_j].pop()
+          link_i2j = Link(switch_i, switch_i_port, switch_j, switch_j_port)
+          link_j2i = link_i2j.reversed_link()
+          port2internal_link[switch_i_port] = link_i2j
+          port2internal_link[switch_j_port] = link_j2i
+      self.port2internal_link = port2internal_link
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
@@ -633,33 +649,14 @@ class FatTree (Topology):
 
   def wire_tree(self):
     # Auxiliary data to make get_connected_port efficient
-    self.port2internal_link = {}
-    for link in self.network_links:
-      #if link.start_port in self.port2internal_link:
-        #raise RuntimeError("%s Already there %s" % (str(link),
-        #                   str(self.port2internal_link[link.start_port])))
-      self.port2internal_link[link.start_port] = link
+    port2internal_link = { link.start_port: link
+                           for link in self.network_links }
+    port2access_link = { access_link.switch_port: access_link
+                         for access_link in self.access_links }
+    interface2access_link = { access_link.interface: access_link
+                              for access_link in self.access_links }
 
-    # TODO(cs): this should be in a unit test, not here
-    #if len(self.port2internal_link) != len(self.network_links):
-    #  raise RuntimeError("Not enough port2network_links(%d s/b %d)" % \
-    #                    (len(self.port2internal_link), len(self.network_links)))
-
-    self.port2access_link = {}
-    self.interface2access_link = {}
-    for access_link in self.access_links:
-      self.port2access_link[access_link.switch_port] = access_link
-      self.interface2access_link[access_link.interface] = access_link
-
-    # TODO(cs): this should be in a unit test, not here
-    #if len(self.port2access_link) != len(self.access_links):
-    #  raise RuntimeError("Not enough port2accesslinks (%d s/b %d)" % \
-    #                    (len(self.port2access_link), len(self.access_links)))
-
-    # TODO(cs): this should be in a unit test, not here
-    #if len(self.interface2access_link) != len(self.access_links):
-    #  raise RuntimeError("Not enough interface2accesslinks (%d s/b %d)" % \
-    #                    (len(self.interface2accesslinks), len(self.access_links)))
+    self.get_connected_port = self.FatTreeLinks(port2access_link, interface2access_link, port2internal_link, self.dpid2switch)
 
   def _sanity_check_tree(self):
     # TODO(cs): this should be in a unit test, not here
@@ -745,17 +742,10 @@ class FatTree (Topology):
       flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
       edge._receive_flow_mod(flow_mod)
 
-  def get_connected_port(self, node, port):
-    ''' Given a node and a port, return a tuple (node, port) that is directly
-    connected to the port '''
-    # TODO(cs): use a $@#*$! graph library
-    if port in self.port2access_link:
-      access_link = self.port2access_link[port]
-      return (access_link.host, access_link.interface)
-    if port in self.interface2access_link:
-      access_link = self.interface2access_link[port]
-      return (access_link.switch, access_link.switch_port)
-    if port in self.port2internal_link:
-      link = self.port2internal_link[port]
-      return (link.end_software_switch, link.end_port)
-    raise RuntimeError("Node %s Port %s not in network" % (str(node), str(port)))
+  class FatTreeLinks(LinkTracker):
+    # TODO(cs): perhaps we should not use inheritance here, since it is
+    # essentially entirely trivial. Alternatively, we could just have an
+    # overloaded constructor in the LinkTracker class?
+    def __init__(self, port2access_link, interface2access_link, port2internal_link, dpid2switch):
+      LinkTracker.__init__(self, dpid2switch, port2access_link, interface2access_link)
+      self.port2internal_link = port2internal_link

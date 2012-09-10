@@ -1,26 +1,43 @@
-This is a troubleshooting framework for software-defined networks. It is
-useful for both network operators seeking to track down network policy-violations,
-and platform developers seeking to test and debug control software.
+See http://colin-scott.github.com/sts/ for an HTML version of this file.
 
-The code is under heavy development.
+Ever had to painstakingly dig through production logs to find the one or two inputs that lead your software to break? sts seeks to eliminate this need, thereby freeing you to debug the problematic code itself.
 
- == Notes ==
+sts is intended for distributed SDN control software such as Floodlight. sts simulates networks in a deterministic runtime environment, allowing fine-grained control over the inputs to  unmodified* controllers.
 
-Requires python 2.7+
+Beyond helping developers troubleshoot problems found in production, sts is useful as a standalone integration test framework.
 
-You'll need to link in the current 'debugger' branch of pox to run the debugger --
-it is used as an infrastructure framework.
+### Installation
 
-Typical workflow:
-~/debugger $ cd ..
-~ $ git clone git://github.com/noxrepo/pox.git pox/
-~ $ cd debugger
-~/debugger $ ln -s ../pox pox
+sts depends on pox. To install sts, you'll just need to set up a symlink:
 
-To run, see:
-  $ ./debugger.py -h
+$ git clone git://github.com/colin-scott/sts.git
+$ git clone -b debugger git://github.com/noxrepo/pox.git pox/
+$ cd sts
+$ ln -s ../pox pox
 
-The config/ directory contains sample topology configurations. You can specify
+### Running
+
+Take sts for test drive with:
+
+$ ./simulator.py
+
+This will boot up pox, generate a FatTree network with 16 hosts, and begin feeding in random inputs.
+
+The config/ directory contains sample configurations. You can specify
 a particular config file by specifing the module name of your configuration:
 
-  $ ./debugger.py -c config.my_config
+$ ./simulator.py -c config.my_config
+
+See config/README for more information.
+
+### Version Notes
+
+sts requires python 2.7+
+
+sts will automatically use pypy as its interpreter if you place a pypy/ directory at the top-level of the repository.
+
+### Research
+
+For more information about the research behind sts, see our paper: http://www.eecs.berkeley.edu/~rcs/research/hotnets12.pdf
+
+*Automatic invariant checking requires an interface to the controllers' state.

@@ -13,9 +13,6 @@ controllers = %s
 topology_class = %s
 topology_params = "%s"
 patch_panel_class = %s
-# TODO(cs): replayer should have two modes:
-# - find_mcs() mode, with causal dependency info
-# - simple() mode, without causal dependencies
 control_flow = Replayer("%s")
 dataplane_trace = %s
 '''
