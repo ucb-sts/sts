@@ -39,7 +39,7 @@ def ethernet_display(bytes):
     #print "Int unpacked is:", bytes_to_int(bytes)
     #print "Eth String is:" + str(EthAddr(bytes_to_int(bytes)))
     return str(EthAddr(bytes_to_int(bytes)))
-    
+
 def ip_display(bytes):
   if bytes_all_x(bytes):
     # Optimization
@@ -47,7 +47,7 @@ def ip_display(bytes):
   else:
     if len(bytes) != 4*2:
       raise RuntimeError(len(bytes))
-    
+
     # Have to get a bit at a time, since an HSA byte contains 4 real bits,
     # and mask length may not be a multiple of 4
     # 0th byte, 0th bit is least significant
@@ -67,7 +67,7 @@ def ip_display(bytes):
           normal_bit = hsa_bit_to_normal_bit(bit_val)
           val += (normal_bit << current_idx)
         current_idx += 1
-    
+
     # I'm misunderstanding something about IPAddr's network order
     # arg... the val is in network order (has been sanity checked), but
     # seeting network_order=True makes the byte order backwards...
@@ -78,15 +78,15 @@ def default_display(bytes):
     return "x"
   else:
     return str(bytes_to_int(bytes))
-      
+
 def HS_FORMAT():
   format = {}
-  
+
   field_lengths = {
     "dl_src" : 6,
     "dl_dst" : 6,
     "dl_vlan" : 2,
-    "dl_vlan_pcp" : 1,       
+    "dl_vlan_pcp" : 1,
     "dl_type" : 2,
     "nw_tos" : 1,
     "nw_proto" : 1,
@@ -95,21 +95,21 @@ def HS_FORMAT():
     "tp_src" : 2,
     "tp_dst" : 2
   }
-  
+
   position = 0
   for field in fields:
     field_length =  field_lengths[field]
     format[field] = field_info(position, field_length)
     position += field_length
-    
+
   # 31 bytes
   format["length"] = position
-  
+
   display_handler_map = {
-    "dl_src" : ethernet_display, 
+    "dl_src" : ethernet_display,
     "dl_dst" : ethernet_display,
     "dl_vlan" : default_display,
-    "dl_vlan_pcp" : default_display,       
+    "dl_vlan_pcp" : default_display,
     "dl_type" :  default_display,
     "nw_tos" : default_display,
     "nw_proto" : default_display,
@@ -118,20 +118,20 @@ def HS_FORMAT():
     "tp_src" : default_display,
     "tp_dst" : default_display
   }
-  
+
   def display(byte_array):
     # Note that byte array is twice the length of our format (to encode x, y)
     # so, s/b 62 bytes long
     if len(byte_array) != format["length"]*2:
       raise "Unknown byte array length. Got %d, s/b %d" % (len(byte_array),format["length"]*2)
-    
+
     if byte_array_equal(byte_array, all_one):
       return "1^L"
     if byte_array_equal(byte_array, all_zero):
       return "0^L"
     if byte_array_equal(byte_array, all_x):
       return "x^L"
-    
+
     field_strs = []
     for field in fields:
       strings = []
@@ -144,16 +144,16 @@ def HS_FORMAT():
       display = display_handler_map[field](bytes)
       if display == "x":
         continue
-      strings.append(display) 
+      strings.append(display)
       field_strs.append("".join(strings))
     return ",".join(field_strs)
-       
+
   format["display"] = display
   return format
 
 global hs_format
 hs_format = HS_FORMAT()
-  
+
 # TODOC: wtf does wc stand for?
 def wc_to_parsed_string(byte_arr):
   out_string = ""
@@ -185,7 +185,7 @@ def set_field(arr, field, value, right_mask=0):
       rm = (0xff << 2*shft) & 0xff
       lm = ~rm & 0xff
       arr[start_pos + i] = (b_array[i] & rm) | (arr[start_pos + i] & lm)
-      
+
 # XXX CURRENTLY NOT WORKING
 def optimize_forwarding_table(self):
   print "=== Compressing forwarding table ==="
@@ -201,7 +201,7 @@ def optimize_forwarding_table(self):
       print str
   '''
   print "=== DONE forwarding table compression ==="
-  
+
 def ofp_match_to_input_ports(ofp_match, switch, all_port_ids):
   in_ports = []
   if (ofp_match.wildcards & OFPFW_IN_PORT):
@@ -209,20 +209,20 @@ def ofp_match_to_input_ports(ofp_match, switch, all_port_ids):
   else:
     in_ports = [get_uniq_port_id(switch, ofp_match.in_port)]
   return in_ports
-    
+
 def ofp_match_to_hsa_match(ofp_match):
   hsa_match = byte_array_get_all_x(hs_format["length"]*2)
-  
+
   def field_wardcarded(ofp_match, flag):
     if (ofp_match.wildcards & flag):
       return True
     return False
-  
+
   for field_name in set(ofp_match_data.keys()) - set(['in_port','dl_src','dl_dst','nw_src','nw_dst']):
     flag = ofp_match_data[field_name][1]
     if not field_wardcarded(ofp_match, flag):
       set_field(hsa_match, field_name, ofp_match.__dict__['_'+field_name])
-    
+
   for field_name in ['dl_src', 'dl_dst']:
     addr = getattr(ofp_match, field_name)
     if addr is not None: # None addr implies wildcard
@@ -232,24 +232,25 @@ def ofp_match_to_hsa_match(ofp_match):
         addr = addr.toInt()
       #print "addr is: ", addr
       set_field(hsa_match, field_name, addr)
-  
+
   for field_name in ['nw_src', 'nw_dst']:
     (addr, mask_bits_from_left) = getattr(ofp_match, "get_%s"%field_name)()
     if addr is not None: # None addr implies wildcard
       # TODO: signed or unsigned?
-      addr = socket.htonl(addr.toUnsignedN())
+      if type(addr) == IPAddr:
+        addr = socket.htonl(addr.toUnsignedN())
       # if addr, not all wildcard bits set
       set_field(hsa_match, field_name, addr, right_mask=32-mask_bits_from_left)
   return hsa_match
-    
-# Returns (mask, rewrite) 
+
+# Returns (mask, rewrite)
 def ofp_actions_to_hsa_rewrite(ofp_actions):
   # TODO: this should include the previous match by default? Is that already implemented by TF?
   # Bits set to one are not touched
   mask = byte_array_get_all_one(hs_format["length"]*2)
   # Bits set to one are rewritten
   rewrite = byte_array_get_all_zero(hs_format["length"]*2)
-  
+
   def set_vlan_id(action):
     set_field(mask, "vlan", 0)
     set_field(rewrite, "vlan", action.vlan_id)
@@ -294,17 +295,17 @@ def ofp_actions_to_hsa_rewrite(ofp_actions):
     OFPAT_SET_TP_SRC: set_tp_src,
     OFPAT_SET_TP_DST: set_tp_dst,
   }
-  
+
   for action in ofp_actions:
     if action.type in handler_map:
       handler_map[action.type](action)
-    
-  return (mask, rewrite) 
+
+  return (mask, rewrite)
 
 def ofp_actions_to_output_ports(ofp_actions, switch, all_port_ids, in_port_id):
   global out_port_nos
   output_port_nos = []
-  
+
   def output_packet(action):
     out_port = action.port
     out_port_id = get_uniq_port_id(switch, out_port)
@@ -320,18 +321,18 @@ def ofp_actions_to_output_ports(ofp_actions, switch, all_port_ids, in_port_id):
       return
     else:
       raise("Unsupported virtual output port: %x" % out_port)
-      
+
   handler_map = {
     OFPAT_OUTPUT: output_packet,
     OFPAT_ENQUEUE: output_packet,
   }
-    
+
   for action in ofp_actions:
     if action.type in handler_map:
       handler_map[action.type](action)
- 
+
   return output_port_nos
-   
+
 def generate_transfer_function(tf, software_switch):
   '''
   The rules will be added to transfer function tf passed to the function.
@@ -341,18 +342,18 @@ def generate_transfer_function(tf, software_switch):
   table = software_switch.table
   all_port_ids = map(lambda port: get_uniq_port_id(software_switch, port), software_switch.ports.values())
   for flow_entry in table.entries:
-    # TODO: For now, we're assuming completely non-overlapping entries. Need to 
+    # TODO: For now, we're assuming completely non-overlapping entries. Need to
     #       deal with priorities properly!
     ofp_match = flow_entry.match
     ofp_actions = flow_entry.actions
-    
+
     hsa_match = ofp_match_to_hsa_match(ofp_match)
     input_port_ids = set(ofp_match_to_input_ports(ofp_match, software_switch, all_port_ids))
     (mask, rewrite) = ofp_actions_to_hsa_rewrite(ofp_actions)
     output_port_nos = set()
     for input_port_id in input_port_ids:
       output_port_nos = output_port_nos.union(ofp_actions_to_output_ports(ofp_actions, software_switch, all_port_ids, input_port_id))
-      
+
     # No self-loops. TODO: this is the wrong place to handle this
     input_port_ids -= output_port_nos
 
@@ -366,7 +367,7 @@ def generate_transfer_function(tf, software_switch):
         tf.add_fwd_rule(tf_rule)
       else:
         tf.add_rewrite_rule(tf_rule)
-         
+
   print "=== Successfully Generated Transfer function ==="
   #print tf
   return 0
@@ -391,11 +392,11 @@ def get_kw_for_field_match(field_match):
   value = field_match.value
   field_name = type_to_name[field_match.field]
   if field_name == "dl_dst" or field_name == "dl_src":
-    value = "EthAddr(\"%s\")" % value 
+    value = "EthAddr(\"%s\")" % value
   if field_name == "nw_dst" or field_name == "nw_src":
     # Odd that ofp_match takes EthAddrs, but just strings for IpAddrs...
     value = "\"%s\"" % value
-    
+
   return "%s=%s" % (field_name, value)
 
 def tf_from_switch(ntf, switch, real_switch):
@@ -412,11 +413,11 @@ def get_uniq_port_id(switch, port):
     dpid = switch
   else:
     dpid = switch.dpid
-    
+
   if type(port) == int or type(port) == long:
     port_no = port
   else:
     port_no = port.port_no
-    
+
   # port_no's are 16 bits long
   return (dpid << 16) + port_no
