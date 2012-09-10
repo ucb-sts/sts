@@ -105,9 +105,9 @@ if controller_configs[0].name == "floodlight":
   snapshotService = FloodlightSnapshotService()
 # We default snapshotService to POX
 snapshotService = PoxSnapshotService()
-# Hacky way to pass the right snapshot service to the invariantchecker  
+# Hacky way to pass the right snapshot service to the invariantchecker
 simulator.invariant_checker.snapshotService = snapshotService
-  
+
 # For injecting dataplane packets into the simulated network
 if hasattr(config, 'dataplane_trace') and config.dataplane_trace:
   dataplane_trace_path = config.dataplane_trace
