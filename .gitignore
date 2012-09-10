@@ -15,7 +15,7 @@ pox/lib/pxpcap/pxpcap_c/WpdPack
 pypy/
 config/20*.py
 input_traces/20*.trace
-dataplane_trace/20*.trace
+dataplane_traces/20*.trace
 
 # ignore eclipse project files
 .pydevproject
