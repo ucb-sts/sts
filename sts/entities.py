@@ -118,6 +118,11 @@ class Link (object):
     return "(%d:%d) -> (%d:%d)" % (self.start_software_switch.dpid, self.start_port.port_no,
                                    self.end_software_switch.dpid, self.end_port.port_no)
 
+  def reversed_link(self):
+    '''Create a Link that is in the opposite direction of this Link.'''
+    return Link(self.end_software_switch, self.end_port,
+                self.start_software_switch, self.start_port)
+
 class AccessLink (object):
   '''
   Represents a bidirectional edge: host <-> ingress switch
@@ -196,6 +201,7 @@ class Host (EventMixin):
 
   def send(self, interface, packet):
     ''' Send a packet out a given interface '''
+    self.log.info("sending packet on interface %s: %s" % (interface.name, str(packet)))
     self.raiseEvent(DpPacketOut(self, packet, interface))
 
   def receive(self, interface, packet):
