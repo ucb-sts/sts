@@ -99,9 +99,9 @@ else:
 # For snapshot service
 from sts.snapshot import *
 # Read from config what controller we are using
-if controller_configs[0].name == "pox":
+if controller_configs != [] and controller_configs[0].name == "pox":
   snapshotService = PoxSnapshotService()
-elif controller_configs[0].name == "floodlight":
+elif controller_configs != [] and controller_configs[0].name == "floodlight":
   snapshotService = FloodlightSnapshotService()
 else:
   # We default snapshotService to POX
