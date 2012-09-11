@@ -49,6 +49,9 @@ class InputLogger(object):
       self.dp_events.append(kws['dp_event'])
       del kws['dp_event']
 
+    # Add on dependent labels to appease log_processing.superlog_parser.
+    # TODO(cs): Replayer shouldn't depend on superlog_parser
+    kws['dependent_labels'] = []
     json_hash = json.dumps(kws)
     self.output.write(json_hash + '\n')
 

@@ -32,6 +32,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       self.log.exception(e)
       raise e
 
+    # controller (ip, port) -> connection
+    self.uuid2connection = {}
     self.error_handler = error_handler
     self.controller_info = []
 
@@ -49,6 +51,13 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       conn = self.set_io_worker(io_worker)
       # cause errors to be raised
       conn.error_handler = self.error_handler
+      # controller (ip, port) -> connection
+      self.uuid2connection[io_worker.socket.getpeername()] = conn
+
+  def get_connection(self, uuid):
+    if uuid not in self.uuid2connection:
+      raise ValueError("No such connection %s" % str(uuid))
+    return self.uuid2connection[uuid]
 
   def fail(self):
     # TODO(cs): depending on the type of failure, a real switch failure

@@ -100,7 +100,7 @@ class Fuzzer(ControlFlow):
     self.logical_time = 0
 
   def _log_input_event(self, **kws):
-    if self._input_logger is not None:
+    if self._input_logger is not none:
       self._input_logger.log_input_event(**kws)
 
   def _load_fuzzer_params(self, fuzzer_params_path):
@@ -174,29 +174,35 @@ class Fuzzer(ControlFlow):
     ''' Decide whether to delay, drop, or deliver packets '''
     for dp_event in self.simulation.patch_panel.queued_dataplane_events:
       if self.random.random() < self.params.dataplane_delay_rate:
-        self.simulation.delay_dp_event(dp_event)
+        self.simulation.patch_panel.delay_dp_event(dp_event)
       elif self.random.random() < self.params.dataplane_drop_rate:
-        self.simulation.drop_dp_event(dp_event)
+        self.simulation.patch_panel.drop_dp_event(dp_event)
+        self._log_input_event(klass="DataplaneDrop",dpout_id=dp_event.dpout_id)
       elif self.simulation.topology.ok_to_send(dp_event):
         self.simulation.patch_panel.permit_dp_event(dp_event)
+        self._log_input_event(klass="DataplanePermit",dpout_id=dp_event.dpout_id)
 
   def check_controlplane(self):
     ''' Decide whether to delay or deliver packets '''
-    def check_deliver(connection, delay_function, permit_function):
-      if self.random.random() < self.params.controlplane_delay_rate:
-        delay_function(connection)
-      else:
-        permit_function(connection)
-
     # Check reads
-    for connection in self.simulation.topology.cp_connections_with_pending_receives:
-      check_deliver(connection, self.simulation.topology.delay_cp_receive,
-                    self.simulation.topology.permit_cp_receive)
+    for (switch, connection) in self.simulation.topology.cp_connections_with_pending_receives:
+      if self.random.random() < self.params.controlplane_delay_rate:
+        self.simulation.topology.delay_cp_receive(connection)
+      else:
+        self.simulation.topology.permit_cp_receive(connection)
+        self._log_input_event(klass="ControlplaneReceivePermit",
+                              controller_uuid=connection.get_controller_id(),
+                              dpid=switch.dpid)
 
     # Check writes
-    for connection in self.simulation.topology.cp_connections_with_pending_sends:
-      check_deliver(connection, self.simulation.topology.delay_cp_send,
-                    self.simulation.topology.permit_cp_send)
+    for (switch, connection) in self.simulation.topology.cp_connections_with_pending_sends:
+      if self.random.random() < self.params.controlplane_delay_rate:
+        self.simulation.topology.delay_cp_send(connection)
+      else:
+        self.simulation.topology.permit_cp_send(connection)
+        self._log_input_event(klass="ControlplaneReceivePermit",
+                              controller_uuid=connection.get_controller_id(),
+                              dpid=switch.dpid)
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
@@ -291,9 +297,10 @@ class Interactive(ControlFlow):
   # TODO(cs): rather than just prompting "Continue to next round? [Yn]", allow
   #           the user to examine the state of the network interactively (i.e.,
   #           provide them with the normal POX cli + the simulated events
-  def __init__(self):
+  def __init__(self, input_logger=None):
     ControlFlow.__init__(self)
     self.logical_time = 0
+    self._input_logger = input_logger
     # TODO(cs): future feature: allow the user to interactively choose the order
     # events occur for each round, whether to delay, drop packets, fail nodes,
     # etc.
@@ -305,23 +312,32 @@ class Interactive(ControlFlow):
     #   EVERYTHING  # The user controls everything, including message ordering
     # ]
 
+  def _log_input_event(self, **kws):
+    # TODO(cs): redundant with Fuzzer._log_input_event
+    if self._input_logger is not None:
+      self._input_logger.log_input_event(**kws)
+
   def simulate(self, simulation):
     self.simulation = simulation
     self.simulation.bootstrap()
     self.loop()
 
   def loop(self):
-    while True:
-      # TODO(cs): print out the state of the network at each timestep? Take a
-      # verbose flag..
-      self.logical_time += 1
-      self.invariant_check_prompt()
-      self.dataplane_trace_prompt()
-      self.check_controlplane()
-      self.check_dataplane()
-      answer = msg.raw_input('Continue to next round? [Yn]').strip()
-      if answer != '' and answer.lower() != 'y':
-        break
+    try:
+      while True:
+        # TODO(cs): print out the state of the network at each timestep? Take a
+        # verbose flag..
+        self.logical_time += 1
+        self.invariant_check_prompt()
+        self.dataplane_trace_prompt()
+        self.check_controlplane()
+        self.check_dataplane()
+        answer = msg.raw_input('Continue to next round? [Yn]').strip()
+        if answer != '' and answer.lower() != 'y':
+          break
+    finally:
+      if self._input_logger is not None:
+        self._input_logger.close(self.simulation)
 
   def invariant_check_prompt(self):
     answer = msg.raw_input('Check Invariants? [Ny]')
@@ -357,27 +373,34 @@ class Interactive(ControlFlow):
       while True:
         answer = msg.raw_input('Feed in next dataplane event? [Ny]')
         if answer != '' and answer.lower() != 'n':
-          self.simulation.dataplane_trace.inject_trace_event()
+          dp_event = self.simulation.dataplane_trace.inject_trace_event()
+          self._log_input_event(klass="TrafficInjection", dp_event=dp_event)
         else:
           break
 
   def check_controlplane(self):
     ''' Decide whether to delay or deliver packets '''
     # Check reads
-    for connection in self.simulation.topology.cp_connections_with_pending_receives:
+    for (switch, connection) in self.simulation.topology.cp_connections_with_pending_receives:
       answer = msg.raw_input('Allow control plane receive %s? [Yn]' % connection)
       if answer != '' and answer.lower() != 'y':
         self.simulation.topology.delay_cp_receive(connection)
       else:
         self.simulation.topology.permit_cp_receive(connection)
+        self._log_input_event(klass="ControlplaneReceivePermit",
+                              controller_uuid=connection.get_controller_id(),
+                              dpid=switch.dpid)
 
     # Check write
-    for connection in self.simulation.topology.cp_connections_with_pending_sends:
+    for (switch, connection) in self.simulation.topology.cp_connections_with_pending_sends:
       answer = msg.raw_input('Allow control plane send %s? [Yn]' % connection)
       if answer != '' and answer.lower() != 'y':
         self.simulation.topology.delay_cp_send(connection)
       else:
         self.simulation.topology.permit_cp_send(connection)
+        self._log_input_event(klass="ControlplaneSendPermit",
+                              controller_uuid=connection.get_controller_id(),
+                              dpid=switch.dpid)
 
   def check_dataplane(self):
     ''' Decide whether to delay, drop, or deliver packets '''
@@ -388,8 +411,10 @@ class Interactive(ControlFlow):
         if ((answer == '' or answer.lower() == 'a') and
                 self.simulation.topology.ok_to_send(dp_event)):
           self.simulation.patch_panel.permit_dp_event(dp_event)
+          self._log_input_event(klass="DataplanePermit",dpout_id=dp_event.dpout_id)
         elif answer.lower() == 'd':
           self.simulation.drop_dp_event(dp_event)
+          self._log_input_event(klass="DataplaneDrop",dpout_id=dp_event.dpout_id)
         elif answer.lower() == 'e':
           self.simulation.delay_dp_event(dp_event)
         else:

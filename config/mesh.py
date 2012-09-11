@@ -1,5 +1,5 @@
 from experiment_config_lib import ControllerConfig
-from sts.topology import MeshTopology, PatchPanel
+from sts.topology import MeshTopology, BufferedPatchPanel
 from sts.control_flow import Interactive
 from input_traces.input_logger import InputLogger
 
@@ -16,10 +16,10 @@ topology_params = "num_switches=2"
 
 # Use a BufferedPatchPanel (already the default)
 # (specify the class, but don't instantiate the object)
-patch_panel_class = PatchPanel
+patch_panel_class = BufferedPatchPanel
 
 # Use a Fuzzer (already the default)
-control_flow = Interactive()
+control_flow = Interactive(input_logger=InputLogger())
 
 # Specify None as the dataplane trace (already the default)
 # Otherwise, specify the path to the trace file

@@ -192,10 +192,6 @@ class PatchPanel(object):
     for host in self.hosts:
       host.addListener(DpPacketOut, self.handle_DpPacketOut)
 
-  @property
-  def queued_dataplane_events(self):
-    return set(self.get_buffered_dp_events())
-
   def handle_DpPacketOut(self, event):
     (node, port) = self.get_connected_port(event.node, event.port)
     if type(node) == Host:
@@ -231,28 +227,38 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
   permission from a higher-level.
   '''
   _eventMixin_events = set([DpPacketOut])
+  # TODO(cs): these ids need to be unique across runs, and assigning the ids based
+  # on order may be dangerous if control connections have different delays!
+  _dpout_id_gen = itertools.count(1)
 
   def __init__(self, switches, hosts, connected_port_mapping):
     self.get_connected_port = connected_port_mapping
     self.switches = sorted(switches, key=lambda(sw): sw.dpid)
     self.hosts = hosts
-    self.buffered_dp_out_events = set()
+    # dp out id -> dp_out object
+    self.buffered_dp_out_events = {}
     self.dropped_dp_events = []
     def handle_DpPacketOut(event):
-      self.buffered_dp_out_events.add(event)
+      # Monkey patch on a unique id for this event
+      event.dpout_id = self._dpout_id_gen.next()
+      self.buffered_dp_out_events[event.dpout_id] = event
       self.raiseEventNoErrors(event)
     for i, s in enumerate(self.switches):
       s.addListener(DpPacketOut, handle_DpPacketOut)
     for host in self.hosts:
       host.addListener(DpPacketOut, handle_DpPacketOut)
 
+  @property
+  def queued_dataplane_events(self):
+    return self.buffered_dp_out_events.values()
+
   def permit_dp_event(self, dp_event):
     ''' Given a SwitchDpPacketOut event, permit it to be forwarded  '''
     # TODO(cs): self.forward_packet should not be externally visible!
-    # Superclass DpPacketOut handler
     msg.event("Forwarding dataplane event")
+    # Invoke superclass DpPacketOut handler
     self.handle_DpPacketOut(dp_event)
-    self.buffered_dp_out_events.remove(dp_event)
+    del self.buffered_dp_out_events[dp_event.dpout_id]
 
   def drop_dp_event(self, dp_event):
     '''
@@ -260,7 +266,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     Return the dropped event.
     '''
     msg.event("Dropping dataplane event")
-    self.buffered_dp_out_events.remove(dp_event)
+    del self.buffered_dp_out_events[dp_event.dpout_id]
     self.dropped_dp_events.append(dp_event)
     return dp_event
 
@@ -271,9 +277,10 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
       dp_event.delayed_rounds = 0
     dp_event.delayed_rounds += 1
 
-  def get_buffered_dp_events(self):
-    ''' Return a set of all buffered SwitchDpPacketOut events '''
-    return self.buffered_dp_out_events
+  def get_buffered_dp_event(self, id):
+    if id not in self.buffered_dp_out_events:
+      return None
+    return self.buffered_dp_out_events[id]
 
 class Topology(object):
   '''
@@ -384,14 +391,14 @@ class Topology(object):
     for software_switch in self.live_switches:
       for c in software_switch.connections:
         if c.io_worker.has_pending_receives():
-          yield c
+          yield (software_switch, c)
 
   @property
   def cp_connections_with_pending_sends(self):
     for software_switch in self.live_switches:
       for c in software_switch.connections:
         if c.io_worker.has_pending_sends():
-          yield c
+          yield (software_switch, c)
 
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''

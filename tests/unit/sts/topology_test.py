@@ -202,18 +202,18 @@ class BufferedPanelTest(unittest.TestCase):
   def test_buffering(self):
     self.switch1.raiseEvent(self.dp_out_event)
     self.assertFalse(self.switch2.has_forwarded, "should not have forwarded yet")
-    self.assertFalse(len(self.m.get_buffered_dp_events()) == 0, "should have buffered packet")
+    self.assertFalse(len(self.m.queued_dataplane_events) == 0, "should have buffered packet")
     self.m.permit_dp_event(self.dp_out_event)
-    self.assertTrue(len(self.m.get_buffered_dp_events()) == 0, "should have cleared buffer")
+    self.assertTrue(len(self.m.queued_dataplane_events) == 0, "should have cleared buffer")
     self.assertTrue(self.switch2.has_forwarded, "should have forwarded")
 
   def test_drop(self):
     # raise the event
     self.switch1.raiseEvent(self.dp_out_event)
     self.assertFalse(self.switch2.has_forwarded, "should not have forwarded yet")
-    self.assertFalse(len(self.m.get_buffered_dp_events()) == 0, "should have buffered packet")
+    self.assertFalse(len(self.m.queued_dataplane_events) == 0, "should have buffered packet")
     self.m.drop_dp_event(self.dp_out_event)
-    self.assertTrue(len(self.m.get_buffered_dp_events()) == 0, "should have cleared buffer")
+    self.assertTrue(len(self.m.queued_dataplane_events) == 0, "should have cleared buffer")
     self.assertFalse(self.switch2.has_forwarded, "should not have forwarded")
 
 if __name__ == '__main__':
