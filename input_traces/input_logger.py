@@ -36,13 +36,9 @@ class InputLogger(object):
     self.dp_trace_path = "./dataplane_traces/" + basename
     self.cfg_path = "./config/" + basename.replace(".trace", ".py")
 
-    # XXX Temporary hack: prepend a SwitchesConnected event to the start
-    #     of the log
-    self.log_input_event(klass="SwitchesConnected")
-
-  def log_input_event(**kws):
+  def log_input_event(self, **kws):
     # assign a label
-    kws['label'] = 'e' + self._label_gen.next()
+    kws['label'] = 'e' + str(self._label_gen.next())
     # 'class' is a reserved keyword, so we replace 'klass' with 'class'
     # instead
     kws['class'] = kws['klass']
