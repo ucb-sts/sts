@@ -7,6 +7,7 @@ Author: sw
 from sts.entities import Link
 import abc
 import logging
+import time
 log = logging.getLogger("events")
 
 class EventDag(object):
@@ -66,12 +67,13 @@ class EventWatcher(object):
     self._pre()
 
     while not self.event.proceed(simulation):
+      time.sleep(0.2)
       log.debug(".")
 
     self._post()
 
   def _pre(self):
-    pass
+    log.debug("Executing %s" % str(self.event))
 
   def _post(self):
     pass
@@ -89,6 +91,9 @@ class Event(object):
     Replayer may continue to the next Event, otherwise proceed() again
     later.'''
     pass
+
+  def __str__(self):
+    return self.__class__.__name__ + ":" + self.label
 
 # -------------------------------------------------------- #
 # Semi-abstract classes for internal and external events   #
