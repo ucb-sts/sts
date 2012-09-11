@@ -16,7 +16,7 @@ topology_params = "num_switches=2"
 
 # Use a BufferedPatchPanel (already the default)
 # (specify the class, but don't instantiate the object)
-patch_panel_class = BufferedPatchPanel
+patch_panel_class = PatchPanel
 
 # Use a Fuzzer (already the default)
 control_flow = Fuzzer(check_interval=80)
