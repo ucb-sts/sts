@@ -6,6 +6,8 @@ Author: sw
 
 from sts.entities import Link
 import abc
+import logging
+log = logging.getLogger("events")
 
 class EventDag(object):
   '''A collection of Event objects. EventDags are primarily used to present a
@@ -259,6 +261,29 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
 #  Concrete classes of InternalEvents #
 # ----------------------------------- #
 
+class SwitchesConnected(InternalEvent):
+  '''
+  Wait until all switches have connected successfully to controllers.
+  (Technically a simulation internal event, not a controller's internal event.
+  Once we have real internal event logging, we can remove this class)
+  '''
+  def __init__(self, _):
+    # Bypass json_hash
+    pass
+
+  def proceed(self, simulation):
+    for switch in self.simulation.topology.switches:
+      # Temporary hack: we guess that a switch is finished connecting iff it
+      # has at least one flow entry (LLDAP) installed
+      if len(switch.table) == 0:
+        # This switch isn't initialized yet, so sleep for a second, and
+        # tell EventDag that we need to have proceed() called again
+        log.info("Sleeping for 1 second to wait for switch connects")
+        time.sleep(1)
+        return False
+    # all switches have connected, so it's ok to proceed to the next event
+    return True
+
 class MastershipChange(InternalEvent):
   def __init__(self, json_hash):
     super(MastershipChange, self).__init__(json_hash)
@@ -267,4 +292,4 @@ class TimerEvent(InternalEvent):
   def __init__(self, json_hash):
     super(TimerEvent, self).__init__(json_hash)
 
-all_internal_events = [MastershipChange, TimerEvent]
+all_internal_events = [SwitchesConnected, MastershipChange, TimerEvent]
