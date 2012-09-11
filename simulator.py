@@ -101,10 +101,11 @@ from sts.snapshot import *
 # Read from config what controller we are using
 if controller_configs[0].name == "pox":
   snapshotService = PoxSnapshotService()
-if controller_configs[0].name == "floodlight":
+elif controller_configs[0].name == "floodlight":
   snapshotService = FloodlightSnapshotService()
-# We default snapshotService to POX
-snapshotService = PoxSnapshotService()
+else:
+  # We default snapshotService to POX
+  snapshotService = PoxSnapshotService()
 # Hacky way to pass the right snapshot service to the invariantchecker
 simulator.invariant_checker.snapshotService = snapshotService
 
