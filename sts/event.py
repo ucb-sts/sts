@@ -66,7 +66,7 @@ class EventWatcher(object):
     self._pre()
 
     while not self.event.proceed(simulation):
-      pass
+      log.debug(".")
 
     self._post()
 
@@ -261,28 +261,7 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
 #  Concrete classes of InternalEvents #
 # ----------------------------------- #
 
-class SwitchesConnected(InternalEvent):
-  '''
-  Wait until all switches have connected successfully to controllers.
-  (Technically a simulation internal event, not a controller's internal event.
-  Once we have real internal event logging, we can remove this class)
-  '''
-  def __init__(self, _):
-    # Bypass json_hash
-    pass
-
-  def proceed(self, simulation):
-    for switch in self.simulation.topology.switches:
-      # Temporary hack: we guess that a switch is finished connecting iff it
-      # has at least one flow entry (LLDAP) installed
-      if len(switch.table) == 0:
-        # This switch isn't initialized yet, so sleep for a second, and
-        # tell EventDag that we need to have proceed() called again
-        log.info("Sleeping for 1 second to wait for switch connects")
-        time.sleep(1)
-        return False
-    # all switches have connected, so it's ok to proceed to the next event
-    return True
+# Controllers' internal events:
 
 class MastershipChange(InternalEvent):
   def __init__(self, json_hash):
@@ -292,4 +271,68 @@ class TimerEvent(InternalEvent):
   def __init__(self, json_hash):
     super(TimerEvent, self).__init__(json_hash)
 
-all_internal_events = [SwitchesConnected, MastershipChange, TimerEvent]
+# Simulator's internal events:
+
+class DataplaneDrop(InternalEvent):
+  def __init__(self, json_hash):
+    super(DataplaneDrop, self).__init__(json_hash)
+    assert('dpout_id' in json_hash)
+    self.dpout_id = json_hash['dpout_id']
+
+  def proceed(self, simulation):
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.dpout_id)
+    if dp_event is not None:
+      simulation.patch_panel.drop_dp_event(dp_event)
+      return True
+    return False
+
+class DataplanePermit(InternalEvent):
+  def __init__(self, json_hash):
+    super(DataplanePermit, self).__init__(json_hash)
+    assert('dpout_id' in json_hash)
+    self.dpout_id = json_hash['dpout_id']
+
+  def proceed(self, simulation):
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.dpout_id)
+    if dp_event is not None:
+      simulation.patch_panel.permit_dp_event(dp_event)
+      return True
+    return False
+
+class ControlplaneReceivePermit(InternalEvent):
+  def __init__(self, json_hash):
+    super(ControlplaneReceivePermit, self).__init__(json_hash)
+    assert('dpid' in json_hash)
+    self.dpid = json_hash['dpid']
+    assert('controller_uuid' in json_hash)
+    self.controller_uuid = (json_hash['controller_uuid'][0],
+                            json_hash['controller_uuid'][1])
+
+  def proceed(self, simulation):
+    switch = simulation.topology.get_switch(self.dpid)
+    connection = switch.get_connection(self.controller_uuid)
+    if not connection.io_worker.has_pending_receives():
+      return False
+    connection.io_worker.permit_receive()
+    return True
+
+class ControlplaneSendPermit(InternalEvent):
+  def __init__(self, json_hash):
+    super(ControlplaneSendPermit, self).__init__(json_hash)
+    assert('dpid' in json_hash)
+    self.dpid = json_hash['dpid']
+    assert('controller_uuid' in json_hash)
+    self.controller_uuid = (json_hash['controller_uuid'][0],
+                            json_hash['controller_uuid'][1])
+
+  def proceed(self, simulation):
+    switch = simulation.topology.get_switch(self.dpid)
+    connection = switch.get_connection(self.controller_uuid)
+    if not connection.io_worker.has_pending_sends():
+      return False
+    connection.io_worker.permit_send()
+    return True
+
+all_internal_events = [MastershipChange, TimerEvent, DataplaneDrop,
+                       DataplanePermit, ControlplaneReceivePermit,
+                       ControlplaneSendPermit]
