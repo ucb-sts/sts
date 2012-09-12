@@ -4,8 +4,8 @@ from sts.control_flow import Interactive
 from input_traces.input_logger import InputLogger
 
 # Use POX as our controller
-command_line = "./pox/pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__ forwarding.l2_learning"
-controllers = [ControllerConfig(command_line)]
+command_line = "./pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__ samples.topo forwarding.l2_learning"
+controllers = [ControllerConfig(command_line, cwd="pox", address="127.0.0.1", port=8888)]
 
 # Use a FatTree with 4 pods (already the default)
 # (specify the class, but don't instantiate the object)

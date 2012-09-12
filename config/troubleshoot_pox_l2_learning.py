@@ -3,7 +3,7 @@ from experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import Replayer
 
-controllers = [ControllerConfig(cmdline="./pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__ topology forwarding.l2_learning", cwd="pox", address="127.0.0.1",port=8888)]
+controllers = [ControllerConfig(cmdline="./pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__ samples.topo forwarding.l2_learning", cwd="pox", address="127.0.0.1",port=8888)]
 topology_class = MeshTopology
 topology_params = "num_switches=2"
 patch_panel_class = BufferedPatchPanel
