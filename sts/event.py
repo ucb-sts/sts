@@ -258,9 +258,21 @@ class TrafficInjection(InputEvent):
     simulation.dataplane_trace.inject_trace_event()
     return True
 
+class WaitTime(InputEvent):
+  def __init__(self, json_hash):
+    assert('time' in json_hash)
+    self.time = json_hash['time']
+    super(WaitTime, self).__init__(json_hash)
+
+  def proceed(self, simulation):
+    log.info("WaitTime: pausing simulation for %f seconds" % (self.time))
+    time.sleep(self.time)
+    return True
+
+
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
-                    PolicyChange, TrafficInjection]
+                    PolicyChange, TrafficInjection, WaitTime]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #

@@ -54,6 +54,7 @@ class Replayer(ControlFlow):
 
     self.simulation.bootstrap()
     for event_watcher in self.dag.event_watchers():
+      time.sleep(0.05)
       event_watcher.run(simulation)
       self.increment_round()
       # TODO(cs): check correspondence
