@@ -1,0 +1,25 @@
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e1", "dependent_labels": [], "dpid": 1}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e2", "dependent_labels": [], "dpid": 2}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e3", "dependent_labels": [], "dpid": 1}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e4", "dependent_labels": [], "dpid": 2}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e5", "dependent_labels": [], "dpid": 1}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e6", "dependent_labels": [], "dpid": 2}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e7", "dependent_labels": [], "dpid": 1}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e8", "dependent_labels": [], "dpid": 2}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e9", "dependent_labels": [], "dpid": 1}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e10", "dependent_labels": [], "dpid": 2}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e11", "dependent_labels": [], "dpid": 1}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e12", "dependent_labels": [], "dpid": 2}
+{"class": "WaitTime", "label": "e13", "dependent_labels": [], "dpid": 2, "time": 2 }
+{"dependent_labels": [], "class": "TrafficInjection", "label": "e14"}
+{"dpout_id": 1, "dependent_labels": [], "class": "DataplanePermit", "label": "e15"}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e16", "dependent_labels": [], "dpid": 1}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e17", "dependent_labels": [], "dpid": 1}
+{"dpout_id": 2, "dependent_labels": [], "class": "DataplanePermit", "label": "e18"}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e19", "dependent_labels": [], "dpid": 2}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e20", "dependent_labels": [], "dpid": 2}
+{"dpout_id": 3, "dependent_labels": [], "class": "DataplanePermit", "label": "e21"}
+{"dependent_labels": [], "class": "TrafficInjection", "label": "e22"}
+{"dpout_id": 4, "dependent_labels": [], "class": "DataplanePermit", "label": "e23"}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e24", "dependent_labels": [], "dpid": 2}
+{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e25", "dependent_labels": [], "dpid": 2}
