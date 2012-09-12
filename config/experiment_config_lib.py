@@ -45,4 +45,6 @@ class ControllerConfig(object):
 
   def __repr__(self):
     return self.__class__.__name__  + "(cmdline=\"" + self.cmdline_string +\
-           "\",address=\"" + self.address + "\",port=" + self.port.__repr__() + ")"
+           "\", address=\"" + self.address + "\",port=" + self.port.__repr__() + \
+          ( (", cwd=\"%s\"" % self.cwd) if self.cwd else "" ) + \
+           ")"
