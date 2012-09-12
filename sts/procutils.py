@@ -65,7 +65,10 @@ def _prefix_thread(f, func):
   t.start()
 
 def popen_filtered(name, args, cwd=None):
-  cmd = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
+  try:
+    cmd = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
+  except OSError as e:
+    raise OSError("Error launching %s in directory %s: %s (error %d)" % (args, cwd, e.strerror, e.errno))
   _prefix_thread(cmd.stdout, lambda l: "%s%s [%d] %s%s\n" % (color.YELLOW, name, cmd.pid, l.rstrip(), color.NORMAL))
   _prefix_thread(cmd.stderr, lambda l: "%s%s [%d] %s%s\n" % (color.B_RED + color.YELLOW, name, cmd.pid, l.rstrip(), color.NORMAL))
   return cmd
