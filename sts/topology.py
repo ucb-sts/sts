@@ -400,6 +400,14 @@ class Topology(object):
         if c.io_worker.has_pending_sends():
           yield (software_switch, c)
 
+  # convenience method: allow all buffered control plane packets through
+  # TODO(cs): alternative implementation: use non-deferred io workers
+  def flush_controlplane_buffers(self):
+    for (_, connection) in self.cp_connections_with_pending_receives:
+      self.permit_cp_receive(connection)
+    for (_, connection) in self.cp_connections_with_pending_sends:
+      self.permit_cp_sends(connection)
+
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
     Bind sockets from the software_switchs to the controllers. For now, assign each
