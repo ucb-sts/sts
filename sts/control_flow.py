@@ -17,9 +17,9 @@ from sts.event import EventDag
 import log_processing.superlog_parser as superlog_parser
 
 import os
-import time
 import sys
 import threading
+import time
 import random
 import logging
 

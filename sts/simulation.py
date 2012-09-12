@@ -10,8 +10,7 @@ Encapsulates the state of the simulation, including:
   - Metadata (e.g. # of failures)
 '''
 
-from pox.lib.ioworker.io_worker import RecocoIOLoop
-from sts.deferred_io import DeferredIOWorker
+from sts.io_master import IOMaster
 from dataplane_traces.trace import Trace
 from entities import Link, Host, Controller
 from sts.topology import *
@@ -45,6 +44,7 @@ class Simulation (object):
     self._patch_panel_class = patch_panel_class
     self.dataplane_trace = None
     self._dataplane_trace_path = dataplane_trace_path
+    self._io_master = None
 
   # TODO(cs): the next three next methods should go in a separate
   #           ControllerContainer class
@@ -71,8 +71,8 @@ class Simulation (object):
 
     # Just to make sure there isn't any state lying around, throw out the old
     # RecocoIOLoop
-    if self._io_loop is not None:
-      self._io_loop.stop()
+    if self._io_master is not None:
+      self._io_master.close_all()
 
   def bootstrap(self):
     '''Set up the state of the system to its initial starting point:
@@ -83,6 +83,12 @@ class Simulation (object):
     '''
     # Clean up state from any previous runs
     self.clean_up()
+
+    # boot the IOLoop (needed for the controllers)
+    self._io_master = IOMaster()
+
+    # monkey patch time.sleep for all our friends
+    self._io_master.monkey_time_sleep()
 
     # Boot the controllers
     controllers = []
@@ -104,8 +110,5 @@ class Simulation (object):
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
 
     # Connect switches to controllers
-    self._io_loop = RecocoIOLoop()
-    self._scheduler.schedule(self._io_loop)
-    create_worker = lambda(socket): DeferredIOWorker(self._io_loop.create_worker_for_socket(socket),
-                                                     self._scheduler.callLater)
+    create_worker = lambda(socket): self._io_master.create_worker_for_socket(socket)
     self.topology.connect_to_controllers(self.controller_configs, create_worker)
