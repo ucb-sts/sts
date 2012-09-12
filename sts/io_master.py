@@ -5,7 +5,9 @@ import Queue
 import select
 import socket
 import time
+import threading
 
+from pox.lib.util import makePinger
 from pox.lib.ioworker.io_worker import IOWorker
 
 log = logging.getLogger()
@@ -42,6 +44,7 @@ class IOMaster(object):
 
   def __init__ (self):
     self._workers = set()
+    self.pinger = makePinger()
 
   def create_worker_for_socket(self, socket):
     '''
@@ -64,6 +67,32 @@ class IOMaster(object):
     """monkey patches time.sleep to use this io_masters's time.sleep"""
     self.original_time_sleep = time.sleep
     time.sleep = self.sleep
+
+  def raw_input(self, prompt):
+    _io_master = self
+
+    class InputThread(threading.Thread):
+      def __init__(self):
+        threading.Thread.__init__(self, name="InputThread")
+        self.result = None
+
+      def run(self):
+        self.result = raw_input(prompt)
+        _io_master._ping()
+
+    # some time to do io so we don't get too many competing messages
+    self.sleep(0.05)
+    input_thread = InputThread()
+    input_thread.daemon = True
+    input_thread.start()
+
+    while(input_thread.result is None):
+      self._select(None)
+
+    return input_thread.result
+
+  def _ping(self):
+    self.pinger.ping()
 
   def close_all(self):
     for w in list(self._workers):
@@ -89,11 +118,15 @@ class IOMaster(object):
 
   def _select(self, timeout=0):
     # Now grab workers
-    read_sockets = list(self._workers)
+    read_sockets = list(self._workers) + [ self.pinger ]
     write_sockets = [ worker for worker in self._workers if worker._ready_to_send ]
     exception_sockets = list(self._workers)
 
     rlist, wlist, elist = select.select(read_sockets, write_sockets, exception_sockets, timeout)
+
+    if self.pinger in rlist:
+      self.pinger.pongAll()
+      rlist.remove(self.pinger)
 
     for worker in elist:
       worker.close()

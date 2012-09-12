@@ -321,6 +321,7 @@ class Interactive(ControlFlow):
       while True:
         # TODO(cs): print out the state of the network at each timestep? Take a
         # verbose flag..
+        time.sleep(0.05)
         self.logical_time += 1
         self.invariant_check_prompt()
         self.dataplane_trace_prompt()

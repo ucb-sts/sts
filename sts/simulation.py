@@ -10,6 +10,7 @@ Encapsulates the state of the simulation, including:
   - Metadata (e.g. # of failures)
 '''
 
+from sts.console import msg
 from sts.io_master import IOMaster
 from dataplane_traces.trace import Trace
 from entities import Link, Host, Controller
@@ -73,6 +74,7 @@ class Simulation (object):
     # RecocoIOLoop
     if self._io_master is not None:
       self._io_master.close_all()
+    msg.unset_io_master()
 
   def bootstrap(self):
     '''Set up the state of the system to its initial starting point:
@@ -89,6 +91,8 @@ class Simulation (object):
 
     # monkey patch time.sleep for all our friends
     self._io_master.monkey_time_sleep()
+    # tell sts.console to use our io_master
+    msg.set_io_master(self._io_master)
 
     # Boot the controllers
     controllers = []

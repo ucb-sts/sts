@@ -7,6 +7,8 @@ class color(object):
   NORMAL = END
 
 class msg():
+  global_io_master = None
+
   BEGIN = '\033[1;'
   END = '\033[1;m'
 
@@ -25,7 +27,10 @@ class msg():
   @staticmethod
   def raw_input(message):
     prompt = msg.BEGIN + msg.WHITE + message + msg.END
-    return raw_input(prompt)
+    if msg.global_io_master:
+      return msg.global_io_master.raw_input(prompt)
+    else:
+      return raw_input(prompt)
 
   @staticmethod
   def success(message):
@@ -34,5 +39,13 @@ class msg():
   @staticmethod
   def fail(message):
     print msg.BEGIN + msg.B_RED + msg.BEGIN + msg.WHITE + message + msg.END
+
+  @staticmethod
+  def set_io_master(io_master):
+    msg.global_io_master = io_master
+
+  @staticmethod
+  def unset_io_master():
+    msg.global_io_master = None
 
 
