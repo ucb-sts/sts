@@ -247,7 +247,7 @@ class Controller(object):
     self._active_processes.discard(proc)
 
   def __del__(self):
-    if hasattr(self, 'process'): # if it fails in __init__, process may not have been assigned
+    if hasattr(self, 'process') and self.process != None: # if it fails in __init__, process may not have been assigned
       if self.process.poll():
         self._unregister_proc(self.process) # don't let this happen for shutdown
       else:
@@ -262,7 +262,7 @@ class Controller(object):
   @property
   def pid(self):
     '''Return the PID of the Popen instance the controller was started with.'''
-    return self.process.pid
+    return self.process.pid if self.process else None
 
   @property
   def uuid(self):
@@ -275,6 +275,7 @@ class Controller(object):
     kill_procs([self.process])
     self._unregister_proc(self.process)
     self.alive = False
+    self.process = None
 
   def start(self):
     '''Start a new controller process based on the config's cmdline
