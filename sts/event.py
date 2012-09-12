@@ -76,7 +76,7 @@ class EventWatcher(object):
     log.debug("Executing %s" % str(self.event))
 
   def _post(self):
-    pass
+    log.debug("Finished Executing %s" % str(self.event))
 
 class Event(object):
   __metaclass__ = abc.ABCMeta
