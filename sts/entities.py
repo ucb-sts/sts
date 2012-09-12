@@ -282,7 +282,7 @@ class Controller(object):
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process.'''
     msg.event("Starting controller %s" % (str(self.uuid)))
-    self.process = popen_filtered("c%s" % str(self.uuid), self.config.cmdline, self.config.cwd)
+    self.process = popen_filtered("c%s" % str(self.uuid), self.config.expanded_cmdline, self.config.cwd)
     self._register_proc(self.process)
 
     self.alive = True
