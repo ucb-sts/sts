@@ -37,7 +37,7 @@ def check_unique_label(event_label, existing_event_labels):
 
   If the invariant does hold, add event_label to existing_event_labels.'''
   if event_label in existing_event_labels:
-    raise RuntimeError("Event label %d already exists!" % event_label)
+    raise RuntimeError("Event label %s already exists!" % event_label)
   existing_event_labels.add(event_label)
 
 def sanity_check_external_input_event(existing_event_labels, dependent_labels,
