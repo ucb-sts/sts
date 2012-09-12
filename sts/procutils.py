@@ -64,8 +64,8 @@ def _prefix_thread(f, func):
   t.daemon = True
   t.start()
 
-def popen_filtered(name, args):
-  cmd = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+def popen_filtered(name, args, cwd=None):
+  cmd = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd)
   _prefix_thread(cmd.stdout, lambda l: "%s%s [%d] %s%s\n" % (color.YELLOW, name, cmd.pid, l.rstrip(), color.NORMAL))
   _prefix_thread(cmd.stderr, lambda l: "%s%s [%d] %s%s\n" % (color.B_RED + color.YELLOW, name, cmd.pid, l.rstrip(), color.NORMAL))
   return cmd

@@ -1,10 +1,11 @@
 import itertools
 import string
+import sys
 
 class ControllerConfig(object):
   _port_gen = itertools.count(8888)
 
-  def __init__(self, cmdline="", address="127.0.0.1", port=None):
+  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None):
     '''
     Store metadata for the controller.
       - cmdline is an array of command line tokens.
@@ -26,6 +27,17 @@ class ControllerConfig(object):
     self.cmdline = map(lambda(x): string.replace(x, "__port__", str(port)),
                        map(lambda(x): string.replace(x, "__address__",
                                                      str(address)), cmdline.split()))
+    self.cwd = cwd
+    if not cwd:
+        sys.stderr.write("""
+        =======================================================================
+        WARN - no working directory defined for controller with command line 
+        %s
+        The controller is run in the STS base directory. This may result
+        in unintended consequences (i.e., POX not logging correctly).
+        =======================================================================
+        \n""" % (self.cmdline) )
+
 
   @property
   def uuid(self):
