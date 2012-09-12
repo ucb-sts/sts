@@ -90,7 +90,7 @@ class Simulation (object):
       controller = Controller(c)
       controller.start()
       log.info("Launched controller c%s: %s [PID %d]" %
-               (str(c.uuid), " ".join(c.cmdline), controller.pid))
+               (str(c.uuid), " ".join(c.expanded_cmdline), controller.pid))
       controllers.append(controller)
 
     self.controller_manager = ControllerManager(controllers)

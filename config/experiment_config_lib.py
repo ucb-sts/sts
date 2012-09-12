@@ -5,7 +5,7 @@ import sys
 class ControllerConfig(object):
   _port_gen = itertools.count(8888)
 
-  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None):
+  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None, sync=None):
     '''
     Store metadata for the controller.
       - cmdline is an array of command line tokens.
@@ -17,16 +17,15 @@ class ControllerConfig(object):
     '''
     if cmdline == "":
       raise RuntimeError("Must specify boot parameters.")
-    self.cmdline_string = cmdline
+    self.cmdline = cmdline
     self.address = address
     if not port:
       port = self._port_gen.next()
+
     self.port = port
-    if "pox" in self.cmdline_string:
+    if "pox" in self.cmdline:
       self.name = "pox"
-    self.cmdline = map(lambda(x): string.replace(x, "__port__", str(port)),
-                       map(lambda(x): string.replace(x, "__address__",
-                                                     str(address)), cmdline.split()))
+
     self.cwd = cwd
     if not cwd:
         sys.stderr.write("""
@@ -38,13 +37,22 @@ class ControllerConfig(object):
         =======================================================================
         \n""" % (self.cmdline) )
 
+    self.sync = sync
 
   @property
   def uuid(self):
     return (self.address, self.port)
 
+  @property
+  def expanded_cmdline(self):
+    return map(lambda(x): string.replace(x, "__port__", str(self.port)),
+           map(lambda(x): string.replace(x, "__address__", str(self.address)),
+             self.cmdline.split()))
+
   def __repr__(self):
-    return self.__class__.__name__  + "(cmdline=\"" + self.cmdline_string +\
-           "\", address=\"" + self.address + "\",port=" + self.port.__repr__() + \
-          ( (", cwd=\"%s\"" % self.cwd) if self.cwd else "" ) + \
-           ")"
+    attributes = ("cmdline", "address", "port", "cwd", "sync")
+
+    pairs = ( (attr, getattr(self, attr)) for attr in attributes)
+    quoted = ( "%s=%s" % (attr, repr(value)) for (attr, value) in pairs if value)
+
+    return self.__class__.__name__  + "(" + ", ".join(quoted) + ")"
