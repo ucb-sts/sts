@@ -10,6 +10,7 @@ import logging
 import Queue
 import socket
 
+from input_traces.fingerprints import OFFingerprint
 from pox.lib.util import assert_type, makePinger
 from pox.lib.recoco import Select, Task
 from pox.lib.ioworker.io_worker import IOWorker
@@ -20,8 +21,8 @@ class DeferredIOWorker(object):
   '''
   Wrapper class for RecocoIOWorkers.
 
-  Rather than actually sending/receiving right away, queue the messages.
-  Then there are separate methods for actually sending the messages via
+  Rather than actually sending/receiving right away, queue the data.
+  Then there are separate methods for actually sending the data via
   the wrapped io_worker
 
   io_worker: io_worker to wrap
@@ -44,9 +45,8 @@ class DeferredIOWorker(object):
 
     raises an exception if the write queue is empty
     '''
-    message = self._send_queue.get()
-    # TODO(cs): will recoco guarentee in-order delivery of a sequence of these send requests?
-    self._call_later(lambda: self._io_worker.send(message))
+    data = self._send_queue.get()
+    self._call_later(lambda: self._io_worker.send(data))
 
   def send(self, data):
     """ send data from the client side. fire and forget. """
@@ -83,10 +83,10 @@ class DeferredIOWorker(object):
   def io_worker_receive_handler(self, io_worker):
     ''' called from io_worker (recoco thread, after the Select loop pushes onto io_worker) '''
     # Consume everything immediately
-    message = io_worker.peek_receive_buf()
-    io_worker.consume_receive_buf(len(message))
+    data = io_worker.peek_receive_buf()
+    io_worker.consume_receive_buf(len(data))
     # thread-safe queue
-    self._receive_queue.put(message)
+    self._receive_queue.put(data)
 
   def has_pending_receives(self):
     ''' called by the "arbitrator" in charge of deferal '''
