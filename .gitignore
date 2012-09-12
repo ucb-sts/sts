@@ -20,3 +20,6 @@ dataplane_traces/20*.trace
 # ignore eclipse project files
 .pydevproject
 .project
+
+# ignore ctags file
+tags
