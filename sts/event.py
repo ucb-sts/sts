@@ -316,9 +316,9 @@ class DataplanePermit(InternalEvent):
       return True
     return False
 
-class ControlplaneReceivePermit(InternalEvent):
+class ControlChannelBlock(InternalEvent):
   def __init__(self, json_hash):
-    super(ControlplaneReceivePermit, self).__init__(json_hash)
+    super(ControlChannelBlock, self).__init__(json_hash)
     assert('dpid' in json_hash)
     self.dpid = json_hash['dpid']
     assert('controller_uuid' in json_hash)
@@ -328,14 +328,14 @@ class ControlplaneReceivePermit(InternalEvent):
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
     connection = switch.get_connection(self.controller_uuid)
-    if not connection.io_worker.has_pending_receives():
-      return False
-    connection.io_worker.permit_receive()
+    if connection.currently_blocked:
+      raise RuntimeError("Expected channel %s to not be blocked" % str(connection))
+    connection.block()
     return True
 
-class ControlplaneSendPermit(InternalEvent):
+class ControlChannelUnblock(InternalEvent):
   def __init__(self, json_hash):
-    super(ControlplaneSendPermit, self).__init__(json_hash)
+    super(ControlChannelUnblock, self).__init__(json_hash)
     assert('dpid' in json_hash)
     self.dpid = json_hash['dpid']
     assert('controller_uuid' in json_hash)
@@ -345,11 +345,11 @@ class ControlplaneSendPermit(InternalEvent):
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
     connection = switch.get_connection(self.controller_uuid)
-    if not connection.io_worker.has_pending_sends():
-      return False
-    connection.io_worker.permit_send()
+    if not connection.currently_blocked:
+      raise RuntimeError("Expected channel %s to be blocked" % str(connection))
+    connection.unblock()
     return True
 
 all_internal_events = [MastershipChange, TimerEvent, DataplaneDrop,
-                       DataplanePermit, ControlplaneReceivePermit,
-                       ControlplaneSendPermit]
+                       DataplanePermit, ControlChannelBlock,
+                       ControlChannelUnblock]

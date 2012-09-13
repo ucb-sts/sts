@@ -184,26 +184,19 @@ class Fuzzer(ControlFlow):
         self._log_input_event(klass="DataplanePermit",dpout_id=dp_event.dpout_id)
 
   def check_controlplane(self):
-    ''' Decide whether to delay or deliver packets '''
-    # Check reads
-    for (switch, connection) in self.simulation.topology.cp_connections_with_pending_receives:
-      if self.random.random() < self.params.controlplane_delay_rate:
-        self.simulation.topology.delay_cp_receive(connection)
-      else:
-        self.simulation.topology.permit_cp_receive(connection)
-        self._log_input_event(klass="ControlplaneReceivePermit",
-                              controller_uuid=connection.get_controller_id(),
-                              dpid=switch.dpid)
-
-    # Check writes
-    for (switch, connection) in self.simulation.topology.cp_connections_with_pending_sends:
-      if self.random.random() < self.params.controlplane_delay_rate:
-        self.simulation.topology.delay_cp_send(connection)
-      else:
-        self.simulation.topology.permit_cp_send(connection)
-        self._log_input_event(klass="ControlplaneReceivePermit",
-                              controller_uuid=connection.get_controller_id(),
-                              dpid=switch.dpid)
+    ''' Decide whether to block or unblock control channels '''
+    for switch in self.simulation.topology.switches:
+      for connection in switch.connections:
+        blocked = connection.currently_blocked
+        if blocked and self.random.random() < self.params.controlplane_unblock_rate:
+          self.topology.unblock_connection(connection)
+          self._log_input_event(klass="ControlChannelUnBlock",dpid=switch.dpid,
+                                controller_uuid=connection.get_controller_id())
+        elif (not blocked and
+             self.random.random() < self.params.controlplane_block_rate):
+          self._log_input_event(klass="ControlChannelBlock",dpid=switch.dpid,
+                                controller_uuid=connection.get_controller_id())
+          self.topology.block_connection(connection)
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
@@ -379,30 +372,6 @@ class Interactive(ControlFlow):
         else:
           break
 
-  def check_controlplane(self):
-    ''' Decide whether to delay or deliver packets '''
-    # Check reads
-    for (switch, connection) in self.simulation.topology.cp_connections_with_pending_receives:
-      answer = msg.raw_input('Allow control plane receive %s? [Yn]' % connection)
-      if answer != '' and answer.lower() != 'y':
-        self.simulation.topology.delay_cp_receive(connection)
-      else:
-        self.simulation.topology.permit_cp_receive(connection)
-        self._log_input_event(klass="ControlplaneReceivePermit",
-                              controller_uuid=connection.get_controller_id(),
-                              dpid=switch.dpid)
-
-    # Check write
-    for (switch, connection) in self.simulation.topology.cp_connections_with_pending_sends:
-      answer = msg.raw_input('Allow control plane send %s? [Yn]' % connection)
-      if answer != '' and answer.lower() != 'y':
-        self.simulation.topology.delay_cp_send(connection)
-      else:
-        self.simulation.topology.permit_cp_send(connection)
-        self._log_input_event(klass="ControlplaneSendPermit",
-                              controller_uuid=connection.get_controller_id(),
-                              dpid=switch.dpid)
-
   def check_dataplane(self):
     ''' Decide whether to delay, drop, or deliver packets '''
     if type(self.simulation.patch_panel) == BufferedPatchPanel:
@@ -422,4 +391,4 @@ class Interactive(ControlFlow):
           log.warn("Unknown input...")
           self.simulation.delay_dp_event(dp_event)
 
-  # TODO(cs): add support for switch, link, controller failures
+  # TODO(cs): add support for control channel blocking + switch, link, controller failures
