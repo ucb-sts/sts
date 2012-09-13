@@ -324,7 +324,6 @@ class Interactive(ControlFlow):
         self.logical_time += 1
         self.invariant_check_prompt()
         self.dataplane_trace_prompt()
-        self.check_controlplane()
         self.check_dataplane()
         answer = msg.raw_input('Continue to next round? [Yn]').strip()
         if answer != '' and answer.lower() != 'y':
