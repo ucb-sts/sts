@@ -33,6 +33,7 @@ class DeferredIOWorker(object):
     self._io_worker.set_receive_handler(self.io_worker_receive_handler)
     self._call_later = call_later
     # Thread-safe read and write queues of indefinite length
+    # TODO(cs): no need for thread safety anymore
     self._receive_queue = Queue.Queue()
     self._send_queue = Queue.Queue()
     # Read buffer that we present to clients
