@@ -368,37 +368,13 @@ class Topology(object):
     # TODO(cs): the switch on the other end of the link should eventually
     # notice that the link has come back up!
 
-  def permit_cp_send(self, connection):
-    # pre: software_switch.io_worker.has_pending_sends()
-    msg.event("Giving permission for control plane send for %s" % connection)
-    connection.io_worker.permit_send()
+  def block_connection(self, connection):
+    msg.event("Blocking connection %s" % connection)
+    return connection.io_worker.block()
 
-  def delay_cp_send(self, connection):
-    msg.event("Delaying control plane send for %s" % connection)
-    # update # delayed rounds?
-
-  def permit_cp_receive(self, connection):
-    # pre: software_switch.io_worker.has_pending_sends()
-    msg.event("Giving permission for control plane receive for %s" % connection)
-    connection.io_worker.permit_receive()
-
-  def delay_cp_receive(self, connection):
-    msg.event("Delaying control plane receive for %s" % connection)
-    # update # delayed rounds?
-
-  @property
-  def cp_connections_with_pending_receives(self):
-    for software_switch in self.live_switches:
-      for c in software_switch.connections:
-        if c.io_worker.has_pending_receives():
-          yield (software_switch, c)
-
-  @property
-  def cp_connections_with_pending_sends(self):
-    for software_switch in self.live_switches:
-      for c in software_switch.connections:
-        if c.io_worker.has_pending_sends():
-          yield (software_switch, c)
+  def unblock_connection(self, connection):
+    msg.event("Unblocking connection %s" % connection)
+    return connection.io_worker.unblock()
 
   # convenience method: allow all buffered control plane packets through
   # TODO(cs): alternative implementation: use non-deferred io workers
