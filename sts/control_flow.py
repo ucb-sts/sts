@@ -178,10 +178,12 @@ class Fuzzer(ControlFlow):
         self.simulation.patch_panel.delay_dp_event(dp_event)
       elif self.random.random() < self.params.dataplane_drop_rate:
         self.simulation.patch_panel.drop_dp_event(dp_event)
-        self._log_input_event(klass="DataplaneDrop",dpout_id=dp_event.dpout_id)
+        self._log_input_event(klass="DataplaneDrop",
+                              fingerprint=dp_event.fingerprint.to_dict())
       elif self.simulation.topology.ok_to_send(dp_event):
         self.simulation.patch_panel.permit_dp_event(dp_event)
-        self._log_input_event(klass="DataplanePermit",dpout_id=dp_event.dpout_id)
+        self._log_input_event(klass="DataplanePermit",
+                              fingerprint=dp_event.fingerprint.to_dict())
 
   def check_controlplane(self):
     ''' Decide whether to block or unblock control channels '''

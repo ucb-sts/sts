@@ -16,6 +16,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
                   host3
 '''
 
+from input_traces.fingerprints import DPFingerprint, OFFingerprint
 from entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink
 from pox.openflow.software_switch import ofp_phy_port, DpPacketOut, SoftwareSwitch
 from pox.lib.addresses import EthAddr, IPAddr
@@ -227,9 +228,6 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
   permission from a higher-level.
   '''
   _eventMixin_events = set([DpPacketOut])
-  # TODO(cs): these ids need to be unique across runs, and assigning the ids based
-  # on order may be dangerous if control connections have different delays!
-  _dpout_id_gen = itertools.count(1)
 
   def __init__(self, switches, hosts, connected_port_mapping):
     self.get_connected_port = connected_port_mapping
@@ -239,9 +237,9 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     self.buffered_dp_out_events = {}
     self.dropped_dp_events = []
     def handle_DpPacketOut(event):
-      # Monkey patch on a unique id for this event
-      event.dpout_id = self._dpout_id_gen.next()
-      self.buffered_dp_out_events[event.dpout_id] = event
+      # Monkey patch on a fingerprint for this event
+      event.fingerprint = DPFingerprint.from_pkt(event.packet)
+      self.buffered_dp_out_events[event.fingerprint] = event
       self.raiseEventNoErrors(event)
     for i, s in enumerate(self.switches):
       s.addListener(DpPacketOut, handle_DpPacketOut)
@@ -258,7 +256,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     msg.event("Forwarding dataplane event")
     # Invoke superclass DpPacketOut handler
     self.handle_DpPacketOut(dp_event)
-    del self.buffered_dp_out_events[dp_event.dpout_id]
+    del self.buffered_dp_out_events[dp_event.fingerprint]
 
   def drop_dp_event(self, dp_event):
     '''
@@ -266,7 +264,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     Return the dropped event.
     '''
     msg.event("Dropping dataplane event")
-    del self.buffered_dp_out_events[dp_event.dpout_id]
+    del self.buffered_dp_out_events[dp_event.fingerprint]
     self.dropped_dp_events.append(dp_event)
     return dp_event
 
@@ -277,8 +275,8 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
       dp_event.delayed_rounds = 0
     dp_event.delayed_rounds += 1
 
-  def get_buffered_dp_event(self, id):
-    if id not in self.buffered_dp_out_events:
+  def get_buffered_dp_event(self, fingerprint):
+    if fingerprint not in self.buffered_dp_out_events:
       return None
     return self.buffered_dp_out_events[id]
 

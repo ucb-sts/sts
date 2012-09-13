@@ -293,11 +293,11 @@ class TimerEvent(InternalEvent):
 class DataplaneDrop(InternalEvent):
   def __init__(self, json_hash):
     super(DataplaneDrop, self).__init__(json_hash)
-    assert('dpout_id' in json_hash)
-    self.dpout_id = json_hash['dpout_id']
+    assert('fingerprint' in json_hash)
+    self.fingerprint = json_hash['fingerprint']
 
   def proceed(self, simulation):
-    dp_event = simulation.patch_panel.get_buffered_dp_event(self.dpout_id)
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint)
     if dp_event is not None:
       simulation.patch_panel.drop_dp_event(dp_event)
       return True
@@ -306,11 +306,11 @@ class DataplaneDrop(InternalEvent):
 class DataplanePermit(InternalEvent):
   def __init__(self, json_hash):
     super(DataplanePermit, self).__init__(json_hash)
-    assert('dpout_id' in json_hash)
-    self.dpout_id = json_hash['dpout_id']
+    assert('fingerprint' in json_hash)
+    self.fingerprint = json_hash['fingerprint']
 
   def proceed(self, simulation):
-    dp_event = simulation.patch_panel.get_buffered_dp_event(self.dpout_id)
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint)
     if dp_event is not None:
       simulation.patch_panel.permit_dp_event(dp_event)
       return True
