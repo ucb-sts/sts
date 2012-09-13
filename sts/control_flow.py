@@ -101,7 +101,7 @@ class Fuzzer(ControlFlow):
     self.logical_time = 0
 
   def _log_input_event(self, **kws):
-    if self._input_logger is not none:
+    if self._input_logger is not None:
       self._input_logger.log_input_event(**kws)
 
   def _load_fuzzer_params(self, fuzzer_params_path):
