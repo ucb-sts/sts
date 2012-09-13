@@ -23,6 +23,7 @@ from pox.lib.addresses import EthAddr, IPAddr
 from pox.openflow.libopenflow_01 import *
 from pox.lib.util import connect_socket_with_backoff
 from pox.lib.revent import EventMixin
+from sts.entities import CpMessageEvent
 from console import msg
 import socket
 import abc
@@ -278,7 +279,23 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
   def get_buffered_dp_event(self, fingerprint):
     if fingerprint not in self.buffered_dp_out_events:
       return None
-    return self.buffered_dp_out_events[id]
+    return self.buffered_dp_out_events[fingerprint]
+
+class ManagementPanel(EventMixin):
+  '''
+  Notifies listeners about control channel sends/receives.
+
+  The management panel is used only for logging and replay (blocking) purposes.
+  It does not serve to fuzz control plane processing. (DeferredIOWorker serves
+  that role)
+  '''
+  _eventMixin_events = set([CpMessageEvent])
+
+  def __init__(self, switches):
+    self.switches = switches
+    for switch in switches:
+      # Re-raise the event.
+      switch.addListener(CpMessageEvent, self.raiseEventNoErrors)
 
 class Topology(object):
   '''

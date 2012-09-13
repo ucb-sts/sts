@@ -350,6 +350,25 @@ class ControlChannelUnblock(InternalEvent):
     connection.unblock()
     return True
 
+class ControlMessageEvent(InternalEvent):
+  def __init__(self, json_hash):
+    super(ControlMessageEvent, self).__init__(json_hash)
+    assert('dpid' in json_hash)
+    self.dpid = json_hash['dpid']
+    assert('controller_uuid' in json_hash)
+    self.controller_uuid = (json_hash['controller_uuid'][0],
+                            json_hash['controller_uuid'][1])
+    assert('fingerprint' in json_hash)
+    self.fingerprint = json_hash['fingerprint']
+
+  def proceed(self, simulation):
+    switch = simulation.topology.get_switch(self.dpid)
+    connection = switch.get_connection(self.controller_uuid)
+    if not connection.currently_blocked:
+      raise RuntimeError("Expected channel %s to be blocked" % str(connection))
+    connection.unblock()
+    return True
+
 all_internal_events = [MastershipChange, TimerEvent, DataplaneDrop,
                        DataplanePermit, ControlChannelBlock,
                        ControlChannelUnblock]

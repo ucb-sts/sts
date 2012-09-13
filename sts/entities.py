@@ -15,14 +15,31 @@ import logging
 import pickle
 import signal
 
+class CpMessageEvent (Event):
+  """ Event raised when a control plane packet is sent or received """
+  def __init__ (self, connection, message):
+    assert_type("message", message, ofp_header, none_ok=False)
+    Event.__init__(self)
+    self.connection = connection
+    self.message = message
+
 class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
   A mock switch implementation for testing purposes. Can simulate dropping dead.
   """
+
+  _eventMixin_events = set([DpPacketOut, CpMessageEvent])
+
   def __init__ (self, create_io_worker, dpid, name=None, ports=4, miss_send_len=128,
                 n_buffers=100, n_tables=1, capabilities=None):
     NXSoftwareSwitch.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
-
+    # Overwrite the handlers with a shim layer that queues up events and waits
+    # for permission before allowing the switch to process them
+    # original_handlers = self.ofp_handlers
+    # new_handlers = {
+    #   key : shim(handler)
+    #   for key, handler in original_handlers.iteritems()
+    # }
     self.create_io_worker = create_io_worker
 
     self.failed = False

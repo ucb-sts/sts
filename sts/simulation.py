@@ -108,6 +108,8 @@ class Simulation (object):
     self.patch_panel = self._patch_panel_class(self.topology.switches,
                                                self.topology.hosts,
                                                self.topology.get_connected_port)
+    # TODO(cs): allow the user to specify a ManagementPanel class
+    self.mgmt_panel = ManagementPanel(self.topology.switches)
     if self._dataplane_trace_path is not None:
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
 
