@@ -368,6 +368,20 @@ class Topology(object):
     # TODO(cs): the switch on the other end of the link should eventually
     # notice that the link has come back up!
 
+  @property
+  def blocked_controller_connections(self):
+    for switch in self.switches:
+      for connection in switch.connections:
+        if connection.io_worker.currently_blocked:
+           yield (switch, connection)
+
+  @property
+  def unblocked_controller_connections(self):
+    for switch in self.switches:
+      for connection in switch.connections:
+        if not connection.io_worker.currently_blocked:
+           yield (switch, connection)
+
   def block_connection(self, connection):
     msg.event("Blocking connection %s" % connection)
     return connection.io_worker.block()

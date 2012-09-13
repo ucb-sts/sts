@@ -185,18 +185,17 @@ class Fuzzer(ControlFlow):
 
   def check_controlplane(self):
     ''' Decide whether to block or unblock control channels '''
-    for switch in self.simulation.topology.switches:
-      for connection in switch.connections:
-        blocked = connection.currently_blocked
-        if blocked and self.random.random() < self.params.controlplane_unblock_rate:
-          self.topology.unblock_connection(connection)
-          self._log_input_event(klass="ControlChannelUnBlock",dpid=switch.dpid,
-                                controller_uuid=connection.get_controller_id())
-        elif (not blocked and
-             self.random.random() < self.params.controlplane_block_rate):
-          self._log_input_event(klass="ControlChannelBlock",dpid=switch.dpid,
-                                controller_uuid=connection.get_controller_id())
-          self.topology.block_connection(connection)
+    for (switch, connection) in self.simulation.topology.unblocked_controller_connections:
+      if self.random.random() < self.params.controlplane_block_rate:
+        self.topology.block_connection(connection)
+        self._log_input_event(klass="ControlChannelBlock",dpid=switch.dpid,
+                              controller_uuid=connection.get_controller_id())
+
+    for (switch, connection) in self.simulation.topology.blocked_controller_connections:
+      if self.random.random() < self.params.controlplane_unblock_rate:
+        self.topology.unblock_connection(connection)
+        self._log_input_event(klass="ControlChannelUnBlock",dpid=switch.dpid,
+                              controller_uuid=connection.get_controller_id())
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
