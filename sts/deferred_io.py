@@ -37,33 +37,35 @@ class DeferredIOWorker(object):
     self._send_queue = Queue.Queue()
     # Read buffer that we present to clients
     self._receive_buf = ""
+    # Whether this control channel is currently blocked. If False, passes
+    # through packets.
+    self._currently_blocked = False
 
-  def permit_send(self):
-    '''
-    deque()s the first element of the write queue, and actually sends it
-    across the wire.
+  def block(self):
+    ''' Stop allowing data through until unblock() is called '''
+    self._currently_blocked = True
 
-    raises an exception if the write queue is empty
-    '''
-    data = self._send_queue.get()
-    self._call_later(lambda: self._io_worker.send(data))
+  def unblock(self):
+    ''' Allow data through, and flush buffers '''
+    self._currently_blocked = False
+    while not self._send_queue.empty():
+      data = self._send_queue.get()
+      self._actual_send(data)
+    while not self._receive_queue.empty():
+      data = self._receive_queue.get()
+      self._actual_receive(data)
 
   def send(self, data):
-    """ send data from the client side. fire and forget. """
-    self._send_queue.put(data)
+    ''' send data from the client side. fire and forget. '''
+    if self._currently_blocked:
+      self._send_queue.put(data)
+    else:
+      self._actual_send(data)
 
-  def has_pending_sends(self):
-    ''' called by the "arbitrator" in charge of deferal '''
-    return not self._send_queue.empty()
+  def _actual_send(self, data):
+    self._call_later(lambda: self._io_worker.send(data))
 
-  def permit_receive(self):
-    '''
-    deque()s the first element of the read queue, and notifies the client
-    that there is data to be read.
-
-    raises an exception if the read queue is empty
-    '''
-    data = self._receive_queue.get()
+  def _actual_receive(self, data):
     self._receive_buf += data
     self._client_receive_handler(self)
 
@@ -85,12 +87,16 @@ class DeferredIOWorker(object):
     # Consume everything immediately
     data = io_worker.peek_receive_buf()
     io_worker.consume_receive_buf(len(data))
-    # thread-safe queue
-    self._receive_queue.put(data)
+    if self._currently_blocked:
+      # thread-safe queue
+      self._receive_queue.put(data)
+    else:
+      self._actual_receive(data)
 
-  def has_pending_receives(self):
-    ''' called by the "arbitrator" in charge of deferal '''
-    return not self._receive_queue.empty()
+  @property
+  def currently_blocked(self):
+    ''' Return whether we are currently allowing data through '''
+    return self._currently_blocked
 
   # ------- Delegation functions. ---------
   # TODO(cs): is there a more pythonic way to implement delegation?

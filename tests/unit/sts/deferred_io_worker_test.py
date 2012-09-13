@@ -24,27 +24,29 @@ class DeferredIOWorkerTest(unittest.TestCase):
 
   def test_not_sent_until_permitted(self):
     i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
+    i.block()
     i.send("foo")
     self.assertFalse(i._io_worker._ready_to_send)
     self.assertFalse(i._send_queue.empty())
-    i.permit_send()
+    i.unblock()
     self.assertTrue(i._send_queue.empty())
     i._io_worker._consume_send_buf(3)
     self.assertFalse(i._io_worker._ready_to_send)
 
   def test_not_received_until_permitted(self):
     i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
+    i.block()
     self.data = None
     def d(worker):
       self.data = worker.peek_receive_buf()
     i.set_receive_handler(d)
     i._io_worker._push_receive_data("bar")
     self.assertEqual(self.data, None)
-    i.permit_receive()
+    i.unblock()
     self.assertEqual(self.data, "bar")
-    # d does not consume the data
+    # Now if unblocked, should go through immediately
+    # Note: d does not consume the data
     i._io_worker._push_receive_data("hepp")
-    i.permit_receive()
     self.assertEqual(self.data, "barhepp")
 
   def test_receive_consume(self):
@@ -54,11 +56,11 @@ class DeferredIOWorkerTest(unittest.TestCase):
       self.data = worker.peek_receive_buf()
       worker.consume_receive_buf(len(self.data))
     i.set_receive_handler(consume)
+    i.block()
     i._io_worker._push_receive_data("bar")
     self.assertEqual(self.data, None)
-    i.permit_receive()
+    i.unblock()
     self.assertEqual(self.data, "bar")
     # data has been consumed
     i._io_worker._push_receive_data("hepp")
-    i.permit_receive()
     self.assertEqual(self.data, "hepp")
