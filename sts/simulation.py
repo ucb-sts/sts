@@ -16,6 +16,7 @@ from dataplane_traces.trace import Trace
 from entities import Link, Host, Controller
 from sts.topology import *
 from sts.controller_manager import ControllerManager
+from sts.deferred_io import DeferredIOWorker
 
 import logging
 import pickle
@@ -111,5 +112,6 @@ class Simulation (object):
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
 
     # Connect switches to controllers
-    create_worker = lambda(socket): self._io_master.create_worker_for_socket(socket)
+    create_worker = lambda(socket): \
+            DeferredIOWorker(self._io_master.create_worker_for_socket(socket))
     self.topology.connect_to_controllers(self.controller_configs, create_worker)

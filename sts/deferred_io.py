@@ -26,12 +26,10 @@ class DeferredIOWorker(object):
   the wrapped io_worker
 
   io_worker: io_worker to wrap
-  call_later: recoco.Scheduler's call_later factory method for scheduling/thread-safety
   '''
-  def __init__(self, io_worker, call_later):
+  def __init__(self, io_worker):
     self._io_worker = io_worker
     self._io_worker.set_receive_handler(self.io_worker_receive_handler)
-    self._call_later = call_later
     # Thread-safe read and write queues of indefinite length
     # TODO(cs): no need for thread safety anymore
     self._receive_queue = Queue.Queue()
@@ -64,7 +62,7 @@ class DeferredIOWorker(object):
       self._actual_send(data)
 
   def _actual_send(self, data):
-    self._call_later(lambda: self._io_worker.send(data))
+    self._io_worker.send(data)
 
   def _actual_receive(self, data):
     self._receive_buf += data
@@ -107,7 +105,7 @@ class DeferredIOWorker(object):
     return self._io_worker.fileno()
 
   def close(self):
-    self._call_later(self._io_worker.close)
+    self._io_worker.close
 
   @property
   def socket(self):
