@@ -406,7 +406,7 @@ class Topology(object):
     for (_, connection) in self.cp_connections_with_pending_receives:
       self.permit_cp_receive(connection)
     for (_, connection) in self.cp_connections_with_pending_sends:
-      self.permit_cp_sends(connection)
+      self.permit_cp_send(connection)
 
   def connect_to_controllers(self, controller_info_list, io_worker_generator):
     '''
