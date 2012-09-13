@@ -12,7 +12,6 @@ from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import Replayer
 from sts.topology import FatTree, PatchPanel, MeshTopology
 from sts.simulation import Simulation
-from pox.lib.recoco.recoco import Scheduler
 from sts.entities import Host
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
@@ -49,8 +48,7 @@ class ReplayerTest(unittest.TestCase):
     topology_class = FatTree
     topology_params = ""
     patch_panel_class = PatchPanel
-    scheduler = Scheduler(daemon=True, useEpoll=False)
-    return Simulation(scheduler, controllers, topology_class, topology_params, patch_panel_class)
+    return Simulation(controllers, topology_class, topology_params, patch_panel_class)
 
   def test_basic(self):
     try:
@@ -81,8 +79,7 @@ class ReplayerTest(unittest.TestCase):
     topology_class = FatTree
     topology_params = ""
     patch_panel_class = PatchPanel
-    scheduler = Scheduler(daemon=True, useEpoll=False)
-    return Simulation(scheduler, controllers, topology_class, topology_params, patch_panel_class)
+    return Simulation(controllers, topology_class, topology_params, patch_panel_class)
 
   def test_controller_crash(self):
     try:
@@ -112,9 +109,8 @@ class ReplayerTest(unittest.TestCase):
     topology_class = MeshTopology
     topology_params = "num_switches=2"
     patch_panel_class = PatchPanel
-    scheduler = Scheduler(daemon=True, useEpoll=False)
     dataplane_trace_path = "./dataplane_traces/ping_pong_same_subnet.trace"
-    return Simulation(scheduler, controllers, topology_class, topology_params,
+    return Simulation(controllers, topology_class, topology_params,
                       patch_panel_class, dataplane_trace_path=dataplane_trace_path)
 
   def test_dataplane_injection(self):
@@ -147,8 +143,7 @@ class ReplayerTest(unittest.TestCase):
     topology_class = FatTree
     topology_params = ""
     patch_panel_class = PatchPanel
-    scheduler = Scheduler(daemon=True, useEpoll=False)
-    return Simulation(scheduler, controllers, topology_class, topology_params,
+    return Simulation(controllers, topology_class, topology_params,
                       patch_panel_class)
 
   def test_migration(self):

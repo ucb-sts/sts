@@ -88,7 +88,6 @@ else:
   # We default to no parameters
   topology_params = ""
 
-
 # For controlling the simulation
 if hasattr(config, 'control_flow'):
   simulator = config.control_flow
@@ -117,16 +116,9 @@ else:
   dataplane_trace_path = None
 
 simulation = None
-scheduler = None
-def kill_scheduler():
-  if scheduler and not scheduler._hasQuit:
-    sys.stderr.write("Stopping Recoco Scheduler...")
-    scheduler.quit()
-    sys.stderr.write(" OK\n")
 
 def handle_int(signal, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
-  kill_scheduler()
   if simulation is not None:
     simulation.clean_up()
   sys.exit(0)
@@ -135,12 +127,10 @@ signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
 
 try:
-  scheduler = Scheduler(daemon=True, useEpoll=False)
-  simulation = Simulation(scheduler, controller_configs, topology_class,
+  simulation = Simulation(controller_configs, topology_class,
                           topology_params, patch_panel_class,
                           dataplane_trace_path=dataplane_trace_path)
   simulator.simulate(simulation)
 finally:
   if simulation is not None:
     simulation.clean_up()
-  kill_scheduler()

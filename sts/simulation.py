@@ -25,16 +25,13 @@ log = logging.getLogger("simulation")
 class Simulation (object):
   """
   Maintains the current state of:
-    - scheduler: a Recoco scheduler
     - The controllers: a list of ControllerConfig objects
     - The topology
     - Patch panel (dataplane forwarding)
     - (Optionally) the dataplane trace
   """
-  def __init__(self, scheduler, controller_configs, topology_class,
+  def __init__(self, controller_configs, topology_class,
                topology_params, patch_panel_class, dataplane_trace_path=None):
-    self._scheduler = scheduler
-    self._io_loop = None
     self.controller_configs = controller_configs
     self.controller_manager = None
     self.topology = None
