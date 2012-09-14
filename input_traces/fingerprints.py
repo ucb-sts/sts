@@ -73,24 +73,24 @@ class OFFingerprint(Fingerprint):
     'desc' : lambda pkt: (pkt.desc.port_no, pkt.desc.hw_addr.toStr()),
     # actions is an ordered list
     # for now, store it as a tuple of just the names of the action types
-    'actions' : lambda pkt: tuple(map(string, map(type, pkt.actions))),
+    'actions' : lambda pkt: tuple(map(str, map(type, pkt.actions))),
     # match has a bunch of crazy fields
     # Trick: convert it to an hsa match, and extract the human readable string
     # for the hsa match
-    'match' : lambda pkt: hsa.hs_format.display(hsa.ofp_match_to_hsa_match(pkt.match))
+    'match' : lambda pkt: hsa.hs_format["display"](hsa.ofp_match_to_hsa_match(pkt.match))
   }
 
   @staticmethod
   def from_pkt(pkt):
     pkt_type = type(pkt)
-    if pkt_type not in self.pkt_type_to_fields:
+    if pkt_type not in OFFingerprint.pkt_type_to_fields:
       raise ValueError("Unknown pkt_type %s" % pkt_type)
     field2value = {}
     field2value["class"] = pkt_type.__name__
-    fields = self.pkt_type_to_fields[pkt_type]
+    fields = OFFingerprint.pkt_type_to_fields[pkt_type]
     for field in fields:
-      if field in self.special_fields:
-        value = self.special_fields[field](pkt)
+      if field in OFFingerprint.special_fields:
+        value = OFFingerprint.special_fields[field](pkt)
       else:
         value = getattr(pkt, field)
       field2value[field] = value
