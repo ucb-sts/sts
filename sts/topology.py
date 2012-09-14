@@ -321,23 +321,26 @@ class BufferedManagementPanel(EventMixin):
     for switch in switches:
       switch.addListener(CpMessageEvent, self._handle_CpMessageEvent)
 
-   def have_observed_event(self, fingerprint, dpid):
-     ''' return whether the event has been observed yet '''
-     return (fingerprint, dpid) in self.fingerprint_dpids
+  def have_observed_event(self, fingerprint, dpid):
+    ''' return whether the event has been observed yet '''
+    # TODO(cs): memory leak here! control message events may appear here that
+    # didn't occur in the original execution -> nobody ever pulls them off the
+    # buffer
+    return (fingerprint, dpid) in self.fingerprint_dpids
 
-   def remove_event(self, fingerprint, dpid):
-     ''' remove the events that are waiting to be observed '''
-     self.fingerprint_ids.remove((fingerprint, dpid))
+  def remove_event(self, fingerprint, dpid):
+    ''' remove the events that are waiting to be observed '''
+    self.fingerprint_ids.remove((fingerprint, dpid))
 
-   def _handle_CpMessageEvent(event):
-     # Re-raise the event
-     fingerprint = OFFingerprint.from_pkt(event.message)
-     # temporary hack: only examine the first connection used
-     connection = event.connections_used[0]
-     dpid = self.connection2dpid[connection]
-     self.fingerprint_dpids.add((fingerprint, dpid))
-     #  Also re-raise the event for giggles
-     self.raiseEventNoErrors(event)
+  def _handle_CpMessageEvent(event):
+    # Re-raise the event
+    fingerprint = OFFingerprint.from_pkt(event.message)
+    # temporary hack: only examine the first connection used
+    connection = event.connections_used[0]
+    dpid = self.connection2dpid[connection]
+    self.fingerprint_dpids.add((fingerprint, dpid))
+    #  Also re-raise the event for giggles
+    self.raiseEventNoErrors(event)
 
 class Topology(object):
   '''
@@ -362,9 +365,11 @@ class Topology(object):
       for switch in switches
     }
 
+  def _populate_connection2switch(self):
     self.connection2switch = {
-      switch.connection : switch
-      for switch in switches
+      connection : switch
+      for switch in self.switches
+      for connection in switch.connections
     }
 
   @property
@@ -506,6 +511,7 @@ class Topology(object):
       software_switch.connect()
 
     log.debug("Controller connections done")
+    self._populate_connection2switch()
 
   def migrate_host(self, old_ingress_dpid, old_ingress_portno,
                    new_ingress_dpid, new_ingress_portno):

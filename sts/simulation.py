@@ -115,7 +115,7 @@ class Simulation (object):
     # HACK: only Replayer uses a BufferedManagementPanel, so infer the correct
     # ManagementPanel from the control_flow type.
     # TODO(cs): will break once we start using MCSFinder!
-    if self.control_flow_type == Replayer:
+    if self.control_flow_class == Replayer:
       self.mgmt_panel = BufferedManagementPanel(self.topology.switches)
     else:
       self.mgmt_panel = ManagementPanel(self.topology.switches)
