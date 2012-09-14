@@ -67,7 +67,7 @@ class EventWatcher(object):
     self._pre()
 
     while not self.event.proceed(simulation):
-      time.sleep(0.2)
+      time.sleep(0.05)
       log.debug(".")
 
     self._post()

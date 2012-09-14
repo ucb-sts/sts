@@ -55,7 +55,6 @@ class Replayer(ControlFlow):
     self.simulation.bootstrap()
     for event_watcher in self.dag.event_watchers():
       event_watcher.run(simulation)
-      time.sleep(0.05)
       self.increment_round()
       # TODO(cs): check correspondence
 
@@ -70,7 +69,6 @@ class MCSFinder(Replayer):
       self.simulation.bootstrap()
       for event_watcher in self.dag.event_watchers(pruned_event):
         event_watcher.run(self.simulation)
-        time.sleep(0.05)
         self.increment_round()
     return mcs
 
