@@ -5,6 +5,7 @@ Author: sw
 '''
 
 from sts.entities import Link
+from sts.entities import CpMessageEvent
 import abc
 import logging
 import time
@@ -355,20 +356,22 @@ class ControlMessageEvent(InternalEvent):
     super(ControlMessageEvent, self).__init__(json_hash)
     assert('dpid' in json_hash)
     self.dpid = json_hash['dpid']
-    assert('controller_uuid' in json_hash)
-    self.controller_uuid = (json_hash['controller_uuid'][0],
-                            json_hash['controller_uuid'][1])
+    # TODO(cs): since NXSoftwareSwitches have multiple connections, we
+    # potentially need to include the connections used to disambiguate
+    # the same fingerprint on the same switch being used to talk to a
+    # different subset of its parent controllers
     assert('fingerprint' in json_hash)
     self.fingerprint = json_hash['fingerprint']
 
   def proceed(self, simulation):
-    switch = simulation.topology.get_switch(self.dpid)
-    connection = switch.get_connection(self.controller_uuid)
-    if not connection.currently_blocked:
-      raise RuntimeError("Expected channel %s to be blocked" % str(connection))
-    connection.unblock()
-    return True
+   # TODO(cs): there is potentially a more efficient way to do this than
+   # polling self.simulation.mgmt_panel
+   if self.simulation.mgmt_panel.have_observed_event(self.fingerprint,
+                                                     self.dpid):
+     self.simulation.mgmt_panel.remove_event(self.fingerprint, self.dpid)
+     return True
+   return False
 
 all_internal_events = [MastershipChange, TimerEvent, DataplaneDrop,
                        DataplanePermit, ControlChannelBlock,
-                       ControlChannelUnblock]
+                       ControlChannelUnblock, ControlMessageEvent]

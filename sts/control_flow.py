@@ -15,6 +15,8 @@ from traffic_generator import TrafficGenerator
 from sts.console import msg
 from sts.event import EventDag
 import log_processing.superlog_parser as superlog_parser
+from input_traces.fingerprints import OFFingerprint
+from sts.entities import CpMessageEvent
 
 import os
 import sys
@@ -109,11 +111,22 @@ class Fuzzer(ControlFlow):
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
 
+  def _log_cp_message_event(self, event):
+    fingerprint = OFFingerprint.from_pkt(event)
+    # temporary hack: only examine the first connection used
+    connection = event.connections_used[0]
+    dpid = self.simulation.topology.get_switch(connection).dpid
+    self._log_input_event(klass=ControlMessageEvent,
+                          fingerprint=fingerprint, dpid=dpid)
+
   def simulate(self, simulation):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     self.simulation = simulation
     self.simulation.bootstrap()
     assert(isinstance(simulation.patch_panel, BufferedPatchPanel))
+    # Register to log all control plane events
+    self.simulation.mgmt_panel.addListener(CpMessageEvent,
+                                           self._log_cp_message_event)
     self.loop()
 
   def loop(self):
@@ -310,9 +323,21 @@ class Interactive(ControlFlow):
     if self._input_logger is not None:
       self._input_logger.log_input_event(**kws)
 
+ def _log_cp_message_event(self, event):
+    # TODO(cs): redundant with Fuzzer._log_cp_message_event
+    fingerprint = OFFingerprint.from_pkt(event)
+    # temporary hack: only examine the first connection used
+    connection = event.connections_used[0]
+    dpid = self.simulation.topology.get_switch(connection).dpid
+    self._log_input_event(klass=ControlMessageEvent,
+                          fingerprint=fingerprint, dpid=dpid)
+
   def simulate(self, simulation):
     self.simulation = simulation
     self.simulation.bootstrap()
+    # Register to log all control plane events
+    self.simulation.mgmt_panel.addListener(CpMessageEvent,
+                                           self._log_cp_message_event)
     self.loop()
 
   def loop(self):

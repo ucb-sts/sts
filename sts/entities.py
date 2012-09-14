@@ -3,7 +3,7 @@ This module mocks out openflow switches, links, and hosts. These are all the
 'entities' that exist within our simulated environment.
 """
 
-from pox.openflow.software_switch import SoftwareSwitch, DpPacketOut
+from pox.openflow.software_switch import SoftwareSwitch, DpPacketOut, ControllerConnection
 from pox.openflow.nx_software_switch import NXSoftwareSwitch
 from pox.lib.util import assert_type
 from pox.openflow.libopenflow_01 import *
@@ -17,11 +17,37 @@ import signal
 
 class CpMessageEvent (Event):
   """ Event raised when a control plane packet is sent or received """
-  def __init__ (self, connection, message):
+  def __init__ (self, connections_used, message):
     assert_type("message", message, ofp_header, none_ok=False)
     Event.__init__(self)
-    self.connection = connection
+    self.connections_used = connections_used
     self.message = message
+
+class ShimHandler (object):
+  '''
+  Interpose on switch ofp receive handlers:
+  pass CpMessageEvents to the ManagementPanel for fingerprinting purposes
+  after invoking the original handler
+  '''
+
+  def __init__(self, original_handler, parent_switch):
+    self.original_handler = original_handler
+    self.parent_switch = parent_switch
+
+  def __call__(self, *args, **kws):
+    # Raise event /after/ the message has been processed.
+    # This means that a BufferedPatchPanel /must/ be used!
+    # Otherwise, the next line could cause a chain of DpPacketOut events
+    # to occur before we have the opportunity to raise the CpMessageEvent
+    self.original_handler(*args, **kws)
+
+    # NXSoftwareSwitch "beefs up" the SoftwareSwitch receive handlers by
+    # inserting the connection as the first param
+    assert(type(args[0]) == ControllerConnection)
+    assert(type(args[1]) == ofp_header)
+    connections_used = [args[0]]
+    msg = args[1]
+    self.parent_switch.raiseEvent(CpMessageEvent(connections_used, msg))
 
 class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
@@ -33,13 +59,16 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def __init__ (self, create_io_worker, dpid, name=None, ports=4, miss_send_len=128,
                 n_buffers=100, n_tables=1, capabilities=None):
     NXSoftwareSwitch.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
-    # Overwrite the handlers with a shim layer that queues up events and waits
-    # for permission before allowing the switch to process them
-    # original_handlers = self.ofp_handlers
-    # new_handlers = {
-    #   key : shim(handler)
-    #   for key, handler in original_handlers.iteritems()
-    # }
+    # Overwrite the ofp receive handlers with a shim layer that passes
+    # CpMessageEvents to the ManagementPanel for fingerprinting purposes
+    original_handlers = self.ofp_handlers
+    self.ofp_handlers = {
+      key : ShimHandler(handler)
+      for key, handler in original_handlers.iteritems()
+    }
+    # For messages initiated from switch -> controller, we override the
+    # send() method below
+
     self.create_io_worker = create_io_worker
 
     self.failed = False
@@ -53,6 +82,14 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.uuid2connection = {}
     self.error_handler = error_handler
     self.controller_info = []
+
+  # ------------------------------------------------- #
+  # Override message sends from switch -> controller  #
+  # ------------------------------------------------- #
+  def send(self, message):
+    # Log /after/ the send() has been put on the wire
+    connections_used = super(FuzzSoftwareSwitch, self).send(message)
+    self.raiseEvent(CpMessageEvent(connections_used, message))
 
   def add_controller_info(self, info):
     self.controller_info.append(info)

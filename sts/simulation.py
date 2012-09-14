@@ -17,6 +17,7 @@ from entities import Link, Host, Controller
 from sts.topology import *
 from sts.controller_manager import ControllerManager
 from sts.deferred_io import DeferredIOWorker
+from sts.control_flow import Replayer
 
 import logging
 import pickle
@@ -32,7 +33,8 @@ class Simulation (object):
     - (Optionally) the dataplane trace
   """
   def __init__(self, controller_configs, topology_class,
-               topology_params, patch_panel_class, dataplane_trace_path=None):
+               topology_params, patch_panel_class, dataplane_trace_path=None,
+               control_flow_class=None):
     self.controller_configs = controller_configs
     self.controller_manager = None
     self.topology = None
@@ -44,6 +46,8 @@ class Simulation (object):
     self.dataplane_trace = None
     self._dataplane_trace_path = dataplane_trace_path
     self._io_master = None
+    self.mgmt_panel = None
+    self.control_flow_class = control_flow_class
 
   # TODO(cs): the next three next methods should go in a separate
   #           ControllerContainer class
@@ -108,8 +112,14 @@ class Simulation (object):
     self.patch_panel = self._patch_panel_class(self.topology.switches,
                                                self.topology.hosts,
                                                self.topology.get_connected_port)
-    # TODO(cs): allow the user to specify a ManagementPanel class
-    self.mgmt_panel = ManagementPanel(self.topology.switches)
+    # HACK: only Replayer uses a BufferedManagementPanel, so infer the correct
+    # ManagementPanel from the control_flow type.
+    # TODO(cs): will break once we start using MCSFinder!
+    if self.control_flow_type == Replayer:
+      self.mgmt_panel = BufferedManagementPanel(self.topology.switches)
+    else:
+      self.mgmt_panel = ManagementPanel(self.topology.switches)
+
     if self._dataplane_trace_path is not None:
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
 
