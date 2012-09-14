@@ -241,7 +241,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
       # Monkey patch on a fingerprint for this event
       event.fingerprint = DPFingerprint.from_pkt(event.packet)
       self.buffered_dp_out_events[event.fingerprint] = event
-      self.raiseEventNoErrors(event)
+      self.raiseEvent(event)
     for i, s in enumerate(self.switches):
       s.addListener(DpPacketOut, handle_DpPacketOut)
     for host in self.hosts:
@@ -294,7 +294,7 @@ class ManagementPanel(EventMixin):
   def __init__(self, switches):
     for switch in switches:
       # Re-raise the event.
-      switch.addListener(CpMessageEvent, self.raiseEventNoErrors)
+      switch.addListener(CpMessageEvent, self.raiseEvent)
 
 class BufferedManagementPanel(EventMixin):
   '''
@@ -340,7 +340,7 @@ class BufferedManagementPanel(EventMixin):
     dpid = self.connection2dpid[connection]
     self.fingerprint_dpids.add((fingerprint, dpid))
     #  Also re-raise the event for giggles
-    self.raiseEventNoErrors(event)
+    self.raiseEvent(event)
 
 class Topology(object):
   '''
