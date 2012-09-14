@@ -23,31 +23,26 @@ class CpMessageEvent (Event):
     self.connections_used = connections_used
     self.message = message
 
-class ShimHandler (object):
-  '''
-  Interpose on switch ofp receive handlers:
-  pass CpMessageEvents to the ManagementPanel for fingerprinting purposes
-  after invoking the original handler
-  '''
-
-  def __init__(self, original_handler, parent_switch):
-    self.original_handler = original_handler
-    self.parent_switch = parent_switch
-
-  def __call__(self, *args, **kws):
+def curry(original_handler, parent_switch):
+  def shim_handler(msg_obj, connection, *args, **kws):
+    '''
+    Interpose on switch ofp receive handlers:
+    pass CpMessageEvents to the ManagementPanel for fingerprinting purposes
+    after invoking the original handler
+    '''
     # Raise event /after/ the message has been processed.
     # This means that a BufferedPatchPanel /must/ be used!
     # Otherwise, the next line could cause a chain of DpPacketOut events
     # to occur before we have the opportunity to raise the CpMessageEvent
-    self.original_handler(*args, **kws)
+    original_handler(msg_obj, connection, *args, **kws)
 
     # NXSoftwareSwitch "beefs up" the SoftwareSwitch receive handlers by
     # inserting the connection as the first param
     assert(type(args[0]) == ControllerConnection)
     assert(type(args[1]) == ofp_header)
-    connections_used = [args[0]]
-    msg = args[1]
-    self.parent_switch.raiseEvent(CpMessageEvent(connections_used, msg))
+    connections_used = [connection]
+    parent_switch.raiseEvent(CpMessageEvent(connections_used, msg_obj))
+  return shim_handler
 
 class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
@@ -63,7 +58,9 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     # CpMessageEvents to the ManagementPanel for fingerprinting purposes
     original_handlers = self.ofp_handlers
     self.ofp_handlers = {
-      key : ShimHandler(handler)
+      # the value is the shim_handler, with original handler and reference to
+      # us curried in
+      key : curry(handler, self)
       for key, handler in original_handlers.iteritems()
     }
     # For messages initiated from switch -> controller, we override the
