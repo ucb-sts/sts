@@ -349,8 +349,6 @@ class Topology(object):
   '''
   def __init__(self):
     self.dpid2switch = {}
-    # Connection objects are technically immutable, but meh
-    self.connection2switch = {}
     self.network_links = set()
 
     # Metatdata for simulated failures
@@ -365,28 +363,15 @@ class Topology(object):
       for switch in switches
     }
 
-  def _populate_connection2switch(self):
-    self.connection2switch = {
-      connection : switch
-      for switch in self.switches
-      for connection in switch.connections
-    }
-
   @property
   def switches(self):
     return self.dpid2switch.values()
 
-  def get_switch(self, dpid_or_connection):
-    if type(dpid_or_connection) == int:
-      dpid = dpid_or_connection
-      if dpid not in self.dpid2switch:
-        raise RuntimeError("unknown dpid %d" % dpid)
-      return self.dpid2switch[dpid]
-    else:
-      connection = dpid_or_connection
-      if connection not in self.connection2switch:
-        raise RuntimeError("unknown connection %s" % str(connection))
-      return self.connection2switch[connection]
+  def get_switch(self, dpid):
+    dpid = dpid_or_connection
+    if dpid not in self.dpid2switch:
+      raise RuntimeError("unknown dpid %d" % dpid)
+    return self.dpid2switch[dpid]
 
   @property
   def live_switches(self):
@@ -511,7 +496,6 @@ class Topology(object):
       software_switch.connect()
 
     log.debug("Controller connections done")
-    self._populate_connection2switch()
 
   def migrate_host(self, old_ingress_dpid, old_ingress_portno,
                    new_ingress_dpid, new_ingress_portno):
