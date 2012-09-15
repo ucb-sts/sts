@@ -15,11 +15,11 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 class MockIOWorker(object):
   def __init__(self):
     self.sends = []
-    self.on_receive_json = None
+    self.on_json_received = None
   def send(self, msg):
     self.sends.append(msg)
   def receive(self, msg):
-    self.on_receive_json(self, msg)
+    self.on_json_received(self, msg)
 
 
 class SyncTimeTest(unittest.TestCase):
@@ -45,7 +45,6 @@ class SyncMessageTest(unittest.TestCase):
         self.changed_hash(type="INVALID"),
         self.changed_hash(additionalInvalidAttribute="FOOBAR"),
         self.changed_hash(type=None),
-        self.changed_hash(time=None),
         ):
       self.assertRaises(Exception, SyncMessage, **invalid_hash)
 
