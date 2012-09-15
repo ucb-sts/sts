@@ -325,7 +325,7 @@ class Interactive(ControlFlow):
 
   def _log_cp_message_event(self, event):
     # TODO(cs): redundant with Fuzzer._log_cp_message_event
-    fingerprint = OFFingerprint.from_pkt(event).to_dict()
+    fingerprint = OFFingerprint.from_pkt(event.message).to_dict()
     # temporary hack: only examine the first connection used
     connection = event.connections_used[0]
     dpid = self.simulation.topology.get_switch(connection).dpid
@@ -405,10 +405,12 @@ class Interactive(ControlFlow):
         if ((answer == '' or answer.lower() == 'a') and
                 self.simulation.topology.ok_to_send(dp_event)):
           self.simulation.patch_panel.permit_dp_event(dp_event)
-          self._log_input_event(klass="DataplanePermit",dpout_id=dp_event.dpout_id)
+          self._log_input_event(klass="DataplanePermit",
+                                fingerprint=dp_event.fingerprint.to_dict())
         elif answer.lower() == 'd':
           self.simulation.drop_dp_event(dp_event)
-          self._log_input_event(klass="DataplaneDrop",dpout_id=dp_event.dpout_id)
+          self._log_input_event(klass="DataplaneDrop",
+                                fingerprint=dp_event.fingerprint.to_dict())
         elif answer.lower() == 'e':
           self.simulation.delay_dp_event(dp_event)
         else:
