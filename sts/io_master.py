@@ -87,7 +87,7 @@ class IOMaster(object):
     input_thread.start()
 
     while(input_thread.result is None):
-      self._select(None)
+      self.select(None)
 
     return input_thread.result
 
@@ -105,7 +105,7 @@ class IOMaster(object):
       time.sleep = self.original_time_sleep
 
   def poll(self):
-    self._select(0)
+    self.select(0)
 
   def sleep(self, timeout):
     start = time.time()
@@ -114,9 +114,9 @@ class IOMaster(object):
       remaining = timeout - elapsed
       if remaining < 0.01:
         break
-      self._select(remaining)
+      self.select(remaining)
 
-  def _select(self, timeout=0):
+  def select(self, timeout=0):
     # Now grab workers
     read_sockets = list(self._workers) + [ self.pinger ]
     write_sockets = [ worker for worker in self._workers if worker._ready_to_send ]
