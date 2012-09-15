@@ -1,6 +1,7 @@
 
 import abc
 from pox.openflow.libopenflow_01 import *
+from pox.lib.packet.ethernet import *
 import headerspace.config_parser.openflow_parser as hsa
 
 class Fingerprint(object):
@@ -23,6 +24,13 @@ class Fingerprint(object):
 
   def __str__(self):
     return str(self._field2value)
+
+def process_data(msg):
+  if msg.data == b'':
+    return []
+  else:
+    dp_packet = ethernet(msg.data)
+    return DPFingerprint.from_pkt(dp_packet).to_dict()
 
 class OFFingerprint(Fingerprint):
   ''' Fingerprints for openflow messages '''
@@ -67,8 +75,7 @@ class OFFingerprint(Fingerprint):
   }
   special_fields = {
     # data needs a nested fingerprint
-    'data' : lambda pkt: [] if pkt.data != b''
-                            else DPFingerprint.from_pkt(pkt.data),
+    'data' : process_data,
     # desc is a ofp_phy_port object
     'desc' : lambda pkt: (pkt.desc.port_no, pkt.desc.hw_addr.toStr()),
     # actions is an ordered list
