@@ -45,7 +45,7 @@ class Simulation (object):
     self.dataplane_trace = None
     self._dataplane_trace_path = dataplane_trace_path
     self._io_master = None
-    self.mgmt_panel = None
+    self.god_scheduler = None
 
   # TODO(cs): the next three next methods should go in a separate
   #           ControllerContainer class

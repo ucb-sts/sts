@@ -351,9 +351,13 @@ class ControlChannelUnblock(InternalEvent):
     connection.unblock()
     return True
 
-class ControlMessageEvent(InternalEvent):
+class ControlMessageReceive(InternalEvent):
+  '''
+  Logged whenever the GodScheduler decides to allow a switch to see an
+  openflow packet.
+  '''
   def __init__(self, json_hash):
-    super(ControlMessageEvent, self).__init__(json_hash)
+    super(ControlMessageReceive, self).__init__(json_hash)
     assert('dpid' in json_hash)
     self.dpid = json_hash['dpid']
     # TODO(cs): since NXSoftwareSwitches have multiple connections, we
@@ -364,14 +368,13 @@ class ControlMessageEvent(InternalEvent):
     self.fingerprint = json_hash['fingerprint']
 
   def proceed(self, simulation):
-   # TODO(cs): there is potentially a more efficient way to do this than
-   # polling self.simulation.mgmt_panel
-   if self.simulation.mgmt_panel.have_observed_event(self.fingerprint,
-                                                     self.dpid):
-     self.simulation.mgmt_panel.remove_event(self.fingerprint, self.dpid)
+   pending_message = simulation.god_scheduler\
+                               .message_waiting(self.dpid, self.fingerprint)
+   if pending_message:
+     simulation.god_scheduler.schedule(self.dpid, self.fingerprint)
      return True
    return False
 
 all_internal_events = [MastershipChange, TimerEvent, DataplaneDrop,
                        DataplanePermit, ControlChannelBlock,
-                       ControlChannelUnblock, ControlMessageEvent]
+                       ControlChannelUnblock, ControlMessageRecieve]
