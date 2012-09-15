@@ -111,13 +111,14 @@ class Fuzzer(ControlFlow):
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
 
-  def _log_cp_message_event(self, event):
-    fingerprint = OFFingerprint.from_pkt(event.message).to_dict()
-    # temporary hack: only examine the first connection used
-    connection = event.connections_used[0]
-    dpid = self.simulation.topology.get_switch(connection).dpid
-    self._log_input_event(klass="CpMessageEvent",
-                          fingerprint=fingerprint, dpid=dpid)
+  #def _log_cp_message_event(self, event):
+  #  fingerprint = OFFingerprint.from_pkt(event.message).to_dict()
+  #  # temporary hack: only examine the first connection used
+  #  connection = event.connections_used[0]
+  #  self._log_input_event(klass="CpMessageEvent",
+  #                        fingerprint=fingerprint, dpid=event.dpid)
+
+  # TODO(cs): need to consult the GodScheduler
 
   def simulate(self, simulation):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
@@ -323,14 +324,15 @@ class Interactive(ControlFlow):
     if self._input_logger is not None:
       self._input_logger.log_input_event(**kws)
 
-  def _log_cp_message_event(self, event):
-    # TODO(cs): redundant with Fuzzer._log_cp_message_event
-    fingerprint = OFFingerprint.from_pkt(event.message).to_dict()
-    # temporary hack: only examine the first connection used
-    connection = event.connections_used[0]
-    dpid = self.simulation.topology.get_switch(connection).dpid
-    self._log_input_event(klass="CpMessageEvent",
-                          fingerprint=fingerprint, dpid=dpid)
+  #def _log_cp_message_event(self, event):
+  #  # TODO(cs): redundant with Fuzzer._log_cp_message_event
+  #  fingerprint = OFFingerprint.from_pkt(event.message).to_dict()
+  #  # temporary hack: only examine the first connection used
+  #  connection = event.connections_used[0]
+  #  self._log_input_event(klass="CpMessageEvent",
+  #                        fingerprint=fingerprint, dpid=event.dpid)
+
+  # TODO(cs): need to consult the GodScheduler
 
   def simulate(self, simulation):
     self.simulation = simulation
