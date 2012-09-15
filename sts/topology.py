@@ -281,67 +281,6 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
       return None
     return self.buffered_dp_out_events[fingerprint]
 
-class ManagementPanel(EventMixin):
-  '''
-  Notifies listeners about control channel sends/receives.
-
-  The management panel is used only for logging and replay (blocking) purposes.
-  It does not serve to fuzz control plane processing. (DeferredIOWorker serves
-  that role)
-  '''
-  _eventMixin_events = set([CpMessageEvent])
-
-  def __init__(self, switches):
-    for switch in switches:
-      # Re-raise the event.
-      switch.addListener(CpMessageEvent, self.raiseEvent)
-
-class BufferedManagementPanel(EventMixin):
-  '''
-  buffer control channel sends/receives until someone pulls them off the
-  buffer.
-
-  The management panel is used only for logging and replay (blocking) purposes.
-  It does not serve to fuzz control plane processing. (DeferredIOWorker serves
-  that role)
-  '''
-  _eventMixin_events = set([CpMessageEvent])
-
-  def __init__(self, switches):
-    self.connection2dpid = {
-      switch.connection : switch.dpid
-      for switch in switches
-    }
-    # keep around a set of (fingerprint, dpid) pairs
-    # in case we don't have listeners, but someone wants to grab
-    # cp events from us asynchronously
-    # TODO(cs): I have a suspicion that this asynchronous model may be completely broken
-    # TODO(cs): rather than storing tuples, override CpMessageEvent.__hash__
-    self.fingerprint_dpids = set()
-    for switch in switches:
-      switch.addListener(CpMessageEvent, self._handle_CpMessageEvent)
-
-  def have_observed_event(self, fingerprint, dpid):
-    ''' return whether the event has been observed yet '''
-    # TODO(cs): memory leak here! control message events may appear here that
-    # didn't occur in the original execution -> nobody ever pulls them off the
-    # buffer
-    return (fingerprint, dpid) in self.fingerprint_dpids
-
-  def remove_event(self, fingerprint, dpid):
-    ''' remove the events that are waiting to be observed '''
-    self.fingerprint_ids.remove((fingerprint, dpid))
-
-  def _handle_CpMessageEvent(event):
-    # Re-raise the event
-    fingerprint = OFFingerprint.from_pkt(event.message)
-    # temporary hack: only examine the first connection used
-    connection = event.connections_used[0]
-    dpid = self.connection2dpid[connection]
-    self.fingerprint_dpids.add((fingerprint, dpid))
-    #  Also re-raise the event for giggles
-    self.raiseEvent(event)
-
 class Topology(object):
   '''
   Abstract base class of all topology types. Wraps the edges and vertices of
