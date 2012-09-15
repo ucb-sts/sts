@@ -19,6 +19,8 @@ from sts.controller_manager import ControllerManager
 from sts.deferred_io import DeferredIOWorker
 from sts.control_flow import Replayer
 from sts.god_scheduler import GodScheduler
+from sts.sync_connection import SyncTime
+from sts.sts_syncer import STSSyncConnectionManager
 
 import logging
 import pickle
@@ -95,10 +97,21 @@ class Simulation (object):
     # tell sts.console to use our io_master
     msg.set_io_master(self._io_master)
 
+    class StateMaster:
+      def state_change(self, controller, time, fingerprint, name, value):
+        logger.info("controller: {} time: {} fingerprint: {} name: {} value: {}".format(controller, time, fingerprint, name, value))
+      def get_deterministic_value(self, controller, name):
+        if name == "gettimeofday":
+          return SyncTime.now()
+
+    state_logger = StateMaster()
+
+    self.sync_connection_manager = STSSyncConnectionManager(self._io_master, state_logger)
+
     # Boot the controllers
     controllers = []
     for c in self.controller_configs:
-      controller = Controller(c)
+      controller = Controller(c, self.sync_connection_manager)
       controller.start()
       log.info("Launched controller c%s: %s [PID %d]" %
                (str(c.uuid), " ".join(c.expanded_cmdline), controller.pid))

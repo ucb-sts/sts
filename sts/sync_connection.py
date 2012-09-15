@@ -1,57 +1,59 @@
 import collections
 import itertools
 import json
+import logging
+import time
 
-from pox.lib.util import parse_openflow_uri
+from pox.lib.util import parse_openflow_uri, connect_socket_with_backoff
 
-def sync_connect(controller, sync_uri):
- return s
+log = logging.getLogger("sync_connection")
 
-class SyncConnectionManager(object):
-  """the connection manager for the STS sync protocols. 
-     TODO: finish"""
-  def initialize(self, io_master):
-    self.io_loop  = io_master
-    self.sync_connections = []
-
-  def connect(self, controller, sync_info):
-    s = SyncConnection(controller, sync_uri)
-    s.connect()
-
-    s.on_disconnect(self.remove_connection)
-    return s
-
-  def remove_connection(self, connection):
-    self.sync_connections.remove(connection)
 
 class SyncTime(collections.namedtuple('SyncTime', ('seconds', 'microSeconds'))):
   """ ValueObject that models the microsecond timestamps used in STS Sync Messages """
   def __new__(cls, seconds, microSeconds):
     return super(cls, SyncTime).__new__(cls, seconds, microSeconds)
 
-  pass
+  @staticmethod
+  def now():
+    # if time.time has been patched by sts then we don't want to fall into this
+    # trap ourselves
+    if(hasattr(time, "_orig_time")):
+      now = time._orig_time()
+    else:
+      now = time.time()
+    return SyncTime( int(now), int((now * 1000000) % 1000000))
+
+  def as_float(self):
+    return float(self.seconds) + float(self.microSeconds) / 1e6
 
 class SyncMessage(collections.namedtuple('SyncMessage', ('type', 'messageClass', 'time', 'xid', 'name', 'value', 'fingerPrint'))):
   """ value object that models a message in the STS sync protocol """
-  def __new__(cls, type, messageClass, time, xid=None, **kw):
+  def __new__(cls, type, messageClass, time=None, xid=None, name=None, value=None, fingerPrint=None):
     if type not in ("ASYNC", "REQUEST", "RESPONSE"):
       raise ValueError("SyncMessage: type must one of (ASYNC, REQUEST, RESPONSE)")
 
     if type == "RESPONSE" and xid is None:
       raise ValueError("SyncMessage: xid must be given for messages of type RESPONSE")
 
-    return super(cls, SyncMessage).__new__(cls, type=type, messageClass=messageClass, time=SyncTime(**time), xid=xid, **kw)
+    if time is None:
+      time = SyncTime.now()
+    elif isinstance(time, SyncTime):
+      pass
+    elif isinstance(time, list):
+      time = SyncTime(*time)
+    elif isinstance(time, dict):
+      time = SyncTime(**time)
+    else:
+      raise ValueError("Unknown type %s (repr %s) for time" % (time.__class__, repr(time)))
 
-class SyncProtocolSpeaker:
+    return super(cls, SyncMessage).__new__(cls, type=type, messageClass=messageClass, time=time, xid=xid, name=name, value=value, fingerPrint=fingerPrint)
+
+class SyncProtocolSpeaker(object):
   """ speaks the sts sync protocol """
-  def __init__(self, json_io_worker=None, state_logger=None):
-    self.state_logger = state_logger
+  def __init__(self, handlers, json_io_worker=None):
     self.xid_generator = itertools.count(1)
-
-    self.handlers = {
-        "StateChange": self._log_state_change
-    }
-
+    self.handlers = handlers
     self.set_io_worker(json_io_worker)
 
   def get_io_worker(self):
@@ -60,12 +62,9 @@ class SyncProtocolSpeaker:
   def set_io_worker(self, json_io_worker):
     self._io_worker = json_io_worker
     if(self._io_worker):
-      self._io_worker.on_receive_json = self.receive_json
+      self._io_worker.on_json_received = self.on_json_received
 
   io_worker = property(get_io_worker, set_io_worker)
-
-  def _log_state_change(self, message):
-    self.state_logger.state_change(message.time, message.fingerPrint, message.name, message.value)
 
   def send(self, message):
     if message.xid is None:
@@ -74,36 +73,14 @@ class SyncProtocolSpeaker:
     if(self._io_worker):
       self._io_worker.send(message._asdict())
 
-  def receive_json(self, worker, json_hash):
+    return message
+
+  def on_json_received(self, worker, json_hash):
     message = SyncMessage(**json_hash)
-    if message.messageClass not in self.handlers:
+    key = (message.type, message.messageClass)
+    if key not in self.handlers:
       raise ValueError("Unknown message class: %s" % message.messageClass)
     # dispatch message
-    self.handlers[message.messageClass](message)
-
-class SyncConnection(object):
-  """ A connection to a controller with the sts sync protocol """
-  def initialize(self, controller, sync_uri, state_logger):
-    self.controller = controller
-    (self.mode, self.host, self.port) = parse_openflow_uri(sync_uri)
-    self._on_disconnect = []
-    self.speaker = SyncProtocolSpeaker(state_logger=state_logger)
-
-  def on_disconnect(self, func):
-    self._on_disconnect.append(func)
-
-  def connect(self, io_master):
-    if self.mode != "tcp":
-      raise RuntimeError("only tcp (active) mode supported by now")
-
-    socket = connect_socket_with_backoff(self.host, self.port)
-    self.io_worker = JSONIOWorker(io_loop.create_worker_for_socket(socket))
-    self.speaker.io_worker = self.io_worker
-
-  def disconnect(self):
-    self._socket.close()
-    for handler in self._on_disconnect:
-      handler(self)
-
+    self.handlers[key](message)
 
 

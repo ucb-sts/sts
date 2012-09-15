@@ -12,12 +12,6 @@ from sts.sync_connection import SyncMessage, SyncTime, SyncProtocolSpeaker
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
-class MockStateLogger(object):
-  def __init__(self):
-    self.changes = []
-  def state_change(self, time, fingerprint, name, value):
-    self.changes.append( (time, fingerprint, name, value) )
-
 class MockIOWorker(object):
   def __init__(self):
     self.sends = []
@@ -54,18 +48,6 @@ class SyncMessageTest(unittest.TestCase):
         self.changed_hash(time=None),
         ):
       self.assertRaises(Exception, SyncMessage, **invalid_hash)
-
-class SyncProtocolSpeakerTest(unittest.TestCase):
-  def test_log_state_change(self):
-    _eq = self.assertEquals
-    h = SyncMessageTest.basic_hash
-
-    logger = MockStateLogger()
-    worker = MockIOWorker()
-    speaker = SyncProtocolSpeaker(worker, logger)
-    worker.receive(h)
-    _eq(1, len(logger.changes))
-    _eq( (SyncTime(**h['time']), h['fingerPrint'], h['name'], h['value']), logger.changes[0])
 
 if __name__ == '__main__':
   unittest.main()

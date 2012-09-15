@@ -12,6 +12,8 @@ from sts.procutils import popen_filtered, kill_procs
 from sts.console import msg
 
 import logging
+import os
+import re
 import pickle
 import signal
 
@@ -280,11 +282,13 @@ class Controller(object):
       else:
         self.kill() # make sure it is killed if this was started errantly
 
-  def __init__(self, controller_config):
+  def __init__(self, controller_config, sync_connection_manager):
     '''idx is the unique index for the controller used mostly for logging purposes.'''
     self.config = controller_config
     self.alive = False
     self.process = None
+    self.sync_connection_manager = sync_connection_manager
+    self.sync_connection = None
 
   @property
   def pid(self):
@@ -299,6 +303,9 @@ class Controller(object):
   def kill(self):
     '''Kill the process the controller is running in.'''
     msg.event("Killing controller %s" % (str(self.uuid)))
+    if self.sync_connection:
+      self.sync_connection.close()
+
     kill_procs([self.process])
     self._unregister_proc(self.process)
     self.alive = False
@@ -309,8 +316,24 @@ class Controller(object):
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process.'''
     msg.event("Starting controller %s" % (str(self.uuid)))
-    self.process = popen_filtered("c%s" % str(self.uuid), self.config.expanded_cmdline, self.config.cwd)
+    env = None
+
+    if self.config.sync:
+      # if a sync connectioe has been configured in the controller conf
+      # launch the controller with environment variable 'sts_sync' set
+      # to the appropriate listening port. This is quite a hack.
+      env = os.environ.copy()
+      port_match = re.search(r':(\d+)$', self.config.sync)
+      if port_match is None:
+        raise ValueError("sync: cannot find port in %s" % self.config.sync)
+      port = port_match.group(1)
+      env['sts_sync'] = "ptcp:0.0.0.0:%d" % (int(port),)
+
+    self.process = popen_filtered("c%s" % str(self.uuid), self.config.expanded_cmdline, self.config.cwd, env=env)
     self._register_proc(self.process)
+
+    if self.config.sync:
+      self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
 
     self.alive = True
 
