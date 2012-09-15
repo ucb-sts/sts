@@ -177,7 +177,7 @@ class Fuzzer(ControlFlow):
 
   def trigger_events(self):
     self.check_dataplane()
-    self.check_controlplane()
+    self.check_tcp_connections()
     self.check_switch_crashes()
     self.fuzz_traffic()
     self.check_controllers()
@@ -196,7 +196,7 @@ class Fuzzer(ControlFlow):
         self._log_input_event(klass="DataplanePermit",
                               fingerprint=dp_event.fingerprint.to_dict())
 
-  def check_controlplane(self):
+  def check_tcp_connections(self):
     ''' Decide whether to block or unblock control channels '''
     for (switch, connection) in self.simulation.topology.unblocked_controller_connections:
       if self.random.random() < self.params.controlplane_block_rate:
