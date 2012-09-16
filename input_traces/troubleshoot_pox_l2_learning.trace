@@ -1,37 +1,8 @@
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e1", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e2", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e3", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e4", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e5", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e6", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e7", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e8", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e9", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e10", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e11", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e12", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e13", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e14", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e15", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e16", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e17", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e18", "dependent_labels": [], "dpid": 2}
-{"dependent_labels": [], "class": "WaitTime", "time": 2, "label": "e18-1"}
-{"dependent_labels": [], "class": "TrafficInjection", "label": "e19"}
-{"dpout_id": 1, "dependent_labels": [], "class": "DataplanePermit", "label": "e20"}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e21", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e22", "dependent_labels": [], "dpid": 1}
-{"dpout_id": 2, "dependent_labels": [], "class": "DataplanePermit", "label": "e23"}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e24", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e25", "dependent_labels": [], "dpid": 2}
-{"dpout_id": 3, "dependent_labels": [], "class": "DataplanePermit", "label": "e26"}
-{"dependent_labels": [], "class": "TrafficInjection", "label": "e27"}
-{"dpout_id": 4, "dependent_labels": [], "class": "DataplanePermit", "label": "e28"}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e29", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e30", "dependent_labels": [], "dpid": 2}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e31", "dependent_labels": [], "dpid": 2}
-{"dpout_id": 5, "dependent_labels": [], "class": "DataplanePermit", "label": "e32"}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e33", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneReceivePermit", "label": "e34", "dependent_labels": [], "dpid": 1}
-{"controller_uuid": ["127.0.0.1", 8888], "class": "ControlplaneSendPermit", "label": "e35", "dependent_labels": [], "dpid": 1}
-{"dpout_id": 6, "dependent_labels": [], "class": "DataplanePermit", "label": "e36"}
+{"dependent_labels": [], "class": "TrafficInjection", "label": "e1"}
+{"dependent_labels": [], "class": "DataplanePermit", "label": "e2", "fingerprint": {"dl_dst": "12:34:56:78:02:02", "nw_src": "123.123.1.2", "dl_src": "12:34:56:78:01:02", "nw_dst": "123.123.2.2"}}
+{"dependent_labels": [], "class": "DataplanePermit", "label": "e3", "fingerprint": {"dl_dst": "12:34:56:78:02:02", "nw_src": "123.123.1.2", "dl_src": "12:34:56:78:01:02", "nw_dst": "123.123.2.2"}}
+{"dependent_labels": [], "class": "DataplanePermit", "label": "e4", "fingerprint": {"dl_dst": "12:34:56:78:02:02", "nw_src": "123.123.1.2", "dl_src": "12:34:56:78:01:02", "nw_dst": "123.123.2.2"}}
+{"dependent_labels": [], "class": "TrafficInjection", "label": "e5"}
+{"dependent_labels": [], "class": "DataplanePermit", "label": "e6", "fingerprint": {"dl_dst": "12:34:56:78:01:02", "nw_src": "123.123.2.2", "dl_src": "12:34:56:78:02:02", "nw_dst": "123.123.1.2"}}
+{"dependent_labels": [], "class": "DataplanePermit", "label": "e7", "fingerprint": {"dl_dst": "12:34:56:78:01:02", "nw_src": "123.123.2.2", "dl_src": "12:34:56:78:02:02", "nw_dst": "123.123.1.2"}}
+{"dependent_labels": [], "class": "DataplanePermit", "label": "e8", "fingerprint": {"dl_dst": "12:34:56:78:01:02", "nw_src": "123.123.2.2", "dl_src": "12:34:56:78:02:02", "nw_dst": "123.123.1.2"}}
