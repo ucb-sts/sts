@@ -362,7 +362,8 @@ class ControlMessageReceive(InternalEvent):
     assert('dpid' in json_hash)
     dpid = json_hash['dpid']
     assert('controller_id' in json_hash)
-    controller_id = json_hash['controller_id']
+    controller_id = (json_hash['controller_id'][0],
+                     json_hash['controller_id'][1])
     assert('fingerprint' in json_hash)
     fingerprint = OFFingerprint(json_hash['fingerprint'])
     self.pending_receive = PendingReceive(dpid, controller_id, fingerprint)
