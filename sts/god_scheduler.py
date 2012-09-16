@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from input_traces.fingerprints import *
 
 # TODO(cs): move me to another file?
@@ -46,23 +46,4 @@ class GodScheduler(object):
     ''' Return the message receipts which are waiting to be scheduled '''
     return self.pendingreceive2conn_messages.keys()
 
-class PendingReceive(object):
-  def __init__(self, dpid, controller_id, fingerprint):
-    self.dpid = dpid
-    self.controller_id = controller_id
-    self.fingerprint = fingerprint
-
-  def __str__(self):
-    return "PendingRecieve %d,%s: %s" % (self.dpid, str(self.controller_id),
-                                         str(self.fingerprint))
-
-  def __eq__(self, other):
-    if type(other) != PendingReceive:
-      return False
-    return (self.dpid == other.dpid and
-            self.controller_id == other.controller_id and
-            self.fingerprint == other.fingerprint)
-
-  def __hash__(self):
-    return (self.dpid.__hash__() + self.controller_id.__hash__() +
-            self.fingerprint.__hash__())
+PendingReceive = namedtuple('PendingReceive', ['dpid', 'controller_id', 'fingerprint'])
