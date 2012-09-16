@@ -419,5 +419,6 @@ def get_uniq_port_id(switch, port):
   else:
     port_no = port.port_no
 
-  # port_no's are 16 bits long
-  return (dpid << 16) + port_no
+  # The cisco config parser multiplies the dpid by 100000 and adds the port
+  # number. (The hassel-c code assumes this encoding)
+  return (dpid * 100000) + port_no
