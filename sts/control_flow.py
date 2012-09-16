@@ -114,9 +114,6 @@ class Fuzzer(ControlFlow):
     self.simulation = simulation
     self.simulation.bootstrap()
     assert(isinstance(simulation.patch_panel, BufferedPatchPanel))
-    # Register to log all control plane events
-    self.simulation.mgmt_panel.addListener(CpMessageEvent,
-                                           self._log_cp_message_event)
     self.loop()
 
   def loop(self):
@@ -327,9 +324,6 @@ class Interactive(ControlFlow):
   def simulate(self, simulation):
     self.simulation = simulation
     self.simulation.bootstrap()
-    # Register to log all control plane events
-    self.simulation.mgmt_panel.addListener(CpMessageEvent,
-                                           self._log_cp_message_event)
     self.loop()
 
   def loop(self):
