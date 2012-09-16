@@ -8,6 +8,9 @@ from headerspace.headerspace.tf import *
 from headerspace.config_parser.openflow_parser import get_uniq_port_id
 
 import sys
+import glob
+import os
+import subprocess
 
 # What is a p_node?
 # A hash apparently:
@@ -130,20 +133,40 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
             propagation = tmp_propag
     return loops
 
+# TODO(cs): make this a parameter
+# TODO(cs): don't assume that cwd is the sts top directory
+HASSEL_C_PATH = "./headerspace/hassel-c"
+HASSEL_TF_PATH = HASSEL_C_PATH + "/tfs/sts"
+
 # Omega defines the externally visible behavior of the network. Defined as a table:
 #   (header space, edge_port) -> [(header_space, final_location),(header_space, final_location)...]
 def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
   omega = {}
-  
-  # TODO: need to model host end of link, or does switch end suffice?
+
+  # Nuke old TF object files
+  old_tfs = glob.glob(HASSEL_TF_PATH + "/*tf")
+  for path in old_tfs:
+    os.unlink(path)
+
+  # Write out TF for each switch, and TTF to object files
+  NTF.save_object_to_file(HASSEL_TF_PATH + "/ntf.tf")
+  TTF.save_object_to_file(HASSEL_TF_PATH + "/topology.tf")
+
+  # Generate the .dat file
+  # Make sure we're in the right cwd
+  old_cwd = os.getcwd()
+  os.chdir(HASSEL_C_PATH)
+  os.system("./gen sts")
+
+  # TODO(cs): need to model host end of link, or does switch end suffice?
   edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
-  
   print "edge_ports: %s" % ports_to_hex(edge_ports)
   
   for start_port in edge_ports:
     port_omega = compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map, test_packet)
     omega = dict(omega.items() + port_omega.items()) 
   
+  os.chdir(old_cwd)
   return omega
     
 def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_packet=None):
@@ -157,71 +180,19 @@ def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_
     
     print "port %s is being checked" % hex(start_port)
     
-    propagation = []
-    port_omega = {}
-    
-    # put all-x test packet in propagation graph
-    test_pkt = test_packet
-    if test_pkt == None:
-      test_pkt = get_all_x(NTF)
-        
-    p_node = {}
-    p_node["hdr"] = test_pkt
-    p_node["port"] = start_port
-    p_node["visits"] = []
-    p_node["hs_history"] = []
-        
-    propagation.append(p_node)
-    while len(propagation) > 0:
-      # get the next node in propagation graph and apply it to NTF and TTF
-      print " -- Propagation has length: %d --" % len(propagation)
-      tmp_propag = []
-      for p_node in propagation:
-        print "Checking port: %s hdr: %s" % (port_to_hex(p_node["port"]), str(p_node["hdr"]))
-        # hp is "header port"
-        next_hps = NTF.T(p_node["hdr"],p_node["port"])
-                  
-        for (next_h,next_ps) in next_hps:
-          for next_p in next_ps:
-            sys.stdout.write("    next_hp: %s -> %s" % (port_to_hex(next_p),str(next_h)))
-            
-            # Note: right now, we encode packet drops as a lack of a leave in the propogation graph
-            # TODO: not in (not edge ports) would work better
-            if next_p in edge_ports:
-              # We've reached our final destination!
-              # ASSUMPTION: no edge port will send it back out into the network...
-              # use the inverse T trick to get original headerspace which led us here
-              original_headers = find_loop_original_header(NTF,TTF,p_node)
-              for original_header in original_headers:
-                key = (original_header, start_port)
-                if not key in port_omega:
-                  # TODO: python default value for hash?
-                  port_omega[key] = []
-                port_omega[key].append((next_h, next_p))
-                
-            linked = TTF.T(next_h,next_p)
-            if not linked:
-              sys.stdout.write("\n")
-            for (linked_h,linked_ports) in linked:
-              for linked_p in linked_ports:
-                print " -> %s" % (port_to_hex(linked_p))
-                new_p_node = {}
-                new_p_node["hdr"] = linked_h
-                new_p_node["port"] = linked_p
-                new_p_node["visits"] = list(p_node["visits"])
-                new_p_node["visits"].append(p_node["port"])
-                new_p_node["hs_history"] = list(p_node["hs_history"])
-                new_p_node["hs_history"].append(p_node["hdr"])
-                  
-                if linked_p in new_p_node["visits"]:
-                  print "WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %s "%(\
-                         new_p_node["hdr"],ports_to_hex(new_p_node["visits"]),hex(new_p_node["port"]))
-                  return port_omega
-                else:
-                  tmp_propag.append(new_p_node) 
-      propagation = tmp_propag
-    return port_omega
-  
+    str_start_port = str(start_port)
+    str_edge_ports = map(str, edge_ports)
+    proc = subprocess.Popen(["./sts", str(start_port)] + str_edge_ports,
+                            stdout=subprocess.PIPE)
+    while True:
+      line = proc.stdout.readline()
+      if line != '':
+        print line
+      else:
+        break
+
+    return {}
+
 def print_reachability(paths, reverse_map):
     for p_node in paths:
         str = ""
@@ -234,7 +205,6 @@ def print_reachability(paths, reverse_map):
         print "Path: %s"%str
         print "HS Received: %s"%p_node["hdr"]
         print "----------------------------------------------"
-        
         
 def print_loops(loops, reverse_map):
     for p_node in loops:
