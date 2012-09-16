@@ -1,4 +1,5 @@
 from collections import defaultdict
+from input_traces.fingerprints import *
 
 # TODO(cs): move me to another file?
 class GodScheduler(object):
@@ -7,7 +8,7 @@ class GodScheduler(object):
   controllers. Buffers packets until they are pulled off the buffer and chosen
   by god (control_flow.py) to be processed.
   '''
-  def __init__(self, switches):
+  def __init__(self):
     # keep around a queue for each switch of pending openflow messages waiting to
     # arrive at the switches.
     # { pending receive -> [(connection, pending ofp)_1, (connection, pending ofp)_2, ...] }
@@ -17,7 +18,7 @@ class GodScheduler(object):
     '''
     Return whether the pending receipt is available
     '''
-    return pending_message in self.pendingreceive2conn_messages
+    return pending_receipt in self.pendingreceive2conn_messages
 
   def schedule(self, pending_receive):
     '''
@@ -37,7 +38,7 @@ class GodScheduler(object):
   def insert_pending_message(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DefferedOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
-    pending_receive = PendingReceive(dpid, controller_id, ofp_message)
+    pending_receive = PendingReceive(dpid, controller_id, fingerprint)
     conn_message = (conn, ofp_message)
     self.pendingreceive2conn_messages[pending_receive].append(conn_message)
 
@@ -49,14 +50,14 @@ class PendingReceive(object):
   def __init__(self, dpid, controller_id, fingerprint):
     self.dpid = dpid
     self.controller_id = controller_id
-    self.fingerprint = message
+    self.fingerprint = fingerprint
 
   def __str__(self):
     return "PendingRecieve %d,%s: %s" % (self.dpid, str(self.controller_id),
                                          str(self.fingerprint))
 
   def __eq__(self, other):
-    if type(other) != PendingRecieve:
+    if type(other) != PendingReceive:
       return False
     return (self.dpid == other.dpid and
             self.controller_id == other.controller_id and
@@ -64,4 +65,4 @@ class PendingReceive(object):
 
   def __hash__(self):
     return (self.dpid.__hash__() + self.controller_id.__hash__() +
-           self.fingerprint.__hash__())
+            self.fingerprint.__hash__())

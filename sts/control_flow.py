@@ -204,9 +204,9 @@ class Fuzzer(ControlFlow):
       if self.random.random() < self.params.ofp_message_receipt_rate:
         self.simulation.god_scheduler.schedule(pending_receipt)
         self._log_input_event(klass="ControlMessageReceive",
-                              fingerprint=pending_receipt.fingerprint,
+                              fingerprint=pending_receipt.fingerprint.to_dict(),
                               dpid=pending_receipt.dpid,
-                              controller_id=pending_receipt)
+                              controller_id=pending_receipt.controller_id)
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
@@ -410,8 +410,8 @@ class Interactive(ControlFlow):
       # TODO(cs): make this interactive
       self.simulation.god_scheduler.schedule(pending_receipt)
       self._log_input_event(klass="ControlMessageReceive",
-                            fingerprint=pending_receipt.fingerprint,
+                            fingerprint=pending_receipt.fingerprint.to_dict(),
                             dpid=pending_receipt.dpid,
-                            controller_id=pending_receipt)
+                            controller_id=pending_receipt.controller_id)
 
   # TODO(cs): add support for control channel blocking + switch, link, controller failures

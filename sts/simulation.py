@@ -111,7 +111,7 @@ class Simulation (object):
     self.patch_panel = self._patch_panel_class(self.topology.switches,
                                                self.topology.hosts,
                                                self.topology.get_connected_port)
-    self.god_scheduler = GodScheduler(self.topology.switches)
+    self.god_scheduler = GodScheduler()
 
     if self._dataplane_trace_path is not None:
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
@@ -120,10 +120,11 @@ class Simulation (object):
     # TODO(cs): move this into a ConnectionFactory class
     def create_connection(controller_info, switch):
         socket = connect_socket_with_backoff(controller_info.address,
-                                                        controller_info.port)
+                                             controller_info.port)
         # Set non-blocking
         socket.setblocking(0)
         io_worker = DeferredIOWorker(self._io_master.create_worker_for_socket(socket))
         return DeferredOFConnection(io_worker, switch.dpid, self.god_scheduler)
+
     self.topology.connect_to_controllers(self.controller_configs,
-                                         create_connection)
+                                         create_connection=create_connection)
