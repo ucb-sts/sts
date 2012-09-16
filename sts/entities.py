@@ -24,17 +24,17 @@ class DeferredOFConnection(OFConnection):
     self.on_message_received = self.insert_into_god_scheduler
     self.true_on_message_handler = None
 
-  def insert_into_god_scheduler(self, ofp_msg):
+  def insert_into_god_scheduler(self, _, ofp_msg):
     ''' Rather than pass directly on to the switch, feed into the god scheduler'''
     self.god_scheduler.insert_pending_message(self.dpid, self.get_controller_id(), ofp_msg, self)
 
-  def set_on_message_received(self, handler):
+  def set_message_handler(self, handler):
     ''' Take the switch's handler, and store it for later use '''
     self.true_on_message_handler = handler
 
   def allow_message_receipt(self, ofp_message):
     ''' Allow the message to actually go through to the switch '''
-    self.true_on_message_handler(ofp_message)
+    self.true_on_message_handler(self, ofp_message)
 
 class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
