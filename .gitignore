@@ -16,6 +16,8 @@ pypy/
 config/20*.py
 input_traces/20*.trace
 dataplane_traces/20*.trace
+headerspace/hassel-c/tfs/*tf
+headerspace/hassel-c/data/*
 
 # ignore eclipse project files
 .pydevproject
