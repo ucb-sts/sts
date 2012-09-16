@@ -6,6 +6,7 @@ Author: sw
 
 from sts.entities import Link
 from sts.god_scheduler import PendingReceive
+from input_traces.fingerprints import *
 import abc
 import logging
 import time
@@ -308,7 +309,7 @@ class DataplanePermit(InternalEvent):
   def __init__(self, json_hash):
     super(DataplanePermit, self).__init__(json_hash)
     assert('fingerprint' in json_hash)
-    self.fingerprint = json_hash['fingerprint']
+    self.fingerprint = DPFingerprint(json_hash['fingerprint'])
 
   def proceed(self, simulation):
     dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint)
@@ -363,7 +364,7 @@ class ControlMessageReceive(InternalEvent):
     assert('controller_id' in json_hash)
     controller_id = json_hash['controller_id']
     assert('fingerprint' in json_hash)
-    fingerprint = json_hash['fingerprint']
+    fingerprint = OFFingerprint(json_hash['fingerprint'])
     self.pending_receive = PendingReceive(dpid, controller_id, fingerprint)
 
   def proceed(self, simulation):
