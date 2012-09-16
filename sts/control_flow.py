@@ -395,14 +395,14 @@ class Interactive(ControlFlow):
           self._log_input_event(klass="DataplanePermit",
                                 fingerprint=dp_event.fingerprint.to_dict())
         elif answer.lower() == 'd':
-          self.simulation.drop_dp_event(dp_event)
+          self.simulation.patch_panel.drop_dp_event(dp_event)
           self._log_input_event(klass="DataplaneDrop",
                                 fingerprint=dp_event.fingerprint.to_dict())
         elif answer.lower() == 'e':
-          self.simulation.delay_dp_event(dp_event)
+          self.simulation.patch_panel.delay_dp_event(dp_event)
         else:
           log.warn("Unknown input...")
-          self.simulation.delay_dp_event(dp_event)
+          self.simulation.patch_panel.delay_dp_event(dp_event)
 
   def check_message_receipts(self):
     for pending_receipt in self.simulation.god_scheduler.pending_receives():
