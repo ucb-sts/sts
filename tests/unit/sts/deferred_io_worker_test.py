@@ -23,7 +23,8 @@ class DeferredIOWorkerTest(unittest.TestCase):
       func()
 
   def test_not_sent_until_permitted(self):
-    i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
+    i = DeferredIOWorker(IOWorker())
+    i.set_receive_handler(self.call_later)
     i.block()
     i.send("foo")
     self.assertFalse(i._io_worker._ready_to_send)
@@ -34,7 +35,8 @@ class DeferredIOWorkerTest(unittest.TestCase):
     self.assertFalse(i._io_worker._ready_to_send)
 
   def test_not_received_until_permitted(self):
-    i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
+    i = DeferredIOWorker(IOWorker())
+    i.set_receive_handler(self.call_later)
     i.block()
     self.data = None
     def d(worker):
@@ -50,7 +52,8 @@ class DeferredIOWorkerTest(unittest.TestCase):
     self.assertEqual(self.data, "barhepp")
 
   def test_receive_consume(self):
-    i = DeferredIOWorker(IOWorker(), DeferredIOWorkerTest.call_later)
+    i = DeferredIOWorker(IOWorker())
+    i.set_receive_handler(self.call_later)
     self.data = None
     def consume(worker):
       self.data = worker.peek_receive_buf()
