@@ -23,6 +23,9 @@ headerspace/hassel-c/gen
 headerspace/hassel-c/sts
 headerspace/hassel-c/i2
 headerspace/hassel-c/stanford
+headerspace/hassel-c/test
+headerspace/hassel-c/hs-test
+
 
 # ignore eclipse project files
 .pydevproject
