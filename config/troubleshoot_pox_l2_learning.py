@@ -7,5 +7,5 @@ controllers = [ControllerConfig(cmdline='./pox.py --no-cli openflow.of_01 --addr
 topology_class = MeshTopology
 topology_params = "num_switches=2"
 patch_panel_class = BufferedPatchPanel
-control_flow = Replayer("input_traces/2012_09_15_22_33_10.trace")
+control_flow = Replayer("input_traces/troubleshoot_pox_l2_learning.trace")
 dataplane_trace = "dataplane_traces/ping_pong_same_subnet.trace"
