@@ -3,7 +3,7 @@ This module mocks out openflow switches, links, and hosts. These are all the
 'entities' that exist within our simulated environment.
 """
 
-from pox.openflow.software_switch import SoftwareSwitch, DpPacketOut, ControllerConnection
+from pox.openflow.software_switch import SoftwareSwitch, DpPacketOut, OFConnection
 from pox.openflow.nx_software_switch import NXSoftwareSwitch
 from pox.lib.util import assert_type
 from pox.openflow.libopenflow_01 import *
@@ -15,58 +15,37 @@ import logging
 import pickle
 import signal
 
-class CpMessageEvent (Event):
-  """ Event raised when a control plane packet is sent or received """
-  def __init__ (self, connections_used, message):
-    assert_type("message", message, ofp_header, none_ok=False)
-    Event.__init__(self)
-    self.connections_used = connections_used
-    self.message = message
+class DeferredOFConnection(OFConnection):
+  def __init__(self, io_worker, dpid, god_scheduler):
+    super(DeferredOFConnection, self).__init__(io_worker)
+    self.dpid = dpid
+    self.god_scheduler = god_scheduler
+    # Don't feed messages to the switch directly
+    self.on_message_received = self.insert_into_god_scheduler
+    self.true_on_message_handler = None
 
-def curry(original_handler, parent_switch):
-  def shim_handler(msg_obj, connection, *args, **kws):
-    '''
-    Interpose on switch ofp receive handlers:
-    pass CpMessageEvents to the ManagementPanel for fingerprinting purposes
-    after invoking the original handler
-    '''
-    # Raise event /after/ the message has been processed.
-    # This means that a BufferedPatchPanel /must/ be used!
-    # Otherwise, the next line could cause a chain of DpPacketOut events
-    # to occur before we have the opportunity to raise the CpMessageEvent
-    original_handler(msg_obj, connection, *args, **kws)
+  def insert_into_god_scheduler(self, ofp_msg):
+    ''' Rather than pass directly on to the switch, feed into the god scheduler'''
+    self.god_scheduler.insert_pending_message(self.dpid, self.get_controller_id(), ofp_msg, self)
 
-    # NXSoftwareSwitch "beefs up" the SoftwareSwitch receive handlers by
-    # inserting the connection as the first param
-    assert(type(args[0]) == ControllerConnection)
-    assert(type(args[1]) == ofp_header)
-    connections_used = [connection]
-    parent_switch.raiseEvent(CpMessageEvent(connections_used, msg_obj))
-  return shim_handler
+  def set_on_message_received(self, handler):
+    ''' Take the switch's handler, and store it for later use '''
+    self.true_on_message_handler = handler
+
+  def allow_message_receipt(self, ofp_message):
+    ''' Allow the message to actually go through to the switch '''
+    self.true_on_message_handler(ofp_message)
 
 class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
   A mock switch implementation for testing purposes. Can simulate dropping dead.
   """
 
-  _eventMixin_events = set([DpPacketOut, CpMessageEvent])
+  _eventMixin_events = set([DpPacketOut])
 
-  def __init__ (self, create_io_worker, dpid, name=None, ports=4, miss_send_len=128,
+  def __init__ (self, dpid, name=None, ports=4, miss_send_len=128,
                 n_buffers=100, n_tables=1, capabilities=None):
     NXSoftwareSwitch.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
-    # Overwrite the ofp receive handlers with a shim layer that passes
-    # CpMessageEvents to the ManagementPanel for fingerprinting purposes
-    original_handlers = self.ofp_handlers
-    self.ofp_handlers = {
-      # the value is the shim_handler, with original handler and reference to
-      # us curried in
-      key : curry(handler, self)
-      for key, handler in original_handlers.iteritems()
-    }
-    # For messages initiated from switch -> controller, we override the
-    # send() method below
-
-    self.create_io_worker = create_io_worker
 
     self.failed = False
     self.log = logging.getLogger("FuzzSoftwareSwitch(%d)" % dpid)
@@ -80,30 +59,27 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.error_handler = error_handler
     self.controller_info = []
 
-  # ------------------------------------------------- #
-  # Override message sends from switch -> controller  #
-  # ------------------------------------------------- #
-  def send(self, message):
-    # Log /after/ the send() has been put on the wire
-    connections_used = super(FuzzSoftwareSwitch, self).send(message)
-    self.raiseEvent(CpMessageEvent(connections_used, message))
-
   def add_controller_info(self, info):
     self.controller_info.append(info)
 
   def _handle_ConnectionUp(self, event):
     self._setConnection(event.connection, event.ofp)
 
-  def connect(self):
-    # NOTE: create_io_worker is /not/ an instancemethod but just a function
-    # so we have to pass in the self parameter explicitly
+  def connect(self, create_connection):
+    ''' - create_connection is a factory method for creating Connection objects
+          which are connected to controllers. Takes a ControllerConfig object
+          and a reference to a switch (self) as a paramter
+    '''
+    # Keep around the connection factory for fail/recovery later
+    self.create_connection = create_connection
     for info in self.controller_info:
-      io_worker = self.create_io_worker(self, info)
-      conn = self.set_io_worker(io_worker)
+      # TODO(cs): what else to pass in?
+      conn = create_connection(info, self)
+      self.set_connection(conn)
       # cause errors to be raised
       conn.error_handler = self.error_handler
       # controller (ip, port) -> connection
-      self.uuid2connection[io_worker.socket.getpeername()] = conn
+      self.uuid2connection[conn.io_worker.socket.getpeername()] = conn
 
   def get_connection(self, uuid):
     if uuid not in self.uuid2connection:
@@ -126,7 +102,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     if not self.failed:
       self.log.warn("Switch already up")
       return
-    self.connect()
+    self.connect(self.create_connection)
     self.failed = False
 
   def serialize(self):

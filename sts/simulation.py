@@ -13,11 +13,12 @@ Encapsulates the state of the simulation, including:
 from sts.console import msg
 from sts.io_master import IOMaster
 from dataplane_traces.trace import Trace
-from entities import Link, Host, Controller
+from entities import Link, Host, Controller, DeferredOFConnection
 from sts.topology import *
 from sts.controller_manager import ControllerManager
 from sts.deferred_io import DeferredIOWorker
 from sts.control_flow import Replayer
+from sts.god_scheduler import GodScheduler
 
 import logging
 import pickle
@@ -116,6 +117,13 @@ class Simulation (object):
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
 
     # Connect switches to controllers
-    create_worker = lambda(socket): \
-            DeferredIOWorker(self._io_master.create_worker_for_socket(socket))
-    self.topology.connect_to_controllers(self.controller_configs, create_worker)
+    # TODO(cs): move this into a ConnectionFactory class
+    def create_connection(controller_info, switch):
+        socket = connect_socket_with_backoff(controller_info.address,
+                                                        controller_info.port)
+        # Set non-blocking
+        socket.setblocking(0)
+        io_worker = DeferredIOWorker(self._io_master.create_worker_for_socket(socket))
+        return DeferredOFConnection(io_worker, switch.dpid, self.god_scheduler)
+    self.topology.connect_to_controllers(self.controller_configs,
+                                         create_connection)

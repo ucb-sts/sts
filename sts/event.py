@@ -5,7 +5,7 @@ Author: sw
 '''
 
 from sts.entities import Link
-from sts.entities import CpMessageEvent
+from sts.god_scheduler import PendingReceive
 import abc
 import logging
 import time
@@ -359,22 +359,20 @@ class ControlMessageReceive(InternalEvent):
   def __init__(self, json_hash):
     super(ControlMessageReceive, self).__init__(json_hash)
     assert('dpid' in json_hash)
-    self.dpid = json_hash['dpid']
-    # TODO(cs): since NXSoftwareSwitches have multiple connections, we
-    # potentially need to include the connections used to disambiguate
-    # the same fingerprint on the same switch being used to talk to a
-    # different subset of its parent controllers
+    dpid = json_hash['dpid']
+    assert('controller_id' in json_hash)
+    controller_id = json_hash['controller_id']
     assert('fingerprint' in json_hash)
-    self.fingerprint = json_hash['fingerprint']
+    fingerprint = json_hash['fingerprint']
+    self.pending_receive = PendingReceive(dpid, controller_id, fingerprint)
 
   def proceed(self, simulation):
-   pending_message = simulation.god_scheduler\
-                               .message_waiting(self.dpid, self.fingerprint)
+   pending_message = simulation.god_scheduler.message_waiting(self.pending_receive)
    if pending_message:
-     simulation.god_scheduler.schedule(self.dpid, self.fingerprint)
+     simulation.god_scheduler.schedule(self.pending_receive)
      return True
    return False
 
 all_internal_events = [MastershipChange, TimerEvent, DataplaneDrop,
                        DataplanePermit, ControlChannelBlock,
-                       ControlChannelUnblock, ControlMessageRecieve]
+                       ControlChannelUnblock, ControlMessageReceive]

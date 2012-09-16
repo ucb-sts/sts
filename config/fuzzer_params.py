@@ -4,6 +4,7 @@ dataplane_drop_rate = 0.0
 dataplane_delay_rate = 0.0
 controlplane_block_rate = 0.0
 controlplane_unblock_rate = 1.0
+ofp_message_receipt_rate = 1.0
 link_failure_rate = 0.0
 link_recovery_rate = 0.0
 controller_crash_rate = 0.0

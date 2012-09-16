@@ -15,8 +15,6 @@ from traffic_generator import TrafficGenerator
 from sts.console import msg
 from sts.event import EventDag
 import log_processing.superlog_parser as superlog_parser
-from input_traces.fingerprints import OFFingerprint
-from sts.entities import CpMessageEvent
 
 import os
 import sys
@@ -111,15 +109,6 @@ class Fuzzer(ControlFlow):
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
 
-  #def _log_cp_message_event(self, event):
-  #  fingerprint = OFFingerprint.from_pkt(event.message).to_dict()
-  #  # temporary hack: only examine the first connection used
-  #  connection = event.connections_used[0]
-  #  self._log_input_event(klass="CpMessageEvent",
-  #                        fingerprint=fingerprint, dpid=event.dpid)
-
-  # TODO(cs): need to consult the GodScheduler
-
   def simulate(self, simulation):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     self.simulation = simulation
@@ -179,6 +168,7 @@ class Fuzzer(ControlFlow):
   def trigger_events(self):
     self.check_dataplane()
     self.check_tcp_connections()
+    self.check_message_receipts()
     self.check_switch_crashes()
     self.fuzz_traffic()
     self.check_controllers()
@@ -210,6 +200,16 @@ class Fuzzer(ControlFlow):
         self.topology.unblock_connection(connection)
         self._log_input_event(klass="ControlChannelUnBlock",dpid=switch.dpid,
                               controller_uuid=connection.get_controller_id())
+
+  def check_message_receipts(self):
+    for pending_receipt in self.simulation.god_scheduler.pending_receives():
+      # TODO(cs): this is a really dumb way to fuzz packet receipt scheduling
+      if self.random.random() < self.params.ofp_message_receipt_rate:
+        self.simulation.god_scheduler.schedule(pending_receipt)
+        self._log_input_event(klass="ControlMessageReceive",
+                              fingerprint=pending_receipt.fingerprint,
+                              dpid=pending_receipt.dpid,
+                              controller_id=pending_receipt)
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
@@ -324,16 +324,6 @@ class Interactive(ControlFlow):
     if self._input_logger is not None:
       self._input_logger.log_input_event(**kws)
 
-  #def _log_cp_message_event(self, event):
-  #  # TODO(cs): redundant with Fuzzer._log_cp_message_event
-  #  fingerprint = OFFingerprint.from_pkt(event.message).to_dict()
-  #  # temporary hack: only examine the first connection used
-  #  connection = event.connections_used[0]
-  #  self._log_input_event(klass="CpMessageEvent",
-  #                        fingerprint=fingerprint, dpid=event.dpid)
-
-  # TODO(cs): need to consult the GodScheduler
-
   def simulate(self, simulation):
     self.simulation = simulation
     self.simulation.bootstrap()
@@ -352,6 +342,7 @@ class Interactive(ControlFlow):
         self.invariant_check_prompt()
         self.dataplane_trace_prompt()
         self.check_dataplane()
+        self.check_message_receipts()
         answer = msg.raw_input('Continue to next round? [Yn]').strip()
         if answer != '' and answer.lower() != 'y':
           break
@@ -418,5 +409,15 @@ class Interactive(ControlFlow):
         else:
           log.warn("Unknown input...")
           self.simulation.delay_dp_event(dp_event)
+
+  def check_message_receipts(self):
+    for pending_receipt in self.simulation.god_scheduler.pending_receives():
+      # For now, just schedule FIFO.
+      # TODO(cs): make this interactive
+      self.simulation.god_scheduler.schedule(pending_receipt)
+      self._log_input_event(klass="ControlMessageReceive",
+                            fingerprint=pending_receipt.fingerprint,
+                            dpid=pending_receipt.dpid,
+                            controller_id=pending_receipt)
 
   # TODO(cs): add support for control channel blocking + switch, link, controller failures

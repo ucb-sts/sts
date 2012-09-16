@@ -46,9 +46,8 @@ def create_switch(switch_id, num_ports):
   def unitialized_io_worker(switch):
     raise SystemError("Not initialialized")
 
-  return FuzzSoftwareSwitch(create_io_worker=unitialized_io_worker,
-                        dpid=switch_id, name="SoftSwitch(%d)" % switch_id,
-                        ports=ports)
+  return FuzzSoftwareSwitch(dpid=switch_id, name="SoftSwitch(%d)" % switch_id,
+                            ports=ports)
 
 def get_switchs_host_port(switch):
   ''' return the switch's ofp_phy_port connected to the host '''
@@ -306,7 +305,7 @@ class Topology(object):
     return self.dpid2switch.values()
 
   def get_switch(self, dpid):
-    dpid = dpid_or_connection
+    dpid = dpid
     if dpid not in self.dpid2switch:
       raise RuntimeError("unknown dpid %d" % dpid)
     return self.dpid2switch[dpid]
@@ -397,15 +396,17 @@ class Topology(object):
     for (_, connection) in self.cp_connections_with_pending_sends:
       self.permit_cp_send(connection)
 
-  def connect_to_controllers(self, controller_info_list, io_worker_generator):
+  def connect_to_controllers(self, controller_info_list, create_connection):
     '''
     Bind sockets from the software_switchs to the controllers. For now, assign each
     switch to the next controller in the list in a round robin fashion.
 
-    Controller info list is a list of
-    (controller ip address, controller port number) tuples
-
-    Return a list of socket objects
+    Controller info list is a list of ControllerConfig tuples
+        - create_io_worker is a factory method for creating IOWorker objects.
+          Takes a socket as a paramter
+        - create_connection is a factory method for creating Connection objects
+          which are connected to controllers. Takes a ControllerConfig object
+          as a paramter
     '''
     controller_info_cycler = itertools.cycle(controller_info_list)
     connections_per_switch = len(controller_info_list)
@@ -418,20 +419,12 @@ class Topology(object):
       if len(self.switches) < 20 or not idx % 250:
         log.debug("Connecting switch %d / %d" % (idx, len(self.switches)))
 
-      def create_io_worker(switch, controller_info):
-        controller_socket = connect_socket_with_backoff(controller_info.address,
-                                                        controller_info.port)
-        # Set non-blocking
-        controller_socket.setblocking(0)
-        return io_worker_generator(controller_socket)
-      software_switch.create_io_worker = create_io_worker
-
       # Socket from the software_switch to the controller
       for i in xrange(connections_per_switch):
         controller_info = controller_info_cycler.next()
         software_switch.add_controller_info(controller_info)
 
-      software_switch.connect()
+      software_switch.connect(create_connection)
 
     log.debug("Controller connections done")
 
