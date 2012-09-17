@@ -42,7 +42,7 @@
 
 <p>Ever had to painstakingly dig through logs to find the one or two inputs that lead your controller software to break? sts seeks to eliminate this need, freeing you to debug the problematic code itself. </p>
 
-<p>sts is intended for distributed SDN control software such as <a href="http://floodlight.openflowhub.org/">Floodlight</a>.  sts simulates the devices of your network in a deterministic runtime environment, allowing fine-grained control over the inputs to unmodified* controllers. </p>
+<p>sts is intended for distributed SDN control software such as <a href="http://floodlight.openflowhub.org/">Floodlight</a>.  sts simulates the devices of your network in a deterministic runtime environment, allowing fine-grained control over the inputs to your unmodified* controller(s). </p>
 
 <p><img src="http://www.eecs.berkeley.edu/%7Ercs/research/sts_arch.jpg" alt="sts architecture"></p>
 
@@ -50,9 +50,9 @@
 
 <h3>Installation</h3>
 
-<p>sts depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install sts, you'll just need to clone the pox repository:</p>
+<p>sts depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install sts, you'll just need to clone both repositories:</p>
 
-<pre><code>$ git clone git://github.com/colin-scott/sts.git
+<pre><code>$ git clone git://github.com/ucb-sts/sts.git
 $ cd sts
 $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 </code></pre>
