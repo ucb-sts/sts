@@ -50,7 +50,7 @@
 
 <h3>Installation</h3>
 
-<p>sts depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install sts, you'll just need to pull down a clone of the pox repository:</p>
+<p>sts depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install sts, you'll just need to clone the pox repository:</p>
 
 <pre><code>$ git clone git://github.com/colin-scott/sts.git
 $ cd sts
@@ -65,6 +65,16 @@ $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 </code></pre>
 
 <p>This will boot up pox, generate a FatTree network with 16 hosts, and begin feeding in random inputs.</p>
+
+<p>You can also run sts interactively:</p>
+
+<pre><code>$ ./simulator.py -c config.mesh
+</code></pre>
+
+<p>Finally, you can use sts to replay previous executions of your controller and automatically identify fault-inducing inputs:</p>
+
+<pre><code>$ ./simulator.py -c troubleshoot_pox_l2_learning
+</code></pre>
 
 <p>The config/ directory contains sample configurations. You can specify your own config file by specifing its module name:</p>
 
