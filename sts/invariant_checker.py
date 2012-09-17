@@ -33,19 +33,18 @@ class InvariantChecker(object):
 
   def check_correspondence(self, simulation):
     ''' Return if there were any policy-violations '''
-    #log.debug("Snapshotting controller...")
-    #controller_snapshot = self.fetch_controller_snapshot(simulation)
+    log.debug("Snapshotting controller...")
+    controller_snapshot = self.fetch_controller_snapshot(simulation)
     log.debug("Computing physical omega...")
     physical_omega = self.compute_physical_omega(simulation.topology.live_switches,
                                                  simulation.topology.live_links,
                                                  simulation.topology.access_links)
-    print physical_omega
-    #log.debug("Computing controller omega...")
-    #controller_omega = self.compute_controller_omega(controller_snapshot,
-    #                                                 simulation.topology.live_switches,
-    #                                                 simulation.topology.live_links,
-    #                                                 simulation.topology.access_links)
-    #return self.infer_policy_violations(physical_omega, controller_omega)
+    log.debug("Computing controller omega...")
+    controller_omega = self.compute_controller_omega(controller_snapshot,
+                                                     simulation.topology.live_switches,
+                                                     simulation.topology.live_links,
+                                                     simulation.topology.access_links)
+    return self.infer_policy_violations(physical_omega, controller_omega)
 
   # --------------------------------------------------------------#
   #                    HSA utilities                              #
