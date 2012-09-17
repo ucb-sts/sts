@@ -24,18 +24,18 @@ def print_p_node(p_node):
     print p_node["port"]
     print p_node["visits"]
     print "-----"
-    
+
 def find_reachability(NTF, TTF, in_port, out_ports, input_pkt):
     paths = []
     propagation = []
- 
+
     p_node = {}
     p_node["hdr"] = input_pkt
     p_node["port"] = in_port
     p_node["visits"] = []
     p_node["hs_history"] = []
     propagation.append(p_node)
-        
+
     while len(propagation)>0:
         #get the next node in propagation graph and apply it to NTF and TTF
         print "Propagation has length: %d"%len(propagation)
@@ -72,32 +72,32 @@ def find_reachability(NTF, TTF, in_port, out_ports, input_pkt):
                                 else:
                                     tmp_propagate.append(new_p_node)
         propagation = tmp_propagate
-                
+
     return paths
-  
+
 def get_all_x(NTF):
   all_x = byte_array_get_all_x(NTF.length)
   test_pkt = headerspace(NTF.format)
   test_pkt.add_hs(all_x)
   return test_pkt
-                    
+
 def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
     loops = []
     for port in ports:
         print "port %d is being checked"%port
         propagation = []
-        
+
         # put all-x test packet in propagation graph
         test_pkt = test_packet
         if test_pkt == None:
           test_pkt = get_all_x(NTF)
-        
+
         p_node = {}
         p_node["hdr"] = test_pkt
         p_node["port"] = port
         p_node["visits"] = []
         p_node["hs_history"] = []
-        
+
         propagation.append(p_node)
         while len(propagation)>0:
             #get the next node in propagation graph and apply it to NTF and TTF
@@ -235,7 +235,7 @@ def print_reachability(paths, reverse_map):
         print "Path: %s"%str
         print "HS Received: %s"%p_node["hdr"]
         print "----------------------------------------------"
-        
+
 def print_loops(loops, reverse_map):
     for p_node in loops:
         print "----------------------------------------------"
@@ -255,8 +255,8 @@ def print_loops(loops, reverse_map):
             print "*** %d) AT PORT: %s\nHS: %s\n"%(i,reverse_map["%d"%p_node["visits"][i]],p_node["hs_history"][i])
         print "*** %d) AT PORT: %s\nHS: %s\n"%(i+1,reverse_map["%d"%p_node["port"]],p_node["hdr"])
         print "----------------------------------------------"
-        
-        
+
+
 def loop_path_to_str(p_node, reverse_map):
     str = ""
     for port in p_node["visits"]:
@@ -266,7 +266,7 @@ def loop_path_to_str(p_node, reverse_map):
             str = "%s ---> %s"%(str,reverse_map["%d"%port])
     str = "%s ---> %s"%(str,reverse_map["%d"%p_node["port"]])
     return str
-        
+
 def trace_hs_back(applied_rule_list,hs,last_port):
     port = last_port
     hs_list = [hs]
@@ -283,35 +283,35 @@ def trace_hs_back(applied_rule_list,hs,last_port):
         hs_list = tmp
         port = in_port
     return hs_list
-        
-        
+
+
 def find_loop_original_header(NTF,TTF,propagation_node):
     applied_rule_ids = list(propagation_node["hdr"].applied_rule_ids)
     hs_list = trace_hs_back(applied_rule_ids,propagation_node["hdr"],propagation_node["port"])
     return hs_list
-        
+
 #def is_loop_infinite(NTF, TTF, propagation_node):
 #    p_node = propagation_node
 #    header_cpy = p_node["hdr"].copy()
 #    while len(p_node['visits']) > 0:
 #        cur_port = p_node['visits'].pop()
-#        
+#
 #         transfer back on the link
 #        linked = TTF.T_inv(p_node["hdr"],p_node["port"])
-#        
+#
 #         transfer back on node
 #        prev_hp = NTF.T_inv(linked[0][0],linked[0][1])
-#        
+#
 #        prev_hs = headerspace(NTF.length)
 #        for (h,p) in prev_hp:
 #            if p == cur_port:
 #                prev_hs.add_hs(h)
-#        
+#
 #        p_node["hdr"] = prev_hs
 #        p_node["port"] = cur_port
-        
+
     #print "hret = %s and"%propagation_node["hdr"]
-    #print "hret_inv = %s"%(p_node["hdr"])    
+    #print "hret_inv = %s"%(p_node["hdr"])
 #    if propagation_node["hdr"].is_subset_of(p_node["hdr"]):
 #        return (True,p_node["hdr"])
 #    else:
@@ -322,5 +322,5 @@ def find_loop_original_header(NTF,TTF,propagation_node):
 #            new_cpy = propagation_node.copy()
 #            new_cpy["hdr"] = insect
 #            return is_loop_infinite(NTF, TTF, new_cpy)
-                 
-        
+
+
