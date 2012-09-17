@@ -289,6 +289,7 @@ class Controller(object):
     self.process = None
     self.sync_connection_manager = sync_connection_manager
     self.sync_connection = None
+    self.log = logging.getLogger("Controller")
 
   @property
   def pid(self):
@@ -328,6 +329,35 @@ class Controller(object):
         raise ValueError("sync: cannot find port in %s" % self.config.sync)
       port = port_match.group(1)
       env['sts_sync'] = "ptcp:0.0.0.0:%d" % (int(port),)
+
+      if self.config.name == "pox":
+        src_dir = os.path.join(os.path.dirname(__file__), "..")
+        pox_ext_dir = os.path.join(self.config.cwd, "ext")
+        if os.path.exists(pox_ext_dir):
+          for f in ("sts/io_master.py", "sts/syncproto/base.py", "sts/syncproto/pox_syncer.py"):
+            src_path = os.path.join(src_dir, f)
+            if not os.path.exists(src_path):
+              raise ValueError("Integrity violation: sts sync source path %s (abs: %s) does not exist" %
+                  (src_path, os.path.abspath(src_path)))
+            dst_path = os.path.join(pox_ext_dir, f)
+            dst_dir = os.path.dirname(dst_path)
+            init_py = os.path.join(dst_dir, "__init__.py")
+            if not os.path.exists(dst_dir):
+              os.makedirs(dst_dir)
+
+            if not os.path.exists(init_py):
+              open(init_py, "a").close()
+
+            if os.path.islink(dst_path):
+              # remove symlink and recreate
+              os.remove(dst_path)
+
+            if not os.path.exists(dst_path):
+              rel_link = os.path.abspath(src_path)
+              self.log.debug("creating symlink %s -> %s", rel_link, dst_path)
+              os.symlink(rel_link, dst_path)
+        else:
+          self.log.warn("Could not find pox ext dir in %s. Cannot check/link in sync module" % pox_ext_dir)
 
     self.process = popen_filtered("c%s" % str(self.uuid), self.config.expanded_cmdline, self.config.cwd, env=env)
     self._register_proc(self.process)

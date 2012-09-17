@@ -6,12 +6,13 @@ import socket
 from pox.lib.ioworker.io_worker import JSONIOWorker
 
 from sts.io_master import IOMaster
-from sts.sync_connection import SyncTime, SyncMessage, SyncProtocolSpeaker
+from sts.syncproto.base import SyncTime, SyncMessage, SyncProtocolSpeaker
 from pox.lib.util import parse_openflow_uri
 
 log = logging.getLogger("pox_syncer")
 
-def start():
+# POX Module launch method
+def launch():
   if "sts_sync" in os.environ:
     sts_sync = os.environ["sts_sync"]
     log.info("starting sts sync for spec: %s" % sts_sync)

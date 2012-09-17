@@ -4,7 +4,7 @@ import json
 import time
 
 from sts.io_master import IOMaster
-from sts.sync_connection import SyncProtocolSpeaker, SyncMessage, SyncTime
+from sts.syncproto.base import SyncProtocolSpeaker, SyncMessage, SyncTime
 
 from pox.lib.ioworker.io_worker import JSONIOWorker
 from pox.lib.util import parse_openflow_uri, connect_socket_with_backoff

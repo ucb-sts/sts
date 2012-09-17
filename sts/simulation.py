@@ -19,8 +19,8 @@ from sts.controller_manager import ControllerManager
 from sts.deferred_io import DeferredIOWorker
 from sts.control_flow import Replayer
 from sts.god_scheduler import GodScheduler
-from sts.sync_connection import SyncTime
-from sts.sts_syncer import STSSyncConnectionManager
+from sts.syncproto.base import SyncTime
+from sts.syncproto.sts_syncer import STSSyncConnectionManager
 
 import logging
 import pickle
