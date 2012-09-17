@@ -76,11 +76,11 @@ class InvariantChecker(object):
       # TODO(cs): ignoring original hs means that we don't account for
       # field modifications, e.g. TTL decreases
       #
-      # Omegas are { (original hs, original port) -> [(final hs1, final port1), (final hs2, final port2)...] }
+      # Omegas are { original port -> [(final hs1, final port1), (final hs2, final port2)...] }
       # Want to turn them into port -> [(final hs1, final port1), (final hs2, final port2)...]
       simple_dict = collections.defaultdict(lambda: set())
       for key, tuples in omega.iteritems():
-        (hs, port) = key
+        port = key
         for tup in tuples:
           printable_tup = (str(tup[0]), tup[1])
           simple_dict[port].add(printable_tup)
@@ -95,7 +95,7 @@ class InvariantChecker(object):
         for final_location in final_locations:
           if origin_port not in omega2 or final_location not in omega2[origin_port]:
             any_missing_entries = True
-            print ": %s: %s" % (print_string, str(final_location))
+            print ": %s: %s" % (print_string,  str(final_location))
       if not any_missing_entries:
         print "No %s!" % print_string
       return any_missing_entries

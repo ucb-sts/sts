@@ -641,3 +641,6 @@ class headerspace(object):
 
   def __str__(self):
     return self.to_string()
+
+  def __repr__(self):
+    return self.to_string()

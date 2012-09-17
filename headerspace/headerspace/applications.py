@@ -6,6 +6,7 @@ Created on Jan 27, 2011
 from headerspace.headerspace.hs import *
 from headerspace.headerspace.tf import *
 from headerspace.config_parser.openflow_parser import get_uniq_port_id
+import headerspace.config_parser.openflow_parser as of
 
 import sys
 import glob
@@ -162,37 +163,65 @@ def compute_omega(name_tf_pairs, TTF, edge_links):
   # TODO(cs): need to model host end of link, or does switch end suffice?
   edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
   print "edge_ports: %s" % edge_ports
-  
+
   for start_port in edge_ports:
     port_omega = compute_single_omega(start_port, edge_ports)
-    omega = dict(omega.items() + port_omega.items()) 
-  
+    omega = dict(omega.items() + port_omega.items())
+
   os.chdir(old_cwd)
   return omega
-    
+
 def compute_single_omega(start_port, edge_ports):
     if type(start_port) != int:
       start_port = get_uniq_port_id(start_port.switch, start_port.switch_port)
-      
+
     if type(edge_ports) != list:
       edge_ports = list(edge_ports)
     if type(edge_ports[0]) != int:
       edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_ports)
-    
+
     print "port %d is being checked" % start_port
-    
+
     str_start_port = str(start_port)
     str_edge_ports = map(str, edge_ports)
     proc = subprocess.Popen(["./sts", str(start_port)] + str_edge_ports,
-                            stdout=subprocess.PIPE)
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    omega = { start_port : [] }
+    second_to_last_line = ''
+    last_line = ''
     while True:
+      # Format is:
+
+      #  <Original> Port: ...
+      #  <Next> Port: ...
+      #  ...
+      #  <Edge> Port: ...
+      #  HS: D0,D0,D0,D8,D123,D123,...
+      # -----
+      #  <Original> Port -> ...
+      #  ...
+
       line = proc.stdout.readline()
-      if line != '':
-        print line
-      else:
+      if line == '':
         break
 
-    return {}
+      if line.startswith("-----"):
+        hs_string = last_line.split(":")[1].strip()
+        port_stripped = second_to_last_line.split(":")[1].lstrip()
+        out_port_string = port_stripped[0:port_stripped.index(",")]
+        out_port = int(out_port_string)
+        # TODO(cs): debug the code below to get human readable headerspace
+        # strings
+        #readable_hs = headerspace(of.hs_format)
+        #readable_hs.add_hs(hs_string_to_byte_array(hs_string))
+        #omega[start_port].append((readable_hs, out_port))
+        omega[start_port].append((hs_string, out_port))
+
+      second_to_last_line = last_line
+      last_line = line
+
+    return omega
 
 def print_reachability(paths, reverse_map):
     for p_node in paths:
