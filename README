@@ -2,7 +2,7 @@ See http://ucb-sts.github.com/sts/ for an html version of this file.
 
 Ever had to painstakingly dig through logs to find the one or two inputs that lead your controller software to break? sts seeks to eliminate this need, freeing you to debug the problematic code itself.
 
-sts is intended for distributed SDN control software such as [Floodlight](http://floodlight.openflowhub.org/).  sts simulates the devices of your network in a deterministic runtime environment, allowing fine-grained control over the inputs to unmodified* controllers.
+sts is intended for distributed SDN control software such as [Floodlight](http://floodlight.openflowhub.org/).  sts simulates the devices of your network in a deterministic runtime environment, allowing fine-grained control over the inputs to your unmodified* controller(s).
 
 ![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/sts_arch.jpg)
 
@@ -10,10 +10,10 @@ Beyond troubleshooting, sts is also useful as a framework for programmatically g
 
 ### Installation
 
-sts depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install sts, you'll just need to clone the pox repository:
+sts depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install sts, you'll just need to clone both repositories:
 
 ```
-$ git clone git://github.com/colin-scott/sts.git
+$ git clone git://github.com/ucb-sts/sts.git
 $ cd sts
 $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 ```
@@ -46,7 +46,7 @@ The config/ directory contains sample configurations. You can specify your own c
 $ ./simulator.py -c config.my_config
 ```
 
-See [config/README](https://github.com/colin-scott/sts/blob/master/config/README) for more information.
+See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README) for more information.
 
 ### Version Notes
 
@@ -56,6 +56,6 @@ sts will automatically use [pypy](http://pypy.org/) as its interpreter if you pl
 
 ### Research
 
-For more information about the research behind sts, see our paper [draft](http://www.eecs.berkeley.edu/~rcs/research/hotnets12.pdf).
+For more information about the research behind sts, see our paper [draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf).
 
 *Automatic invariant checking requires an interface to the controllers' view of the network policy.
