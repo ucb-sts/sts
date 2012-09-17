@@ -12,6 +12,9 @@ import collections
 log = logging.getLogger("invariant_checker")
 
 class InvariantChecker(object):
+  def __init__(self, snapshotService):
+    self.snapshotService = snapshotService
+
   def fetch_controller_snapshot(self, simulation):
     self.snapshotService.fetchSnapshot()
     return self.snapshotService.snapshot

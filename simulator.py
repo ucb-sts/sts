@@ -31,6 +31,7 @@ from sts.control_flow import Fuzzer
 from sts.invariant_checker import InvariantChecker
 from sts.simulation import Simulation
 from pox.lib.recoco.recoco import Scheduler
+from sts.snapshot import PoxSnapshotService, FloodlightSnapshotService
 
 import signal
 import sys
@@ -95,8 +96,7 @@ else:
   # We default to a Fuzzer
   simulator = Fuzzer()
 
-# For snapshot service
-from sts.snapshot import *
+# For snapshotting the controller
 # Read from config what controller we are using
 if controller_configs != [] and controller_configs[0].name == "pox":
   snapshotService = PoxSnapshotService()
@@ -105,8 +105,8 @@ elif controller_configs != [] and controller_configs[0].name == "floodlight":
 else:
   # We default snapshotService to POX
   snapshotService = PoxSnapshotService()
-# Hacky way to pass the right snapshot service to the invariantchecker
-simulator.invariant_checker.snapshotService = snapshotService
+
+simulator.set_invariant_checker(InvariantChecker(snapshotService))
 
 # For injecting dataplane packets into the simulated network
 if hasattr(config, 'dataplane_trace') and config.dataplane_trace:

@@ -28,7 +28,10 @@ log = logging.getLogger("control_flow")
 class ControlFlow(object):
   ''' Superclass of ControlFlow types '''
   def __init__(self):
-    self.invariant_checker = InvariantChecker()
+    self.invariant_checker = None
+
+  def set_invariant_checker(invariant_checker):
+    self.invariant_checker = invariant_checker
 
   def simulate(self, simulation):
     ''' Move the simulation forward! Take the state of the system as a
