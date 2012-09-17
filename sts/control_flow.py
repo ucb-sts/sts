@@ -30,7 +30,7 @@ class ControlFlow(object):
   def __init__(self):
     self.invariant_checker = None
 
-  def set_invariant_checker(invariant_checker):
+  def set_invariant_checker(self, invariant_checker):
     self.invariant_checker = invariant_checker
 
   def simulate(self, simulation):
