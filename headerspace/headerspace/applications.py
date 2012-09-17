@@ -140,7 +140,7 @@ HASSEL_TF_PATH = HASSEL_C_PATH + "/tfs/sts"
 
 # Omega defines the externally visible behavior of the network. Defined as a table:
 #   (header space, edge_port) -> [(header_space, final_location),(header_space, final_location)...]
-def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
+def compute_omega(name_tf_pairs, TTF, edge_links):
   omega = {}
 
   # Nuke old TF object files
@@ -149,7 +149,8 @@ def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
     os.unlink(path)
 
   # Write out TF for each switch, and TTF to object files
-  NTF.save_object_to_file(HASSEL_TF_PATH + "/ntf.tf")
+  for name, tf in name_tf_pairs:
+    tf.save_object_to_file(HASSEL_TF_PATH + "/" + name + ".tf")
   TTF.save_object_to_file(HASSEL_TF_PATH + "/topology.tf")
 
   # Generate the .dat file
@@ -163,13 +164,13 @@ def compute_omega(NTF, TTF, edge_links, reverse_map={}, test_packet=None):
   print "edge_ports: %s" % edge_ports
   
   for start_port in edge_ports:
-    port_omega = compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map, test_packet)
+    port_omega = compute_single_omega(start_port, edge_ports)
     omega = dict(omega.items() + port_omega.items()) 
   
   os.chdir(old_cwd)
   return omega
     
-def compute_single_omega(NTF, TTF, start_port, edge_ports, reverse_map={}, test_packet=None):
+def compute_single_omega(start_port, edge_ports):
     if type(start_port) != int:
       start_port = get_uniq_port_id(start_port.switch, start_port.switch_port)
       

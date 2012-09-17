@@ -33,42 +33,39 @@ class InvariantChecker(object):
 
   def check_correspondence(self, simulation):
     ''' Return if there were any policy-violations '''
-    log.debug("Snapshotting controller...")
-    controller_snapshot = self.fetch_controller_snapshot(simulation)
+    #log.debug("Snapshotting controller...")
+    #controller_snapshot = self.fetch_controller_snapshot(simulation)
     log.debug("Computing physical omega...")
     physical_omega = self.compute_physical_omega(simulation.topology.live_switches,
                                                  simulation.topology.live_links,
                                                  simulation.topology.access_links)
-    log.debug("Computing controller omega...")
-    controller_omega = self.compute_controller_omega(controller_snapshot,
-                                                     simulation.topology.live_switches,
-                                                     simulation.topology.live_links,
-                                                     simulation.topology.access_links)
-    return self.infer_policy_violations(physical_omega, controller_omega)
+    print physical_omega
+    #log.debug("Computing controller omega...")
+    #controller_omega = self.compute_controller_omega(controller_snapshot,
+    #                                                 simulation.topology.live_switches,
+    #                                                 simulation.topology.live_links,
+    #                                                 simulation.topology.access_links)
+    #return self.infer_policy_violations(physical_omega, controller_omega)
 
   # --------------------------------------------------------------#
   #                    HSA utilities                              #
   # --------------------------------------------------------------#
   def compute_physical_omega(self, live_switches, live_links, edge_links):
-    (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
-    physical_omega = hsa.compute_omega(NTF, TTF, edge_links)
+    (name_tf_pairs, TTF) = self._get_transfer_functions(live_switches, live_links)
+    physical_omega = hsa.compute_omega(name_tf_pairs, TTF, edge_links)
     return physical_omega
 
   def compute_controller_omega(self, controller_snapshot, live_switches, live_links, edge_links):
-    NTF = hsa_topo.NTF_from_snapshot(controller_snapshot, live_switches)
+    name_tf_pairs = hsa_topo.tf_pairs_from_snapshot(controller_snapshot, live_switches)
     # Frenetic doesn't store any link or host information.
     # No virtualization though, so we can assume the same TTF. TODO(cs): for now...
     TTF = hsa_topo.generate_TTF(live_links)
-    return hsa.compute_omega(NTF, TTF, edge_links)
-
-  def compute_single_omega(self, start_link, live_switches, live_links, edge_links):
-    (NTF, TTF) = self._get_transfer_functions(live_switches, live_links)
-    return hsa.compute_single_omega(NTF, TTF, start_link, edge_links)
+    return hsa.compute_omega(name_tf_pairs, TTF, edge_links)
 
   def _get_transfer_functions(self, live_switches, live_links):
-    NTF = hsa_topo.generate_NTF(live_switches)
+    name_tf_pairs = hsa_topo.generate_tf_pairs(live_switches)
     TTF = hsa_topo.generate_TTF(live_links)
-    return (NTF, TTF)
+    return (name_tf_pairs, TTF)
 
   def infer_policy_violations(self, physical_omega, controller_omega):
     ''' Return if there were any missing entries '''

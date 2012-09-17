@@ -27,18 +27,21 @@ def generate_TTF(all_links):
   print "TTF: %s" % str(ttf)
   return ttf
 
-def generate_NTF(switches):
-  ntf = tf.TF(of.HS_FORMAT())
+def generate_tf_pairs(switches):
+  name_tf_pairs = []
   for switch in switches:
     print "SWITCH", switch
-    of.generate_transfer_function(ntf, switch)
-  print "NTF: %s" % str(ntf)
-  return ntf
+    switch_tf = tf.TF(of.HS_FORMAT())
+    of.generate_transfer_function(switch_tf, switch)
+    name_tf_pairs.append((switch.name, switch_tf))
+    print "TF", switch_tf
+  return name_tf_pairs
 
-def NTF_from_snapshot(snapshot, real_switches):
-  ntf = tf.TF(of.HS_FORMAT())
+def tf_pairs_from_snapshot(snapshot, real_switches):
+  name_tf_pairs = []
   for switch in snapshot.switches:
     real_switch = find(lambda sw: sw.dpid == switch.dpid, real_switches)
-    of.tf_from_switch(ntf, switch, real_switch)
-  print "NTF: %s" % str(ntf)
-  return ntf
+    switch_tf = tf.TF(of.HS_FORMAT())
+    of.tf_from_switch(switch_tf, switch, real_switch)
+    name_tf_pairs.append((switch.name, switch_tf))
+  return name_tf_pairs
