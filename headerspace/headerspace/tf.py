@@ -647,13 +647,13 @@ class TF(object):
     f.write("#\n")
     for rule in self.rules:
       f.write("%s$"%rule["action"])
-      f.write("%s$"%rule["in_ports"])
+      f.write("%s$"%list(rule["in_ports"]))
       f.write("%s$"%byte_array_to_hs_string(rule["match"]))
       f.write("%s$"%byte_array_to_hs_string(rule["mask"]))
       f.write("%s$"%byte_array_to_hs_string(rule["rewrite"]))
       f.write("%s$"%byte_array_to_hs_string(rule["inverse_match"]))
       f.write("%s$"%byte_array_to_hs_string(rule["inverse_rewrite"]))
-      f.write("%s$"%rule["out_ports"])
+      f.write("%s$"%list(rule["out_ports"]))
       f.write("#")
       for ra in rule["affected_by"]:
         f.write("%d;%s;%s#"%(self.rules.index(ra[0]),byte_array_to_hs_string(ra[1]),ra[2]))
