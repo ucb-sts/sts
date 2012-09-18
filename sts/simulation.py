@@ -105,7 +105,7 @@ class Simulation (object):
     # Boot the controllers
     controllers = []
     for c in self.controller_configs:
-      controller = Controller(c, self.controller_sync_callback)
+      controller = Controller(c, self.sync_connection_manager)
       controller.start()
       log.info("Launched controller c%s: %s [PID %d]" %
                (str(c.uuid), " ".join(c.expanded_cmdline), controller.pid))
