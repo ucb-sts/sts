@@ -17,21 +17,23 @@ from sts.entities import Host, Controller
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
+_running_simulation = None
+def handle_int(sigspec, frame):
+  print >> sys.stderr, "Caught signal %d, stopping sdndebug" % sigspec
+  if _running_simulation is not None:
+    _running_simulation.clean_up()
+  raise RuntimeError("terminating on signal %d" % sigspec)
+
+
+signal.signal(signal.SIGINT, handle_int)
+signal.signal(signal.SIGTERM, handle_int)
+
+
 class ReplayerTest(unittest.TestCase):
   tmp_basic_superlog = '/tmp/superlog_basic.tmp'
   tmp_controller_superlog = '/tmp/superlog_controller.tmp'
   tmp_dataplane_superlog = '/tmp/superlog_dataplane.tmp'
   tmp_migration_superlog = '/tmp/superlog_migration.tmp'
-
-  def handle_int(signal, frame):
-    print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
-    if self.simulation is not None:
-      self.simulation.clean_up()
-    sys.exit(0)
-
-  signal.signal(signal.SIGINT, handle_int)
-  signal.signal(signal.SIGTERM, handle_int)
-
 
   # ------------------------------------------ #
   #        Basic Test                          #
@@ -60,8 +62,10 @@ class ReplayerTest(unittest.TestCase):
     topology_class = FatTree
     topology_params = ""
     patch_panel_class = PatchPanel
-    self.simulation = Simulation(controllers, topology_class, topology_params, patch_panel_class)
-    return self.simulation
+    sim = Simulation(controllers, topology_class, topology_params, patch_panel_class)
+    global _running_simulation
+    _running_simulation = sim
+    return sim
 
   def test_basic(self):
     try:
