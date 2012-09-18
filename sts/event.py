@@ -86,6 +86,8 @@ class Event(object):
   def __init__(self, json_hash):
     assert('label' in json_hash)
     self.label = json_hash['label']
+    assert('time' in json_hash)
+    self.time = tuple(json_hash['time'])
 
   @abc.abstractmethod
   def proceed(self, simulation):

@@ -20,10 +20,10 @@ class superlog_parser_test(unittest.TestCase):
     ''' Returns the file. Make sure to close afterwards! '''
     superlog = open(self.tmpfile, 'w')
     e1 = str('''{"dependent_labels": ["e2"], "start_dpid": 1, "class": "LinkFailure",'''
-             ''' "start_port_no": 1, "end_dpid": 2, "end_port_no": 1, "label": "e1"}''')
+             ''' "start_port_no": 1, "end_dpid": 2, "end_port_no": 1, "label": "e1", "time": [0,0]}''')
     superlog.write(e1 + '\n')
     e2 = str('''{"dependent_labels": [], "start_dpid": 1, "class": "LinkRecovery",'''
-             ''' "start_port_no": 1, "end_dpid": 2, "end_port_no": 1, "label": "e2"}''')
+             ''' "start_port_no": 1, "end_dpid": 2, "end_port_no": 1, "label": "e2", "time": [0,0]}''')
     superlog.write(e2 + '\n')
     superlog.close()
 

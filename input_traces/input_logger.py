@@ -3,6 +3,7 @@ import itertools
 import os
 import time
 import dataplane_traces.trace_generator as tg
+from sts.syncproto.base import SyncTime
 
 config_template = '''
 from experiment_config_lib import ControllerConfig
@@ -53,6 +54,12 @@ class InputLogger(object):
     # Add on dependent labels to appease log_processing.superlog_parser.
     # TODO(cs): Replayer shouldn't depend on superlog_parser
     kws['dependent_labels'] = []
+
+    # Assign each logged event a time
+    # TODO(cs): compress time for interactive mode?
+    if 'time' not in kws:
+      kws['time'] = SyncTime.now()
+
     json_hash = json.dumps(kws)
     self.output.write(json_hash + '\n')
 
