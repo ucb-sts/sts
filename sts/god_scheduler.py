@@ -12,6 +12,7 @@ class GodScheduler(object):
     # keep around a queue for each switch of pending openflow messages waiting to
     # arrive at the switches.
     # { pending receive -> [(connection, pending ofp)_1, (connection, pending ofp)_2, ...] }
+    # TODO(cs): garbage collect me
     self.pendingreceive2conn_messages = defaultdict(list)
 
   def message_waiting(self, pending_receipt):
