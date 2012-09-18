@@ -91,7 +91,7 @@ class ReplayerTest(unittest.TestCase):
     superlog.close()
 
   def setup_controller_simulation(self, controller_sync_callback):
-    cmdline = "./pox.py --no-cli sts.syncproto.pox_syncer openflow.of_01 --address=__address__ --port=__port__"
+    cmdline = "./pox.py --verbose --no-cli sts.syncproto.pox_syncer openflow.of_01 --address=__address__ --port=__port__"
     controllers = [ControllerConfig(cwd='pox', cmdline=cmdline, address="127.0.0.1", port=8899, sync="tcp:localhost:18899")]
     topology_class = FatTree
     topology_params = ""
