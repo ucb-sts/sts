@@ -31,10 +31,7 @@ def kill_procs(child_processes, kill=None, verbose=True, timeout=5):
   start_time = time.time()
   last_dot = start_time
   while True:
-    for child in child_processes:
-      if child.poll() != None:
-        if child in child_processes:
-          child_processes.remove(child)
+    child_processes = [ child for child in child_processes if child.poll() is None ]
     if len(child_processes) == 0:
       break
     time.sleep(0.1)
