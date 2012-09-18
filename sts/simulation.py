@@ -99,7 +99,8 @@ class Simulation (object):
     # tell sts.console to use our io_master
     msg.set_io_master(self._io_master)
 
-    self.sync_connection_manager = STSSyncConnectionManager(self._io_master, self.controller_sync_callback)
+    self.sync_connection_manager = STSSyncConnectionManager(self._io_master,
+                                                            self.controller_sync_callback)
 
     # Boot the controllers
     controllers = []
