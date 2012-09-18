@@ -6,13 +6,14 @@ import os
 import itertools
 from copy import copy
 import types
+import signal
 import tempfile
 
 from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import Replayer
 from sts.topology import FatTree, PatchPanel, MeshTopology
 from sts.simulation import Simulation
-from sts.entities import Host
+from sts.entities import Host, Controller
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
@@ -21,6 +22,16 @@ class ReplayerTest(unittest.TestCase):
   tmp_controller_superlog = '/tmp/superlog_controller.tmp'
   tmp_dataplane_superlog = '/tmp/superlog_dataplane.tmp'
   tmp_migration_superlog = '/tmp/superlog_migration.tmp'
+
+  def handle_int(signal, frame):
+    print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
+    if self.simulation is not None:
+      self.simulation.clean_up()
+    sys.exit(0)
+
+  signal.signal(signal.SIGINT, handle_int)
+  signal.signal(signal.SIGTERM, handle_int)
+
 
   # ------------------------------------------ #
   #        Basic Test                          #
@@ -49,7 +60,8 @@ class ReplayerTest(unittest.TestCase):
     topology_class = FatTree
     topology_params = ""
     patch_panel_class = PatchPanel
-    return Simulation(controllers, topology_class, topology_params, patch_panel_class)
+    self.simulation = Simulation(controllers, topology_class, topology_params, patch_panel_class)
+    return self.simulation
 
   def test_basic(self):
     try:
@@ -74,21 +86,24 @@ class ReplayerTest(unittest.TestCase):
     superlog.write(e2 + '\n')
     superlog.close()
 
-  def setup_controller_simulation(self):
-    cmdline = "./pox/pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__"
-    controllers = [ControllerConfig(cmdline=cmdline, address="127.0.0.1", port=8899)]
+  def setup_controller_simulation(self, controller_sync_callback):
+    cmdline = "./pox.py --no-cli sts.syncproto.pox_syncer openflow.of_01 --address=__address__ --port=__port__"
+    controllers = [ControllerConfig(cwd='pox', cmdline=cmdline, address="127.0.0.1", port=8899, sync="tcp:localhost:18899")]
     topology_class = FatTree
     topology_params = ""
     patch_panel_class = PatchPanel
-    return Simulation(controllers, topology_class, topology_params, patch_panel_class)
+    return Simulation(controller_configs=controllers, topology_class=topology_class,
+        topology_params=topology_params, patch_panel_class=patch_panel_class,
+        controller_sync_callback=controller_sync_callback)
 
   def test_controller_crash(self):
     try:
       self.write_controller_crash_superlog()
       replayer = Replayer(self.tmp_controller_superlog)
-      simulation = self.setup_controller_simulation()
+      simulation = self.setup_controller_simulation(controller_sync_callback=replayer.get_sync_callback())
       replayer.simulate(simulation)
     finally:
+      Controller.kill_active_procs()
       os.unlink(self.tmp_controller_superlog)
 
   # ------------------------------------------ #
