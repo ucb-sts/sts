@@ -56,6 +56,8 @@ class Replayer(ControlFlow):
     # The dag is codefied as a list, where each element has
     # a list of its dependents
     self.dag = EventDag(superlog_parser.parse_path(superlog_path))
+    # compute interpolate to time to be just before first event
+    self.compute_interpolated_time(self.dag.events().next())
 
   def get_interpolated_time(self):
     '''
