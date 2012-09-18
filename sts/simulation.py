@@ -36,7 +36,8 @@ class Simulation (object):
     - (Optionally) the dataplane trace
   """
   def __init__(self, controller_configs, topology_class,
-               topology_params, patch_panel_class, dataplane_trace_path=None):
+               topology_params, patch_panel_class, dataplane_trace_path=None,
+               controller_sync_callback=None):
     self.controller_configs = controller_configs
     self.controller_manager = None
     self.topology = None
@@ -49,6 +50,7 @@ class Simulation (object):
     self._dataplane_trace_path = dataplane_trace_path
     self._io_master = None
     self.god_scheduler = None
+    self.controller_sync_callback = controller_sync_callback
 
   # TODO(cs): the next three next methods should go in a separate
   #           ControllerContainer class
@@ -97,21 +99,12 @@ class Simulation (object):
     # tell sts.console to use our io_master
     msg.set_io_master(self._io_master)
 
-    class StateMaster:
-      def state_change(self, controller, time, fingerprint, name, value):
-        logger.info("controller: {} time: {} fingerprint: {} name: {} value: {}".format(controller, time, fingerprint, name, value))
-      def get_deterministic_value(self, controller, name):
-        if name == "gettimeofday":
-          return SyncTime.now()
-
-    state_logger = StateMaster()
-
-    self.sync_connection_manager = STSSyncConnectionManager(self._io_master, state_logger)
+    self.sync_connection_manager = STSSyncConnectionManager(self._io_master, self.controller_sync_callback)
 
     # Boot the controllers
     controllers = []
     for c in self.controller_configs:
-      controller = Controller(c, self.sync_connection_manager)
+      controller = Controller(c, self.controller_sync_callback)
       controller.start()
       log.info("Launched controller c%s: %s [PID %d]" %
                (str(c.uuid), " ".join(c.expanded_cmdline), controller.pid))

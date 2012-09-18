@@ -78,3 +78,12 @@ class STSSyncConnectionManager(object):
     if connection in self.sync_connections:
       self.sync_connections.remove(connection)
 
+class STSSyncCallback:
+  """ override with your favorite functionality """
+  def state_change(self, controller, time, fingerprint, name, value):
+    logger.info("controller: {} time: {} fingerprint: {} name: {} value: {}".format(controller, time, fingerprint, name, value))
+  def get_deterministic_value(self, controller, name):
+    if name == "gettimeofday":
+      return SyncTime.now()
+
+

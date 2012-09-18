@@ -129,7 +129,8 @@ signal.signal(signal.SIGTERM, handle_int)
 try:
   simulation = Simulation(controller_configs, topology_class,
                           topology_params, patch_panel_class,
-                          dataplane_trace_path=dataplane_trace_path)
+                          dataplane_trace_path=dataplane_trace_path,
+                          controller_sync_callback=simulator.get_sync_callback())
   simulator.simulate(simulation)
 finally:
   if simulation is not None:

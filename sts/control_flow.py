@@ -14,6 +14,7 @@ from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.console import msg
 from sts.event import EventDag
+from sts.syncproto.sts_syncer import STSSyncCallback
 import log_processing.superlog_parser as superlog_parser
 
 import os
@@ -27,8 +28,9 @@ log = logging.getLogger("control_flow")
 
 class ControlFlow(object):
   ''' Superclass of ControlFlow types '''
-  def __init__(self):
+  def __init__(self, sync_callback):
     self.invariant_checker = None
+    self.sync_callback = sync_callback
 
   def set_invariant_checker(self, invariant_checker):
     self.invariant_checker = invariant_checker
@@ -38,12 +40,15 @@ class ControlFlow(object):
     parameter'''
     pass
 
+  def get_sync_callback(self):
+    return self.sync_callback
+
 class Replayer(ControlFlow):
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
   '''
   def __init__(self, superlog_path):
-    ControlFlow.__init__(self)
+    ControlFlow.__init__(self, None)
     # The dag is codefied as a list, where each element has
     # a list of its dependents
     self.dag = EventDag(superlog_parser.parse_path(superlog_path))
@@ -83,7 +88,7 @@ class Fuzzer(ControlFlow):
   def __init__(self, fuzzer_params="config.fuzzer_params",
                check_interval=35, trace_interval=10, random_seed=0.0,
                delay=0.1, steps=None, input_logger=None):
-    ControlFlow.__init__(self)
+    ControlFlow.__init__(self, RecordingSyncCallback(input_logger))
 
     self.check_interval = check_interval
     self.trace_interval = trace_interval
@@ -305,7 +310,7 @@ class Interactive(ControlFlow):
   #           the user to examine the state of the network interactively (i.e.,
   #           provide them with the normal POX cli + the simulated events
   def __init__(self, input_logger=None):
-    ControlFlow.__init__(self)
+    ControlFlow.__init__(self, RecordingSyncCallback(input_logger))
     self.logical_time = 0
     self._input_logger = input_logger
     # TODO(cs): future feature: allow the user to interactively choose the order
@@ -418,3 +423,18 @@ class Interactive(ControlFlow):
                             controller_id=pending_receipt.controller_id)
 
   # TODO(cs): add support for control channel blocking + switch, link, controller failures
+
+class RecordingSyncCallback(STSSyncCallback):
+  def __init__(self, input_logger):
+    self.input_logger = input_logger
+  def state_change(self, controller, time, fingerprint, name, value):
+    self.input_logger.log_input_event(klass="ControllerStateChange", controller=controller.name, time=time.as_float(), fingerprint=fingerprint, name=name, value=value)
+  def get_deterministic_value(self, controller, name):
+    value = None
+    if name == "gettimeofday":
+      value = SyncTime.now()
+    else:
+      raise ValueError("not support deterministic value: %s" % name)
+    self.input_logger.log_input_event(klass="DeterministicValue", controller=controller.name, time=time.as_float(), fingerprint=fingerprint, name=name, value=value)
+    return value
+
