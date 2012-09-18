@@ -60,6 +60,9 @@ parser.add_argument('-c', '--config',
                          '''subdirectory, e.g. config.fat_tree''')
 
 args = parser.parse_args()
+if args.config.endswith('.py'):
+  args.config = args.config[:-3].replace("/", ".")
+
 config = __import__(args.config, globals(), locals(), ["*"])
 
 # For instrumenting the controller
