@@ -37,7 +37,7 @@ class InputLogger(object):
     self.cfg_path = "./config/" + basename.replace(".trace", ".py")
 
   def log_input_event(self, **kws):
-    #### TODO: refactor logic to event classes - create to_json / from_json
+    #### TODO(aw): refactor logic to event classes - create to_json / from_json
     # assign a label
     kws['label'] = 'e' + str(self._label_gen.next())
     # 'class' is a reserved keyword, so we replace 'klass' with 'class'
