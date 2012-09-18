@@ -10,6 +10,8 @@ from input_traces.fingerprints import *
 import abc
 import logging
 import time
+from collections import namedtuple
+from sts.syncproto.base import SyncTime
 log = logging.getLogger("events")
 
 class EventDag(object):
@@ -363,6 +365,47 @@ class ControlMessageReceive(InternalEvent):
      return True
    return False
 
-all_internal_events = [MastershipChange, TimerEvent, DataplaneDrop,
-                       DataplanePermit, ControlChannelBlock,
-                       ControlChannelUnblock, ControlMessageReceive]
+# Controllers' internal events:
+
+# TODO(cs): move me?
+PendingStateChange = namedtuple('PendingStateChange',
+                                ['controller_id', 'time', 'fingerprint',
+                                 'name', 'value'])
+
+class ControllerStateChange(InternalEvent):
+  '''
+  Logged for any relevent kind of state change in the controller (e.g.
+  mastership change)
+  '''
+  def __init__(self, json_hash):
+    super(ControllerStateChange, self).__init__(json_hash)
+    assert('controller_id' in json_hash)
+    controller_id = tuple(json_hash['controller_id'])
+    assert('fingerprint' in json_hash)
+    fingerprint = json_hash['fingerprint']
+    assert('name' in json_hash)
+    name = json_hash['name']
+    assert('value' in json_hash)
+    value = json_hash['value']
+    self.pending_state_change = PendingStateChange(controller_id, self.time,
+                                                   fingerprint, name, value)
+
+  def proceed(self, simulation):
+    observed_yet = simulation.controller_sync_callback\
+                             .state_change_pending(self.pending_state_change)
+    if observed_yet:
+      simulation.controller_sync_callback\
+                .gc_pending_state_change(self.pending_state_change)
+      return True
+    return False
+
+class DeterministicValue(InternalEvent):
+  '''
+  Logged whenever the controller asks for a deterministic value (e.g.
+  gettimeofday()
+  '''
+  pass
+
+all_internal_events = [DataplaneDrop, DataplanePermit, ControlChannelBlock,
+                       ControlChannelUnblock, ControlMessageReceive,
+                       ControllerStateChange, DeterministicValue]

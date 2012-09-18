@@ -13,9 +13,10 @@ from invariant_checker import InvariantChecker
 from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.console import msg
-from sts.event import EventDag
+from sts.event import EventDag, PendingStateChange
 from sts.syncproto.sts_syncer import STSSyncCallback
 import log_processing.superlog_parser as superlog_parser
+from sts.syncproto.base import SyncTime
 
 import os
 import sys
@@ -23,6 +24,7 @@ import threading
 import time
 import random
 import logging
+from collections import Counter
 
 log = logging.getLogger("control_flow")
 
@@ -44,17 +46,39 @@ class ControlFlow(object):
     return self.sync_callback
 
 class Replayer(ControlFlow):
+  time_epsilon_microseconds = 500
+
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
   '''
   def __init__(self, superlog_path):
-    ControlFlow.__init__(self, None)
+    ControlFlow.__init__(self, ReplaySyncCallback(self.get_interpolated_time))
     # The dag is codefied as a list, where each element has
     # a list of its dependents
     self.dag = EventDag(superlog_parser.parse_path(superlog_path))
 
+  def get_interpolated_time(self):
+    '''
+    During divergence, the controller may ask for the current time more or
+    less times than they did in the original run. We control the time, so we
+    need to give them some answer. The answers we give them should be
+    (i) monotonically increasing, and (ii) between the time of the last
+    recorded ("landmark") event and the next landmark event, and (iii)
+    as close to the recorded times as possible
+
+    Our temporary solution is to always return the time right before the next
+    landmark
+    '''
+    # TODO(cs): implement Andi's improved time heuristic
+    return self.interpolated_time
+
+  def compute_interpolated_time(self, current_event):
+    next_time = current_event.time
+    just_before_micro = next_time.microSeconds - self.time_epsilon_microseconds
+    just_before_micro = max(0, just_before_micro)
+    self.interpolated_time = SyncTime(next_time.seconds, just_before_micro)
+
   def increment_round(self):
-    # TODO(cs): complete this method
     pass
 
   def simulate(self, simulation):
@@ -62,6 +86,7 @@ class Replayer(ControlFlow):
 
     self.simulation.bootstrap()
     for event_watcher in self.dag.event_watchers():
+      self.compute_interpolated_time(event_watcher.event)
       event_watcher.run(simulation)
       self.increment_round()
       # TODO(cs): check correspondence
@@ -424,17 +449,66 @@ class Interactive(ControlFlow):
 
   # TODO(cs): add support for control channel blocking + switch, link, controller failures
 
+# ---------------------------------------- #
+#  Callbacks for controller sync messages  #
+# ---------------------------------------- #
+
+class ReplaySyncCallback(STSSyncCallback):
+  def __init__(self, get_interpolated_time):
+    self.get_interpolated_time = get_interpolated_time
+    # TODO(cs): move buffering functionality into the GodScheduler? Or a
+    # separate class?
+    # Python's Counter object is effectively a multiset
+    # TODO(cs): garbage collect me
+    self.pending_state_changes = Counter()
+
+  def state_change_pending(self, pending_state_change):
+    ''' Return whether the PendingStateChange has been observed '''
+    return self.pending_state_changes[pending_state_change] > 0
+
+  def gc_pending_state_change(self, pending_state_change):
+    ''' Garbage collect the PendingStateChange from our buffer'''
+    self.pending_state_changes[pending_state_change] -= 1
+    if self.pending_state_changes[pending_state_change] <= 0:
+      del self.pending_state_changes[pending_state_change]
+
+  def state_change(self, controller, time, fingerprint, name, value):
+    # TODO(cs): unblock the controller after processing the state change?
+    pending_state_change = PendingStateChange(controller.uuid, time,
+                                              fingerprint, name, value)
+    self.pending_state_changes[pending_state_change] += 1
+
+  def get_deterministic_value(self, controller, name):
+    if name == "gettimeofday":
+      # Note: not a method, but a bound function
+      value = self.get_interpolated_time()
+      # TODO(cs): implement Andi's improved gettime heuristic
+    else:
+      raise ValueError("unsupported deterministic value: %s" % name)
+    return value
+
 class RecordingSyncCallback(STSSyncCallback):
   def __init__(self, input_logger):
     self.input_logger = input_logger
+
   def state_change(self, controller, time, fingerprint, name, value):
-    self.input_logger.log_input_event(klass="ControllerStateChange", controller=controller.name, time=time.as_float(), fingerprint=fingerprint, name=name, value=value)
+    self.input_logger.log_input_event(klass="ControllerStateChange",
+                                      controller_id=controller.uuid,
+                                      time=time, fingerprint=fingerprint,
+                                      name=name, value=value)
+
   def get_deterministic_value(self, controller, name):
     value = None
     if name == "gettimeofday":
       value = SyncTime.now()
+      time = value
     else:
-      raise ValueError("not support deterministic value: %s" % name)
-    self.input_logger.log_input_event(klass="DeterministicValue", controller=controller.name, time=time.as_float(), fingerprint=fingerprint, name=name, value=value)
-    return value
+      raise ValueError("unsupported deterministic value: %s" % name)
 
+    # TODO(cs): implement Andi's improved gettime heuristic, and uncomment
+    #           the following statement
+    #self.input_logger.log_input_event(klass="DeterministicValue",
+    #                                  controller_id=controller.uuid,
+    #                                  time=time, fingerprint="null",
+    #                                  name=name, value=value)
+    return value
