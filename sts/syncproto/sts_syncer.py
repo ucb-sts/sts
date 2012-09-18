@@ -4,13 +4,13 @@ import json
 import time
 
 from sts.io_master import IOMaster
-from sts.syncproto.base import SyncProtocolSpeaker, SyncMessage, SyncTime
+from sts.syncproto.base import SyncProtocolSpeaker, SyncMessage, SyncTime, SyncIODelegate
 
 from pox.lib.ioworker.io_worker import JSONIOWorker
 from pox.lib.util import parse_openflow_uri, connect_socket_with_backoff
 
 class STSSyncProtocolSpeaker(SyncProtocolSpeaker):
-  def __init__(self, controller, state_master, json_io_worker=None):
+  def __init__(self, controller, state_master, io_delegate):
     self.state_master = state_master
     self.controller = controller
 
@@ -18,7 +18,7 @@ class STSSyncProtocolSpeaker(SyncProtocolSpeaker):
         ("ASYNC", "StateChange"): self._log_state_change,
         ("REQUEST", "DeterministicValue"): self._get_deterministic_value
     }
-    SyncProtocolSpeaker.__init__(self, handlers, json_io_worker)
+    SyncProtocolSpeaker.__init__(self, handlers, io_delegate)
 
   def _log_state_change(self, message):
     self.state_master.state_change(self.controller, message.time, message.fingerPrint, message.name, message.value)
@@ -33,9 +33,10 @@ class STSSyncConnection(object):
   def __init__(self, controller, state_master, sync_uri):
     self.controller = controller
     (self.mode, self.host, self.port) = parse_openflow_uri(sync_uri)
+    self.state_master = state_master
     self._on_disconnect = []
-    self.speaker = STSSyncProtocolSpeaker(controller=controller, state_master=state_master)
     self.io_worker = None
+    self.speaker = None
 
   def on_disconnect(self, func):
     self._on_disconnect.append(func)
@@ -45,8 +46,9 @@ class STSSyncConnection(object):
       raise RuntimeError("only tcp (active) mode supported by now")
 
     socket = connect_socket_with_backoff(self.host, self.port)
-    self.io_worker = JSONIOWorker(io_master.create_worker_for_socket(socket))
-    self.speaker.io_worker = self.io_worker
+    self.io_delegate = SyncIODelegate(io_master, socket)
+    self.speaker = STSSyncProtocolSpeaker(controller=self.controller,
+        state_master=self.state_master, io_delegate=self.io_delegate)
 
   def disconnect(self):
     if(self.io_worker):
@@ -56,6 +58,12 @@ class STSSyncConnection(object):
 
   def close(self):
     self.disconnect()
+
+  def get_nom_snapshot(self):
+    if self.speaker:
+      return self.speaker.sync_request("NOMSnapshot", "")
+    else:
+      log.warn("STSSyncConnection: not connected. cannot handle requests")
 
 class STSSyncConnectionManager(object):
   """the connection manager for the STS sync protocols.

@@ -4,33 +4,56 @@ import os
 import socket
 
 from pox.lib.ioworker.io_worker import JSONIOWorker
+from pox.lib.graph.util import NOMEncoder
 
 from sts.io_master import IOMaster
-from sts.syncproto.base import SyncTime, SyncMessage, SyncProtocolSpeaker
+from sts.syncproto.base import SyncTime, SyncMessage, SyncProtocolSpeaker, SyncIODelegate
 from pox.lib.util import parse_openflow_uri
+from pox.lib.recoco import Task, Select
 
 log = logging.getLogger("pox_syncer")
 
 # POX Module launch method
 def launch():
   if "sts_sync" in os.environ:
+
     sts_sync = os.environ["sts_sync"]
     log.info("starting sts sync for spec: %s" % sts_sync)
-    sync_master = POXSyncMaster()
+
+    from pox.core import core
+    io_master = POXIOMaster()
+    io_master.start(core.scheduler)
+
+    sync_master = POXSyncMaster(io_master)
     sync_master.start(sts_sync)
   else:
     log.info("no sts_sync variable found in environment. Not starting pox_syncer")
 
-class POXSyncMaster(object):
+class POXIOMaster(IOMaster, Task):
+  """ horrible clutch of a hack that is both a regular select loop and a POX task
+      yielding select (so it can be run by the recoco scheduler) """
+
+  _select_timeout = 5
+
   def __init__(self):
-    self.io_master = IOMaster()
+    IOMaster.__init__(self)
+    Task.__init__(self)
+
+  def run(self):
+    while True:
+      read_sockets, write_sockets, exception_sockets = self.grab_workers_rwe()
+      rlist, wlist, elist = yield Select(read_sockets, write_sockets, exception_sockets, self._select_timeout)
+      self.handle_workers_rwe(rlist, wlist, elist)
+
+class POXSyncMaster(object):
+  def __init__(self, io_master):
+    self.io_master = io_master
 
   def start(self, sync_uri):
     self.connection = POXSyncConnection(self.io_master, sync_uri)
     self.connection.listen()
     self.connection.wait_for_connect()
     self.patch_functions()
-
 
   def patch_functions(self):
     time._orig_time = time.time
@@ -42,8 +65,8 @@ class POXSyncMaster(object):
 class POXSyncConnection(object):
   def __init__(self, io_master, sync_uri):
     (self.mode, self.host, self.port) = parse_openflow_uri(sync_uri)
-    self.speaker = POXSyncProtocolSpeaker()
     self.io_master = io_master
+    self.speaker = None
 
   def listen(self):
     if self.mode != "ptcp":
@@ -59,33 +82,41 @@ class POXSyncConnection(object):
   def wait_for_connect(self):
     log.info("waiting for sts_sync connection on %s:%d" % (self.host, self.port))
     (socket, addr) = self.listen_socket.accept()
-    self.io_worker = JSONIOWorker(self.io_master.create_worker_for_socket(socket))
-    self.speaker.set_io_worker(self.io_worker)
+    self.speaker = POXSyncProtocolSpeaker(SyncIODelegate(self.io_master, socket))
 
   def request(self, messageClass, name):
-    message = self.speaker.send(SyncMessage(type="REQUEST", messageClass=messageClass, name=name))
-
-    while not self.speaker.has_response(message.xid):
-      self.io_master.select(0.2)
-
-    response = self.speaker.retrieve_response(message.xid)
-    return response.value
+    if self.speaker:
+      return self.speaker.sync_request(messageClass=messageClass, name=name)
+    else:
+      log.warn("POXSyncConnection: not connected. cannot handle requests")
 
 class POXSyncProtocolSpeaker(SyncProtocolSpeaker):
-  def __init__(self, json_io_worker=None):
-    self.received_responses = {}
+  def __init__(self, io_delegate=None):
+    self.snapshotter = POXNomSnapshotter()
 
     handlers = {
-      ("RESPONSE", "DeterministicValue"): self._set_deterministic_value
+      ("REQUEST", "NOMSnapshot"): self._get_nom_snapshot
     }
-    SyncProtocolSpeaker.__init__(self, handlers, json_io_worker)
+    SyncProtocolSpeaker.__init__(self, handlers, io_delegate)
 
-  def _set_deterministic_value(self, message):
-    self.received_responses[message.xid] = message
+  def _get_nom_snapshot(self, message):
+    snapshot = self.snapshotter.get_snapshot()
+    response = SyncMessage(type="RESPONSE", messageClass="NOMSnapshot", time=SyncTime.now(), xid = message.xid, value=snapshot)
+    self.send(response)
 
-  def has_response(self, xid):
-    return xid in self.received_responses
 
-  def retrieve_response(self, xid):
-    return self.received_responses.pop(xid)
+class POXNomSnapshotter(object):
+  def __init__(self):
+    self.encoder = NOMEncoder()
+
+  def get_snapshot(self):
+    nom = {"switches":[], "hosts":[], "links":[]}
+    for s in core.topology.getEntitiesOfType(Switch):
+      nom["switches"].append(self.myEncoder.encode(s))
+    for h in core.topology.getEntitiesOfType(Host):
+      nom["hosts"].append(self.myEncoder.encode(h))
+    for l in core.topology.getEntitiesOfType(Link):
+      nom["links"].append(self.myEncoder.encode(l))
+    return nom
+
 

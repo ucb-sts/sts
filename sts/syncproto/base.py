@@ -4,6 +4,7 @@ import json
 import logging
 import time
 
+from pox.lib.ioworker.io_worker import JSONIOWorker
 from pox.lib.util import parse_openflow_uri, connect_socket_with_backoff
 
 log = logging.getLogger("sync_connection")
@@ -49,38 +50,68 @@ class SyncMessage(collections.namedtuple('SyncMessage', ('type', 'messageClass',
 
     return super(cls, SyncMessage).__new__(cls, type=type, messageClass=messageClass, time=time, xid=xid, name=name, value=value, fingerPrint=fingerPrint)
 
+class SyncIODelegate(object):
+  def __init__(self, io_master, socket):
+    self.io_master = io_master
+    self.io_worker = JSONIOWorker(self.io_master.create_worker_for_socket(socket))
+
+  def wait_for_message(self):
+    self.io_master.select(None)
+
+  def send(self, msg):
+    self.io_worker.send(msg)
+
+  def get_on_message_received(self):
+    return self.io_worker.on_json_received
+
+  def set_on_message_received(self, f):
+    self.io_worker.on_json_received = lambda io_worker, msg: f(msg)
+
+  on_message_received = property(get_on_message_received, set_on_message_received)
+
 class SyncProtocolSpeaker(object):
   """ speaks the sts sync protocol """
-  def __init__(self, handlers, json_io_worker=None):
+  def __init__(self, handlers, io_delegate):
     self.xid_generator = itertools.count(1)
     self.handlers = handlers
-    self.set_io_worker(json_io_worker)
+    self.io = io_delegate
+    self.io.on_message_received = self.on_message_received
+    self.waiting_xids = set()
+    self.received_responses = {}
 
-  def get_io_worker(self):
-    return self._io_worker
-
-  def set_io_worker(self, json_io_worker):
-    self._io_worker = json_io_worker
-    if(self._io_worker):
-      self._io_worker.on_json_received = self.on_json_received
-
-  io_worker = property(get_io_worker, set_io_worker)
+  def message_with_xid(self, message):
+    if message.xid:
+      return message
+    else:
+      return message._replace(xid=self.xid_generator.next())
 
   def send(self, message):
-    if message.xid is None:
-      message = message._replace(xid=self.xid_generator.next())
-
-    if(self._io_worker):
-      self._io_worker.send(message._asdict())
+    message = self.message_with_xid(message)
+    self.io.send(message._asdict())
 
     return message
 
-  def on_json_received(self, worker, json_hash):
-    message = SyncMessage(**json_hash)
+  def on_message_received(self, msg_hash):
+    message = SyncMessage(**msg_hash)
     key = (message.type, message.messageClass)
+
+    if message.type == "RESPONSE" and message.xid in self.waiting_xids:
+      self.waiting_xids.discard(message.xid)
+      self.received_responses[message.xid] = message
+      return
+
     if key not in self.handlers:
       raise ValueError("Unknown message class: %s" % message.messageClass)
     # dispatch message
     self.handlers[key](message)
 
+  def sync_request(self, messageClass, name):
+    message = self.message_with_xid(SyncMessage(type="REQUEST", messageClass=messageClass, name=name))
+    self.waiting_xids.add(message.xid)
+    self.send(message)
+
+    while not message.xid in self.received_responses:
+      self.io.wait_for_message()
+
+    return self.received_responses.pop(message.xid).value
 
