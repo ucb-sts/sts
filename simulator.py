@@ -98,6 +98,7 @@ else:
 
 # For snapshotting the controller
 # Read from config what controller we are using
+# TODO(cs): move this demultiplexing to a factory method in snapshotservice.py
 if controller_configs != [] and controller_configs[0].name == "pox":
   snapshotService = PoxSnapshotService()
 elif controller_configs != [] and controller_configs[0].name == "floodlight":
@@ -115,8 +116,6 @@ else:
   # We default to no dataplane trace
   dataplane_trace_path = None
 
-simulation = None
-
 def handle_int(signal, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
   if simulation is not None:
@@ -125,6 +124,8 @@ def handle_int(signal, frame):
 
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
+
+simulation = None
 
 try:
   simulation = Simulation(controller_configs, topology_class,
