@@ -87,7 +87,7 @@ class Event(object):
     assert('label' in json_hash)
     self.label = json_hash['label']
     assert('time' in json_hash)
-    self.time = tuple(json_hash['time'])
+    self.time = SyncTime(json_hash['time'][0], json_hash['time'][1])
 
   @abc.abstractmethod
   def proceed(self, simulation):
@@ -264,15 +264,14 @@ class TrafficInjection(InputEvent):
 
 class WaitTime(InputEvent):
   def __init__(self, json_hash):
-    assert('time' in json_hash)
-    self.time = json_hash['time']
+    assert('wait_time' in json_hash)
+    self.wait_time = json_hash['wait_time']
     super(WaitTime, self).__init__(json_hash)
 
   def proceed(self, simulation):
-    log.info("WaitTime: pausing simulation for %f seconds" % (self.time))
-    time.sleep(self.time)
+    log.info("WaitTime: pausing simulation for %f seconds" % (self.wait_time))
+    time.sleep(self.wait_time)
     return True
-
 
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
