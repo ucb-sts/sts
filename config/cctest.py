@@ -4,8 +4,8 @@ from sts.control_flow import Interactive, Fuzzer
 from input_traces.input_logger import InputLogger
 
 # Use POX as our controller
-command_line = "./pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__ samples.topo forwarding.l2_learning messenger.messenger samples.nommessenger"
-controllers = [ControllerConfig(command_line, cwd="pox")]
+command_line = "./pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__ sts.syncproto.pox_syncer samples.topo forwarding.l2_learning messenger.messenger samples.nommessenger"
+controllers = [ControllerConfig(command_line, cwd="pox", sync="tcp:localhost:18889")]
 
 # Use a FatTree with 4 pods (already the default)
 # (specify the class, but don't instantiate the object)
