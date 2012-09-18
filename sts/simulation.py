@@ -50,6 +50,8 @@ class Simulation (object):
     self._dataplane_trace_path = dataplane_trace_path
     self._io_master = None
     self.god_scheduler = None
+    # TODO(cs): controller_sync_callback is currently stateful -> need to fix
+    # for correct bootstrap()'ing
     self.controller_sync_callback = controller_sync_callback
 
   # TODO(cs): the next three next methods should go in a separate
