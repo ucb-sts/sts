@@ -116,14 +116,19 @@ class IOMaster(object):
         break
       self.select(remaining)
 
-  def select(self, timeout=0):
+  def grab_workers_rwe(self):
     # Now grab workers
     read_sockets = list(self._workers) + [ self.pinger ]
     write_sockets = [ worker for worker in self._workers if worker._ready_to_send ]
     exception_sockets = list(self._workers)
+    return (read_sockets, write_sockets, exception_sockets)
 
+  def select(self, timeout=0):
+    read_sockets, write_sockets, exception_sockets = self.grab_workers_rwe()
     rlist, wlist, elist = select.select(read_sockets, write_sockets, exception_sockets, timeout)
+    self.handle_workers_rwe(rlist, wlist, elist)
 
+  def handle_workers_rwe(self, rlist, wlist, elist):
     if self.pinger in rlist:
       self.pinger.pongAll()
       rlist.remove(self.pinger)
