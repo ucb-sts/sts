@@ -280,16 +280,6 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
 #  Concrete classes of InternalEvents #
 # ----------------------------------- #
 
-# Controllers' internal events:
-
-class MastershipChange(InternalEvent):
-  def __init__(self, json_hash):
-    super(MastershipChange, self).__init__(json_hash)
-
-class TimerEvent(InternalEvent):
-  def __init__(self, json_hash):
-    super(TimerEvent, self).__init__(json_hash)
-
 # Simulator's internal events:
 
 class DataplaneDrop(InternalEvent):
@@ -324,8 +314,7 @@ class ControlChannelBlock(InternalEvent):
     assert('dpid' in json_hash)
     self.dpid = json_hash['dpid']
     assert('controller_uuid' in json_hash)
-    self.controller_uuid = (json_hash['controller_uuid'][0],
-                            json_hash['controller_uuid'][1])
+    self.controller_uuid = tuple(json_hash['controller_uuid'])
 
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
@@ -341,8 +330,7 @@ class ControlChannelUnblock(InternalEvent):
     assert('dpid' in json_hash)
     self.dpid = json_hash['dpid']
     assert('controller_uuid' in json_hash)
-    self.controller_uuid = (json_hash['controller_uuid'][0],
-                            json_hash['controller_uuid'][1])
+    self.controller_uuid = tuple(json_hash['controller_uuid'])
 
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
@@ -362,8 +350,7 @@ class ControlMessageReceive(InternalEvent):
     assert('dpid' in json_hash)
     dpid = json_hash['dpid']
     assert('controller_id' in json_hash)
-    controller_id = (json_hash['controller_id'][0],
-                     json_hash['controller_id'][1])
+    controller_id = tuple(json_hash['controller_id'])
     assert('fingerprint' in json_hash)
     fingerprint = OFFingerprint(json_hash['fingerprint'])
     self.pending_receive = PendingReceive(dpid, controller_id, fingerprint)
