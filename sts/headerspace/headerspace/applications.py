@@ -3,10 +3,10 @@ Created on Jan 27, 2011
 
 @author: peyman kazemian
 '''
-from headerspace.headerspace.hs import *
-from headerspace.headerspace.tf import *
-from headerspace.config_parser.openflow_parser import get_uniq_port_id
-import headerspace.config_parser.openflow_parser as of
+from sts.headerspace.headerspace.hs import *
+from sts.headerspace.headerspace.tf import *
+from sts.headerspace.config_parser.openflow_parser import get_uniq_port_id
+import sts.headerspace.config_parser.openflow_parser as of
 
 import sys
 import glob

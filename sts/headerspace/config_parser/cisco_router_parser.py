@@ -4,8 +4,8 @@ Created on May 11, 2011
 @author: peymankazemian
 '''
 from helper import *
-from headerspace.headerspace.tf import *
-from headerspace.headerspace.hs import *
+from sts.headerspace.headerspace.tf import *
+from sts.headerspace.headerspace.hs import *
 import re
 
 class ciscoRouter(object):

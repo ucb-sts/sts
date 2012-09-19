@@ -4,8 +4,8 @@ Created on Mar 7, 2012
 @author: rcs
 '''
 from helper import *
-from headerspace.headerspace.tf import *
-from headerspace.headerspace.hs import *
+from sts.headerspace.headerspace.tf import *
+from sts.headerspace.headerspace.hs import *
 from pox.openflow.libopenflow_01 import *
 from pox.openflow.flow_table import SwitchFlowTable, TableEntry
 from pox.openflow.software_switch import SoftwareSwitch

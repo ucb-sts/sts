@@ -3,9 +3,9 @@ Created on Jun 20, 2011
 
 @author: peymankazemian
 '''
-from headerspace.headerspace.hs import *
-from headerspace.headerspace.tf import *
-from headerspace.config_parser.helper import *
+from sts.headerspace.headerspace.hs import *
+from sts.headerspace.headerspace.tf import *
+from sts.headerspace.config_parser.helper import *
 import os
 
 def convert(ipsi,ipei):

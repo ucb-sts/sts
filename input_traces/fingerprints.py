@@ -2,7 +2,7 @@
 import abc
 from pox.openflow.libopenflow_01 import *
 from pox.lib.packet.ethernet import *
-import headerspace.config_parser.openflow_parser as hsa
+import sts.headerspace.config_parser.openflow_parser as hsa
 
 class Fingerprint(object):
   __metaclass__ = abc.ABCMeta
