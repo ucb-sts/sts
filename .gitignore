@@ -16,15 +16,15 @@ pypy/
 config/20*.py
 input_traces/20*.trace
 dataplane_traces/20*.trace
-headerspace/hassel-c/tfs/sts/*tf
-headerspace/hassel-c/data/*
-headerspace/hassel-c/build/*
-headerspace/hassel-c/gen
-headerspace/hassel-c/sts
-headerspace/hassel-c/i2
-headerspace/hassel-c/stanford
-headerspace/hassel-c/test
-headerspace/hassel-c/hs-test
+sts/headerspace/hassel-c/tfs/sts/*tf
+sts/headerspace/hassel-c/data/*
+sts/headerspace/hassel-c/build/*
+sts/headerspace/hassel-c/gen
+sts/headerspace/hassel-c/sts
+sts/headerspace/hassel-c/i2
+sts/headerspace/hassel-c/stanford
+sts/headerspace/hassel-c/test
+sts/headerspace/hassel-c/hs-test
 
 
 # ignore eclipse project files
