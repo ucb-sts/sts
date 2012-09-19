@@ -101,7 +101,7 @@ class SyncProtocolSpeaker(object):
       return
 
     if key not in self.handlers:
-      raise ValueError("Unknown message class: %s" % message.messageClass)
+      raise ValueError("%s: No message handler for: %s\nKnown handlers are: %s" % (type(self).__name__, str(key), ", ".join(map(lambda h: str(h), self.handlers))))
     # dispatch message
     self.handlers[key](message)
 
