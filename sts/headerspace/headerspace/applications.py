@@ -136,7 +136,7 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
 
 # TODO(cs): make this a parameter
 # TODO(cs): don't assume that cwd is the sts top directory
-HASSEL_C_PATH = "./headerspace/hassel-c"
+HASSEL_C_PATH = "./sts/headerspace/hassel-c"
 HASSEL_TF_PATH = HASSEL_C_PATH + "/tfs/sts"
 
 # Omega defines the externally visible behavior of the network. Defined as a table:
