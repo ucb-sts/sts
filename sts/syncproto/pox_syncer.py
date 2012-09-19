@@ -22,7 +22,7 @@ def launch():
 
     from pox.core import core
     io_master = POXIOMaster()
-    io_master.start(core.scheduler)
+    #io_master.start(core.scheduler)
 
     sync_master = POXSyncMaster(io_master)
     sync_master.start(sts_sync)
