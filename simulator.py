@@ -39,11 +39,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 log = logging.getLogger("sts")
 
-#import sts.dataplane_traces.trace_generator as tg
-#tg.generate_example_trace()
-#tg.generate_example_trace_same_subnet()
-#tg.generate_example_trace_fat_tree()
-
 description = """
 Run a simulation.
 Example usage:
