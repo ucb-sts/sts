@@ -59,4 +59,8 @@ sts will automatically use [pypy](http://pypy.org/) as its interpreter if you pl
 
 For more information about the research behind sts, see our paper [draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf).
 
+### Questions?
+
+Send questions or comments to sts-dev@googlegroups.com
+
 *Automatic invariant checking requires an interface to the controllers' view of the network policy.
