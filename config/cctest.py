@@ -19,7 +19,7 @@ topology_params = "num_switches=2"
 patch_panel_class = BufferedPatchPanel
 
 # Use a Fuzzer (already the default)
-control_flow = Fuzzer(check_interval=80)
+control_flow = Fuzzer(check_interval=40)
 
 # Specify None as the dataplane trace (already the default)
 # Otherwise, specify the path to the trace file
