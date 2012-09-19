@@ -4,8 +4,8 @@ Created on Mar 10, 2012
 @author: rcs
 '''
 
-import headerspace.headerspace.tf as tf
-import headerspace.config_parser.openflow_parser as of
+import sts.headerspace.headerspace.tf as tf
+import sts.headerspace.config_parser.openflow_parser as of
 
 # Python, Y U NO HAVE FIND BUILT IN
 def find(f, seq):

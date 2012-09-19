@@ -3,8 +3,8 @@ import urllib2
 
 from pox.openflow.libopenflow_01 import *
 from entities import *
-import headerspace.topology_loader.topology_loader as hsa_topo
-import headerspace.headerspace.applications as hsa
+import sts.headerspace.topology_loader.topology_loader as hsa_topo
+import sts.headerspace.headerspace.applications as hsa
 import pickle
 import logging
 import collections

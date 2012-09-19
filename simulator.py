@@ -8,20 +8,15 @@
 
 ''''echo -n
 export OPT="-O"
-export FLG=""
-if [[ "$(basename $0)" == "debug-pox.py" ]]; then
-  export OPT=""
-  export FLG="--debug"
-fi
 
 if [ -x pypy/bin/pypy ]; then
   exec pypy/bin/pypy $OPT "$0" $FLG "$@"
 fi
 
 if [ "$(type -P python2.7)" != "" ]; then
-  exec python2.7 $OPT "$0" $FLG "$@"
+  exec python2.7 $OPT "$0" "$@"
 fi
-exec python $OPT "$0" $FLG "$@"
+exec python $OPT "$0" "$@"
 '''
 
 from sts.procutils import kill_procs
@@ -31,7 +26,7 @@ from sts.control_flow import Fuzzer
 from sts.invariant_checker import InvariantChecker
 from sts.simulation import Simulation
 from pox.lib.recoco.recoco import Scheduler
-from sts.snapshot import PoxSnapshotService, FloodlightSnapshotService
+import sts.snapshot as snapshot
 
 import signal
 import sys
@@ -60,12 +55,13 @@ parser.add_argument('-c', '--config',
                          '''subdirectory, e.g. config.fat_tree''')
 
 args = parser.parse_args()
+# Allow configs to be specified as paths as well as module names
 if args.config.endswith('.py'):
   args.config = args.config[:-3].replace("/", ".")
 
 config = __import__(args.config, globals(), locals(), ["*"])
 
-# For instrumenting the controller
+# For booting controllers
 if hasattr(config, 'controllers'):
   controller_configs = config.controllers
 else:
@@ -99,17 +95,8 @@ else:
   # We default to a Fuzzer
   simulator = Fuzzer()
 
-# For snapshotting the controller
-# Read from config what controller we are using
-# TODO(cs): move this demultiplexing to a factory method in snapshotservice.py
-if controller_configs != [] and controller_configs[0].name == "pox":
-  snapshotService = PoxSnapshotService()
-elif controller_configs != [] and controller_configs[0].name == "floodlight":
-  snapshotService = FloodlightSnapshotService()
-else:
-  # We default snapshotService to POX
-  snapshotService = PoxSnapshotService()
-
+# For snapshotting the controller's view of the network configuration
+snapshotService = snapshot.get_snapshotservice(controller_configs)
 simulator.set_invariant_checker(InvariantChecker(snapshotService))
 
 # For injecting dataplane packets into the simulated network

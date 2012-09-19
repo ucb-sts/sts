@@ -6,7 +6,7 @@ Created on Jun 1, 2011
 
 import re
 from math import pow
-from headerspace.headerspace.hs import byte_array_get_bit, byte_array_set_bit, byte_array_to_hs_string
+from sts.headerspace.headerspace.hs import byte_array_get_bit, byte_array_set_bit, byte_array_to_hs_string
 
 def is_ip_address(str):
   ips = re.match('(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})\.(?:[\d]{1,3})', str)

@@ -15,7 +15,7 @@ from traffic_generator import TrafficGenerator
 from sts.console import msg
 from sts.event import EventDag, PendingStateChange
 from sts.syncproto.sts_syncer import STSSyncCallback
-import log_processing.superlog_parser as superlog_parser
+import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
 
 import os

@@ -40,10 +40,11 @@ Finally, you can use sts to replay previous executions of your controller and au
 $ ./simulator.py -c troubleshoot_pox_l2_learning
 ```
 
-The config/ directory contains sample configurations. You can specify your own config file by specifing its module name:
+The config/ directory contains sample configurations. You can specify your own
+config file by specifying its path:
 
 ```
-$ ./simulator.py -c config.my_config
+$ ./simulator.py -c config/my_config.py
 ```
 
 See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README) for more information.
@@ -57,5 +58,9 @@ sts will automatically use [pypy](http://pypy.org/) as its interpreter if you pl
 ### Research
 
 For more information about the research behind sts, see our paper [draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf).
+
+### Questions?
+
+Send questions or comments to sts-dev@googlegroups.com
 
 *Automatic invariant checking requires an interface to the controllers' view of the network policy.

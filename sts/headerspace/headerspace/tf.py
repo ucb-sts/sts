@@ -4,9 +4,9 @@ Created on Jan 24, 2011
 @author: peyman kazemian
 '''
 
-from headerspace.headerspace.hs import *
+from sts.headerspace.headerspace.hs import *
 from array import array
-from headerspace.headerspace.wildcard_dictionary import wildcard_dictionary
+from sts.headerspace.headerspace.wildcard_dictionary import wildcard_dictionary
 
 def ports_to_hex(ports):
   return map(port_to_hex, ports)

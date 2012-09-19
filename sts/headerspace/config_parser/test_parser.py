@@ -3,9 +3,9 @@ Created on Jul 5, 2011
 
 @author: peymankazemian
 '''
-from headerspace.headerspace.tf import *
-from headerspace.headerspace.hs import *
-from headerspace.config_parser.cisco_router_parser import ciscoRouter,dotted_ip_to_int
+from sts.headerspace.headerspace.tf import *
+from sts.headerspace.headerspace.hs import *
+from sts.headerspace.config_parser.cisco_router_parser import ciscoRouter,dotted_ip_to_int
 from time import time, clock
 
 if __name__ == '__main__':

@@ -4,8 +4,8 @@ Created on Jun 20, 2011
 @author: peymankazemian
 '''
 
-from headerspace.headerspace.hs import *
-from headerspace.headerspace.wildcard_dictionary import *
+from sts.headerspace.headerspace.hs import *
+from sts.headerspace.headerspace.wildcard_dictionary import *
 
 def test_hs_simple():
   hs = headerspace(2)
