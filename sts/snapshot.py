@@ -89,3 +89,13 @@ class FloodlightSnapshotService(SnapshotService):
     self.snapshot = snapshot
     return self.snapshot
 
+def get_snapshotservice(controller_configs):
+  # Read from config what controller we are using
+  # TODO(cs): allow for heterogenous controllers?
+  if controller_configs != [] and controller_configs[0].name == "pox":
+    snapshotService = PoxSnapshotService()
+  elif controller_configs != [] and controller_configs[0].name == "floodlight":
+    snapshotService = FloodlightSnapshotService()
+  else:
+    # We default snapshotService to POX
+    snapshotService = PoxSnapshotService()
