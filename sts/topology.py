@@ -16,7 +16,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
                   host3
 '''
 
-from input_traces.fingerprints import DPFingerprint
+from sts.input_traces.fingerprints import DPFingerprint
 from entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink
 from pox.openflow.software_switch import ofp_phy_port, DpPacketOut, SoftwareSwitch
 from pox.lib.addresses import EthAddr, IPAddr

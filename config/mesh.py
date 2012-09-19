@@ -1,7 +1,7 @@
 from experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology, BufferedPatchPanel
 from sts.control_flow import Interactive
-from input_traces.input_logger import InputLogger
+from sts.input_traces.input_logger import InputLogger
 
 # Use POX as our controller
 command_line = "./pox.py --no-cli --verbose openflow.of_01 --address=__address__ --port=__port__ sts.syncproto.pox_syncer samples.topo forwarding.l2_learning"

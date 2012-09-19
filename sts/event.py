@@ -6,7 +6,7 @@ Author: sw
 
 from sts.entities import Link
 from sts.god_scheduler import PendingReceive
-from input_traces.fingerprints import *
+from sts.input_traces.fingerprints import *
 import abc
 import logging
 import time

@@ -1,5 +1,5 @@
 from collections import defaultdict, namedtuple
-from input_traces.fingerprints import *
+from sts.input_traces.fingerprints import *
 
 # TODO(cs): move me to another file?
 class GodScheduler(object):

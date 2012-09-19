@@ -10,7 +10,7 @@ import logging
 import Queue
 import socket
 
-from input_traces.fingerprints import OFFingerprint
+from sts.input_traces.fingerprints import OFFingerprint
 from pox.lib.util import assert_type, makePinger
 from pox.lib.recoco import Select, Task
 from pox.lib.ioworker.io_worker import IOWorker
