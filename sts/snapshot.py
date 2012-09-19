@@ -99,3 +99,4 @@ def get_snapshotservice(controller_configs):
   else:
     # We default snapshotService to POX
     snapshotService = PoxSnapshotService()
+  return snapshotService
