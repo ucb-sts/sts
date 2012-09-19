@@ -2,7 +2,7 @@
 from pox.lib.packet.ethernet import *
 from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
-from dataplane_traces.trace import DataplaneEvent
+from sts.dataplane_traces.trace import DataplaneEvent
 
 class TrafficGenerator (object):
   """

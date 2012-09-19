@@ -2,7 +2,7 @@ import json
 import itertools
 import os
 import time
-import dataplane_traces.trace_generator as tg
+import sts.dataplane_traces.trace_generator as tg
 from sts.syncproto.base import SyncTime
 
 config_template = '''
