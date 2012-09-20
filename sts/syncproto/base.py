@@ -117,5 +117,5 @@ class SyncProtocolSpeaker(object):
     while not message.xid in self.received_responses:
       self.io.wait_for_message()
 
-    return self.received_responses.pop(message.xid).value
-
+    response = self.received_responses.pop(message.xid)
+    return response.value

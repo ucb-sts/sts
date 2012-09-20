@@ -48,6 +48,7 @@ class POXIOMaster(IOMaster, Task):
 class POXSyncMaster(object):
   def __init__(self, io_master):
     self.io_master = io_master
+    self._in_get_time = False
 
   def start(self, sync_uri):
     self.connection = POXSyncConnection(self.io_master, sync_uri)
@@ -56,11 +57,26 @@ class POXSyncMaster(object):
     self.patch_functions()
 
   def patch_functions(self):
+    if hasattr(time, "_orig_time"):
+      raise RuntimeError("Already patched")
     time._orig_time = time.time
     time.time = self.get_time
 
   def get_time(self):
-    return SyncTime(*self.connection.request("DeterministicValue", "gettimeofday")).as_float()
+    """ Hack alert: python logging use time.time(). That means that log statements in the determinism
+        protocols are going to invoke get_time again. Solve by returning the real time if we (get_time)
+        are in the stacktrace """
+
+    if self._in_get_time:
+      return time._orig_time()
+
+    try:
+      self._in_get_time = True
+      time_array = self.connection.request("DeterministicValue", "gettimeofday")
+      sync_time =  SyncTime(*time_array)
+      return sync_time.as_float()
+    finally:
+      self._in_get_time = False
 
 class POXSyncConnection(object):
   def __init__(self, io_master, sync_uri):
