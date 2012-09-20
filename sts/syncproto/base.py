@@ -88,9 +88,9 @@ class SyncProtocolSpeaker(object):
 
   def send(self, message):
     message = self.message_with_xid(message)
-    if(message.xid in self.sent_xids):
+    if((message.type, message.xid) in self.sent_xids):
       raise RuntimeError("Error sending message %s: XID %d already sent" % (str(message), message.xid))
-    self.sent_xids.add(message.xid)
+    self.sent_xids.add( (message.type, message.xid) )
     self.io.send(message._asdict())
 
     return message
