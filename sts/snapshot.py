@@ -35,13 +35,30 @@ class SnapshotService(object):
   def fetchSnapshot(self):
     pass
 
+class SyncProtoSnapshotService(SnapshotService):
+  def __init__(self):
+    SnapshotService.__init__(self)
+    self.myNOMDecoder = NOMDecoder()
+
+  def fetchSnapshot(self, controller):
+    jsonNOM = controller.sync_connection.get_nom_snapshot()
+
+    # Update local Snapshot object
+    self.snapshot.switches = [self.myNOMDecoder.decode(s) for s in jsonNOM["switches"]]
+    self.snapshot.hosts = [self.myNOMDecoder.decode(h) for h in jsonNOM["hosts"]]
+    self.snapshot.links = [self.myNOMDecoder.decode(l) for l in jsonNOM["links"]]
+    self.snapshot.time = time.time()
+
+    return self.snapshot
+
+
 class PoxSnapshotService(SnapshotService):
   def __init__(self):
     SnapshotService.__init__(self)
     self.port = 7790
     self.myNOMDecoder = NOMDecoder()
 
-  def fetchSnapshot(self):
+  def fetchSnapshot(self, controller):
     from pox.lib.util import connect_socket_with_backoff
     import socket
     snapshotSocket = connect_socket_with_backoff('127.0.0.1', self.port)
@@ -72,7 +89,7 @@ class FloodlightSnapshotService(SnapshotService):
   def __init__(self):
     SnapshotService.__init__(self)
 
-  def fetchSnapshot(self):
+  def fetchSnapshot(self, controller):
     req = urllib2.Request('http://localhost:8080/wm/core/proact')
     response = urllib2.urlopen(req)
     json_data = response.read()
@@ -92,7 +109,9 @@ class FloodlightSnapshotService(SnapshotService):
 def get_snapshotservice(controller_configs):
   # Read from config what controller we are using
   # TODO(cs): allow for heterogenous controllers?
-  if controller_configs != [] and controller_configs[0].name == "pox":
+  if controller_configs != [] and controller_configs[0].sync:
+    snapshotService = SyncProtoSnapshotService()
+  elif controller_configs != [] and controller_configs[0].name == "pox":
     snapshotService = PoxSnapshotService()
   elif controller_configs != [] and controller_configs[0].name == "floodlight":
     snapshotService = FloodlightSnapshotService()

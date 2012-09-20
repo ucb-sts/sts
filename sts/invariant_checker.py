@@ -15,8 +15,8 @@ class InvariantChecker(object):
   def __init__(self, snapshotService):
     self.snapshotService = snapshotService
 
-  def fetch_controller_snapshot(self, simulation):
-    self.snapshotService.fetchSnapshot()
+  def fetch_controller_snapshot(self, controller):
+    self.snapshotService.fetchSnapshot(controller)
     return self.snapshotService.snapshot
 
   # --------------------------------------------------------------#
@@ -36,8 +36,20 @@ class InvariantChecker(object):
 
   def check_correspondence(self, simulation):
     ''' Return if there were any policy-violations '''
-    log.debug("Snapshotting controller...")
-    controller_snapshot = self.fetch_controller_snapshot(simulation)
+
+    controller_snapshot = None
+    for controller in simulation.controller_manager.controllers:
+      log.debug("Snapshotting controller %s...", controller)
+      ### TODO: Do something useful with multiple controllers
+      if controller_snapshot is not None:
+        log.warn("Warning: multiple controllers unsupported. " +
+             "Will only consider the snapshot of the /last/ controller for now")
+      controller_snapshot = self.fetch_controller_snapshot(controller)
+
+    ### if necessary, split this up. Take snapshot of controller nom(s)
+    ### and simulation state from the main thread while everything is paused
+    ### the fork of a side thread for HSA computation if necessary.
+
     log.debug("Computing physical omega...")
     physical_omega = self.compute_physical_omega(simulation.topology.live_switches,
                                                  simulation.topology.live_links,

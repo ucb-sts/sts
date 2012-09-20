@@ -183,13 +183,16 @@ class Fuzzer(ControlFlow):
           msg.fail("There were policy-violations!")
         else:
           msg.interactive("No policy-violations!")
-      thread = threading.Thread(target=do_correspondence)
-      thread.start()
-      while thread.isAlive():
-        for switch in self.simulation.topology.live_switches:
-          # connection -> deferred io worker -> io worker
-          switch.send(of.ofp_echo_request().pack())
-        thread.join(2.0)
+      # use a non-threaded version of correspondence for now. otherwise
+      # communication / snapshotting has to be done in the main thread.
+      do_correspondence()
+      #thread = threading.Thread(target=do_correspondence)
+      #thread.start()
+      #while thread.isAlive():
+      #  for switch in self.simulation.topology.live_switches:
+      #    # connection -> deferred io worker -> io worker
+      #    switch.send(of.ofp_echo_request().pack())
+      #  thread.join(2.0)
 
   def maybe_inject_trace_event(self):
     if (self.simulation.dataplane_trace and

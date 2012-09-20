@@ -2,8 +2,12 @@ import logging
 import time
 import os
 import socket
+import threading
+import traceback
 
+from pox.core import core
 from pox.lib.ioworker.io_worker import JSONIOWorker
+from pox.lib.graph.nom import Switch, Host, Link
 from pox.lib.graph.util import NOMEncoder
 
 from sts.io_master import IOMaster
@@ -20,9 +24,8 @@ def launch():
     sts_sync = os.environ["sts_sync"]
     log.info("starting sts sync for spec: %s" % sts_sync)
 
-    from pox.core import core
     io_master = POXIOMaster()
-    #io_master.start(core.scheduler)
+    io_master.start(core.scheduler)
 
     sync_master = POXSyncMaster(io_master)
     sync_master.start(sts_sync)
@@ -128,11 +131,11 @@ class POXNomSnapshotter(object):
   def get_snapshot(self):
     nom = {"switches":[], "hosts":[], "links":[]}
     for s in core.topology.getEntitiesOfType(Switch):
-      nom["switches"].append(self.myEncoder.encode(s))
+      nom["switches"].append(self.encoder.encode(s))
     for h in core.topology.getEntitiesOfType(Host):
-      nom["hosts"].append(self.myEncoder.encode(h))
+      nom["hosts"].append(self.myencoder.encode(h))
     for l in core.topology.getEntitiesOfType(Link):
-      nom["links"].append(self.myEncoder.encode(l))
+      nom["links"].append(self.myencoder.encode(l))
     return nom
 
 
