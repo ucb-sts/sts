@@ -11,7 +11,7 @@ Encapsulates the state of the simulation, including:
 '''
 
 from sts.util.console import msg
-from sts.io_master import IOMaster
+from sts.util.io_master import IOMaster
 from sts.dataplane_traces.trace import Trace
 from entities import Link, Host, Controller, DeferredOFConnection
 from sts.topology import *
