@@ -82,10 +82,10 @@ class ReplayerTest(unittest.TestCase):
 
   def write_controller_crash_superlog(self):
     superlog = open(self.tmp_controller_superlog, 'w')
-    e1 = str('''{"dependent_labels": ["e2"], "uuid": ["127.0.0.1", 8899],'''
+    e1 = str('''{"dependent_labels": ["e2"], "controller_id": ["127.0.0.1", 8899],'''
              ''' "class": "ControllerFailure", "label": "e1", "time": [0,0]}''')
     superlog.write(e1 + '\n')
-    e2 = str('''{"dependent_labels": [], "uuid": ["127.0.0.1", 8899],'''
+    e2 = str('''{"dependent_labels": [], "controller_id": ["127.0.0.1", 8899],'''
              ''' "class": "ControllerRecovery", "label": "e2", "time": [0,0]}''')
     superlog.write(e2 + '\n')
     superlog.close()

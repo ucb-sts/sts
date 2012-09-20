@@ -131,22 +131,17 @@ class InputEvent(Event):
 #  Concrete classes of InputEvents  #
 # --------------------------------- #
 
-def assert_switch(json_hash):
-  assert('dpid' in json_hash)
-
-def assert_link(json_hash):
-  assert('start_dpid' in json_hash)
-  assert('start_port_no' in json_hash)
-  assert('end_dpid' in json_hash)
-  assert('end_port_no' in json_hash)
-
-def assert_controller(json_hash):
-  assert('uuid' in json_hash)
+def assert_fields_exist(json_hash, *args):
+  ''' assert that the fields exist in json_hash '''
+  fields = args
+  for field in fields:
+    if field not in json_hash:
+      raise ValueError("Field %s not in json_hash %s" % (field, str(json_hash)))
 
 class SwitchFailure(InputEvent):
   def __init__(self, json_hash):
     super(SwitchFailure, self).__init__(json_hash)
-    assert_switch(json_hash)
+    assert_fields_exist(json_hash, 'dpid')
     self.dpid = int(json_hash['dpid'])
 
   def proceed(self, simulation):
@@ -157,7 +152,7 @@ class SwitchFailure(InputEvent):
 class SwitchRecovery(InputEvent):
   def __init__(self, json_hash):
     super(SwitchRecovery, self).__init__(json_hash)
-    assert_switch(json_hash)
+    assert_fields_exist(json_hash, 'dpid')
     self.dpid = int(json_hash['dpid'])
 
   def proceed(self, simulation):
@@ -175,7 +170,8 @@ def get_link(link_event, simulation):
 class LinkFailure(InputEvent):
   def __init__(self, json_hash):
     super(LinkFailure, self).__init__(json_hash)
-    assert_link(json_hash)
+    assert_fields_exist(json_hash, 'start_dpid', 'start_port_no', 'end_dpid',
+                        'end_port_no')
     self.start_dpid = int(json_hash['start_dpid'])
     self.start_port_no = int(json_hash['start_port_no'])
     self.end_dpid = int(json_hash['end_dpid'])
@@ -189,7 +185,8 @@ class LinkFailure(InputEvent):
 class LinkRecovery(InputEvent):
   def __init__(self, json_hash):
     super(LinkRecovery, self).__init__(json_hash)
-    assert_link(json_hash)
+    assert_fields_exist(json_hash, 'start_dpid', 'start_port_no', 'end_dpid',
+                        'end_port_no')
     self.start_dpid = int(json_hash['start_dpid'])
     self.start_port_no = int(json_hash['start_port_no'])
     self.end_dpid = int(json_hash['end_dpid'])
@@ -203,37 +200,35 @@ class LinkRecovery(InputEvent):
 class ControllerFailure(InputEvent):
   def __init__(self, json_hash):
     super(ControllerFailure, self).__init__(json_hash)
-    assert_controller(json_hash)
-    uuid = json_hash['uuid']
-    self.uuid = (uuid[0], int(uuid[1]))
+    assert_fields_exist('controller_id')
+    controller_id = json_hash['controller_id']
+    self.controller_id = (controller_id[0], int(controller_id[1]))
 
   def proceed(self, simulation):
-    controller = simulation.controller_manager.get_controller(self.uuid)
+    controller = simulation.controller_manager.get_controller(self.controller_id)
     simulation.controller_manager.kill_controller(controller)
     return True
 
 class ControllerRecovery(InputEvent):
   def __init__(self, json_hash):
     super(ControllerRecovery, self).__init__(json_hash)
-    assert_controller(json_hash)
-    uuid = json_hash['uuid']
-    self.uuid = (uuid[0], int(uuid[1]))
+    assert_fields_exist(json_hash, 'controller_id')
+    controller_id = json_hash['controller_id']
+    self.controller_id = (controller_id[0], int(controller_id[1]))
 
   def proceed(self, simulation):
-    controller = simulation.controller_manager.get_controller(self.uuid)
+    controller = simulation.controller_manager.get_controller(self.controller_id)
     simulation.controller_manager.reboot_controller(controller)
     return True
 
 class HostMigration(InputEvent):
   def __init__(self, json_hash):
     super(HostMigration, self).__init__(json_hash)
-    assert('old_ingress_dpid' in json_hash)
+    assert_fields_exist(json_hash, 'old_ingress_dpid', 'old_ingress_port_no',
+                        'new_ingress_dpid', 'new_ingress_port_no')
     self.old_ingress_dpid = int(json_hash['old_ingress_dpid'])
-    assert('old_ingress_port_no' in json_hash)
     self.old_ingress_port_no = int(json_hash['old_ingress_port_no'])
-    assert('new_ingress_dpid' in json_hash)
     self.new_ingress_dpid = int(json_hash['new_ingress_dpid'])
-    assert('new_ingress_port_no' in json_hash)
     self.new_ingress_port_no = int(json_hash['new_ingress_port_no'])
 
   def proceed(self, simulation):
@@ -247,7 +242,7 @@ class HostMigration(InputEvent):
 class PolicyChange(InputEvent):
   def __init__(self, json_hash):
     super(PolicyChange, self).__init__(json_hash)
-    assert('request_type' in json_hash)
+    assert_fields_exist(json_hash, 'request_type')
     self.request_type = json_hash['request_type']
 
   def proceed(self, simulation):
@@ -266,7 +261,7 @@ class TrafficInjection(InputEvent):
 
 class WaitTime(InputEvent):
   def __init__(self, json_hash):
-    assert('wait_time' in json_hash)
+    assert_fields_exist(json_hash, 'wait_time')
     self.wait_time = json_hash['wait_time']
     super(WaitTime, self).__init__(json_hash)
 
@@ -288,7 +283,7 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
 class DataplaneDrop(InternalEvent):
   def __init__(self, json_hash):
     super(DataplaneDrop, self).__init__(json_hash)
-    assert('fingerprint' in json_hash)
+    assert_fields_exist(json_hash, 'fingerprint')
     self.fingerprint = json_hash['fingerprint']
 
   def proceed(self, simulation):
@@ -301,7 +296,7 @@ class DataplaneDrop(InternalEvent):
 class DataplanePermit(InternalEvent):
   def __init__(self, json_hash):
     super(DataplanePermit, self).__init__(json_hash)
-    assert('fingerprint' in json_hash)
+    assert_fields_exist(json_hash, 'fingerprint')
     self.fingerprint = DPFingerprint(json_hash['fingerprint'])
 
   def proceed(self, simulation):
@@ -314,14 +309,13 @@ class DataplanePermit(InternalEvent):
 class ControlChannelBlock(InternalEvent):
   def __init__(self, json_hash):
     super(ControlChannelBlock, self).__init__(json_hash)
-    assert('dpid' in json_hash)
+    assert_fields_exist(json_hash, 'dpid', 'controller_id')
     self.dpid = json_hash['dpid']
-    assert('controller_uuid' in json_hash)
-    self.controller_uuid = tuple(json_hash['controller_uuid'])
+    self.controller_id = tuple(json_hash['controller_id'])
 
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
-    connection = switch.get_connection(self.controller_uuid)
+    connection = switch.get_connection(self.controller_id)
     if connection.currently_blocked:
       raise RuntimeError("Expected channel %s to not be blocked" % str(connection))
     connection.block()
@@ -330,14 +324,13 @@ class ControlChannelBlock(InternalEvent):
 class ControlChannelUnblock(InternalEvent):
   def __init__(self, json_hash):
     super(ControlChannelUnblock, self).__init__(json_hash)
-    assert('dpid' in json_hash)
+    assert_fields_exist(json_hash, 'dpid', 'controller_id')
     self.dpid = json_hash['dpid']
-    assert('controller_uuid' in json_hash)
-    self.controller_uuid = tuple(json_hash['controller_uuid'])
+    self.controller_id = tuple(json_hash['controller_id'])
 
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
-    connection = switch.get_connection(self.controller_uuid)
+    connection = switch.get_connection(self.controller_id)
     if not connection.currently_blocked:
       raise RuntimeError("Expected channel %s to be blocked" % str(connection))
     connection.unblock()
@@ -350,11 +343,9 @@ class ControlMessageReceive(InternalEvent):
   '''
   def __init__(self, json_hash):
     super(ControlMessageReceive, self).__init__(json_hash)
-    assert('dpid' in json_hash)
+    assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
     dpid = json_hash['dpid']
-    assert('controller_id' in json_hash)
     controller_id = tuple(json_hash['controller_id'])
-    assert('fingerprint' in json_hash)
     fingerprint = OFFingerprint(json_hash['fingerprint'])
     self.pending_receive = PendingReceive(dpid, controller_id, fingerprint)
 
@@ -379,13 +370,11 @@ class ControllerStateChange(InternalEvent):
   '''
   def __init__(self, json_hash):
     super(ControllerStateChange, self).__init__(json_hash)
-    assert('controller_id' in json_hash)
+    assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint',
+                        'name', 'value')
     controller_id = tuple(json_hash['controller_id'])
-    assert('fingerprint' in json_hash)
     fingerprint = json_hash['fingerprint']
-    assert('name' in json_hash)
     name = json_hash['name']
-    assert('value' in json_hash)
     value = json_hash['value']
     self.pending_state_change = PendingStateChange(controller_id, self.time,
                                                    fingerprint, name, value)

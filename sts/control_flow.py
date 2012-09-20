@@ -225,13 +225,13 @@ class Fuzzer(ControlFlow):
       if self.random.random() < self.params.controlplane_block_rate:
         self.topology.block_connection(connection)
         self._log_input_event(klass="ControlChannelBlock",dpid=switch.dpid,
-                              controller_uuid=connection.get_controller_id())
+                              controller_id=connection.get_controller_id())
 
     for (switch, connection) in self.simulation.topology.blocked_controller_connections:
       if self.random.random() < self.params.controlplane_unblock_rate:
         self.topology.unblock_connection(connection)
         self._log_input_event(klass="ControlChannelUnBlock",dpid=switch.dpid,
-                              controller_uuid=connection.get_controller_id())
+                              controller_id=connection.get_controller_id())
 
   def check_message_receipts(self):
     for pending_receipt in self.simulation.god_scheduler.pending_receives():
@@ -313,7 +313,7 @@ class Fuzzer(ControlFlow):
           crashed_this_round.add(controller)
           controller.kill()
           self._log_input_event(klass="ControllerCrash",
-                                uuid=controller.uuid)
+                                controller_id=controller.uuid)
       return crashed_this_round
 
     def reboot_controllers(crashed_this_round):
@@ -323,7 +323,7 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.controller_recovery_rate:
           controller.start()
           self._log_input_event(klass="ControllerRecovery",
-                                uuid=controller.uuid)
+                                controller_id=controller.uuid)
 
     crashed_this_round = crash_controllers()
     reboot_controllers(crashed_this_round)
