@@ -221,7 +221,7 @@ def ofp_match_to_hsa_match(ofp_match):
   for field_name in set(ofp_match_data.keys()) - set(['in_port','dl_src','dl_dst','nw_src','nw_dst']):
     flag = ofp_match_data[field_name][1]
     if not field_wardcarded(ofp_match, flag):
-      set_field(hsa_match, field_name, ofp_match.__dict__[field_name])
+      set_field(hsa_match, field_name, getattr(ofp_match, field_name))
 
   for field_name in ['dl_src', 'dl_dst']:
     addr = getattr(ofp_match, field_name)
