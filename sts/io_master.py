@@ -131,7 +131,7 @@ class IOMaster(object):
   def handle_workers_rwe(self, rlist, wlist, elist):
     if self.pinger in rlist:
       self.pinger.pongAll()
-      rlist.discard(self.pinger)
+      rlist.remove(self.pinger)
 
     for worker in elist:
       worker.close()
