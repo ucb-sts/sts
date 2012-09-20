@@ -157,18 +157,19 @@ def compute_omega(name_tf_pairs, TTF, edge_links):
   # Generate the .dat file
   # Make sure we're in the right cwd
   old_cwd = os.getcwd()
-  os.chdir(HASSEL_C_PATH)
-  os.system("./gen sts")
+  try:
+    os.chdir(HASSEL_C_PATH)
+    os.system("./gen sts")
 
-  # TODO(cs): need to model host end of link, or does switch end suffice?
-  edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
-  print "edge_ports: %s" % edge_ports
+    # TODO(cs): need to model host end of link, or does switch end suffice?
+    edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
+    print "edge_ports: %s" % edge_ports
 
-  for start_port in edge_ports:
-    port_omega = compute_single_omega(start_port, edge_ports)
-    omega = dict(omega.items() + port_omega.items())
-
-  os.chdir(old_cwd)
+    for start_port in edge_ports:
+      port_omega = compute_single_omega(start_port, edge_ports)
+      omega = dict(omega.items() + port_omega.items())
+  finally:
+    os.chdir(old_cwd)
   return omega
 
 def compute_single_omega(start_port, edge_ports):
