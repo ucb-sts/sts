@@ -12,7 +12,7 @@ import tempfile
 from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import Replayer
 from sts.topology import FatTree, PatchPanel, MeshTopology
-from sts.simulation import Simulation
+from sts.simulation_state import Simulation
 from sts.entities import Host, Controller
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
