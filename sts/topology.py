@@ -23,7 +23,7 @@ from pox.lib.addresses import EthAddr, IPAddr
 from pox.openflow.libopenflow_01 import *
 from pox.lib.util import connect_socket_with_backoff
 from pox.lib.revent import EventMixin
-from console import msg
+from sts.util.console import msg
 import socket
 import abc
 import time

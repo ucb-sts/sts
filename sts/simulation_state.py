@@ -10,7 +10,7 @@ Encapsulates the state of the simulation, including:
   - Metadata (e.g. # of failures)
 '''
 
-from sts.console import msg
+from sts.util.console import msg
 from sts.io_master import IOMaster
 from sts.dataplane_traces.trace import Trace
 from entities import Link, Host, Controller, DeferredOFConnection

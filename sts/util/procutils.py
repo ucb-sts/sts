@@ -4,7 +4,7 @@ import threading
 import sys
 import time
 
-from sts.console import color
+from sts.util.console import color
 
 def kill_procs(child_processes, kill=None, verbose=True, timeout=5):
   def msg(msg):

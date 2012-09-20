@@ -1,4 +1,4 @@
-from sts.console import msg
+from sts.util.console import msg
 
 class ControllerManager(object):
   ''' Encapsulate a list of controllers objects '''

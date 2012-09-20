@@ -12,7 +12,7 @@ import pox.openflow.libopenflow_01 as of
 from invariant_checker import InvariantChecker
 from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
-from sts.console import msg
+from sts.util.console import msg
 from sts.event import EventDag, PendingStateChange
 from sts.syncproto.sts_syncer import STSSyncCallback
 import sts.log_processing.superlog_parser as superlog_parser

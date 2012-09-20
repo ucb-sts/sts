@@ -9,7 +9,7 @@ from pox.lib.util import assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
 from sts.util.procutils import popen_filtered, kill_procs
-from sts.console import msg
+from sts.util.console import msg
 
 import logging
 import os
