@@ -226,7 +226,7 @@ def ofp_match_to_hsa_match(ofp_match):
   for field_name in ['dl_src', 'dl_dst']:
     addr = getattr(ofp_match, field_name)
     if addr is not None: # None addr implies wildcard
-      if type(addr) == str:
+      if type(addr) != EthAddr:
         addr = EthAddr(addr).toInt()
       else:
         addr = addr.toInt()
