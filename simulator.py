@@ -19,7 +19,7 @@ fi
 exec python $OPT "$0" "$@"
 '''
 
-from sts.procutils import kill_procs
+from sts.util.procutils import kill_procs
 
 from sts.topology import FatTree, BufferedPatchPanel
 from sts.control_flow import Fuzzer
