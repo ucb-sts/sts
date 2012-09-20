@@ -18,7 +18,7 @@ must the following key:
 
 import logging
 import json
-import sts.event as event
+import sts.replay_event as event
 log = logging.getLogger("superlog_parser")
 
 input_name_to_class = {
