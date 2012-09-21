@@ -254,12 +254,19 @@ class Fuzzer(ControlFlow):
       return crashed_this_round
 
     def restart_switches(crashed_this_round):
+      # Make sure we don't try to connect to dead controllers
+      down_controller_ids = map(lambda c: c.uuid,
+                                self.simulation.controller_manager.down_controllers)
+
       for software_switch in list(self.simulation.topology.failed_switches):
         if software_switch in crashed_this_round:
           continue
         if self.random.random() < self.params.switch_recovery_rate:
-          self.simulation.topology.recover_switch(software_switch)
-          self._log_input_event(SwitchRecovery(software_switch.dpid))
+          connected = self.simulation.topology\
+                          .recover_switch(software_switch,
+                                          down_controller_ids=down_controller_ids)
+          if connected:
+            self._log_input_event(SwitchRecovery(software_switch.dpid))
 
     def sever_links():
       # TODO(cs): model administratively down links? (OFPPC_PORT_DOWN)
@@ -310,8 +317,8 @@ class Fuzzer(ControlFlow):
       for controller in self.simulation.controller_manager.live_controllers:
         if self.random.random() < self.params.controller_crash_rate:
           crashed_this_round.add(controller)
-          self._log_input_event(ControllerFailure(controller.uuid))
           controller.kill()
+          self._log_input_event(ControllerFailure(controller.uuid))
       return crashed_this_round
 
     def reboot_controllers(crashed_this_round):

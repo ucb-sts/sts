@@ -70,21 +70,28 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def _handle_ConnectionUp(self, event):
     self._setConnection(event.connection, event.ofp)
 
-  def connect(self, create_connection):
+  def connect(self, create_connection, down_controller_ids=None):
     ''' - create_connection is a factory method for creating Connection objects
           which are connected to controllers. Takes a ControllerConfig object
           and a reference to a switch (self) as a paramter
     '''
     # Keep around the connection factory for fail/recovery later
+    if down_controller_ids is None:
+      down_controller_ids = set()
     self.create_connection = create_connection
+    connected_to_at_least_one = False
     for info in self.controller_info:
-      # TODO(cs): what else to pass in?
-      conn = create_connection(info, self)
-      self.set_connection(conn)
-      # cause errors to be raised
-      conn.error_handler = self.error_handler
-      # controller (ip, port) -> connection
-      self.uuid2connection[conn.io_worker.socket.getpeername()] = conn
+      # Don't connect to down controllers
+      if info.uuid not in down_controller_ids:
+        conn = create_connection(info, self)
+        self.set_connection(conn)
+        # cause errors to be raised
+        conn.error_handler = self.error_handler
+        # controller (ip, port) -> connection
+        self.uuid2connection[conn.io_worker.socket.getpeername()] = conn
+        connected_to_at_least_one = True
+
+    return connected_to_at_least_one
 
   def get_connection(self, uuid):
     if uuid not in self.uuid2connection:
@@ -103,12 +110,15 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       connection.close()
     self.connections = []
 
-  def recover(self):
+  def recover(self, down_controller_ids=None):
     if not self.failed:
       self.log.warn("Switch already up")
       return
-    self.connect(self.create_connection)
-    self.failed = False
+    connected_to_at_least_one = self.connect(self.create_connection,
+                                             down_controller_ids=down_controller_ids)
+    if connected_to_at_least_one:
+      self.failed = False
+    return connected_to_at_least_one
 
   def serialize(self):
     # Skip over non-serializable data, e.g. sockets

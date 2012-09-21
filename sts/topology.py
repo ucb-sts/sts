@@ -386,13 +386,18 @@ class Topology(object):
     software_switch.fail()
     self.failed_switches.add(software_switch)
 
-  def recover_switch(self, software_switch):
+  def recover_switch(self, software_switch, down_controller_ids=None):
     msg.event("Rebooting software_switch %s" % str(software_switch))
+    if down_controller_ids is None:
+      down_controller_ids = set()
     if software_switch not in self.failed_switches:
       raise RuntimeError("Switch %s not currently down. (Currently down: %s)" %
                          (str(software_switch), str(self.failed_switches)))
-    software_switch.recover()
-    self.failed_switches.remove(software_switch)
+    connected_to_at_least_one = software_switch\
+                                 .recover(down_controller_ids=down_controller_ids)
+    if connected_to_at_least_one:
+      self.failed_switches.remove(software_switch)
+    return connected_to_at_least_one
 
   @property
   def live_links(self):
