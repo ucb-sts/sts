@@ -10,3 +10,4 @@ link_recovery_rate = 0.0
 controller_crash_rate = 0.0
 controller_recovery_rate = 0.0
 traffic_generation_rate = 0.3
+host_migration_rate = 0.0

@@ -204,6 +204,7 @@ class Fuzzer(ControlFlow):
     self.check_switch_crashes()
     self.fuzz_traffic()
     self.check_controllers()
+    self.check_migrations()
 
   def check_dataplane(self):
     ''' Decide whether to delay, drop, or deliver packets '''
@@ -323,6 +324,24 @@ class Fuzzer(ControlFlow):
     crashed_this_round = crash_controllers()
     reboot_controllers(crashed_this_round)
 
+  def check_migrations(self):
+    for access_link in self.simulation.topology.access_links:
+      if self.random.random() < self.params.host_migration_rate:
+        old_ingress_dpid = access_link.switch.dpid
+        old_ingress_port_no = access_link.switch_port.port_no
+        live_edge_switches = self.simulation.topology.live_edge_switches
+        if len(live_edge_switches) > 0:
+          new_switch = random.choice(live_edge_switches)
+          new_port_no = max(new_switch.ports.keys()) + 1
+          self.simulation.topology.migrate_host(old_ingress_dpid,
+                                                old_ingress_port_no,
+                                                new_switch.dpid,
+                                                new_port_no)
+          self._log_input_event(HostMigration(old_ingress_dpid,
+                                              old_ingress_port_no,
+                                              new_switch.dpid,
+                                              new_port_no))
+
 class Interactive(ControlFlow):
   '''
   Presents an interactive prompt for injecting events and
@@ -441,7 +460,8 @@ class Interactive(ControlFlow):
                                                   pending_receipt.controller_id,
                                                   pending_receipt.fingerprint.to_dict()))
 
-  # TODO(cs): add support for control channel blocking + switch, link, controller failures
+  # TODO(cs): add support for control channel blocking + switch, link,
+  # controller failures, host migration, god scheduling
 
 # ---------------------------------------- #
 #  Callbacks for controller sync messages  #

@@ -46,8 +46,11 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   _eventMixin_events = set([DpPacketOut])
 
   def __init__ (self, dpid, name=None, ports=4, miss_send_len=128,
-                n_buffers=100, n_tables=1, capabilities=None):
+                n_buffers=100, n_tables=1, capabilities=None,
+                can_connect_to_endhosts=True):
     NXSoftwareSwitch.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
+
+    self.can_connect_to_endhosts = can_connect_to_endhosts
 
     self.failed = False
     self.log = logging.getLogger("FuzzSoftwareSwitch(%d)" % dpid)

@@ -34,7 +34,7 @@ import logging
 
 log = logging.getLogger("sts.topology")
 
-def create_switch(switch_id, num_ports):
+def create_switch(switch_id, num_ports, can_connect_to_endhosts=True):
   ports = []
   for port_no in range(1, num_ports+1):
     eth_addr = EthAddr("00:00:00:00:%02x:%02x" % (switch_id, port_no))
@@ -47,7 +47,8 @@ def create_switch(switch_id, num_ports):
     raise SystemError("Not initialialized")
 
   return FuzzSoftwareSwitch(dpid=switch_id, name="SoftSwitch(%d)" % switch_id,
-                            ports=ports)
+                            ports=ports,
+                            can_connect_to_endhosts=can_connect_to_endhosts)
 
 def get_switchs_host_port(switch):
   ''' return the switch's ofp_phy_port connected to the host '''
@@ -287,6 +288,7 @@ class Topology(object):
   def __init__(self):
     self.dpid2switch = {}
     self.network_links = set()
+    self.access_links = set()
 
     # Metatdata for simulated failures
     # sts.entities.Link objects
@@ -314,6 +316,15 @@ class Topology(object):
   def live_switches(self):
     """ Return the software_switchs which are currently up """
     return set(self.switches) - self.failed_switches
+
+  @property
+  def live_edge_switches(self):
+    """
+    Return the software_switchs which are currently up and can connect to
+    hosts
+    """
+    edge_switches = set(filter(lambda sw: sw.can_connect_to_endhosts, self.switches))
+    return edge_switches - self.failed_switches
 
   def ok_to_send(self, dp_event):
     """Returns True if it is ok to send the dp_event arg."""
@@ -596,7 +607,8 @@ class FatTree (Topology):
       current_aggs = []
       for _ in  range(self.agg_per_pod):
         current_dpid += 1
-        agg = create_switch(current_dpid, self.ports_per_switch)
+        agg = create_switch(current_dpid, self.ports_per_switch,
+                            can_connect_to_endhosts=False)
         agg.pod_id = pod_id
         current_aggs.append(agg)
 
@@ -622,7 +634,8 @@ class FatTree (Topology):
       if not i % 100:
         log.debug("agg<->core %d / %d" % (i, self.total_core))
       current_dpid += 1
-      self.cores.append(create_switch(current_dpid, self.ports_per_switch))
+      self.cores.append(create_switch(current_dpid, self.ports_per_switch,
+                                      can_connect_to_endhosts=False))
 
     core_cycler = itertools.cycle(self.cores)
     for agg in self.aggs:

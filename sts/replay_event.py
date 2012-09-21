@@ -298,7 +298,6 @@ class HostMigration(InputEvent):
     self.new_ingress_port_no =  new_ingress_port_no
 
   def proceed(self, simulation):
-    # TODO(cs): add HostMigrations to Fuzzer
     simulation.topology.migrate_host(self.old_ingress_dpid,
                                      self.old_ingress_port_no,
                                      self.new_ingress_dpid,
