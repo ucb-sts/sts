@@ -310,8 +310,8 @@ class Fuzzer(ControlFlow):
       for controller in self.simulation.controller_manager.live_controllers:
         if self.random.random() < self.params.controller_crash_rate:
           crashed_this_round.add(controller)
-          controller.kill()
           self._log_input_event(ControllerFailure(controller.uuid))
+          controller.kill()
       return crashed_this_round
 
     def reboot_controllers(crashed_this_round):
