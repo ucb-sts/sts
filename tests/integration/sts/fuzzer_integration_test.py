@@ -22,7 +22,7 @@ controllers = [ControllerConfig(command_line)]
 topology_class = MeshTopology
 topology_params = "num_switches=4"
 patch_panel_class = BufferedPatchPanel
-control_flow = Fuzzer(steps=60, fuzzer_params='config.fuzzer_simple_test_params')
+control_flow = Fuzzer(steps=40, fuzzer_params='config.fuzzer_simple_test_params')
 dataplane_trace = None
 '''
 
@@ -39,7 +39,7 @@ link_recovery_rate = 0.5
 controller_crash_rate = 0.1
 controller_recovery_rate = 0.5
 traffic_generation_rate = 0.5
-host_migration_rate = 0.0
+host_migration_rate = 0.5
 '''
 
 class FuzzerTest(unittest.TestCase):
