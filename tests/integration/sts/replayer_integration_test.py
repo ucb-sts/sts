@@ -36,7 +36,6 @@ class ReplayerTest(unittest.TestCase):
     superlog.close()
 
   def write_simple_cfg(self):
-    ''' Returns the file. Make sure to close afterwards! '''
     cfg = open(self.tmpcfg, 'w')
     cfg.write(simple_cfg % self.tmpsuperlog)
     cfg.close()
@@ -44,7 +43,7 @@ class ReplayerTest(unittest.TestCase):
   def basic_test(self):
     try:
       self.write_simple_superlog()
-      cfg = self.write_simple_cfg()
+      self.write_simple_cfg()
       ret = os.system("./simulator.py -c %s" % self.tmpcfgmodule)
       self.assertEqual(0, ret)
     finally:

@@ -113,7 +113,7 @@ class Fuzzer(ControlFlow):
   for invariant violations. (Not the proper use of the term `Fuzzer`)
   '''
   def __init__(self, fuzzer_params="config.fuzzer_params",
-               check_interval=35, trace_interval=10, random_seed=0.0,
+               check_interval=None, trace_interval=10, random_seed=0.0,
                delay=0.1, steps=None, input_logger=None):
     ControlFlow.__init__(self, RecordingSyncCallback(input_logger))
 
@@ -170,7 +170,8 @@ class Fuzzer(ControlFlow):
         self._input_logger.close(self.simulation)
 
   def maybe_check_correspondence(self):
-    if (self.logical_time % self.check_interval) == 0:
+    if (self.check_interval is not None and
+        (self.logical_time % self.check_interval) == 0):
       # Time to run correspondence!
       # spawn a thread for running correspondence. Make sure the controller doesn't
       # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
@@ -222,14 +223,14 @@ class Fuzzer(ControlFlow):
     ''' Decide whether to block or unblock control channels '''
     for (switch, connection) in self.simulation.topology.unblocked_controller_connections:
       if self.random.random() < self.params.controlplane_block_rate:
-        self.topology.block_connection(connection)
+        self.simulation.topology.block_connection(connection)
         self._log_input_event(ControlChannelBlock(switch.dpid,
                               connection.get_controller_id()))
 
     for (switch, connection) in self.simulation.topology.blocked_controller_connections:
       if self.random.random() < self.params.controlplane_unblock_rate:
-        self.topology.unblock_connection(connection)
-        self._log_input_event(ControlChannelUnBlock(switch.dpid,
+        self.simulation.topology.unblock_connection(connection)
+        self._log_input_event(ControlChannelUnblock(switch.dpid,
                               controller_id=connection.get_controller_id()))
 
   def check_message_receipts(self):
@@ -245,7 +246,7 @@ class Fuzzer(ControlFlow):
     ''' Decide whether to crash or restart switches, links and controllers '''
     def crash_switches():
       crashed_this_round = set()
-      for software_switch in self.simulation.topology.live_switches:
+      for software_switch in list(self.simulation.topology.live_switches):
         if self.random.random() < self.params.switch_failure_rate:
           crashed_this_round.add(software_switch)
           self.simulation.topology.crash_switch(software_switch)
@@ -253,7 +254,7 @@ class Fuzzer(ControlFlow):
       return crashed_this_round
 
     def restart_switches(crashed_this_round):
-      for software_switch in self.simulation.topology.failed_switches:
+      for software_switch in list(self.simulation.topology.failed_switches):
         if software_switch in crashed_this_round:
           continue
         if self.random.random() < self.params.switch_recovery_rate:
@@ -263,28 +264,28 @@ class Fuzzer(ControlFlow):
     def sever_links():
       # TODO(cs): model administratively down links? (OFPPC_PORT_DOWN)
       cut_this_round = set()
-      for link in self.simulation.topology.live_links:
+      for link in list(self.simulation.topology.live_links):
         if self.random.random() < self.params.link_failure_rate:
           cut_this_round.add(link)
           self.simulation.topology.sever_link(link)
           self._log_input_event(LinkFailure(
                                 link.start_software_switch.dpid,
-                                link.start_software_switch.port.port_no,
+                                link.start_port.port_no,
                                 link.end_software_switch.dpid,
-                                link.end_software_switch.port.port_no))
+                                link.end_port.port_no))
       return cut_this_round
 
     def repair_links(cut_this_round):
-      for link in self.simulation.topology.cut_links:
+      for link in list(self.simulation.topology.cut_links):
         if link in cut_this_round:
           continue
         if self.random.random() < self.params.link_recovery_rate:
           self.simulation.topology.repair_link(link)
           self._log_input_event(LinkRecovery(
                                 link.start_software_switch.dpid,
-                                link.start_software_switch.port.port_no,
+                                link.start_port.port_no,
                                 link.end_software_switch.dpid,
-                                link.end_software_switch.port.port_no))
+                                link.end_port.port_no))
 
     crashed_this_round = crash_switches()
     restart_switches(crashed_this_round)
@@ -310,7 +311,7 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.controller_crash_rate:
           crashed_this_round.add(controller)
           controller.kill()
-          self._log_input_event(ControllerCrash(controller.uuid))
+          self._log_input_event(ControllerFailure(controller.uuid))
       return crashed_this_round
 
     def reboot_controllers(crashed_this_round):
@@ -325,11 +326,11 @@ class Fuzzer(ControlFlow):
     reboot_controllers(crashed_this_round)
 
   def check_migrations(self):
-    for access_link in self.simulation.topology.access_links:
+    for access_link in list(self.simulation.topology.access_links):
       if self.random.random() < self.params.host_migration_rate:
         old_ingress_dpid = access_link.switch.dpid
         old_ingress_port_no = access_link.switch_port.port_no
-        live_edge_switches = self.simulation.topology.live_edge_switches
+        live_edge_switches = list(self.simulation.topology.live_edge_switches)
         if len(live_edge_switches) > 0:
           new_switch = random.choice(live_edge_switches)
           new_port_no = max(new_switch.ports.keys()) + 1

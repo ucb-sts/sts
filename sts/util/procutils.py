@@ -7,6 +7,7 @@ import time
 from sts.util.console import color
 
 def kill_procs(child_processes, kill=None, verbose=True, timeout=5):
+  child_processes = filter(lambda e: e is not None, child_processes)
   def msg(msg):
     if(verbose):
       sys.stderr.write(msg)
