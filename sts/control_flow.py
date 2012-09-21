@@ -13,7 +13,7 @@ from invariant_checker import InvariantChecker
 from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.util.console import msg
-from sts.replay_event import EventDag, PendingStateChange
+from sts.replay_event import *
 from sts.syncproto.sts_syncer import STSSyncCallback
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
@@ -133,9 +133,9 @@ class Fuzzer(ControlFlow):
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
 
-  def _log_input_event(self, **kws):
+  def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
-      self._input_logger.log_input_event(**kws)
+      self._input_logger.log_input_event(event, **kws)
 
   def _load_fuzzer_params(self, fuzzer_params_path):
     try:
@@ -195,7 +195,7 @@ class Fuzzer(ControlFlow):
     if (self.simulation.dataplane_trace and
         (self.logical_time % self.trace_interval) == 0):
       dp_event = self.simulation.dataplane_trace.inject_trace_event()
-      self._log_input_event(klass="TrafficInjection", dp_event=dp_event)
+      self._log_input_event(TrafficInjection(), dp_event=dp_event)
 
   def trigger_events(self):
     self.check_dataplane()
@@ -212,36 +212,33 @@ class Fuzzer(ControlFlow):
         self.simulation.patch_panel.delay_dp_event(dp_event)
       elif self.random.random() < self.params.dataplane_drop_rate:
         self.simulation.patch_panel.drop_dp_event(dp_event)
-        self._log_input_event(klass="DataplaneDrop",
-                              fingerprint=dp_event.fingerprint.to_dict())
+        self._log_input_event(DataplaneDrop(dp_event.fingerprint.to_dict()))
       elif self.simulation.topology.ok_to_send(dp_event):
         self.simulation.patch_panel.permit_dp_event(dp_event)
-        self._log_input_event(klass="DataplanePermit",
-                              fingerprint=dp_event.fingerprint.to_dict())
+        self._log_input_event(DataplanePermit(dp_event.fingerprint.to_dict()))
 
   def check_tcp_connections(self):
     ''' Decide whether to block or unblock control channels '''
     for (switch, connection) in self.simulation.topology.unblocked_controller_connections:
       if self.random.random() < self.params.controlplane_block_rate:
         self.topology.block_connection(connection)
-        self._log_input_event(klass="ControlChannelBlock",dpid=switch.dpid,
-                              controller_id=connection.get_controller_id())
+        self._log_input_event(ControlChannelBlock(switch.dpid,
+                              connection.get_controller_id()))
 
     for (switch, connection) in self.simulation.topology.blocked_controller_connections:
       if self.random.random() < self.params.controlplane_unblock_rate:
         self.topology.unblock_connection(connection)
-        self._log_input_event(klass="ControlChannelUnBlock",dpid=switch.dpid,
-                              controller_id=connection.get_controller_id())
+        self._log_input_event(ControlChannelUnBlock(switch.dpid,
+                              controller_id=connection.get_controller_id()))
 
   def check_message_receipts(self):
     for pending_receipt in self.simulation.god_scheduler.pending_receives():
       # TODO(cs): this is a really dumb way to fuzz packet receipt scheduling
       if self.random.random() < self.params.ofp_message_receipt_rate:
         self.simulation.god_scheduler.schedule(pending_receipt)
-        self._log_input_event(klass="ControlMessageReceive",
-                              fingerprint=pending_receipt.fingerprint.to_dict(),
-                              dpid=pending_receipt.dpid,
-                              controller_id=pending_receipt.controller_id)
+        self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
+                                                    pending_receipt.controller_id,
+                                                    pending_receipt.fingerprint.to_dict()))
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
@@ -251,7 +248,7 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.switch_failure_rate:
           crashed_this_round.add(software_switch)
           self.simulation.topology.crash_switch(software_switch)
-          self._log_input_event(klass="SwitchFailure",dpid=software_switch.dpid)
+          self._log_input_event(SwitchFailure(software_switch.dpid))
       return crashed_this_round
 
     def restart_switches(crashed_this_round):
@@ -260,7 +257,7 @@ class Fuzzer(ControlFlow):
           continue
         if self.random.random() < self.params.switch_recovery_rate:
           self.simulation.topology.recover_switch(software_switch)
-          self._log_input_event(klass="SwitchRecovery",dpid=software_switch.dpid)
+          self._log_input_event(SwitchRecovery(software_switch.dpid))
 
     def sever_links():
       # TODO(cs): model administratively down links? (OFPPC_PORT_DOWN)
@@ -269,11 +266,11 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.link_failure_rate:
           cut_this_round.add(link)
           self.simulation.topology.sever_link(link)
-          self._log_input_event(klass="LinkFailure",
-                                start_dpid=link.start_software_switch.dpid,
-                                start_port_no=link.start_software_switch.port.port_no,
-                                end_dpid=link.end_software_switch.dpid,
-                                end_port_no=link.end_software_switch.port.port_no)
+          self._log_input_event(LinkFailure(
+                                link.start_software_switch.dpid,
+                                link.start_software_switch.port.port_no,
+                                link.end_software_switch.dpid,
+                                link.end_software_switch.port.port_no))
       return cut_this_round
 
     def repair_links(cut_this_round):
@@ -282,11 +279,11 @@ class Fuzzer(ControlFlow):
           continue
         if self.random.random() < self.params.link_recovery_rate:
           self.simulation.topology.repair_link(link)
-          self._log_input_event(klass="LinkRecovery",
-                                start_dpid=link.start_software_switch.dpid,
-                                start_port_no=link.start_software_switch.port.port_no,
-                                end_dpid=link.end_software_switch.dpid,
-                                end_port_no=link.end_software_switch.port.port_no)
+          self._log_input_event(LinkRecovery(
+                                link.start_software_switch.dpid,
+                                link.start_software_switch.port.port_no,
+                                link.end_software_switch.dpid,
+                                link.end_software_switch.port.port_no))
 
     crashed_this_round = crash_switches()
     restart_switches(crashed_this_round)
@@ -303,7 +300,7 @@ class Fuzzer(ControlFlow):
             traffic_type = "icmp_ping"
             # Generates a packet, and feeds it to the software_switch
             dp_event = self.traffic_generator.generate(traffic_type, host)
-            self._log_input_event(klass="TrafficInjection", dp_event=dp_event)
+            self._log_input_event(TrafficInjection(), dp_event=dp_event)
 
   def check_controllers(self):
     def crash_controllers():
@@ -312,8 +309,7 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.controller_crash_rate:
           crashed_this_round.add(controller)
           controller.kill()
-          self._log_input_event(klass="ControllerCrash",
-                                controller_id=controller.uuid)
+          self._log_input_event(ControllerCrash(controller.uuid))
       return crashed_this_round
 
     def reboot_controllers(crashed_this_round):
@@ -322,8 +318,7 @@ class Fuzzer(ControlFlow):
           continue
         if self.random.random() < self.params.controller_recovery_rate:
           controller.start()
-          self._log_input_event(klass="ControllerRecovery",
-                                controller_id=controller.uuid)
+          self._log_input_event(ControllerRecovery(controller.uuid))
 
     crashed_this_round = crash_controllers()
     reboot_controllers(crashed_this_round)
@@ -351,10 +346,10 @@ class Interactive(ControlFlow):
     #   EVERYTHING  # The user controls everything, including message ordering
     # ]
 
-  def _log_input_event(self, **kws):
+  def _log_input_event(self, event, **kws):
     # TODO(cs): redundant with Fuzzer._log_input_event
     if self._input_logger is not None:
-      self._input_logger.log_input_event(**kws)
+      self._input_logger.log_input_event(event, **kws)
 
   def simulate(self, simulation):
     self.simulation = simulation
@@ -414,7 +409,7 @@ class Interactive(ControlFlow):
         answer = msg.raw_input('Feed in next dataplane event? [Ny]')
         if answer != '' and answer.lower() != 'n':
           dp_event = self.simulation.dataplane_trace.inject_trace_event()
-          self._log_input_event(klass="TrafficInjection", dp_event=dp_event)
+          self._log_input_event(TrafficInjection(), dp_event=dp_event)
         else:
           break
 
@@ -427,12 +422,10 @@ class Interactive(ControlFlow):
         if ((answer == '' or answer.lower() == 'a') and
                 self.simulation.topology.ok_to_send(dp_event)):
           self.simulation.patch_panel.permit_dp_event(dp_event)
-          self._log_input_event(klass="DataplanePermit",
-                                fingerprint=dp_event.fingerprint.to_dict())
+          self._log_input_event(DataplanePermit(dp_event.fingerprint.to_dict()))
         elif answer.lower() == 'd':
           self.simulation.patch_panel.drop_dp_event(dp_event)
-          self._log_input_event(klass="DataplaneDrop",
-                                fingerprint=dp_event.fingerprint.to_dict())
+          self._log_input_event(DataplaneDrop(dp_event.fingerprint.to_dict()))
         elif answer.lower() == 'e':
           self.simulation.patch_panel.delay_dp_event(dp_event)
         else:
@@ -444,10 +437,9 @@ class Interactive(ControlFlow):
       # For now, just schedule FIFO.
       # TODO(cs): make this interactive
       self.simulation.god_scheduler.schedule(pending_receipt)
-      self._log_input_event(klass="ControlMessageReceive",
-                            fingerprint=pending_receipt.fingerprint.to_dict(),
-                            dpid=pending_receipt.dpid,
-                            controller_id=pending_receipt.controller_id)
+      self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
+                                                  pending_receipt.controller_id,
+                                                  pending_receipt.fingerprint.to_dict()))
 
   # TODO(cs): add support for control channel blocking + switch, link, controller failures
 
@@ -495,10 +487,10 @@ class RecordingSyncCallback(STSSyncCallback):
 
   def state_change(self, controller, time, fingerprint, name, value):
     if self.input_logger is not None:
-      self.input_logger.log_input_event(klass="ControllerStateChange",
-                                        controller_id=controller.uuid,
-                                        time=time, fingerprint=fingerprint,
-                                        name=name, value=value)
+      self.input_logger.log_input_event(ControllerStateChange((controller.uuid,
+                                                               time,
+                                                               fingerprint,
+                                                               name, value)))
 
   def get_deterministic_value(self, controller, name):
     value = None

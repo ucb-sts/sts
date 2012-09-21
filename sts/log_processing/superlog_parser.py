@@ -90,11 +90,11 @@ def parse(logfile):
       sanity_check_external_input_event(event_labels,
                                         dependent_labels,
                                         json_hash)
-      event = input_name_to_class[json_hash['class']](json_hash)
+      event = input_name_to_class[json_hash['class']].from_json(json_hash)
     elif json_hash['class'] in internal_event_name_to_class:
       sanity_check_internal_event(event_labels, dependent_labels,
                                   json_hash)
-      event = internal_event_name_to_class[json_hash['class']](json_hash)
+      event = internal_event_name_to_class[json_hash['class']].from_json(json_hash)
     else:
       log.warn("Unknown class type %s" % json_hash['class'])
       continue
