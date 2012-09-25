@@ -15,7 +15,7 @@ class Snapshot(object):
   def __int__(self):
     self.time = None
     self.switches = []
-    # The debugger doesn't use the next two (for now anywoy)
+    # The debugger doesn't use the next two (for now anyway)
     self.hosts = []
     self.links = []
 
@@ -90,6 +90,10 @@ class FloodlightSnapshotService(SnapshotService):
     return self.snapshot
 
 def get_snapshotservice(controller_configs):
+  '''Return a SnapshotService object determined by the name of the first
+  controller in the controller_configs.
+
+  For now, we only support a homogenous controller environment.'''
   # Read from config what controller we are using
   # TODO(cs): allow for heterogenous controllers?
   if controller_configs != [] and controller_configs[0].name == "pox":
