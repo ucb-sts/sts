@@ -130,6 +130,8 @@ class InternalEvent(Event):
     super(InternalEvent, self).__init__(label=label, time=time)
 
   def proceed(self, simulation):
+     # There might be nothing happening for certain internal events, so default
+     # to just doing nothing for proceed (i.e. proceeding automatically).
     pass
 
 class InputEvent(Event):
@@ -137,7 +139,11 @@ class InputEvent(Event):
   assumed to be causally independent.
 
   Each InputEvent has a list of dependent InternalEvents that it takes in its
-  constructor. This enables the pruning of events.'''
+  constructor. This enables the pruning of events.
+
+  This class also conceptually models (because it is equivalent to) 'external
+  events', which is a term that may be used elsewhere in documentation or
+  code.'''
   def __init__(self, label=None, time=None, dependent_labels=None):
     super(InputEvent, self).__init__(label=label, time=time)
     self.dependent_labels = dependent_labels
