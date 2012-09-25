@@ -59,7 +59,13 @@ args = parser.parse_args()
 if args.config.endswith('.py'):
   args.config = args.config[:-3].replace("/", ".")
 
-config = __import__(args.config, globals(), locals(), ["*"])
+try:
+  config = __import__(args.config, globals(), locals(), ["*"])
+except ImportError:
+  # try again, but look in the config director/module
+  config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
+
+# If we get here, either *both* of the imports failed. config is defined if execution reaches here.
 
 # For booting controllers
 if hasattr(config, 'controllers'):
