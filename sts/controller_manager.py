@@ -32,12 +32,12 @@ class ControllerManager(object):
       c.kill()
     self.uuid2controller = {}
 
-  def kill_controller(self, controller):
+  @staticmethod
+  def kill_controller(controller):
     msg.event("Killing controller %s" % str(controller))
     controller.kill()
 
-  def reboot_controller(self, controller):
+  @staticmethod
+  def reboot_controller(controller):
     msg.event("Restarting controller %s" % str(controller))
     controller.start()
-
-
