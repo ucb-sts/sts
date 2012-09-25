@@ -101,6 +101,7 @@ else:
   # We default to a Fuzzer
   simulator = Fuzzer()
 
+# TODO(sw): support the specification of different invariant checkers
 # For snapshotting the controller's view of the network configuration
 snapshotService = snapshot.get_snapshotservice(controller_configs)
 simulator.set_invariant_checker(InvariantChecker(snapshotService))

@@ -120,6 +120,7 @@ class Fuzzer(ControlFlow):
     self.check_interval = check_interval
     self.trace_interval = trace_interval
     # Make execution deterministic to allow the user to easily replay
+    # TODO(cs): why are we keeping random_seed around?
     self.seed = random_seed
     self.random = random.Random(self.seed)
     self.traffic_generator = TrafficGenerator(self.random)
@@ -203,6 +204,7 @@ class Fuzzer(ControlFlow):
     self.check_tcp_connections()
     self.check_message_receipts()
     self.check_switch_crashes()
+    self.check_link_failures()
     self.fuzz_traffic()
     self.check_controllers()
     self.check_migrations()
@@ -268,6 +270,10 @@ class Fuzzer(ControlFlow):
           if connected:
             self._log_input_event(SwitchRecovery(software_switch.dpid))
 
+    crashed_this_round = crash_switches()
+    restart_switches(crashed_this_round)
+
+  def check_link_failures(self):
     def sever_links():
       # TODO(cs): model administratively down links? (OFPPC_PORT_DOWN)
       cut_this_round = set()
@@ -294,8 +300,7 @@ class Fuzzer(ControlFlow):
                                 link.end_software_switch.dpid,
                                 link.end_port.port_no))
 
-    crashed_this_round = crash_switches()
-    restart_switches(crashed_this_round)
+
     cut_this_round = sever_links()
     repair_links(cut_this_round)
 
