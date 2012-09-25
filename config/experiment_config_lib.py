@@ -5,7 +5,7 @@ import sys
 class ControllerConfig(object):
   _port_gen = itertools.count(8888)
 
-  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None, sync=None):
+  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None, sync=None, controller_type=None):
     '''
     Store metadata for the controller.
       - cmdline is an array of command line tokens.
@@ -14,6 +14,9 @@ class ControllerConfig(object):
         command line, use the aliases __address__ and __port__ to have the
         values interpolated automatically
       - address and port are the sockets switches will bind to
+      - controller_type: help us figure out by specifying controller_type as a
+        string that represents the controller. If it is not specified, this
+        method will try to guess if it is either pox or floodlight.
     '''
     if cmdline == "":
       raise RuntimeError("Must specify boot parameters.")
@@ -23,8 +26,15 @@ class ControllerConfig(object):
       port = self._port_gen.next()
 
     self.port = port
-    if "pox" in self.cmdline:
+
+    # TODO(sam): we should either call them all controller_type or all 'name'
+    # we only accept strings
+    if isinstance(controller_type,str):
+      self.name = controller_type
+    elif "pox" in self.cmdline:
       self.name = "pox"
+    elif "floodlight" in self.cmdline:
+      self.name = "floodlight"
 
     self.cwd = cwd
     if not cwd:
