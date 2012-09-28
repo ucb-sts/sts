@@ -142,6 +142,8 @@ HASSEL_TF_PATH = HASSEL_C_PATH + "/tfs/sts"
 # Omega defines the externally visible behavior of the network. Defined as a table:
 #   (header space, edge_port) -> [(header_space, final_location),(header_space, final_location)...]
 def compute_omega(name_tf_pairs, TTF, edge_links):
+  if not os.path.exists(HASSEL_C_PATH + "/gen"):
+    raise RuntimeError("You need to make hassel-c!")
   omega = {}
 
   # Nuke old TF object files
