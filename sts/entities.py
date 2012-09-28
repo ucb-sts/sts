@@ -50,6 +50,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
                 can_connect_to_endhosts=True):
     NXSoftwareSwitch.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
 
+    # Whether this is a core or edge switch
     self.can_connect_to_endhosts = can_connect_to_endhosts
 
     self.failed = False
@@ -157,9 +158,9 @@ class Link (object):
     if not type(other) == Link:
       return False
     return (self.start_software_switch == other.start_software_switch and
-           self.start_port == other.start_port and
-           self.end_software_switch == other.end_software_switch and
-           self.end_port == other.end_port)
+            self.start_port == other.start_port and
+            self.end_software_switch == other.end_software_switch and
+            self.end_port == other.end_port)
 
   def __hash__(self):
     return (self.start_software_switch.__hash__() +  self.start_port.__hash__() +
