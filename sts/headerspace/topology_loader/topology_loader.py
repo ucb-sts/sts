@@ -27,6 +27,14 @@ def generate_TTF(all_links):
   print "TTF: %s" % str(ttf)
   return ttf
 
+def generate_NTF(switches):
+  ntf = tf.TF(of.HS_FORMAT())
+  for switch in switches:
+    print "SWITCH", switch
+    of.generate_transfer_function(ntf, switch)
+  print "NTF: %s" % str(ntf)
+  return ntf
+
 def generate_tf_pairs(switches):
   name_tf_pairs = []
   for switch in switches:
