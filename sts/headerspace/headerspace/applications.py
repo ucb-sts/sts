@@ -183,6 +183,13 @@ def compute_single_omega(start_port, edge_ports):
     if type(edge_ports[0]) != int:
       edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_ports)
 
+    # TODO(cs): just noticed that invoking
+    #  `sts 200002 200002 1000002` returns nothing, whereas
+    #  `sts 200002 100002 2000002` returns something.
+    # Why should the order of the out ports matter? Need to check that
+    # hassel-c is actually computing all paths for all out ports
+    edge_ports.remove(start_port)
+
     print "port %d is being checked" % start_port
 
     str_start_port = str(start_port)
@@ -211,15 +218,14 @@ def compute_single_omega(start_port, edge_ports):
 
       if line.startswith("-----"):
         hs_string = last_line.split(":")[1].strip()
+        # Get rid of commas (otherwise, will yield incorrect byte array)
+        hs_string = hs_string.replace(",", "")
         port_stripped = second_to_last_line.split(":")[1].lstrip()
         out_port_string = port_stripped[0:port_stripped.index(",")]
         out_port = int(out_port_string)
-        # TODO(cs): debug the code below to get human readable headerspace
-        # strings
-        #readable_hs = headerspace(of.hs_format)
-        #readable_hs.add_hs(hs_string_to_byte_array(hs_string))
-        #omega[start_port].append((readable_hs, out_port))
-        omega[start_port].append((hs_string, out_port))
+        readable_hs = headerspace(of.hs_format)
+        readable_hs.add_hs(hs_string_to_byte_array(hs_string))
+        omega[start_port].append((readable_hs, out_port))
 
       second_to_last_line = last_line
       last_line = line

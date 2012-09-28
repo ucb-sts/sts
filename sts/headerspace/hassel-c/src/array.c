@@ -105,10 +105,10 @@ array_to_str (const array_t *a, int len, bool decimal)
   for (int i = 0; i < len; i++, acur += 2) {
     uint8_t tmp[] = {acur[0], acur[1]};
     uint16_t byte = tmp[0] << CHAR_BIT | tmp[1];
-    if (decimal && (!has_x (byte) || byte == UINT16_MAX)) {
-      cur += int_str (byte, cur);
-      continue;
-    }
+    //if (decimal && (!has_x (byte) || byte == UINT16_MAX)) {
+    //  cur += int_str (byte, cur);
+    //  continue;
+    //}
 
     for (int j = 0; j < 2; j++) {
       char *next = cur + CHAR_BIT / 2 - 1;
