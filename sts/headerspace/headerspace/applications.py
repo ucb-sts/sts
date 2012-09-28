@@ -142,12 +142,9 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
 HASSEL_C_PATH = "./sts/headerspace/hassel-c"
 HASSEL_TF_PATH = HASSEL_C_PATH + "/tfs/sts"
 
-# Omega defines the externally visible behavior of the network. Defined as a table:
-#   (header space, edge_port) -> [(header_space, final_location),(header_space, final_location)...]
-def compute_omega(name_tf_pairs, TTF, edge_links):
+def prepare_hassel_c(name_tf_pairs):
   if not os.path.exists(HASSEL_C_PATH + "/gen"):
     raise RuntimeError("You need to make hassel-c!")
-  omega = {}
 
   # Nuke old TF object files
   old_tfs = glob.glob(HASSEL_TF_PATH + "/*tf")
@@ -165,40 +162,53 @@ def compute_omega(name_tf_pairs, TTF, edge_links):
   try:
     os.chdir(HASSEL_C_PATH)
     os.system("./gen sts")
-
-    # TODO(cs): need to model host end of link, or does switch end suffice?
-    edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
-    print "edge_ports: %s" % edge_ports
-
-    for start_port in edge_ports:
-      port_omega = compute_single_omega(start_port, edge_ports)
-      omega = dict(omega.items() + port_omega.items())
   finally:
     os.chdir(old_cwd)
+
+# Omega defines the externally visible behavior of the network. Defined as a table:
+#   (header space, edge_port) -> [(header_space, final_location),(header_space, final_location)...]
+def compute_omega(name_tf_pairs, TTF, edge_links):
+  prepare_hassel_c(name_tf_pairs)
+  omega = {}
+  # TODO(cs): need to model host end of link, or does switch end suffice?
+  edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
+  print "edge_ports: %s" % edge_ports
+
+  for start_port in edge_ports:
+    port_omega = compute_single_omega(start_port, edge_ports)
+    omega = dict(omega.items() + port_omega.items())
   return omega
+
+def invoke_hassel_c(start_port, edge_ports):
+  ''' invoke reachability test, and return the proc object '''
+  if type(start_port) != int:
+    start_port = get_uniq_port_id(start_port.switch, start_port.switch_port)
+
+  if type(edge_ports) != list:
+    edge_ports = list(edge_ports)
+  if type(edge_ports[0]) != int:
+    edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_ports)
+
+  # TODO(cs): just noticed that invoking
+  #  `sts 200002 200002 1000002` returns nothing, whereas
+  #  `sts 200002 100002 2000002` returns something.
+  # Why should the order of the out ports matter? Need to check that
+  # hassel-c is actually computing all paths for all out ports
+  edge_ports.remove(start_port)
+
+  print "port %d is being checked" % start_port
+
+  str_start_port = str(start_port)
+  str_edge_ports = map(str, edge_ports)
+  proc = subprocess.Popen(["./sts", str(start_port)] + str_edge_ports,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 
 def compute_single_omega(start_port, edge_ports):
     if type(start_port) != int:
       start_port = get_uniq_port_id(start_port.switch, start_port.switch_port)
 
-    if type(edge_ports) != list:
-      edge_ports = list(edge_ports)
-    if type(edge_ports[0]) != int:
-      edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_ports)
-
-    # TODO(cs): just noticed that invoking
-    #  `sts 200002 200002 1000002` returns nothing, whereas
-    #  `sts 200002 100002 2000002` returns something.
-    # Why should the order of the out ports matter? Need to check that
-    # hassel-c is actually computing all paths for all out ports
-    edge_ports.remove(start_port)
-
-    print "port %d is being checked" % start_port
-
-    str_start_port = str(start_port)
-    str_edge_ports = map(str, edge_ports)
-    proc = subprocess.Popen(["./sts", str(start_port)] + str_edge_ports,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = self.invoke_hassel_c(start_port, edge_ports)
 
     omega = { start_port : [] }
     second_to_last_line = ''
