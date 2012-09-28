@@ -82,6 +82,9 @@ def get_all_x(NTF):
   return test_pkt
 
 def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
+    if type(ports[0]) != int:
+        ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), ports)
+
     loops = []
     for port in ports:
         print "port %d is being checked"%port

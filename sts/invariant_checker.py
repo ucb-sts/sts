@@ -23,7 +23,11 @@ class InvariantChecker(object):
   #                    Invariant checks                           #
   # --------------------------------------------------------------#
   def check_loops(self, simulation):
-    pass
+    # Warning! depends on python Hassell -- may be really slow!
+    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
+    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
+    loops = hsa.detect_loop(NTF, TTF, simulation.topology.access_links)
+    return loops
 
   def check_blackholes(self, simulation):
     pass
