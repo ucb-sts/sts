@@ -411,23 +411,17 @@ class Interactive(ControlFlow):
     answer = msg.raw_input('Check Invariants? [Ny]')
     if answer != '' and answer.lower() != 'n':
       msg.interactive("Which one?")
-      msg.interactive("  'l' - loops")
-      msg.interactive("  'b' - blackholes")
-      msg.interactive("  'r' - routing consistency")
-      msg.interactive("  'c' - connectivity")
       msg.interactive("  'o' - omega")
+      msg.interactive("  'c' - connectivity")
+      msg.interactive("  'l' - loops")
       answer = msg.raw_input("> ")
       result = None
-      if answer.lower() == 'l':
-        result = self.invariant_checker.check_loops(self.simulation)
-      elif answer.lower() == 'b':
-        result = self.invariant_checker.check_blackholes(self.simulation)
-      elif answer.lower() == 'r':
-        result = self.invariant_checker.check_routing_consistency(self.simulation)
+      if answer.lower() == 'o':
+        result = self.invariant_checker.check_correspondence(self.simulation)
       elif answer.lower() == 'c':
         result = self.invariant_checker.check_connectivity(self.simulation)
-      elif answer.lower() == 'o':
-        result = self.invariant_checker.check_correspondence(self.simulation)
+      elif answer.lower() == 'l':
+        result = self.invariant_checker.check_loops(self.simulation)
       else:
         log.warn("Unknown input...")
 
