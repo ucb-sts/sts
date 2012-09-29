@@ -246,6 +246,13 @@ class LinkTracker(object):
     # TODO(cs): the switch on the other end of the link should eventually
     # notice that the link has come back up!
 
+  def port_connected(self, port):
+    ''' Return whether the port is currently connected to anything '''
+    return (port in self.port2access_link or
+            port in self.interface2access_link or
+            port in self.port2internal_link)
+
+
   def __call__(self, node, port):
     ''' Given a node and a port, return a tuple (node, port) that is directly
     connected to the port.
@@ -370,6 +377,9 @@ class Topology(object):
 
   def ok_to_send(self, dp_event):
     """Returns True if it is ok to send the dp_event arg."""
+    if not self.link_tracker.port_connected(dp_event.port):
+      return False
+
     (next_hop, next_port) = self.get_connected_port(dp_event.switch,
                                                     dp_event.port)
     if type(dp_event.node) == Host or type(next_hop) == Host:
