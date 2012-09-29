@@ -109,7 +109,7 @@ class Fuzzer(ControlFlow):
   for invariant violations. (Not the proper use of the term `Fuzzer`)
   '''
   def __init__(self, fuzzer_params="config.fuzzer_params",
-               check_interval=None, trace_interval=10, random_seed=0.0,
+               check_interval=None, trace_interval=10, random_seed=None,
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence):
     ControlFlow.__init__(self, RecordingSyncCallback(input_logger))
@@ -118,9 +118,10 @@ class Fuzzer(ControlFlow):
     self.invariant_check = invariant_check
     self.trace_interval = trace_interval
     # Make execution deterministic to allow the user to easily replay
-    # TODO(cs): why are we keeping random_seed around?
-    self.seed = random_seed
-    self.random = random.Random(self.seed)
+    if random_seed is None:
+      self.random = random.Random()
+    else:
+      self.random = random.Random(random_seed)
     self.traffic_generator = TrafficGenerator(self.random)
 
     self.delay = delay
