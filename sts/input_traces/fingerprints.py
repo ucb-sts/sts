@@ -74,7 +74,7 @@ class OFFingerprint(Fingerprint):
     "ofp_echo_request" : [],
     "ofp_echo_reply" : [],
     "ofp_vendor_header" : [],
-    #"ofp_vendor" (body of ofp_vendor_header)
+    "ofp_vendor" : [], # (body of ofp_vendor_header)
     "ofp_features_request" : [],
     "ofp_get_config_request" : [],
     "ofp_get_config_reply" : [],
