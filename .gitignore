@@ -25,6 +25,8 @@ sts/headerspace/hassel-c/i2
 sts/headerspace/hassel-c/stanford
 sts/headerspace/hassel-c/test
 sts/headerspace/hassel-c/hs-test
+nox/
+nox_classic/
 
 
 # ignore eclipse project files
