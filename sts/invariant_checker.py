@@ -14,30 +14,30 @@ from sts.util.console import msg
 log = logging.getLogger("invariant_checker")
 
 class InvariantChecker(object):
-  def __init__(self, snapshotService):
-    self.snapshotService = snapshotService
-
-  def fetch_controller_snapshot(self, simulation):
-    self.snapshotService.fetchSnapshot()
-    return self.snapshotService.snapshot
+  @staticmethod
+  def fetch_controller_snapshot(snapshotService):
+    snapshotService.fetchSnapshot()
+    return snapshotService.snapshot
 
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
   # --------------------------------------------------------------#
-  def check_loops(self, simulation):
+  @staticmethod
+  def check_loops(simulation):
     # Warning! depends on python Hassell -- may be really slow!
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     loops = hsa.detect_loop(NTF, TTF, simulation.topology.access_links)
     return loops
 
-  def check_connectivity(self, simulation):
+  @staticmethod
+  def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
     # Effectively, run compute physical omega, ignore concrete values of headers, and
     # check that all pairs can reach eachother
-    physical_omega = self.compute_physical_omega(simulation.topology.live_switches,
-                                                 simulation.topology.live_links,
-                                                 simulation.topology.access_links)
+    physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
+                                                             simulation.topology.live_links,
+                                                             simulation.topology.access_links)
     connected_pairs = set()
     # Omegas are { original port -> [(final hs1, final port1), (final hs2, final port2)...] }
     for start_port, final_location_list in physical_omega.iteritems():
@@ -58,42 +58,47 @@ class InvariantChecker(object):
       msg.success("Fully connected!")
     return remaining_pairs
 
-  def check_correspondence(self, simulation):
+  @staticmethod
+  def check_correspondence(simulation, snapshotService):
     ''' Return if there were any policy-violations '''
     log.debug("Snapshotting controller...")
-    controller_snapshot = self.fetch_controller_snapshot(simulation)
+    controller_snapshot = InvariantChecker.fetch_controller_snapshot(snapshotService)
     log.debug("Computing physical omega...")
-    physical_omega = self.compute_physical_omega(simulation.topology.live_switches,
-                                                 simulation.topology.live_links,
-                                                 simulation.topology.access_links)
+    physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
+                                                             simulation.topology.live_links,
+                                                             simulation.topology.access_links)
     log.debug("Computing controller omega...")
-    controller_omega = self.compute_controller_omega(controller_snapshot,
-                                                     simulation.topology.live_switches,
-                                                     simulation.topology.live_links,
-                                                     simulation.topology.access_links)
-    return self.infer_policy_violations(physical_omega, controller_omega)
+    controller_omega = InvariantChecker.compute_controller_omega(controller_snapshot,
+                                                                 simulation.topology.live_switches,
+                                                                 simulation.topology.live_links,
+                                                                 simulation.topology.access_links)
+    return InvariantChecker.infer_policy_violations(physical_omega, controller_omega)
 
   # --------------------------------------------------------------#
   #                    HSA utilities                              #
   # --------------------------------------------------------------#
-  def compute_physical_omega(self, live_switches, live_links, edge_links):
-    (name_tf_pairs, TTF) = self._get_transfer_functions(live_switches, live_links)
+  @staticmethod
+  def compute_physical_omega(live_switches, live_links, edge_links):
+    (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(live_switches, live_links)
     physical_omega = hsa.compute_omega(name_tf_pairs, TTF, edge_links)
     return physical_omega
 
-  def compute_controller_omega(self, controller_snapshot, live_switches, live_links, edge_links):
+  @staticmethod
+  def compute_controller_omega(controller_snapshot, live_switches, live_links, edge_links):
     name_tf_pairs = hsa_topo.tf_pairs_from_snapshot(controller_snapshot, live_switches)
     # Frenetic doesn't store any link or host information.
     # No virtualization though, so we can assume the same TTF. TODO(cs): for now...
     TTF = hsa_topo.generate_TTF(live_links)
     return hsa.compute_omega(name_tf_pairs, TTF, edge_links)
 
-  def _get_transfer_functions(self, live_switches, live_links):
+  @staticmethod
+  def _get_transfer_functions(live_switches, live_links):
     name_tf_pairs = hsa_topo.generate_tf_pairs(live_switches)
     TTF = hsa_topo.generate_TTF(live_links)
     return (name_tf_pairs, TTF)
 
-  def infer_policy_violations(self, physical_omega, controller_omega):
+  @staticmethod
+  def infer_policy_violations(physical_omega, controller_omega):
     ''' Return if there were any missing entries '''
     print "# entries in physical omega: %d" % len(physical_omega)
     print "# entries in controller omega: %d" % len(controller_omega)

@@ -104,7 +104,7 @@ else:
 # TODO(sw): support the specification of different invariant checkers
 # For snapshotting the controller's view of the network configuration
 snapshotService = snapshot.get_snapshotservice(controller_configs)
-simulator.set_invariant_checker(InvariantChecker(snapshotService))
+simulator.set_snapshot_service(snapshotService)
 
 # For injecting dataplane packets into the simulated network
 if hasattr(config, 'dataplane_trace') and config.dataplane_trace:
