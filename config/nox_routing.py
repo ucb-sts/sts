@@ -5,7 +5,7 @@ from sts.input_traces.input_logger import InputLogger
 from sts.invariant_checker import InvariantChecker
 
 # Use POX as our controller
-command_line = "./nox_core simplerouting"
+command_line = "./nox_core -i ptcp:6633 simplerouting"
 controllers = [ControllerConfig(command_line, cwd="nox_classic/build/src", address="127.0.0.1", port=6633)]
 
 # Use a FatTree with 4 pods (already the default)
