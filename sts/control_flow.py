@@ -114,10 +114,12 @@ class Fuzzer(ControlFlow):
   '''
   def __init__(self, fuzzer_params="config.fuzzer_params",
                check_interval=None, trace_interval=10, random_seed=0.0,
-               delay=0.1, steps=None, input_logger=None):
+               delay=0.1, steps=None, input_logger=None,
+               invariant_check=InvariantChecker.check_correspondence):
     ControlFlow.__init__(self, RecordingSyncCallback(input_logger))
 
     self.check_interval = check_interval
+    self.invariant_check = invariant_check
     self.trace_interval = trace_interval
     # Make execution deterministic to allow the user to easily replay
     # TODO(cs): why are we keeping random_seed around?
@@ -163,29 +165,29 @@ class Fuzzer(ControlFlow):
         self.logical_time += 1
         self.trigger_events()
         msg.event("Round %d completed." % self.logical_time)
-        self.maybe_check_correspondence()
+        self.maybe_check_invariant()
         self.maybe_inject_trace_event()
         time.sleep(self.delay)
     finally:
       if self._input_logger is not None:
         self._input_logger.close(self.simulation)
 
-  def maybe_check_correspondence(self):
+  def maybe_check_invariant(self):
     if (self.check_interval is not None and
         (self.logical_time % self.check_interval) == 0):
       # Time to run correspondence!
       # spawn a thread for running correspondence. Make sure the controller doesn't
       # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
       # TODO(cs): this is a HACK
-      def do_correspondence():
-        any_policy_violations = InvariantChecker.check_correspondence(self.simulation,
-                                                                      self.snapshotService)
+      def do_invariant_check():
+        any_policy_violations = self.invariant_check(self.simulation,
+                                                     self.snapshotService)
 
         if any_policy_violations:
           msg.fail("There were policy-violations!")
         else:
           msg.interactive("No policy-violations!")
-      thread = threading.Thread(target=do_correspondence)
+      thread = threading.Thread(target=do_invariant_check)
       thread.start()
       while thread.isAlive():
         for switch in self.simulation.topology.live_switches:
