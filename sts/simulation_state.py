@@ -37,7 +37,7 @@ class Simulation (object):
   """
   def __init__(self, controller_configs, topology_class,
                topology_params, patch_panel_class, dataplane_trace_path=None,
-               controller_sync_callback=None):
+               controller_sync_callback=None, snapshot_service=None):
     self.controller_configs = controller_configs
     self.controller_manager = None
     self.topology = None
@@ -53,6 +53,7 @@ class Simulation (object):
     # TODO(cs): controller_sync_callback is currently stateful -> need to fix
     # for correct bootstrap()'ing
     self.controller_sync_callback = controller_sync_callback
+    self.snapshot_service = snapshot_service
 
   # TODO(cs): the next three next methods should go in a separate
   #           ControllerContainer class
@@ -107,7 +108,8 @@ class Simulation (object):
     # Boot the controllers
     controllers = []
     for c in self.controller_configs:
-      controller = Controller(c, self.sync_connection_manager)
+      controller = Controller(c, self.sync_connection_manager,
+                              self.snapshot_service)
       controller.start()
       log.info("Launched controller c%s: %s [PID %d]" %
                (str(c.uuid), " ".join(c.expanded_cmdline), controller.pid))

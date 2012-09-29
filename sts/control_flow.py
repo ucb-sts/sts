@@ -31,11 +31,7 @@ log = logging.getLogger("control_flow")
 class ControlFlow(object):
   ''' Superclass of ControlFlow types '''
   def __init__(self, sync_callback):
-    self.invariant_checker = None
     self.sync_callback = sync_callback
-
-  def set_snapshot_service(self, snapshotService):
-    self.snapshotService = snapshotService
 
   def simulate(self, simulation):
     ''' Move the simulation forward! Take the state of the system as a
@@ -180,8 +176,7 @@ class Fuzzer(ControlFlow):
       # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
       # TODO(cs): this is a HACK
       def do_invariant_check():
-        any_policy_violations = self.invariant_check(self.simulation,
-                                                     self.snapshotService)
+        any_policy_violations = self.invariant_check(self.simulation)
 
         if any_policy_violations:
           msg.fail("There were policy-violations!")
@@ -419,8 +414,7 @@ class Interactive(ControlFlow):
       answer = msg.raw_input("> ")
       result = None
       if answer.lower() == 'o':
-        result = InvariantChecker.check_correspondence(self.simulation,
-                                                       self.snapshotService)
+        result = InvariantChecker.check_correspondence(self.simulation)
       elif answer.lower() == 'c':
         result = self.invariant_checker.check_connectivity(self.simulation)
       elif answer.lower() == 'l':

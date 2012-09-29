@@ -14,11 +14,6 @@ from sts.util.console import msg
 log = logging.getLogger("invariant_checker")
 
 class InvariantChecker(object):
-  @staticmethod
-  def fetch_controller_snapshot(snapshotService):
-    snapshotService.fetchSnapshot()
-    return snapshotService.snapshot
-
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
   # --------------------------------------------------------------#
@@ -59,20 +54,24 @@ class InvariantChecker(object):
     return remaining_pairs
 
   @staticmethod
-  def check_correspondence(simulation, snapshotService):
+  def check_correspondence(simulation):
     ''' Return if there were any policy-violations '''
     log.debug("Snapshotting controller...")
-    controller_snapshot = InvariantChecker.fetch_controller_snapshot(snapshotService)
-    log.debug("Computing physical omega...")
-    physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
-                                                             simulation.topology.live_links,
-                                                             simulation.topology.access_links)
-    log.debug("Computing controller omega...")
-    controller_omega = InvariantChecker.compute_controller_omega(controller_snapshot,
-                                                                 simulation.topology.live_switches,
-                                                                 simulation.topology.live_links,
-                                                                 simulation.topology.access_links)
-    return InvariantChecker.infer_policy_violations(physical_omega, controller_omega)
+    diffs = []
+    for controller in simulation.controller_manager.controllers:
+      controller_snapshot = controller.snapshot_service.fetchSnapshot()
+      log.debug("Computing physical omega...")
+      physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
+                                                               simulation.topology.live_links,
+                                                               simulation.topology.access_links)
+      log.debug("Computing controller omega...")
+      controller_omega = InvariantChecker.compute_controller_omega(controller_snapshot,
+                                                                   simulation.topology.live_switches,
+                                                                   simulation.topology.live_links,
+                                                                   simulation.topology.access_links)
+      diff = InvariantChecker.infer_policy_violations(physical_omega, controller_omega)
+      diffs.append(diff)
+    return diffs
 
   # --------------------------------------------------------------#
   #                    HSA utilities                              #

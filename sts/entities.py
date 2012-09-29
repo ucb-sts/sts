@@ -296,13 +296,15 @@ class Controller(object):
       else:
         self.kill() # make sure it is killed if this was started errantly
 
-  def __init__(self, controller_config, sync_connection_manager):
+  def __init__(self, controller_config, sync_connection_manager,
+               snapshot_service):
     '''idx is the unique index for the controller used mostly for logging purposes.'''
     self.config = controller_config
     self.alive = False
     self.process = None
     self.sync_connection_manager = sync_connection_manager
     self.sync_connection = None
+    self.snapshot_service = snapshot_service
     self.log = logging.getLogger("Controller")
 
   @property
