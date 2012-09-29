@@ -176,6 +176,11 @@ class DPFingerprint(Fingerprint):
   def __eq__(self, other):
     if type(other) != DPFingerprint:
       return False
+    if len(self._field2value) != len(other._field2value):
+      return False
+    if 'class' in self._field2value:
+      return ('class' in other._field2value and
+              self._field2value['class'] == other._field2value['class'])
     for field in self.fields:
       if self._field2value[field] != other._field2value[field]:
         return False
