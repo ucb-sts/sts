@@ -1,7 +1,8 @@
 from experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology, BufferedPatchPanel
-from sts.control_flow import Interactive
+from sts.control_flow import Fuzzer
 from sts.input_traces.input_logger import InputLogger
+from sts.invariant_checker import InvariantChecker
 
 # Use POX as our controller
 command_line = "./nox_core simplerouting"
@@ -19,7 +20,8 @@ topology_params = "num_switches=2"
 patch_panel_class = BufferedPatchPanel
 
 # Use a Fuzzer (already the default)
-control_flow = Interactive(input_logger=InputLogger())
+control_flow = Fuzzer(input_logger=InputLogger(),
+                      invariant_check=InvariantChecker.check_connectivity)
 
 # Specify None as the dataplane trace (already the default)
 # Otherwise, specify the path to the trace file
