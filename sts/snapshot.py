@@ -96,11 +96,11 @@ def get_snapshotservice(controller_configs):
   For now, we only support a homogenous controller environment.'''
   # Read from config what controller we are using
   # TODO(cs): allow for heterogenous controllers?
-  if controller_configs != [] and controller_configs[0].name == "pox":
-    snapshotService = PoxSnapshotService()
-  elif controller_configs != [] and controller_configs[0].name == "floodlight":
-    snapshotService = FloodlightSnapshotService()
-  else:
-    # We default snapshotService to None
-    snapshotService = None
-  return snapshotService
+  if controller_configs == []:
+    return None
+  if controller_configs[0].name == "pox":
+    return PoxSnapshotService()
+  if controller_configs[0].name == "floodlight":
+    return FloodlightSnapshotService()
+  # We default to None
+  return None
