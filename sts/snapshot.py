@@ -101,6 +101,6 @@ def get_snapshotservice(controller_configs):
   elif controller_configs != [] and controller_configs[0].name == "floodlight":
     snapshotService = FloodlightSnapshotService()
   else:
-    # We default snapshotService to POX
-    snapshotService = PoxSnapshotService()
+    # We default snapshotService to None
+    snapshotService = None
   return snapshotService

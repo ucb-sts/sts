@@ -29,6 +29,7 @@ class ControllerConfig(object):
 
     # TODO(sam): we should either call them all controller_type or all 'name'
     # we only accept strings
+    self.name = ""
     if isinstance(controller_type,str):
       self.name = controller_type
     elif "pox" in self.cmdline:
