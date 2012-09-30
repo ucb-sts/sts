@@ -204,7 +204,7 @@ def invoke_hassel_c(start_port, edge_ports):
   try:
     os.chdir(HASSEL_C_PATH)
     proc = subprocess.Popen(["./sts", str(start_port)] + str_edge_ports,
-                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
   finally:
     os.chdir(old_cwd)
   return proc
