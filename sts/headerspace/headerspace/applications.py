@@ -175,7 +175,7 @@ def compute_omega(name_tf_pairs, TTF, edge_links):
   print "edge_ports: %s" % edge_ports
 
   for start_port in edge_ports:
-    port_omega = compute_single_omega(start_port, edge_ports)
+    port_omega = compute_single_omega(start_port, list(edge_ports))
     omega = dict(omega.items() + port_omega.items())
   return omega
 
