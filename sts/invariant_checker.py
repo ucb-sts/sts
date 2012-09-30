@@ -5,7 +5,7 @@ from pox.openflow.libopenflow_01 import *
 from entities import *
 import sts.headerspace.topology_loader.topology_loader as hsa_topo
 import sts.headerspace.headerspace.applications as hsa
-import sts.headerspace.config_parser.openflow_parser as get_uniq_port_id
+from sts.headerspace.config_parser.openflow_parser import get_uniq_port_id
 import pickle
 import logging
 import collections
@@ -41,14 +41,17 @@ class InvariantChecker(object):
 
     # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
     # headerspace/ module instead of computing uniq_port_id here
+    access_links = simulation.topology.access_links
     all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port),get_uniq_port_id(l2.switch, l2.switch_port))
-                  for l1 in simulation.topology.acccess_link
-                  for l2 in simulation.topology.acccess_link if l1 != l2 ]
+                  for l1 in access_links
+                  for l2 in access_links if l1 != l2 ]
     all_pairs = set(all_pairs)
     remaining_pairs = all_pairs - connected_pairs
     # TODO(cs): don't print results here
     if len(remaining_pairs) > 0:
-      msg.fail("Not all pairs are connected!")
+      msg.fail("Not all %d pairs are connected! (%d missing)" %
+               (len(all_pairs),len(remaining_pairs)))
+      log.info("remaining_pairs: %s" % (str(remaining_pairs)))
     else:
       msg.success("Fully connected!")
     return remaining_pairs

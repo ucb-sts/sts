@@ -180,9 +180,9 @@ class Fuzzer(ControlFlow):
         any_policy_violations = self.invariant_check(self.simulation)
 
         if any_policy_violations:
-          msg.fail("There were policy-violations!")
+          msg.fail("There were correctness violations!")
         else:
-          msg.interactive("No policy-violations!")
+          msg.interactive("No correctness violations!")
       thread = threading.Thread(target=do_invariant_check)
       thread.start()
       while thread.isAlive():

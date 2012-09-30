@@ -142,7 +142,7 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
 HASSEL_C_PATH = "./sts/headerspace/hassel-c"
 HASSEL_TF_PATH = HASSEL_C_PATH + "/tfs/sts"
 
-def prepare_hassel_c(name_tf_pairs):
+def prepare_hassel_c(name_tf_pairs, TTF):
   if not os.path.exists(HASSEL_C_PATH + "/gen"):
     raise RuntimeError("You need to make hassel-c!")
 
@@ -168,7 +168,7 @@ def prepare_hassel_c(name_tf_pairs):
 # Omega defines the externally visible behavior of the network. Defined as a table:
 #   (header space, edge_port) -> [(header_space, final_location),(header_space, final_location)...]
 def compute_omega(name_tf_pairs, TTF, edge_links):
-  prepare_hassel_c(name_tf_pairs)
+  prepare_hassel_c(name_tf_pairs, TTF)
   omega = {}
   # TODO(cs): need to model host end of link, or does switch end suffice?
   edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
@@ -200,15 +200,20 @@ def invoke_hassel_c(start_port, edge_ports):
 
   str_start_port = str(start_port)
   str_edge_ports = map(str, edge_ports)
-  proc = subprocess.Popen(["./sts", str(start_port)] + str_edge_ports,
+  old_cwd = os.getcwd()
+  try:
+    os.chdir(HASSEL_C_PATH)
+    proc = subprocess.Popen(["./sts", str(start_port)] + str_edge_ports,
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
+  finally:
+    os.chdir(old_cwd)
+  return proc
 
 def compute_single_omega(start_port, edge_ports):
     if type(start_port) != int:
       start_port = get_uniq_port_id(start_port.switch, start_port.switch_port)
 
-    proc = self.invoke_hassel_c(start_port, edge_ports)
+    proc = invoke_hassel_c(start_port, edge_ports)
 
     omega = { start_port : [] }
     second_to_last_line = ''
