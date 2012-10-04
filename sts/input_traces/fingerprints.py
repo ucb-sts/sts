@@ -2,6 +2,8 @@
 import abc
 from pox.openflow.libopenflow_01 import *
 from pox.lib.packet.ethernet import *
+from pox.lib.packet.lldp import *
+from pox.lib.packet.ipv4 import *
 import sts.headerspace.config_parser.openflow_parser as hsa
 
 class Fingerprint(object):
@@ -13,10 +15,18 @@ class Fingerprint(object):
     for field, value in field2value.iteritems():
       if type(value) == list:
         field2value[field] = tuple(value)
+      if type(value) == dict:
+        field2value[field] = DPFingerprint(value)
     self._field2value = field2value
 
   def to_dict(self):
-    return self._field2value
+    flattened = {}
+    for field, value in self._field2value.iteritems():
+      if 'to_dict' in dir(value):
+        flattened[field] = value.to_dict()
+      else:
+        flattened[field] = value
+    return flattened
 
   @abc.abstractmethod
   def __hash__(self):
@@ -34,7 +44,7 @@ def process_data(msg):
     return ()
   else:
     dp_packet = ethernet(msg.data)
-    return DPFingerprint.from_pkt(dp_packet).to_dict()
+    return DPFingerprint.from_pkt(dp_packet)
 
 def process_actions(msg):
   return tuple(map(str, map(type, msg.actions)))
@@ -74,7 +84,7 @@ class OFFingerprint(Fingerprint):
     "ofp_echo_request" : [],
     "ofp_echo_reply" : [],
     "ofp_vendor_header" : [],
-    #"ofp_vendor" (body of ofp_vendor_header)
+    "ofp_vendor" : [], # (body of ofp_vendor_header)
     "ofp_features_request" : [],
     "ofp_get_config_request" : [],
     "ofp_get_config_reply" : [],
@@ -141,12 +151,23 @@ class DPFingerprint(Fingerprint):
     # TODO(cs): might finer granularity later
     eth = pkt
     ip = pkt.next
-    field2value = {'dl_src': eth.src.toStr(), 'dl_dst': eth.dst.toStr(),
-                   'nw_src': ip.srcip.toStr(), 'nw_dst': ip.dstip.toStr()}
-    return DPFingerprint(field2value)
+    if type(ip) == lldp:
+      return DPFingerprint({'class': 'lldp'})
+    elif type(ip) == ipv4:
+      field2value = {'dl_src': eth.src.toStr(), 'dl_dst': eth.dst.toStr(),
+                     'nw_src': ip.srcip.toStr(), 'nw_dst': ip.dstip.toStr()}
+      return DPFingerprint(field2value)
+    else:
+      raise ValueError("Unknown dataplane packet type %s" % str(type(ip)))
 
   def __hash__(self):
     hash = 0
+    if 'class' in self._field2value and len(self._field2value) == 1:
+      # This is not an IP packet -- it could be, e.g., an LLDAP packet
+      hash += self._field2value['class'].__hash__()
+      return hash
+
+    # Else it's an IP packet
     # Note that the order is important
     for field in self.fields:
       hash += self._field2value[field].__hash__()
@@ -155,6 +176,11 @@ class DPFingerprint(Fingerprint):
   def __eq__(self, other):
     if type(other) != DPFingerprint:
       return False
+    if len(self._field2value) != len(other._field2value):
+      return False
+    if 'class' in self._field2value:
+      return ('class' in other._field2value and
+              self._field2value['class'] == other._field2value['class'])
     for field in self.fields:
       if self._field2value[field] != other._field2value[field]:
         return False

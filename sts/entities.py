@@ -8,8 +8,8 @@ from pox.openflow.nx_software_switch import NXSoftwareSwitch
 from pox.lib.util import assert_type
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import Event, EventMixin
-from sts.procutils import popen_filtered, kill_procs
-from sts.console import msg
+from sts.util.procutils import popen_filtered, kill_procs
+from sts.util.console import msg
 
 import logging
 import os
@@ -46,8 +46,12 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   _eventMixin_events = set([DpPacketOut])
 
   def __init__ (self, dpid, name=None, ports=4, miss_send_len=128,
-                n_buffers=100, n_tables=1, capabilities=None):
+                n_buffers=100, n_tables=1, capabilities=None,
+                can_connect_to_endhosts=True):
     NXSoftwareSwitch.__init__(self, dpid, name, ports, miss_send_len, n_buffers, n_tables, capabilities)
+
+    # Whether this is a core or edge switch
+    self.can_connect_to_endhosts = can_connect_to_endhosts
 
     self.failed = False
     self.log = logging.getLogger("FuzzSoftwareSwitch(%d)" % dpid)
@@ -67,21 +71,28 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def _handle_ConnectionUp(self, event):
     self._setConnection(event.connection, event.ofp)
 
-  def connect(self, create_connection):
+  def connect(self, create_connection, down_controller_ids=None):
     ''' - create_connection is a factory method for creating Connection objects
           which are connected to controllers. Takes a ControllerConfig object
           and a reference to a switch (self) as a paramter
     '''
     # Keep around the connection factory for fail/recovery later
+    if down_controller_ids is None:
+      down_controller_ids = set()
     self.create_connection = create_connection
+    connected_to_at_least_one = False
     for info in self.controller_info:
-      # TODO(cs): what else to pass in?
-      conn = create_connection(info, self)
-      self.set_connection(conn)
-      # cause errors to be raised
-      conn.error_handler = self.error_handler
-      # controller (ip, port) -> connection
-      self.uuid2connection[conn.io_worker.socket.getpeername()] = conn
+      # Don't connect to down controllers
+      if info.uuid not in down_controller_ids:
+        conn = create_connection(info, self)
+        self.set_connection(conn)
+        # cause errors to be raised
+        conn.error_handler = self.error_handler
+        # controller (ip, port) -> connection
+        self.uuid2connection[conn.io_worker.socket.getpeername()] = conn
+        connected_to_at_least_one = True
+
+    return connected_to_at_least_one
 
   def get_connection(self, uuid):
     if uuid not in self.uuid2connection:
@@ -100,12 +111,15 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       connection.close()
     self.connections = []
 
-  def recover(self):
+  def recover(self, down_controller_ids=None):
     if not self.failed:
       self.log.warn("Switch already up")
       return
-    self.connect(self.create_connection)
-    self.failed = False
+    connected_to_at_least_one = self.connect(self.create_connection,
+                                             down_controller_ids=down_controller_ids)
+    if connected_to_at_least_one:
+      self.failed = False
+    return connected_to_at_least_one
 
   def serialize(self):
     # Skip over non-serializable data, e.g. sockets
@@ -144,9 +158,9 @@ class Link (object):
     if not type(other) == Link:
       return False
     return (self.start_software_switch == other.start_software_switch and
-           self.start_port == other.start_port and
-           self.end_software_switch == other.end_software_switch and
-           self.end_port == other.end_port)
+            self.start_port == other.start_port and
+            self.end_software_switch == other.end_software_switch and
+            self.end_port == other.end_port)
 
   def __hash__(self):
     return (self.start_software_switch.__hash__() +  self.start_port.__hash__() +
@@ -282,13 +296,15 @@ class Controller(object):
       else:
         self.kill() # make sure it is killed if this was started errantly
 
-  def __init__(self, controller_config, sync_connection_manager):
+  def __init__(self, controller_config, sync_connection_manager,
+               snapshot_service):
     '''idx is the unique index for the controller used mostly for logging purposes.'''
     self.config = controller_config
     self.alive = False
     self.process = None
     self.sync_connection_manager = sync_connection_manager
     self.sync_connection = None
+    self.snapshot_service = snapshot_service
     self.log = logging.getLogger("Controller")
 
   @property
@@ -334,7 +350,8 @@ class Controller(object):
         src_dir = os.path.join(os.path.dirname(__file__), "..")
         pox_ext_dir = os.path.join(self.config.cwd, "ext")
         if os.path.exists(pox_ext_dir):
-          for f in ("sts/io_master.py", "sts/syncproto/base.py", "sts/syncproto/pox_syncer.py"):
+          for f in ("sts/util/io_master.py", "sts/syncproto/base.py",
+                    "sts/syncproto/pox_syncer.py", "sts/__init__.py"):
             src_path = os.path.join(src_dir, f)
             if not os.path.exists(src_path):
               raise ValueError("Integrity violation: sts sync source path %s (abs: %s) does not exist" %

@@ -5,9 +5,11 @@ from pox.openflow.libopenflow_01 import *
 from entities import *
 import sts.headerspace.topology_loader.topology_loader as hsa_topo
 import sts.headerspace.headerspace.applications as hsa
+from sts.headerspace.config_parser.openflow_parser import get_uniq_port_id
 import pickle
 import logging
 import collections
+from sts.util.console import msg
 
 log = logging.getLogger("invariant_checker")
 
@@ -22,66 +24,90 @@ class InvariantChecker(object):
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
   # --------------------------------------------------------------#
-  def check_loops(self, simulation):
-    pass
+  @staticmethod
+  def check_loops(simulation):
+    # Warning! depends on python Hassell -- may be really slow!
+    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
+    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
+    loops = hsa.detect_loop(NTF, TTF, simulation.topology.access_links)
+    return loops
 
-  def check_blackholes(self, simulation):
-    pass
+  @staticmethod
+  def check_connectivity(simulation):
+    ''' Return any pairs that couldn't reach each other '''
+    # Effectively, run compute physical omega, ignore concrete values of headers, and
+    # check that all pairs can reach eachother
+    physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
+                                                             simulation.topology.live_links,
+                                                             simulation.topology.access_links)
+    connected_pairs = set()
+    # Omegas are { original port -> [(final hs1, final port1), (final hs2, final port2)...] }
+    for start_port, final_location_list in physical_omega.iteritems():
+      for _, final_port in final_location_list:
+        connected_pairs.add((start_port, final_port))
 
-  def check_connectivity(self, simulation):
-    pass
+    # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
+    # headerspace/ module instead of computing uniq_port_id here
+    access_links = simulation.topology.access_links
+    all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port),get_uniq_port_id(l2.switch, l2.switch_port))
+                  for l1 in access_links
+                  for l2 in access_links if l1 != l2 ]
+    all_pairs = set(all_pairs)
+    remaining_pairs = all_pairs - connected_pairs
+    # TODO(cs): don't print results here
+    if len(remaining_pairs) > 0:
+      msg.fail("Not all %d pairs are connected! (%d missing)" %
+               (len(all_pairs),len(remaining_pairs)))
+      log.info("remaining_pairs: %s" % (str(remaining_pairs)))
+    else:
+      msg.success("Fully connected!")
+    return remaining_pairs
 
-  def check_routing_consistency(self, simulation):
-    pass
-
-  def check_correspondence(self, simulation):
+  @staticmethod
+  def check_correspondence(simulation):
     ''' Return if there were any policy-violations '''
-
-    controller_snapshot = None
+    log.debug("Snapshotting controller...")
+    diffs = []
     for controller in simulation.controller_manager.controllers:
-      log.debug("Snapshotting controller %s...", controller)
-      ### TODO: Do something useful with multiple controllers
-      if controller_snapshot is not None:
-        log.warn("Warning: multiple controllers unsupported. " +
-             "Will only consider the snapshot of the /last/ controller for now")
-      controller_snapshot = self.fetch_controller_snapshot(controller)
-
-    ### if necessary, split this up. Take snapshot of controller nom(s)
-    ### and simulation state from the main thread while everything is paused
-    ### the fork of a side thread for HSA computation if necessary.
-
-    log.debug("Computing physical omega...")
-    physical_omega = self.compute_physical_omega(simulation.topology.live_switches,
-                                                 simulation.topology.live_links,
-                                                 simulation.topology.access_links)
-    log.debug("Computing controller omega...")
-    controller_omega = self.compute_controller_omega(controller_snapshot,
-                                                     simulation.topology.live_switches,
-                                                     simulation.topology.live_links,
-                                                     simulation.topology.access_links)
-    return self.infer_policy_violations(physical_omega, controller_omega)
+      controller_snapshot = controller.snapshot_service.fetchSnapshot(controller)
+      log.debug("Computing physical omega...")
+      physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
+                                                               simulation.topology.live_links,
+                                                               simulation.topology.access_links)
+      log.debug("Computing controller omega...")
+      controller_omega = InvariantChecker.compute_controller_omega(controller_snapshot,
+                                                                   simulation.topology.live_switches,
+                                                                   simulation.topology.live_links,
+                                                                   simulation.topology.access_links)
+      diff = InvariantChecker.infer_policy_violations(physical_omega, controller_omega)
+      diffs.append(diff)
+    return diffs
 
   # --------------------------------------------------------------#
   #                    HSA utilities                              #
   # --------------------------------------------------------------#
-  def compute_physical_omega(self, live_switches, live_links, edge_links):
-    (name_tf_pairs, TTF) = self._get_transfer_functions(live_switches, live_links)
+  @staticmethod
+  def compute_physical_omega(live_switches, live_links, edge_links):
+    (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(live_switches, live_links)
     physical_omega = hsa.compute_omega(name_tf_pairs, TTF, edge_links)
     return physical_omega
 
-  def compute_controller_omega(self, controller_snapshot, live_switches, live_links, edge_links):
+  @staticmethod
+  def compute_controller_omega(controller_snapshot, live_switches, live_links, edge_links):
     name_tf_pairs = hsa_topo.tf_pairs_from_snapshot(controller_snapshot, live_switches)
     # Frenetic doesn't store any link or host information.
     # No virtualization though, so we can assume the same TTF. TODO(cs): for now...
     TTF = hsa_topo.generate_TTF(live_links)
     return hsa.compute_omega(name_tf_pairs, TTF, edge_links)
 
-  def _get_transfer_functions(self, live_switches, live_links):
+  @staticmethod
+  def _get_transfer_functions(live_switches, live_links):
     name_tf_pairs = hsa_topo.generate_tf_pairs(live_switches)
     TTF = hsa_topo.generate_TTF(live_links)
     return (name_tf_pairs, TTF)
 
-  def infer_policy_violations(self, physical_omega, controller_omega):
+  @staticmethod
+  def infer_policy_violations(physical_omega, controller_omega):
     ''' Return if there were any missing entries '''
     print "# entries in physical omega: %d" % len(physical_omega)
     print "# entries in controller omega: %d" % len(controller_omega)

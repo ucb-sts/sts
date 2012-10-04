@@ -1,9 +1,9 @@
 import json
-import itertools
 import os
 import time
 import sts.dataplane_traces.trace_generator as tg
 from sts.syncproto.base import SyncTime
+from sts.replay_event import TrafficInjection
 
 config_template = '''
 from experiment_config_lib import ControllerConfig
@@ -20,7 +20,6 @@ dataplane_trace = %s
 
 class InputLogger(object):
   '''Log input events injected by a control_flow.Fuzzer'''
-  _label_gen = itertools.count(1)
 
   def __init__(self, output_path=None):
     '''
@@ -37,31 +36,16 @@ class InputLogger(object):
     self.dp_trace_path = "./dataplane_traces/" + basename
     self.cfg_path = "./config/" + basename.replace(".trace", ".py")
 
-  def log_input_event(self, **kws):
-    #### TODO(aw): refactor logic to event classes - create to_json / from_json
-    # assign a label
-    kws['label'] = 'e' + str(self._label_gen.next())
-    # 'class' is a reserved keyword, so we replace 'klass' with 'class'
-    # instead
-    kws['class'] = kws['klass']
-    del kws['klass']
-
-    # We store dp_events in the Trace object, not the log itself
-    if kws['class'] == "TrafficInjection":
-      self.dp_events.append(kws['dp_event'])
-      del kws['dp_event']
-
-    # Add on dependent labels to appease log_processing.superlog_parser.
-    # TODO(cs): Replayer shouldn't depend on superlog_parser
-    kws['dependent_labels'] = []
-
-    # Assign each logged event a time
-    # TODO(cs): compress time for interactive mode?
-    if 'time' not in kws:
-      kws['time'] = SyncTime.now()
-
-    json_hash = json.dumps(kws)
+  def log_input_event(self, event, dp_event=None):
+    '''
+    Log the event as a json hash. Note that we log dataplane events in a
+    separate pickle log, so we optionally allow a packet parameter to be
+    logged separately.
+    '''
+    json_hash = event.to_json()
     self.output.write(json_hash + '\n')
+    if dp_event is not None:
+      self.dp_events.append(dp_event)
 
   def close(self, simulation):
     # Flush the json input log

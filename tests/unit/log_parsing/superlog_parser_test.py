@@ -11,7 +11,7 @@ import tempfile
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 import sts.log_processing.superlog_parser as superlog_parser
-from sts.event import LinkFailure, LinkRecovery
+from sts.replay_event import LinkFailure, LinkRecovery
 
 class superlog_parser_test(unittest.TestCase):
   tmpfile = '/tmp/superlog.tmp'

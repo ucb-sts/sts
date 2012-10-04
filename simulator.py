@@ -19,7 +19,7 @@ fi
 exec python $OPT "$0" "$@"
 '''
 
-from sts.procutils import kill_procs
+from sts.util.procutils import kill_procs
 
 from sts.topology import FatTree, BufferedPatchPanel
 from sts.control_flow import Fuzzer
@@ -59,7 +59,13 @@ args = parser.parse_args()
 if args.config.endswith('.py'):
   args.config = args.config[:-3].replace("/", ".")
 
-config = __import__(args.config, globals(), locals(), ["*"])
+try:
+  config = __import__(args.config, globals(), locals(), ["*"])
+except ImportError:
+  # try again, but look in the config director/module
+  config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
+
+# If we get here, either *both* of the imports failed. config is defined if execution reaches here.
 
 # For booting controllers
 if hasattr(config, 'controllers'):
@@ -96,8 +102,7 @@ else:
   simulator = Fuzzer()
 
 # For snapshotting the controller's view of the network configuration
-snapshotService = snapshot.get_snapshotservice(controller_configs)
-simulator.set_invariant_checker(InvariantChecker(snapshotService))
+snapshot_service = snapshot.get_snapshotservice(controller_configs)
 
 # For injecting dataplane packets into the simulated network
 if hasattr(config, 'dataplane_trace') and config.dataplane_trace:
@@ -121,7 +126,8 @@ try:
   simulation = Simulation(controller_configs, topology_class,
                           topology_params, patch_panel_class,
                           dataplane_trace_path=dataplane_trace_path,
-                          controller_sync_callback=simulator.get_sync_callback())
+                          controller_sync_callback=simulator.get_sync_callback(),
+                          snapshot_service=snapshot_service)
   simulator.simulate(simulation)
 finally:
   if simulation is not None:

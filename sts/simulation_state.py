@@ -10,13 +10,13 @@ Encapsulates the state of the simulation, including:
   - Metadata (e.g. # of failures)
 '''
 
-from sts.console import msg
-from sts.io_master import IOMaster
+from sts.util.console import msg
+from sts.util.io_master import IOMaster
 from sts.dataplane_traces.trace import Trace
 from entities import Link, Host, Controller, DeferredOFConnection
 from sts.topology import *
 from sts.controller_manager import ControllerManager
-from sts.deferred_io import DeferredIOWorker
+from sts.util.deferred_io import DeferredIOWorker
 from sts.control_flow import Replayer
 from sts.god_scheduler import GodScheduler
 from sts.syncproto.base import SyncTime
@@ -37,7 +37,7 @@ class Simulation (object):
   """
   def __init__(self, controller_configs, topology_class,
                topology_params, patch_panel_class, dataplane_trace_path=None,
-               controller_sync_callback=None):
+               controller_sync_callback=None, snapshot_service=None):
     self.controller_configs = controller_configs
     self.controller_manager = None
     self.topology = None
@@ -53,6 +53,7 @@ class Simulation (object):
     # TODO(cs): controller_sync_callback is currently stateful -> need to fix
     # for correct bootstrap()'ing
     self.controller_sync_callback = controller_sync_callback
+    self.snapshot_service = snapshot_service
 
   # TODO(cs): the next three next methods should go in a separate
   #           ControllerContainer class
@@ -107,7 +108,8 @@ class Simulation (object):
     # Boot the controllers
     controllers = []
     for c in self.controller_configs:
-      controller = Controller(c, self.sync_connection_manager)
+      controller = Controller(c, self.sync_connection_manager,
+                              self.snapshot_service)
       controller.start()
       log.info("Launched controller c%s: %s [PID %d]" %
                (str(c.uuid), " ".join(c.expanded_cmdline), controller.pid))

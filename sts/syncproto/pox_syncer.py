@@ -10,7 +10,7 @@ from pox.lib.ioworker.io_worker import JSONIOWorker
 from pox.lib.graph.nom import Switch, Host, Link
 from pox.lib.graph.util import NOMEncoder
 
-from sts.io_master import IOMaster
+from sts.util.io_master import IOMaster
 from sts.syncproto.base import SyncTime, SyncMessage, SyncProtocolSpeaker, SyncIODelegate
 from pox.lib.util import parse_openflow_uri
 from pox.lib.recoco import Task, Select

@@ -3,7 +3,7 @@ import itertools
 import json
 import time
 
-from sts.io_master import IOMaster
+from sts.util.io_master import IOMaster
 from sts.syncproto.base import SyncProtocolSpeaker, SyncMessage, SyncTime, SyncIODelegate
 
 from pox.lib.ioworker.io_worker import JSONIOWorker
