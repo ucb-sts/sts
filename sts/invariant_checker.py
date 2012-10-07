@@ -1,4 +1,4 @@
-import json
+
 import urllib2
 
 from pox.openflow.libopenflow_01 import *

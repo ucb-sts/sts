@@ -423,19 +423,23 @@ class Interactive(ControlFlow):
       msg.interactive("  'l' - loops")
       answer = msg.raw_input("> ")
       result = None
+      message = ""
       if answer.lower() == 'o':
         result = InvariantChecker.check_correspondence(self.simulation)
+        message = "Controllers with miscorrepondence: "
       elif answer.lower() == 'c':
         result = self.invariant_checker.check_connectivity(self.simulation)
+        message = "Disconnected host pairs: "
       elif answer.lower() == 'l':
         result = self.invariant_checker.check_loops(self.simulation)
+        message = "Loops: "
       else:
         log.warn("Unknown input...")
 
       if result is None:
         return
       else:
-        msg.interactive("Result: %s" % str(result))
+        msg.interactive("%s: %s" % (message, str(result)))
 
   def dataplane_trace_prompt(self):
     if self.simulation.dataplane_trace:
