@@ -177,10 +177,11 @@ class Fuzzer(ControlFlow):
       # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
       # TODO(cs): this is a HACK
       def do_invariant_check():
-        any_policy_violations = self.invariant_check(self.simulation)
+        controllers_with_violations = self.invariant_check(self.simulation)
 
-        if any_policy_violations:
-          msg.fail("There were correctness violations!")
+        if controllers_with_violations != []:
+          msg.fail("The following controllers had correctness violations!: %s"
+                   % str(controllers_with_violations))
         else:
           msg.interactive("No correctness violations!")
       # use a non-threaded version of correspondence for now. otherwise
