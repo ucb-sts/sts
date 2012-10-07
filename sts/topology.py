@@ -724,7 +724,6 @@ class FatTree (Topology):
     # number of edge switches per pod = k / 2
     # number of agg switches per pod = k / 2
     total_switches = self.total_core + ((self.edge_per_pod + self.agg_per_pod) * self.k)
-    print "total_switches: %d" % total_switches
     # uni-directional links (on in both directions):
     total_network_links = (total_switches * self.k) - self.total_hosts
     if len(network_links) != total_network_links:
