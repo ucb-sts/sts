@@ -337,7 +337,7 @@ def generate_transfer_function(tf, software_switch):
   '''
   The rules will be added to transfer function tf passed to the function.
   '''
-  print "=== Generating Transfer Function for switch %d ===" % software_switch.dpid
+  log.debug("=== Generating Transfer Function for switch %d ===" % software_switch.dpid)
   # generate the forwarding part of transfer fucntion, from the fwd_prt, to pre-output ports
   table = software_switch.table
   all_port_ids = map(lambda port: get_uniq_port_id(software_switch, port), software_switch.ports.values())
@@ -368,8 +368,7 @@ def generate_transfer_function(tf, software_switch):
       else:
         tf.add_rewrite_rule(tf_rule)
 
-  print "=== Successfully Generated Transfer function ==="
-  #print tf
+  log.debug("=== Successfully Generated Transfer function ===")
   return 0
 
 def get_kw_for_field_match(field_match):

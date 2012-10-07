@@ -8,6 +8,9 @@ from sts.headerspace.headerspace.hs import *
 from array import array
 from sts.headerspace.headerspace.wildcard_dictionary import wildcard_dictionary
 
+import logging
+log = logging.getLogger("headerspace")
+
 def ports_to_hex(ports):
   return map(port_to_hex, ports)
 
@@ -639,7 +642,7 @@ class TF(object):
     '''
     saves all the non-custom transfer function rules to a file
     '''
-    print "=== Saving transfer function to file %s ==="%file
+    log.debug("=== Saving transfer function to file %s ==="%file)
     f = open(file, 'w')
     f.write("%d$%s$%d$%d$%d$\n"%(self.length,self.prefix_id,self.next_id,self.lazy_eval_active,self.send_on_receiving_port))
     for nibble in self.lazy_eval_nibbles:
@@ -666,13 +669,13 @@ class TF(object):
         f.write("%d,"%ln)
       f.write("$%s$\n"%rule["id"])
     f.close()
-    print "=== Transfer function saved to file %s ==="%file
+    log.debug("=== Transfer function saved to file %s ==="%file)
 
   def load_object_from_file(self, file):
     '''
     load object from file, and replace the current object.
     '''
-    print "=== Loading transfer function from file %s ==="%file
+    log.debug("=== Loading transfer function from file %s ==="%file)
     f = open(file,'r')
     self.rules = []
     first_line = f.readline()
@@ -769,7 +772,7 @@ class TF(object):
       rule["affected_by"] = affects
       self.set_fast_lookup_pointers(indx)
 
-    print "=== Transfer function loaded from file %s ==="%file
+    log.debug("=== Transfer function loaded from file %s ==="%file)
 
   def __str__(self):
     strs = self.to_string()

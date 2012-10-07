@@ -12,6 +12,8 @@ import sys
 import glob
 import os
 import subprocess
+import logging
+log = logging.getLogger("headerspace")
 
 # What is a p_node?
 # A hash apparently:
@@ -19,11 +21,11 @@ import subprocess
 #  port -> foo
 #  visits -> foo
 def print_p_node(p_node):
-    print "-----"
-    print p_node["hdr"]
-    print p_node["port"]
-    print p_node["visits"]
-    print "-----"
+    log.debug("-----")
+    log.debug(p_node["hdr"])
+    log.debug(p_node["port"])
+    log.debug(p_node["visits"])
+    log.debug("-----")
 
 def find_reachability(NTF, TTF, in_port, out_ports, input_pkt):
     paths = []
@@ -38,7 +40,7 @@ def find_reachability(NTF, TTF, in_port, out_ports, input_pkt):
 
     while len(propagation)>0:
         #get the next node in propagation graph and apply it to NTF and TTF
-        print "Propagation has length: %d"%len(propagation)
+        log.debug("Propagation has length: %d"%len(propagation))
         tmp_propagate = []
         for p_node in propagation:
             next_hp = NTF.T(p_node["hdr"],p_node["port"])
@@ -67,8 +69,8 @@ def find_reachability(NTF, TTF, in_port, out_ports, input_pkt):
                                 if linked_p in out_ports:
                                     paths.append(new_p_node)
                                 elif linked_p in new_p_node["visits"]:
-                                    print "WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %d "%(\
-                                        new_p_node["hdr"],new_p_node["visits"],new_p_node["port"])
+                                    log.warn("WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %d "%(\
+                                        new_p_node["hdr"],new_p_node["visits"],new_p_node["port"]))
                                 else:
                                     tmp_propagate.append(new_p_node)
         propagation = tmp_propagate
@@ -87,7 +89,7 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
 
     loops = []
     for port in ports:
-        print "port %d is being checked"%port
+        log.debug("port %d is being checked"%port)
         propagation = []
 
         # put all-x test packet in propagation graph
@@ -104,7 +106,7 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
         propagation.append(p_node)
         while len(propagation)>0:
             #get the next node in propagation graph and apply it to NTF and TTF
-            print "Propagation has length: %d"%len(propagation)
+            log.debug("Propagation has length: %d"%len(propagation))
             tmp_propag = []
             for p_node in propagation:
                 # hp is "header port"
@@ -125,7 +127,7 @@ def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
                                 #print new_p_node
                                 if len(new_p_node["visits"]) > 0 and new_p_node["visits"][0] == linked_p:
                                     loops.append(new_p_node)
-                                    print "loop detected"
+                                    log.warn("loop detected")
                                 elif linked_p in new_p_node["visits"]:
 #                                    if (linked_p not in ports):
 #                                        print "WARNING: detected a loop whose port is not in checked ports - branch aborted:"
@@ -161,7 +163,7 @@ def prepare_hassel_c(name_tf_pairs, TTF):
   old_cwd = os.getcwd()
   try:
     os.chdir(HASSEL_C_PATH)
-    os.system("./gen sts")
+    os.system("./gen sts 1>/dev/null 2>&1")
   finally:
     os.chdir(old_cwd)
 
@@ -172,7 +174,7 @@ def compute_omega(name_tf_pairs, TTF, edge_links):
   omega = {}
   # TODO(cs): need to model host end of link, or does switch end suffice?
   edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
-  print "edge_ports: %s" % edge_ports
+  log.debug("edge_ports: %s" % edge_ports)
 
   for start_port in edge_ports:
     port_omega = compute_single_omega(start_port, list(edge_ports))
@@ -196,7 +198,7 @@ def invoke_hassel_c(start_port, edge_ports):
   # hassel-c is actually computing all paths for all out ports
   edge_ports.remove(start_port)
 
-  print "port %d is being checked" % start_port
+  log.debug("port %d is being checked" % start_port)
 
   str_start_port = str(start_port)
   str_edge_ports = map(str, edge_ports)
@@ -204,7 +206,8 @@ def invoke_hassel_c(start_port, edge_ports):
   try:
     os.chdir(HASSEL_C_PATH)
     proc = subprocess.Popen(["./sts", str(start_port)] + str_edge_ports,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                            stdout=subprocess.PIPE,
+                            stderr=open('/dev/null', "w"))
   finally:
     os.chdir(old_cwd)
   return proc

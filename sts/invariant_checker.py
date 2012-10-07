@@ -109,8 +109,8 @@ class InvariantChecker(object):
   @staticmethod
   def infer_policy_violations(physical_omega, controller_omega):
     ''' Return if there were any missing entries '''
-    print "# entries in physical omega: %d" % len(physical_omega)
-    print "# entries in controller omega: %d" % len(controller_omega)
+    log.info("# entries in physical omega: %d" % len(physical_omega))
+    log.info("# entries in controller omega: %d" % len(controller_omega))
 
     def get_simple_dict(omega):
       # TODO(cs): ignoring original hs means that we don't account for
@@ -135,13 +135,15 @@ class InvariantChecker(object):
         for final_location in final_locations:
           if origin_port not in omega2 or final_location not in omega2[origin_port]:
             any_missing_entries = True
-            print ": %s: %s" % (print_string,  str(final_location))
+            log.info(": %s: %s" % (print_string,  str(final_location)))
       if not any_missing_entries:
-        print "No %s!" % print_string
+        log.info("No %s!" % print_string)
       return any_missing_entries
 
     # (physical - controller) = missing routing policies
-    missing_routing_entries = print_missing_entries("missing routing entries", physical_omega, controller_omega)
+    missing_routing_entries = print_missing_entries("final locations in physical missing from virtual",
+                                                    physical_omega, controller_omega)
     # (controller - physical) = missing ACL policies.
-    missing_acl_entries = print_missing_entries("missing acl entries", controller_omega, physical_omega)
+    missing_acl_entries = print_missing_entries("final locations in virtual missing from physical",
+                                                controller_omega, physical_omega)
     return missing_routing_entries or missing_acl_entries
