@@ -2,7 +2,7 @@ See http://ucb-sts.github.com/sts/ for an html version of this file.
 
 Ever had to painstakingly dig through logs to find the one or two inputs that lead your controller software to break? sts seeks to eliminate this need, freeing you to debug the problematic code itself.
 
-sts is intended for distributed SDN control software such as [Floodlight](http://floodlight.openflowhub.org/).  sts simulates the devices of your network in a deterministic runtime environment, allowing fine-grained control over the inputs to your unmodified* controller(s).
+sts is intended for distributed SDN control software such as [Floodlight](http://floodlight.openflowhub.org/).  sts simulates the devices of your network, allowing fine-grained control over the inputs to your unmodified* controller(s).
 
 ![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/sts_arch.jpg)
 
