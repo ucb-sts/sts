@@ -66,8 +66,17 @@ class InvariantChecker(object):
   @staticmethod
   def check_correspondence(simulation):
     ''' Return if there were any policy-violations '''
-    log.debug("Snapshotting controller...")
     controllers_with_violations = []
+
+    log.debug("Checking controller liveness...")
+    dead_controllers = simulation.controller_manager.check_controller_processes_alive()
+    if dead_controllers:
+      log.warn("Problems found while checking controller liveness:")
+      for (c, msg) in dead_controllers:
+        log.warn(" Controller {} - {}", c.config.name, msg)
+        controllers_with_violations.append(c)
+
+    log.debug("Snapshotting controller...")
     for controller in simulation.controller_manager.controllers:
       controller_snapshot = controller.snapshot_service.fetchSnapshot(controller)
       for c in controller_snapshot.switches:

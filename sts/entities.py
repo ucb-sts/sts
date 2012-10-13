@@ -388,6 +388,17 @@ class Controller(object):
     self.kill()
     self.start()
 
+  def check_process_status(self):
+    if not self.alive:
+      return (True, "OK")
+    else:
+      if not self.process:
+        return (False, "Controller %s: Alive, but no controller process found" % self.config.name)
+      rc = self.process.poll()
+      if rc is not None:
+        return (False, "Controller %s: Alive, but controller process terminated with return code %d" % ( self.config.name, rc))
+      return (True, "OK")
+
   def send_policy_request(self, controller, api_call):
     pass
 

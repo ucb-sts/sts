@@ -41,3 +41,11 @@ class ControllerManager(object):
   def reboot_controller(controller):
     msg.event("Restarting controller %s" % str(controller))
     controller.start()
+
+  def check_controller_processes_alive(self):
+    controllers_with_problems = []
+    for c in self.live_controllers:
+      (rc, msg) = c.check_process_status()
+      if not rc:
+        controllers_with_problems.append ( (c, msg) )
+    return controllers_with_problems
