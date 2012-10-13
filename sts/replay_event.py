@@ -378,17 +378,18 @@ class WaitTime(InputEvent):
     return WaitTime(wait_time, label=label, time=time)
 
 class CheckInvariants(InputEvent):
-  def __init__(self, fail_on_error=False, label=None, time=None):
+  def __init__(self, fail_on_error=False, label=None, time=None,
+               invariant_check=InvariantChecker.check_correspondence):
     super(CheckInvariants, self).__init__(label=label, time=time)
     self.fail_on_error = fail_on_error
+    self.invariant_check = invariant_check
 
   def proceed(self, simulation):
     log.info("CheckInvariants: checking correspondence")
-    controllers_with_violations = InvariantChecker.check_correspondence(simulation)
+    violations = self.invariant_check(simulation)
 
-    if controllers_with_violations != []:
-      log.warning("The following controllers had correctness violations!: %s"
-         % str(controllers_with_violations))
+    if violations != []:
+      log.warning("Correctness violations!: %s" % str(violations))
       if self.fail_on_error:
         exit(5)
     else:
@@ -398,7 +399,19 @@ class CheckInvariants(InputEvent):
   @staticmethod
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
-    return CheckInvariants(label=label, time=time, fail_on_error = json_hash['fail_on_error'] if 'fail_on_error' in json_hash else False)
+    fail_on_error = False
+    if 'fail_on_error' in json_hash:
+      fail_on_error = json_hash['fail_on_error']
+    invariant_check = InvariantChecker.check_correspondence
+    if 'invariant_check' in json_hash:
+      method_name = json_hash['invariant_check']
+      if method_name not in InvariantChecker.__dict__:
+        raise ValueError("No such method %s in InvariantChecker" %
+                         (method_name,))
+      invariant_check = InvariantChecker.__dict__[method_name]
+    return CheckInvariants(label=label, time=time,
+                           fail_on_error=fail_on_error,
+                           invariant_check=invariant_check)
 
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
