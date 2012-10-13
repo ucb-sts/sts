@@ -13,6 +13,7 @@ Author: sw
 from sts.entities import Link
 from sts.god_scheduler import PendingReceive
 from sts.input_traces.fingerprints import *
+from invariant_checker import InvariantChecker
 import itertools
 import abc
 import logging
@@ -97,7 +98,7 @@ class Event(object):
   # Create unique labels for events
   _label_gen = itertools.count(1)
 
-  def __init__(self, label=None, time=None):
+  def __init__(self, label=None, time=None, dependent_labels=None):
     if label is None:
       label = 'e' + str(Event._label_gen.next())
     if time is None:
@@ -107,7 +108,7 @@ class Event(object):
     self.time = time
     # Add on dependent labels to appease log_processing.superlog_parser.
     # TODO(cs): Replayer shouldn't depend on superlog_parser
-    self.dependent_labels = []
+    self.dependent_labels = dependent_labels if dependent_labels else []
 
   @abc.abstractmethod
   def proceed(self, simulation):
@@ -151,8 +152,7 @@ class InputEvent(Event):
   events', which is a term that may be used elsewhere in documentation or
   code.'''
   def __init__(self, label=None, time=None, dependent_labels=None):
-    super(InputEvent, self).__init__(label=label, time=time)
-    self.dependent_labels = dependent_labels
+    super(InputEvent, self).__init__(label=label, time=time, dependent_labels=dependent_labels)
 
 # --------------------------------- #
 #  Concrete classes of InputEvents  #
@@ -377,9 +377,32 @@ class WaitTime(InputEvent):
     wait_time = json_hash['wait_time']
     return WaitTime(wait_time, label=label, time=time)
 
+class CheckInvariants(InputEvent):
+  def __init__(self, fail_on_error=False, label=None, time=None):
+    super(CheckInvariants, self).__init__(label=label, time=time)
+    self.fail_on_error = fail_on_error
+
+  def proceed(self, simulation):
+    log.info("CheckInvariants: checking correspondence")
+    controllers_with_violations = InvariantChecker.check_correspondence(simulation)
+
+    if controllers_with_violations != []:
+      log.warning("The following controllers had correctness violations!: %s"
+         % str(controllers_with_violations))
+      if self.fail_on_error:
+        exit(5)
+    else:
+      log.info("No correctness violations!")
+    return True
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time) = extract_label_time(json_hash)
+    return CheckInvariants(label=label, time=time, fail_on_error = json_hash['fail_on_error'] if 'fail_on_error' in json_hash else False)
+
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
-                    PolicyChange, TrafficInjection, WaitTime]
+                    PolicyChange, TrafficInjection, WaitTime, CheckInvariants]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
@@ -403,7 +426,7 @@ class DataplaneDrop(InternalEvent):
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
-    fingerprint = json_hash['fingerprint']
+    fingerprint = DPFingerprint(json_hash['fingerprint'])
     return DataplaneDrop(fingerprint, label=label, time=time)
 
 class DataplanePermit(InternalEvent):
@@ -422,7 +445,7 @@ class DataplanePermit(InternalEvent):
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
-    fingerprint = json_hash['fingerprint']
+    fingerprint = DPFingerprint(json_hash['fingerprint'])
     return DataplanePermit(fingerprint, label=label, time=time)
 
 class ControlChannelBlock(InternalEvent):

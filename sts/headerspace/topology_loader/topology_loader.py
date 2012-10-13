@@ -51,6 +51,10 @@ def tf_pairs_from_snapshot(snapshot, real_switches):
   name_tf_pairs = []
   for switch in snapshot.switches:
     real_switch = find(lambda sw: sw.dpid == switch.dpid, real_switches)
+    if real_switch is None:
+      log.warn("Could not find switch dpid {} in the physical network. Ignoring.", switch.dpid)
+      continue
+
     switch_tf = tf.TF(of.HS_FORMAT())
     of.tf_from_switch(switch_tf, switch, real_switch)
     name_tf_pairs.append((switch.name, switch_tf))

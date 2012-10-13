@@ -17,10 +17,6 @@ class InvariantChecker(object):
   def __init__(self, snapshotService):
     self.snapshotService = snapshotService
 
-  def fetch_controller_snapshot(self, controller):
-    self.snapshotService.fetchSnapshot(controller)
-    return self.snapshotService.snapshot
-
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
   # --------------------------------------------------------------#
@@ -70,13 +66,18 @@ class InvariantChecker(object):
     controllers_with_violations = []
     for controller in simulation.controller_manager.controllers:
       controller_snapshot = controller.snapshot_service.fetchSnapshot(controller)
+      for c in controller_snapshot.switches:
+        print "SNAPSHOT s %d : %s" % (c.dpid, c.flow_table.entries)
       log.debug("Computing physical omega...")
       physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
                                                                simulation.topology.live_links,
                                                                simulation.topology.access_links)
       log.debug("Computing controller omega...")
+      # note: using all_switches to compute the controller omega. The controller might still
+      # reference switches in his omega that are currently dead, which should result in a
+      # policy violation, not sts crashing
       controller_omega = InvariantChecker.compute_controller_omega(controller_snapshot,
-                                                                   simulation.topology.live_switches,
+                                                                   simulation.topology.switches,
                                                                    simulation.topology.live_links,
                                                                    simulation.topology.access_links)
       violations = InvariantChecker.infer_policy_violations(physical_omega, controller_omega)
