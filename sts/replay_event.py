@@ -152,7 +152,8 @@ class InputEvent(Event):
   events', which is a term that may be used elsewhere in documentation or
   code.'''
   def __init__(self, label=None, time=None, dependent_labels=None):
-    super(InputEvent, self).__init__(label=label, time=time, dependent_labels=dependent_labels)
+    super(InputEvent, self).__init__(label=label, time=time,
+                                     dependent_labels=dependent_labels)
 
 # --------------------------------- #
 #  Concrete classes of InputEvents  #
