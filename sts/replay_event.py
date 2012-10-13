@@ -189,6 +189,10 @@ class SwitchFailure(InputEvent):
     dpid = int(json_hash['dpid'])
     return SwitchFailure(dpid, label=label, time=time)
 
+  @property
+  def fingerprint(self):
+    return (self.dpid,)
+
 class SwitchRecovery(InputEvent):
   def __init__(self, dpid, label=None, time=None):
     super(SwitchRecovery, self).__init__(label=label, time=time)
@@ -205,6 +209,10 @@ class SwitchRecovery(InputEvent):
     assert_fields_exist(json_hash, 'dpid')
     dpid = int(json_hash['dpid'])
     return SwitchRecovery(dpid, label=label, time=time)
+
+  @property
+  def fingerprint(self):
+    return (self.dpid,)
 
 def get_link(link_event, simulation):
   start_software_switch = simulation.topology.get_switch(link_event.start_dpid)
@@ -239,6 +247,11 @@ class LinkFailure(InputEvent):
     return LinkFailure(start_dpid, start_port_no, end_dpid, end_port_no,
                        label=label, time=time)
 
+  @property
+  def fingerprint(self):
+    return (self.start_dpid, self.start_port_no,
+            self.end_dpid, self.end_port_no)
+
 class LinkRecovery(InputEvent):
   def __init__(self, start_dpid, start_port_no, end_dpid, end_port_no,
                label=None, time=None):
@@ -265,6 +278,11 @@ class LinkRecovery(InputEvent):
     return LinkRecovery(start_dpid, start_port_no, end_dpid, end_port_no,
                         label=label, time=time)
 
+  @property
+  def fingerprint(self):
+    return (self.start_dpid, self.start_port_no,
+            self.end_dpid, self.end_port_no)
+
 class ControllerFailure(InputEvent):
   def __init__(self, controller_id, label=None, time=None):
     super(ControllerFailure, self).__init__(label=label, time=time)
@@ -283,6 +301,10 @@ class ControllerFailure(InputEvent):
     controller_id = (controller_id[0], int(controller_id[1]))
     return ControllerFailure(controller_id, label=label, time=time)
 
+  @property
+  def fingerprint(self):
+    return self.controller_id
+
 class ControllerRecovery(InputEvent):
   def __init__(self, controller_id, label=None, time=None):
     super(ControllerRecovery, self).__init__(label=label, time=time)
@@ -300,6 +322,10 @@ class ControllerRecovery(InputEvent):
     controller_id = json_hash['controller_id']
     controller_id = (controller_id[0], int(controller_id[1]))
     return ControllerFailure(controller_id, label=label, time=time)
+
+  @property
+  def fingerprint(self):
+    return self.controller_id
 
 class HostMigration(InputEvent):
   def __init__(self, old_ingress_dpid, old_ingress_port_no,
