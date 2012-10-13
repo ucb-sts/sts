@@ -20,6 +20,10 @@ class InvariantChecker(object):
   # --------------------------------------------------------------#
   #                    Invariant checks                           #
   # --------------------------------------------------------------#
+
+  # All invariant check methods must return a list, which is empty
+  # for no violations, and non-empty for violations
+
   @staticmethod
   def check_loops(simulation):
     # Warning! depends on python Hassell -- may be really slow!
@@ -57,7 +61,7 @@ class InvariantChecker(object):
       log.info("remaining_pairs: %s" % (str(remaining_pairs)))
     else:
       msg.success("Fully connected!")
-    return remaining_pairs
+    return list(remaining_pairs)
 
   @staticmethod
   def check_correspondence(simulation):
