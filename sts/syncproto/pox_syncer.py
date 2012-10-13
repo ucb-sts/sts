@@ -133,9 +133,9 @@ class POXNomSnapshotter(object):
     for s in core.topology.getEntitiesOfType(Switch):
       nom["switches"].append(self.encoder.encode(s))
     for h in core.topology.getEntitiesOfType(Host):
-      nom["hosts"].append(self.myencoder.encode(h))
+      nom["hosts"].append(self.encoder.encode(h))
     for l in core.topology.getEntitiesOfType(Link):
-      nom["links"].append(self.myencoder.encode(l))
+      nom["links"].append(self.encoder.encode(l))
     return nom
 
 
