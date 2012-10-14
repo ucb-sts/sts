@@ -83,11 +83,17 @@ $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 
 <p>See <a href="https://github.com/ucb-sts/sts/blob/master/config/README">config/README</a> for more information. </p>
 
-<h3>Version Notes</h3>
+<h3>Dependencies</h3>
 
 <p>sts requires python 2.7+</p>
 
 <p>sts will automatically use <a href="http://pypy.org/">pypy</a> as its interpreter if you place a pypy/ directory at the top-level of the repository.</p>
+
+<p>To use the replay features of sts, you will need to install and make two dependencies:</p>
+
+<pre><code>$ sudo pip install marisa-trie
+$ cd sts/headerspace/hassel-c &amp;&amp; make -j
+</code></pre>
 
 <h3>Research</h3>
 
