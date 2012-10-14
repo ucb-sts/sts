@@ -19,6 +19,7 @@ import abc
 import logging
 import time
 import json
+import math
 from collections import namedtuple
 from sts.syncproto.base import SyncTime
 log = logging.getLogger("events")
@@ -26,49 +27,125 @@ log = logging.getLogger("events")
 
 class EventDag(object):
   '''A collection of Event objects. EventDags are primarily used to present a
-  view of the underlying events with one external event and all of its
-  dependent internal events pruned (see events())
+  view of the underlying events with some subset of the input events pruned
   '''
   def __init__(self, events):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
     # we need to the events to be ordered, so we keep a copy of the list
-    self._events = events
+    self._events = set(events)
     self.label2event = {
       event.label : event
       for event in events
     }
+    # Fill in domain knowledge about valid input
+    # sequences (e.g. don't prune failure without pruning recovery.)
+    self._mark_invalid_input_sequences()
 
-  def events(self, pruned_event_or_label=None):
-    '''Return a generator of the events in the DAG with pruned event and all of its
-    internal dependents pruned'''
-    if pruned_event_or_label is not None:
-      if type(pruned_event_or_label) == str:
-        assert(pruned_label in self.label2event)
-        pruned_event = self.label2event[pruned_event_or_label]
-        pruned_label = pruned_event_or_label
-      else:
-        assert(isinstance(pruned_event_or_label,Event))
-        pruned_event = pruned_event_or_label
-        pruned_label = pruned_event.label
-      if not hasattr(pruned_event, 'dependent_labels'):
-        raise RuntimeError("Pruned Event %s does not specify dependent_labels" %
-                           str(pruned_event))
-      pruned_labels = set(pruned_event.dependent_labels)
-      pruned_labels.add(pruned_label)
-      should_yield = lambda event: event.label not in pruned_labels
-    else:
-      should_yield = lambda x: True
+  @property
+  def events(self):
+    '''Return the events in the DAG'''
+    return list(self._events)
 
+  @property
+  def event_watchers(self):
+    '''Return a generator of the EventWatchers in the DAG'''
+    return map(EventWatcher, self._events)
+
+  def _remove_event(self, event):
+    if event.label in self.label2event[event.label]:
+      del self.label2event[event.label]
+    if event in self._events:
+      self._events.remove(event)
+    # Note that dependent_labels only contains dependencies between input
+    # events. We run peek() to infer dependencies with internal events
+    for label in event.dependent_labels:
+      if label in self.label2event:
+        dependent_event = self.label2event[label]
+        self._remove_event(dependent_event)
+
+  def remove_events(self, ignored_portion):
+    ''' Mutate the DAG: remove all input events in ignored_inputs,
+    as well all of their dependent input events'''
+    # Infer their dependents through peek(), U pre-defined dependents
+    for event in ignored_inputs:
+      if isinstance(event, InputEvent):
+        self._remove_event(event)
+    # Now run peek() to hide the internal events that will no longer occur
+    # Note that causal dependencies change depending on what the prefix is!
+    # So we have to run peek() once per prefix
+    self.peek()
+
+  def ignore_portion(self, ignored_portion):
+    ''' Return a view of the dag with ignored_portion and its dependents
+    removed'''
+    dag = EventDag(set(self._events))
+    dag.remove_events(ignored_portion)
+    return dag
+
+  def split_inputs(self, split_ways):
+    ''' Split our events into split_ways separate lists '''
+    events = list(self._events)
+    if len(events) == 0:
+      return [[]]
+    if split_ways == 1:
+      return [events]
+    if split_ways < 1 or split_ways > len(events):
+      raise ValueError("Invalid split ways %d" % split_ways)
+
+    splits = []
+    split_interval = int(math.ceil(len(events) * 1.0 / split_ways))
+    start_idx = 0
+    split_idx = start_idx + split_interval
+    while start_idx < len(events):
+      splits.append(events[start_idx:split_idx])
+      start_idx = split_idx
+      # Account for odd numbered splits -- if we're about to eat up
+      # all elements even though we will only have added split_ways-1
+      # splits, back up the split interval by 1
+      if (split_idx + split_interval >= len(events) and
+          len(splits) == split_ways - 2):
+        split_interval -= 1
+      split_idx += split_interval
+    return splits
+
+  def peek(self):
+    ''' Assign dependent labels for each internal event '''
+    # TODO(cs): store prefix in a trie (class variable)
+    # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
+    # FindMCS again?
+    pass
+
+  def _mark_invalid_input_sequences(self):
+    # If we prune a failure, make sure that the subsequent
+    # recovery doesn't occur
+    failure_types = set([SwitchFailure, LinkFailure, ControllerFailure])
+    # If we prune a recovery event, make sure that
+    # another failure doesn't occur
+    recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery])
+
+    # Note: we should never see two failures/recoveries with the same
+    # fingerprint in a row
+    fingerprint2previousfailure = {}
+    fingerprint2previousrecovery = {}
+
+    # NOTE: mutates self._events. Should really reset each of their
+    # dependent_labels each time
     for event in self._events:
-      if should_yield(event):
-        yield event
-
-  def event_watchers(self, pruned_event_or_label=None):
-    '''Return a generator of the EventWatchers in the DAG with pruned event and
-    all of its internal dependents pruned'''
-    for event in self.events(pruned_event_or_label):
-      yield EventWatcher(event)
+      if type(event) in failure_types:
+        # Insert it into the previous failure hash
+        fingerprint2previousfailure[event.fingerprint] = event
+        # Check if there were any recovery predecessors
+        if event.fingerprint in fingerprint2previousrecovery:
+          recovery = fingerprint2previousrecovery[event.fingerprint]
+          recovery.dependent_labels.append(event.label)
+      elif type(event) in recovery_types:
+        # Insert it into the previous recovery hash
+        fingerprint2previousrecovery[event.fingerprint] = event
+        # Check if there were any failure predecessors
+        if event.fingerprint in fingerprint2previousfailure:
+          failure = fingerprint2previousfailure[event.fingerprint]
+          failure.dependent_labels.append(event.label)
 
 class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either

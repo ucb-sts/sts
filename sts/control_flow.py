@@ -53,7 +53,7 @@ class Replayer(ControlFlow):
     # a list of its dependents
     self.dag = EventDag(superlog_parser.parse_path(superlog_path))
     # compute interpolate to time to be just before first event
-    self.compute_interpolated_time(self.dag.events().next())
+    self.compute_interpolated_time(self.dag.events[0])
 
   def get_interpolated_time(self):
     '''
@@ -83,7 +83,7 @@ class Replayer(ControlFlow):
     self.simulation = simulation
 
     self.simulation.bootstrap()
-    for event_watcher in self.dag.event_watchers():
+    for event_watcher in self.dag.event_watchers:
       self.compute_interpolated_time(event_watcher.event)
       event_watcher.run(simulation)
       self.increment_round()
@@ -103,78 +103,59 @@ class MCSFinder(Replayer):
       log.warn("Unable to reproduce correctness violation!")
       os.exit(5)
 
-    # Now infer causal dependencies
-    self.peek()
-
     # Now start pruning
     mcs = []
-    # TODO(cs): this should be (multi-key) binary search, not linear search.
-    # See http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf,
+    # TODO(cs): perhaps we should implement the full-blown delta-debugging
+    # algorithm? See http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf,
     # Section 3.2
     # We could also be pretty smart about what we prune first, since we can
     # leverage domain knowledge
-    for pruned_event in self.dag.events():
-      self.simulation.bootstrap()
-      # Run the simulation forward
-      for event_watcher in self.dag.event_watchers(pruned_event):
-        event_watcher.run(self.simulation)
-        self.increment_round()
-      # Check if there were violations
-      violations = self.invariant_check(simulation)
-      if violations == []:
-        # No violation! This must be part of the MCS
-        mcs.append(pruned_event)
-      else:
-        # TODO(cs): We shouldn't keep an event around if it's not part of the
-        # MCS:
-        # self.dag.remove_event()
-        pass
-    return mcs
 
-  def peek(self):
-    ''' Assign dependent labels to each input event '''
-    # First pass: just fill in domain knowledge about valid input
-    # sequences (e.g. don't prune failure without pruning recovery.)
-    self._mark_invalid_input_sequences()
+    # For now, just do a modified version of binary search:
+    #  - split into 2
+    #  - ignore left half.
+    #  - If violation
+    #      - prune entire left half, and recurse!
+    #  - Else, at least one member of MCS was in left half
+    #      - Prune right half. If violation, prune entire right half and
+    #        recurse!
+    #      - Else, elements of MCS on both right and left sides. Split
+    #        entire input into 4 pieces and proceed with quadary search!
 
-    # Next pass: fill in dependency information
+    # Principles here are:
+    #  - If violation, prune everything that was ignored
+    #  - If no violation, at least one member of the ignored portion was part
+    #    of MCS. (If the ignored portion was a singleton, add it to MCS!)
 
-    # TODO(cs): optimization? Combine peek() and MCS, which cuts down on the
-    # number of re-executions we have to run
-    # TODO(cs): write the updated events to a file, in case we want to run
-    # FindMCS again?
+    # If the MCS hasn't been found in the first N splits, this devolves into the
+    # original MCS algorithm (prune one at a time). In the average case, this
+    # should do better -- in the worst case, it will take N extra iterations,
+    # for a total of 2N replays
 
-    # TODO(cs): compute the transitive closure of the depenedent labels
-    pass
-
-  def _mark_invalid_input_sequences(self):
-    # If we prune a failure, make sure that the subsequent
-    # recovery doesn't occur
-    failure_types = set([SwitchFailure, LinkFailure, ControllerFailure])
-    # If we prune a recovery event, make sure that
-    # another failure doesn't occur
-    recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery])
-
-    # Note: we should never see two failures/recoveries with the same
-    # fingerprint in a row
-    fingerprint2previousfailure = {}
-    fingerprint2previousrecovery = {}
-
-    for event in self.dag.events:
-      if type(event) in failure_types:
-        # Insert it into the previous failure hash
-        fingerprint2previousfailure[event.fingerprint] = event
-        # Check if there were any recovery predecessors
-        if event.fingerprint in fingerprint2previousrecovery:
-          recovery = fingerprint2previousrecovery[event.fingerprint]
-          recovery.dependent_labels.append(event.label)
-      elif type(event) in recovery_types:
-        # Insert it into the previous recovery hash
-        fingerprint2previousrecovery[event.fingerprint] = event
-        # Check if there were any failure predecessors
-        if event.fingerprint in fingerprint2previousfailure:
-          failure = fingerprint2previousfailure[event.fingerprint]
-          failure.dependent_labels.append(event.label)
+    split_ways = 2
+    while split_ways <= len(self.dag):
+      ignored_portions = self.dag.split(split_ways)
+      for ignored_portion in ignored_portions:
+        # Note that ignore_portion() invokes peek()
+        new_dag = self.dag.ignore_portion(ignored_portion)
+        self.simulation.bootstrap()
+        # Run the simulation forward
+        for event_watcher in new_dag.event_watchers:
+          event_watcher.run(self.simulation)
+          self.increment_round()
+        # Check if there were violations
+        violations = self.invariant_check(simulation)
+        if violations == []:
+          # No violation!
+          # If singleton, this must be part of the MCS
+          if len(ignored_portion) == 1:
+            mcs.append(pruned_event)
+          split_ways *= 2
+        else:
+          # Violation in the non-pruned half.
+          # Prune the ignored portion (including all of its dependents)
+          self.dag.remove_events(ignored_portion)
+      return mcs
 
 class Fuzzer(ControlFlow):
   '''
