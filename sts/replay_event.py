@@ -119,10 +119,13 @@ class EventDag(object):
   def _mark_invalid_input_sequences(self):
     # If we prune a failure, make sure that the subsequent
     # recovery doesn't occur
-    failure_types = set([SwitchFailure, LinkFailure, ControllerFailure])
+    failure_types = set([SwitchFailure, LinkFailure, ControllerFailure, ControlChannelBlock])
+
     # If we prune a recovery event, make sure that
     # another failure doesn't occur
-    recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery])
+    # TODO(cs): it doesn't make much sense to prune recovery events! Perhaps
+    # we should treat failure/recovery as an atomic pair?
+    recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery, ControlChannelUnblock])
 
     # Note: we should never see two failures/recoveries with the same
     # fingerprint in a row
@@ -531,6 +534,10 @@ class ControlChannelBlock(InternalEvent):
     connection.block()
     return True
 
+  @property
+  def fingerprint(self):
+    return (self.dpid, self.controller_id)
+
   @staticmethod
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
@@ -552,6 +559,10 @@ class ControlChannelUnblock(InternalEvent):
       raise RuntimeError("Expected channel %s to be blocked" % str(connection))
     connection.unblock()
     return True
+
+  @property
+  def fingerprint(self):
+    return (self.dpid, self.controller_id)
 
   @staticmethod
   def from_json(json_hash):
