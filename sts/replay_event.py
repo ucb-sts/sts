@@ -590,6 +590,9 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
 
 # Simulator's internal events:
 
+# TODO(cs): Technically these aren't internal events! They're input events!
+# And they have really complicated dependencies with other input events!
+# For now, turn them off completely.
 class DataplaneDrop(InternalEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplaneDrop, self).__init__(label=label, time=time)
