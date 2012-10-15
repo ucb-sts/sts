@@ -33,8 +33,12 @@ class EventDag(object):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
     # we need to the events to be ordered, so we keep a copy of the list
-    self._events = set(events)
-    self.label2event = {
+    self._events_list = events
+    self._event_to_index = {
+      e : i
+      for i, e in enumerate(self._events_list)
+    }
+    self._label2event = {
       event.label : event
       for event in events
     }
@@ -47,32 +51,33 @@ class EventDag(object):
   @property
   def events(self):
     '''Return the events in the DAG'''
-    return list(self._events)
+    return self._events_list
 
   @property
   def event_watchers(self):
     '''Return a generator of the EventWatchers in the DAG'''
-    return map(EventWatcher, self._events)
+    return map(EventWatcher, self._events_list)
 
   def _remove_event(self, event):
-    if event.label in self.label2event[event.label]:
-      del self.label2event[event.label]
-    if event in self._events:
-      self._events.remove(event)
+    ''' Recursively remove the event and its dependents '''
+    if event.label in self._label2event[event.label]:
+      del self._label2event[event.label]
+    if event in self._event_to_index:
+      list_idx = del self._event_to_index[event]
+      self._event_list.pop(list_idx)
+
     # Note that dependent_labels only contains dependencies between input
     # events. We run peek() to infer dependencies with internal events
     for label in event.dependent_labels:
-      if label in self.label2event:
-        dependent_event = self.label2event[label]
+      if label in self._label2event:
+        dependent_event = self._label2event[label]
         self._remove_event(dependent_event)
 
   def remove_events(self, ignored_portion):
     ''' Mutate the DAG: remove all input events in ignored_inputs,
     as well all of their dependent input events'''
-    # Infer their dependents through peek(), U pre-defined dependents
-    for event in ignored_inputs:
-      if isinstance(event, InputEvent):
-        self._remove_event(event)
+    for event in [ e for e in ignored_portion if isinstance(e, InputEvent)]:
+      self._remove_event(event)
     # Now run peek() to hide the internal events that will no longer occur
     # Note that causal dependencies change depending on what the prefix is!
     # So we have to run peek() once per prefix
@@ -81,13 +86,14 @@ class EventDag(object):
   def ignore_portion(self, ignored_portion):
     ''' Return a view of the dag with ignored_portion and its dependents
     removed'''
-    dag = EventDag(set(self._events))
+    dag = EventDag(list(self._events_list), is_view=True)
+    # TODO(cs): potentially some redundant computation here
     dag.remove_events(ignored_portion)
     return dag
 
   def split_inputs(self, split_ways):
     ''' Split our events into split_ways separate lists '''
-    events = list(self._events)
+    events = self._events_list
     if len(events) == 0:
       return [[]]
     if split_ways == 1:
@@ -134,9 +140,8 @@ class EventDag(object):
     fingerprint2previousfailure = {}
     fingerprint2previousrecovery = {}
 
-    # NOTE: mutates self._events. Should really reset each of their
-    # dependent_labels each time
-    for event in self._events:
+    # NOTE: mutates self._events
+    for event in self._events_list:
       if type(event) in failure_types:
         # Insert it into the previous failure hash
         fingerprint2previousfailure[event.fingerprint] = event
