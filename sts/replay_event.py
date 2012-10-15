@@ -26,6 +26,19 @@ log = logging.getLogger("events")
 
 
 class EventDag(object):
+  # We peek ahead this many seconds after the timestamp of the subseqeunt
+  # event
+  # TODO(cs): be smarter about this -- peek() too far, and peek()'ing not far
+  # enough can both have negative consequences
+  _peek_seconds = 10.0
+  # If we prune a failure, make sure that the subsequent
+  # recovery doesn't occur
+  _failure_types = set([SwitchFailure, LinkFailure, ControllerFailure, ControlChannelBlock])
+  # NOTE: we treat failure/recovery as an atomic pair, since it doesn't make
+  # much sense to prune a recovery event
+  _recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery, ControlChannelUnblock])
+
+
   '''A collection of Event objects. EventDags are primarily used to present a
   view of the underlying events with some subset of the input events pruned
   '''
@@ -76,7 +89,11 @@ class EventDag(object):
   def remove_events(self, ignored_portion):
     ''' Mutate the DAG: remove all input events in ignored_inputs,
     as well all of their dependent input events'''
-    for event in [ e for e in ignored_portion if isinstance(e, InputEvent)]:
+    # Note that we treat failure/recovery as an atomic pair, so we don't prune
+    # recovery events on their own
+    for event in [ e for e in ignored_portion
+                   if (isinstance(e, InputEvent) and
+                       type(e) not in self._recovery_types) ]:
       self._remove_event(event)
     # Now run peek() to hide the internal events that will no longer occur
     # Note that causal dependencies change depending on what the prefix is!
@@ -122,40 +139,42 @@ class EventDag(object):
     # TODO(cs): store prefix in a trie (class variable)
     # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
     # FindMCS again?
-    pass
+    # TODO(cs): first step should be to look up longest matching prefix from
+    # trie
+    input_events = [ e for e in self._events_list if isinstance(e, InputEvent) ]
+    if len(input_events) == 0:
+      return
+
+    # Note that we recompute wait times for every view, since the set of
+    # internal events changes
+    event2wait_time = {}
+    for i in xrange(0, len(input_events)-1):
+      current_event = input_events[i]
+      next_event = input_events[i+1]
+      wait_time = next_event.time.as_float() + self._peek_seconds
+      event2wait_time[event] = wait_time
+    # For the last event, we wait until the last internal event
+    last_wait_time = self._events_list[-1].time.as_float() + self._peek_seconds
+    event2wait_time[input_events[-1]] = last_wait_time
 
   def _mark_invalid_input_sequences(self):
-    # If we prune a failure, make sure that the subsequent
-    # recovery doesn't occur
-    failure_types = set([SwitchFailure, LinkFailure, ControllerFailure, ControlChannelBlock])
-
-    # If we prune a recovery event, make sure that
-    # another failure doesn't occur
-    # TODO(cs): it doesn't make much sense to prune recovery events! Perhaps
-    # we should treat failure/recovery as an atomic pair?
-    recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery, ControlChannelUnblock])
-
-    # Note: we should never see two failures/recoveries with the same
-    # fingerprint in a row
+    # Note: we treat each failure/recovery pair atomically, since it doesn't
+    # make much sense to prune recovery events. Also note that that we will
+    # never see two failures (for a particular node) in a row without an
+    # interleaving recovery event
     fingerprint2previousfailure = {}
-    fingerprint2previousrecovery = {}
 
     # NOTE: mutates self._events
     for event in self._events_list:
-      if type(event) in failure_types:
+      if type(event) in self._failure_types:
         # Insert it into the previous failure hash
         fingerprint2previousfailure[event.fingerprint] = event
-        # Check if there were any recovery predecessors
-        if event.fingerprint in fingerprint2previousrecovery:
-          recovery = fingerprint2previousrecovery[event.fingerprint]
-          recovery.dependent_labels.append(event.label)
-      elif type(event) in recovery_types:
-        # Insert it into the previous recovery hash
-        fingerprint2previousrecovery[event.fingerprint] = event
+      elif type(event) in self_recovery_types:
         # Check if there were any failure predecessors
         if event.fingerprint in fingerprint2previousfailure:
           failure = fingerprint2previousfailure[event.fingerprint]
           failure.dependent_labels.append(event.label)
+      elif type(event) == Dataplae
 
 class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either
