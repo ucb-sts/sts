@@ -29,7 +29,7 @@ class EventDag(object):
   '''A collection of Event objects. EventDags are primarily used to present a
   view of the underlying events with some subset of the input events pruned
   '''
-  def __init__(self, events):
+  def __init__(self, events, is_view=False):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
     # we need to the events to be ordered, so we keep a copy of the list
@@ -40,7 +40,9 @@ class EventDag(object):
     }
     # Fill in domain knowledge about valid input
     # sequences (e.g. don't prune failure without pruning recovery.)
-    self._mark_invalid_input_sequences()
+    # Only do so if this isn't a view of a previously computed DAG
+    if not is_view:
+      self._mark_invalid_input_sequences()
 
   @property
   def events(self):
