@@ -517,9 +517,54 @@ class CheckInvariants(InputEvent):
                            fail_on_error=fail_on_error,
                            invariant_check=invariant_check)
 
+class ControlChannelBlock(InternalEvent):
+  def __init__(self, dpid, controller_id, label=None, time=None):
+    super(ControlChannelBlock, self).__init__(label=label, time=time)
+    self.dpid = dpid
+    self.controller_id = controller_id
+
+  def proceed(self, simulation):
+    switch = simulation.topology.get_switch(self.dpid)
+    connection = switch.get_connection(self.controller_id)
+    if connection.currently_blocked:
+      raise RuntimeError("Expected channel %s to not be blocked" % str(connection))
+    connection.block()
+    return True
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'dpid', 'controller_id')
+    dpid = json_hash['dpid']
+    controller_id = tuple(json_hash['controller_id'])
+    return ControlChannelBlock(dpid, controller_id, label=label, time=time)
+
+class ControlChannelUnblock(InternalEvent):
+  def __init__(self, dpid, controller_id, label=None, time=None):
+    super(ControlChannelUnblock, self).__init__(label=label, time=time)
+    self.dpid = dpid
+    self.controller_id = controller_id
+
+  def proceed(self, simulation):
+    switch = simulation.topology.get_switch(self.dpid)
+    connection = switch.get_connection(self.controller_id)
+    if not connection.currently_blocked:
+      raise RuntimeError("Expected channel %s to be blocked" % str(connection))
+    connection.unblock()
+    return True
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'dpid', 'controller_id')
+    dpid = json_hash['dpid']
+    controller_id = tuple(json_hash['controller_id'])
+    return ControlChannelUnblock(dpid, controller_id, label=label, time=time)
+
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
-                    PolicyChange, TrafficInjection, WaitTime, CheckInvariants]
+                    PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
+                    ControlChannelBlock, ControlChannelUnblock]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
@@ -564,50 +609,6 @@ class DataplanePermit(InternalEvent):
     assert_fields_exist(json_hash, 'fingerprint')
     fingerprint = DPFingerprint(json_hash['fingerprint'])
     return DataplanePermit(fingerprint, label=label, time=time)
-
-class ControlChannelBlock(InternalEvent):
-  def __init__(self, dpid, controller_id, label=None, time=None):
-    super(ControlChannelBlock, self).__init__(label=label, time=time)
-    self.dpid = dpid
-    self.controller_id = controller_id
-
-  def proceed(self, simulation):
-    switch = simulation.topology.get_switch(self.dpid)
-    connection = switch.get_connection(self.controller_id)
-    if connection.currently_blocked:
-      raise RuntimeError("Expected channel %s to not be blocked" % str(connection))
-    connection.block()
-    return True
-
-  @staticmethod
-  def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
-    assert_fields_exist(json_hash, 'dpid', 'controller_id')
-    dpid = json_hash['dpid']
-    controller_id = tuple(json_hash['controller_id'])
-    return ControlChannelBlock(dpid, controller_id, label=label, time=time)
-
-class ControlChannelUnblock(InternalEvent):
-  def __init__(self, dpid, controller_id, label=None, time=None):
-    super(ControlChannelUnblock, self).__init__(label=label, time=time)
-    self.dpid = dpid
-    self.controller_id = controller_id
-
-  def proceed(self, simulation):
-    switch = simulation.topology.get_switch(self.dpid)
-    connection = switch.get_connection(self.controller_id)
-    if not connection.currently_blocked:
-      raise RuntimeError("Expected channel %s to be blocked" % str(connection))
-    connection.unblock()
-    return True
-
-  @staticmethod
-  def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
-    assert_fields_exist(json_hash, 'dpid', 'controller_id')
-    dpid = json_hash['dpid']
-    controller_id = tuple(json_hash['controller_id'])
-    return ControlChannelUnblock(dpid, controller_id, label=label, time=time)
 
 class ControlMessageReceive(InternalEvent):
   '''
@@ -686,6 +687,6 @@ class DeterministicValue(InternalEvent):
   '''
   pass
 
-all_internal_events = [DataplaneDrop, DataplanePermit, ControlChannelBlock,
-                       ControlChannelUnblock, ControlMessageReceive,
+all_internal_events = [DataplaneDrop, DataplanePermit,
+                       ControlMessageReceive,
                        ControllerStateChange, DeterministicValue]
