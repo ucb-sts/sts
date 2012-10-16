@@ -56,7 +56,7 @@ sts will automatically use [pypy](http://pypy.org/) as its interpreter if you pl
 
 To use the replay features of sts, you will need to install and make two dependencies:
 ```
-$ sudo pip install marisa-trie
+$ sudo pip install pytrie
 $ cd sts/headerspace/hassel-c && make -j
 ```
 
