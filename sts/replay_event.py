@@ -25,6 +25,7 @@ from sts.syncproto.base import SyncTime
 log = logging.getLogger("events")
 
 
+# TODO(cs): move this into a separate file -- this class is getting way too large
 class EventDag(object):
   # We peek ahead this many seconds after the timestamp of the subseqeunt
   # event
