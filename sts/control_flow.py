@@ -81,9 +81,11 @@ class Replayer(ControlFlow):
 
   def simulate(self, simulation):
     self.simulation = simulation
+    self.run_simulation_forward(self.dag)
 
+  def run_simulation_forward(dag):
     self.simulation.bootstrap()
-    for event_watcher in self.dag.event_watchers:
+    for event_watcher in dag.event_watchers:
       self.compute_interpolated_time(event_watcher.event)
       event_watcher.run(simulation)
       self.increment_round()
@@ -138,11 +140,8 @@ class MCSFinder(Replayer):
       for ignored_portion in ignored_portions:
         # Note that ignore_portion() invokes peek()
         new_dag = self.dag.ignore_portion(ignored_portion)
-        self.simulation.bootstrap()
         # Run the simulation forward
-        for event_watcher in new_dag.event_watchers:
-          event_watcher.run(self.simulation)
-          self.increment_round()
+        self.run_simulation_forward(new_dag)
         # Check if there were violations
         violations = self.invariant_check(simulation)
         if violations == []:
