@@ -46,7 +46,7 @@ class EventDag(object):
   '''A collection of Event objects. EventDags are primarily used to present a
   view of the underlying events with some subset of the input events pruned
   '''
-  def __init__(self, events, is_view=False):
+  def __init__(self, events, is_view=False, prefix_trie=None, label2event=None):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
     # we need to the events to be ordered, so we keep a copy of the list
@@ -55,10 +55,14 @@ class EventDag(object):
       e : i
       for i, e in enumerate(self._events_list)
     }
-    self._label2event = {
-      event.label : event
-      for event in events
-    }
+    if label2event is None:
+      self._label2event = {
+        event.label : event
+        for event in events
+      }
+    else:
+      self._label2event = label2event
+
     # Fill in domain knowledge about valid input
     # sequences (e.g. don't prune failure without pruning recovery.)
     # Only do so if this isn't a view of a previously computed DAG
@@ -77,8 +81,6 @@ class EventDag(object):
 
   def _remove_event(self, event):
     ''' Recursively remove the event and its dependents '''
-    if event.label in self._label2event:
-      del self._label2event[event.label]
     if event in self._event_to_index:
       list_idx = self._event_to_index[event]
       del self._event_to_index[event]
@@ -89,7 +91,8 @@ class EventDag(object):
     for label in event.dependent_labels:
       if label in self._label2event:
         dependent_event = self._label2event[label]
-        self._remove_event(dependent_event)
+        if dependent_event in self._event_to_index:
+          self._remove_event(dependent_event)
 
   def remove_events(self, ignored_portion):
     ''' Mutate the DAG: remove all input events in ignored_inputs,
@@ -108,7 +111,9 @@ class EventDag(object):
   def ignore_portion(self, ignored_portion):
     ''' Return a view of the dag with ignored_portion and its dependents
     removed'''
-    dag = EventDag(list(self._events_list), is_view=True)
+    dag = EventDag(list(self._events_list), is_view=True,
+                   prefix_trie=self._prefix_trie,
+                   label2event=self._label2event)
     # TODO(cs): potentially some redundant computation here
     dag.remove_events(ignored_portion)
     return dag
