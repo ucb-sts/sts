@@ -37,7 +37,9 @@ class EventDag(object):
   # NOTE: we treat failure/recovery as an atomic pair, since it doesn't make
   # much sense to prune a recovery event
   _recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery, ControlChannelUnblock])
-
+  # For now, we're ignoring these input types, since their dependencies with
+  # other inputs are too complicated to model
+  _ignored_input_types = set([DataplaneDrop, DataplanePermit])
 
   '''A collection of Event objects. EventDags are primarily used to present a
   view of the underlying events with some subset of the input events pruned
@@ -169,12 +171,14 @@ class EventDag(object):
       if type(event) in self._failure_types:
         # Insert it into the previous failure hash
         fingerprint2previousfailure[event.fingerprint] = event
-      elif type(event) in self_recovery_types:
+      elif type(event) in self._recovery_types:
         # Check if there were any failure predecessors
         if event.fingerprint in fingerprint2previousfailure:
           failure = fingerprint2previousfailure[event.fingerprint]
           failure.dependent_labels.append(event.label)
-      elif type(event) == Dataplae
+      elif type(event) in self._ignored_input_types:
+        raise RuntimeError("No support for %s dependencies" %
+                            type(event).__name__)
 
 class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either
