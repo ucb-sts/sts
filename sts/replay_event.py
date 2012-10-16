@@ -40,7 +40,8 @@ class EventDag(object):
   _recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery, ControlChannelUnblock])
   # For now, we're ignoring these input types, since their dependencies with
   # other inputs are too complicated to model
-  _ignored_input_types = set([DataplaneDrop, DataplanePermit])
+  # TODO(cs): model these!
+  _ignored_input_types = set([DataplaneDrop, DataplanePermit, HostMigration])
 
   '''A collection of Event objects. EventDags are primarily used to present a
   view of the underlying events with some subset of the input events pruned
