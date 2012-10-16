@@ -77,10 +77,11 @@ class EventDag(object):
 
   def _remove_event(self, event):
     ''' Recursively remove the event and its dependents '''
-    if event.label in self._label2event[event.label]:
+    if event.label in self._label2event:
       del self._label2event[event.label]
     if event in self._event_to_index:
-      list_idx = del self._event_to_index[event]
+      list_idx = self._event_to_index[event]
+      del self._event_to_index[event]
       self._event_list.pop(list_idx)
 
     # Note that dependent_labels only contains dependencies between input
@@ -552,7 +553,7 @@ class CheckInvariants(InputEvent):
                            fail_on_error=fail_on_error,
                            invariant_check=invariant_check)
 
-class ControlChannelBlock(InternalEvent):
+class ControlChannelBlock(InputEvent):
   def __init__(self, dpid, controller_id, label=None, time=None):
     super(ControlChannelBlock, self).__init__(label=label, time=time)
     self.dpid = dpid
@@ -578,7 +579,7 @@ class ControlChannelBlock(InternalEvent):
     controller_id = tuple(json_hash['controller_id'])
     return ControlChannelBlock(dpid, controller_id, label=label, time=time)
 
-class ControlChannelUnblock(InternalEvent):
+class ControlChannelUnblock(InputEvent):
   def __init__(self, dpid, controller_id, label=None, time=None):
     super(ControlChannelUnblock, self).__init__(label=label, time=time)
     self.dpid = dpid
