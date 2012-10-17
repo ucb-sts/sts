@@ -20,7 +20,7 @@ topology_class = FatTree #, MeshTopology
 patch_panel_class = BufferedPatchPanel
 
 # Use a Fuzzer (already the default)
-control_flow = Fuzzer(check_interval=1)
+control_flow = Fuzzer(check_interval=1, input_logger=InputLogger())
 
 # Specify None as the dataplane trace (already the default)
 # Otherwise, specify the path to the trace file
