@@ -11,9 +11,9 @@ Author: sw
 '''
 
 from sts.entities import Link
-from sts.god_scheduler import PendingReceive
+from sts.god_scheduler import PendingReceive, MessageReceipt
 from sts.input_traces.fingerprints import *
-from sts.control_flow import Replayer
+from sts.control_flow import Replayer, StateChange
 from invariant_checker import InvariantChecker
 import itertools
 import abc
@@ -246,40 +246,65 @@ class EventDag(object):
         replayer = Replayer(prefix_dag, ignore_unsupported_input_types=True)
         replayer.simulate(simulation)
 
-        # Quickly after the last input has been injected, flush the internal
+        # Directly after the last input has been injected, flush the internal
         # event buffers in case there were unaccounted internal events
-        # TODO(cs): race condition here -- internal events could occur while
-        # we're getting ready to start polling the buffers for new internal
-        # events.
+        # Note that there isn't a race condition between flush()'ing and
+        # incoming internal events, since sts is single-threaded
         simulation.god_scheduler.flush()
         simulation.controller_sync_callback.flush()
 
         # Now set all internal event buffers (GodScheduler for
         # ControlMessageReceives and ReplaySyncCallback for state changes)
-        # to "pass through + record", sit tight for wait_seconds and record the
-        # internal events
+        # to "pass through + record" by defining event handlers
+        newly_inferred_events = []
+        def receipt_pass_through(receipt_event):
+          pending_receipt = receipt_event.pending_receipt
+          # Pass through
+          simulation.god_scheduler.schedule(pending_receipt)
+          # Record
+          replay_event = ControlMessageReceive(pending_receipt.dpid,
+                                               pending_receipt.controller_id,
+                                               pending_receipt.fingerprint.to_dict())
+          newly_inferred_events.append(replay_event)
 
-        # Alternative: instead of "passing though", just poll the buffers for
-        # wait_seconds
+        simulation.god_scheduler.addListener(MessageReceipt,
+                                             receipt_pass_through)
 
-        # Make sure to ignore any events after the point where the next input
-        # is supposed to be injected
+        def state_change_pass_through(state_change_event):
+          state_change = state_change_event.pending_state_change
+          # Pass through
+          simulation.controller_sync_callback.gc_pending_state_change(state_change)
+          # Record
+          replay_event = ControllerStateChange(state_change.controller_id,
+                                               state_change.time,
+                                               state_change.fingerprint,
+                                               state_change.name,
+                                               state_change.value)
+          newly_inferred_events.append(replay_event)
+
+        simulation.controller_sync_callback.addListener(StateChange,
+                                                        state_change_pass_through)
+
+        # Now sit tight for wait_seconds
         wait_seconds = event2wait_time[current_input]
         # Note that this is the monkey patched version of time.sleep
         time.sleep(wait_seconds)
 
+        # Turn off those listeners
+        simulation.god_scheduler.removeListener(receipt_pass_through)
+        simulation.controller_sync_callback.removeListener(state_change_pass_through)
+
         # TODO(cs): slurp up the internal events and
         # do the fingerprint matching
-        # TODO(cs): how long do we wait the next time if
-        # none of expected internal events match? Is it OK to
-        # just inject the next input directly this one?
-        newly_inferred_events = []
+        # Make sure to ignore any events after the point where the next input
+        # is supposed to be injected
 
       # Update the trie for this prefix
       current_input_prefix.append(current_input)
       inferred_events.append(current_input)
       inferred_events += newly_inferred_events
       self._prefix_trie[current_input_prefix] = inferred_events
+
       current_input_idx += 1
 
     # Now that the new execution has been inferred,
