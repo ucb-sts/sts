@@ -55,10 +55,12 @@ class EventDag(object):
       e : i
       for i, e in enumerate(self._events_list)
     }
+    # Optimization: only compute label2event once (at the first unpruned
+    # initialization)
     if label2event is None:
       self._label2event = {
         event.label : event
-        for event in events
+        for event in self._events_list
       }
     else:
       self._label2event = label2event
