@@ -165,16 +165,17 @@ class EventDag(object):
     return splits
 
   def peek(self, simulation):
-    ''' Assign dependent labels for each internal event '''
+    ''' Infer which internal events are/aren't going to occur, '''
     # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
     # FindMCS again?
     input_events = [ e for e in self._events_list if isinstance(e, InputEvent) ]
     if len(input_events) == 0:
       # Postcondition: input_events[-1] is not None
+      #                and self._events_list[-1] is not None
       return
 
     # Note that we recompute wait times for every view, since the set of
-    # internal events changes
+    # inputs and intervening expected internal events changes
     def get_wait_times(input_events):
       event2wait_time = {}
       for i in xrange(0, len(input_events)-1):
@@ -189,7 +190,7 @@ class EventDag(object):
 
     event2wait_time = get_wait_times(input_events)
 
-    # Also compute the internal events that we expect for each space between
+    # Also compute the internal events that we expect for each interval between
     # input events
     def get_expected_internal_events(input_events):
       input_to_exected_events = {}
@@ -202,7 +203,7 @@ class EventDag(object):
         expected_internal_events = \
                 self._events_list[current_input_idx+1:next_input_idx]
         input_to_expected_events[current_input] = expected_internal_events
-      # The last input's expected internal events are anything that follow it 
+      # The last input's expected internal events are anything that follow it
       # in the log.
       last_input = input_events[-1]
       last_input_idx = self._event_to_index[last_input]
@@ -239,21 +240,24 @@ class EventDag(object):
       if expected_internal_events == []:
         newly_inferred_events = []
       else:
-        # Now actually do the peek()'ing! First replay the prefix,
+        # Now actually do the peek()'ing! First replay the prefix
         # plus the next input
         prefix_dag = EventDag(inferred_events + [current_input])
         replayer = Replayer(prefix_dag, ignore_unsupported_input_types=True)
         replayer.simulate(simulation)
 
+        # Quickly after the last input has been injected, flush the internal
+        # event buffers in case there were unaccounted internal events
+        # TODO(cs): race condition here -- internal events could occur while
+        # we're getting ready to start polling the buffers for new internal
+        # events.
+        simulation.god_scheduler.flush()
+        simulation.controller_sync_callback.flush()
+
         # Now set all internal event buffers (GodScheduler for
         # ControlMessageReceives and ReplaySyncCallback for state changes)
         # to "pass through + record", sit tight for wait_seconds and record the
         # internal events
-
-        # TODO(cs): race condition here -- internal events could occur while
-        # we're getting ready to start polling. Also need to flush the buffers
-        # in case there were any unnacounted internal events waiting around
-        # from before current_input was injected
 
         # Alternative: instead of "passing though", just poll the buffers for
         # wait_seconds
