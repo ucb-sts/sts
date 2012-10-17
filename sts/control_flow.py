@@ -560,6 +560,9 @@ class StateChange(Event):
     self.pending_state_change = pending_state_change
 
 class ReplaySyncCallback(STSSyncCallback, EventMixin):
+
+  _eventMixin_events = set([StateChange])
+
   def __init__(self, get_interpolated_time):
     self.get_interpolated_time = get_interpolated_time
     # TODO(cs): move buffering functionality into the GodScheduler? Or a

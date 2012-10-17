@@ -16,6 +16,9 @@ class GodScheduler(EventMixin):
   controllers. Buffers packets until they are pulled off the buffer and chosen
   by god (control_flow.py) to be processed.
   '''
+
+  _eventMixin_events = set([MessageReceipt])
+
   def __init__(self):
     # keep around a queue for each switch of pending openflow messages waiting to
     # arrive at the switches.
