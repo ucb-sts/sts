@@ -555,32 +555,36 @@ class ReplaySyncCallback(STSSyncCallback):
     # TODO(cs): move buffering functionality into the GodScheduler? Or a
     # separate class?
     # Python's Counter object is effectively a multiset
-    self.pending_state_changes = Counter()
+    self._pending_state_changes = Counter()
     self.log = logging.getLogger("synccallback")
 
   def flush(self):
     ''' Remove any pending state changes '''
-    num_pending_state_changes = len(self.pending_state_changes)
+    num_pending_state_changes = len(self._pending_state_changes)
     if num_pending_state_changes > 0:
       self.log.info("Flushing %d pending state changes" %
                     num_pending_state_changes)
-    self.pending_state_changes = Counter()
+    self._pending_state_changes = Counter()
 
   def state_change_pending(self, pending_state_change):
     ''' Return whether the PendingStateChange has been observed '''
-    return self.pending_state_changes[pending_state_change] > 0
+    return self._pending_state_changes[pending_state_change] > 0
 
   def gc_pending_state_change(self, pending_state_change):
     ''' Garbage collect the PendingStateChange from our buffer'''
-    self.pending_state_changes[pending_state_change] -= 1
-    if self.pending_state_changes[pending_state_change] <= 0:
-      del self.pending_state_changes[pending_state_change]
+    self._pending_state_changes[pending_state_change] -= 1
+    if self._pending_state_changes[pending_state_change] <= 0:
+      del self._pending_state_changes[pending_state_change]
 
   def state_change(self, controller, time, fingerprint, name, value):
     # TODO(cs): unblock the controller after processing the state change?
     pending_state_change = PendingStateChange(controller.uuid, time,
                                               fingerprint, name, value)
-    self.pending_state_changes[pending_state_change] += 1
+    self._pending_state_changes[pending_state_change] += 1
+
+  def pending_state_changes(self):
+    ''' Return any pending state changes '''
+    return self._pending_state_changes.keys()
 
   def get_deterministic_value(self, controller, name):
     if name == "gettimeofday":
