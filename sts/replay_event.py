@@ -232,9 +232,10 @@ class EventDag(object):
         newly_inferred_events = []
       else:
         # TODO(cs): actually do the peek()'ing! Replay the prefix and record
-        # what happens between current_input and wait_time
+        # what happens between current_input's time and wait_time
         # Make sure to ignore any events after the point where the next input
         # is supposed to be injected
+        wait_time = event2wait_time[current_input]
         newly_inferred_events = []
 
       # Update the trie for this prefix
