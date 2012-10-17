@@ -1,10 +1,15 @@
 from collections import defaultdict, namedtuple
 from sts.input_traces.fingerprints import *
+from pox.lib.revent import Event, EventMixin
 import logging
 log = logging.getLogger("god_scheduler")
 
+class MessageReceipt(Event):
+  def __init__(self, pending_receipt):
+    self.pending_receipt = pending_receipt
+
 # TODO(cs): move me to another file?
-class GodScheduler(object):
+class GodScheduler(EventMixin):
   '''
   Models asynchrony: chooses when switches get to process packets from
   controllers. Buffers packets until they are pulled off the buffer and chosen
@@ -44,6 +49,7 @@ class GodScheduler(object):
     pending_receive = PendingReceive(dpid, controller_id, fingerprint)
     conn_message = (conn, ofp_message)
     self.pendingreceive2conn_messages[pending_receive].append(conn_message)
+    self.raiseEventNoErrors(MessageReceipt(pending_receive))
 
   def pending_receives(self):
     ''' Return the message receipts which are waiting to be scheduled '''
