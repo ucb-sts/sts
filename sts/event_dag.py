@@ -225,7 +225,7 @@ class EventDag(object):
       # Optimization: if no internal events occured between this input and the
       # next, no need to peek()
       if expected_internal_events == []:
-        newly_inferred_events = []
+        newly_inferred_events = [current_input]
       else:
         # Now actually do the peek()'ing! First replay the prefix
         # plus the next input
@@ -281,14 +281,23 @@ class EventDag(object):
         simulation.god_scheduler.removeListener(receipt_pass_through)
         simulation.controller_sync_callback.removeListener(state_change_pass_through)
 
-        # TODO(cs): slurp up the internal events and
-        # do the fingerprint matching
-        # Make sure to ignore any events after the point where the next input
-        # is supposed to be injected
+        # Finally, insert current_input into the appropriate place in
+        # inferred_events (and ignore internal events that come afterward)
+        def match_fingerprints():
+          # Find the last internal event in expected_internal_events that
+          # matches an event in newly_inferred_events. That is the new causal
+          # parent of current_input
+          expected_internal_events.reverse()
+          inferred_fingerprints = set([e.fingerprint
+                                       for e in newly_inferred_events])
+          for expected in expected_internal_events:
+            pass
+
+        newly_inferred_events = match_fingerprints()
 
       # Update the trie for this prefix
       current_input_prefix.append(current_input)
-      inferred_events.append(current_input)
+      # Note that newly_inferred_events includes current_input
       inferred_events += newly_inferred_events
       self._prefix_trie[current_input_prefix] = inferred_events
 
