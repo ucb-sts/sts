@@ -1,5 +1,7 @@
 from collections import defaultdict, namedtuple
 from sts.input_traces.fingerprints import *
+import logging
+log = logging.getLogger("god_scheduler")
 
 # TODO(cs): move me to another file?
 class GodScheduler(object):
@@ -46,5 +48,12 @@ class GodScheduler(object):
   def pending_receives(self):
     ''' Return the message receipts which are waiting to be scheduled '''
     return self.pendingreceive2conn_messages.keys()
+
+  def flush(self):
+    ''' Garbage collect any previous pending messages '''
+    num_pending_messages = len(self.pendingreceive2conn_messages)
+    if num_pending_messages > 0:
+      log.info("Flushing %d pending messages" % num_pending_messages)
+    self.pendingreceive2conn_messages = defaultdict(list)
 
 PendingReceive = namedtuple('PendingReceive', ['dpid', 'controller_id', 'fingerprint'])

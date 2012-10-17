@@ -556,9 +556,14 @@ class ReplaySyncCallback(STSSyncCallback):
     # separate class?
     # Python's Counter object is effectively a multiset
     self.pending_state_changes = Counter()
+    self.log = logging.getLogger("synccallback")
 
   def flush(self):
     ''' Remove any pending state changes '''
+    num_pending_state_changes = len(self.pending_state_changes)
+    if num_pending_state_changes > 0:
+      self.log.info("Flushing %d pending state changes" %
+                    num_pending_state_changes)
     self.pending_state_changes = Counter()
 
   def state_change_pending(self, pending_state_change):
