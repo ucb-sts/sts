@@ -704,21 +704,10 @@ class ControlChannelUnblock(InputEvent):
     controller_id = tuple(json_hash['controller_id'])
     return ControlChannelUnblock(dpid, controller_id, label=label, time=time)
 
-all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
-                    ControllerFailure, ControllerRecovery, HostMigration,
-                    PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
-                    ControlChannelBlock, ControlChannelUnblock]
-
-# ----------------------------------- #
-#  Concrete classes of InternalEvents #
-# ----------------------------------- #
-
-# Simulator's internal events:
-
-# TODO(cs): Technically these aren't internal events! They're input events!
-# And they have really complicated dependencies with other input events!
+# TODO(cs): DataplaneDrop/Permits have really complicated dependencies
+# with other input events!
 # For now, turn them off completely.
-class DataplaneDrop(InternalEvent):
+class DataplaneDrop(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplaneDrop, self).__init__(label=label, time=time)
     self.fingerprint = fingerprint
@@ -737,7 +726,7 @@ class DataplaneDrop(InternalEvent):
     fingerprint = DPFingerprint(json_hash['fingerprint'])
     return DataplaneDrop(fingerprint, label=label, time=time)
 
-class DataplanePermit(InternalEvent):
+class DataplanePermit(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplanePermit, self).__init__(label=label, time=time)
     self.fingerprint = fingerprint
@@ -755,6 +744,16 @@ class DataplanePermit(InternalEvent):
     assert_fields_exist(json_hash, 'fingerprint')
     fingerprint = DPFingerprint(json_hash['fingerprint'])
     return DataplanePermit(fingerprint, label=label, time=time)
+
+all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
+                    ControllerFailure, ControllerRecovery, HostMigration,
+                    PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
+                    ControlChannelBlock, ControlChannelUnblock,
+                    DataplaneDrop, DataplanePermit]
+
+# ----------------------------------- #
+#  Concrete classes of InternalEvents #
+# ----------------------------------- #
 
 class ControlMessageReceive(InternalEvent):
   '''
@@ -784,8 +783,6 @@ class ControlMessageReceive(InternalEvent):
     controller_id = tuple(json_hash['controller_id'])
     fingerprint = OFFingerprint(json_hash['fingerprint'])
     return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time)
-
-# Controllers' internal events:
 
 # TODO(cs): move me?
 PendingStateChange = namedtuple('PendingStateChange',
@@ -833,6 +830,5 @@ class DeterministicValue(InternalEvent):
   '''
   pass
 
-all_internal_events = [DataplaneDrop, DataplanePermit,
-                       ControlMessageReceive,
+all_internal_events = [ControlMessageReceive,
                        ControllerStateChange, DeterministicValue]
