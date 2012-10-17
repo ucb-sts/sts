@@ -202,7 +202,7 @@ class EventDag(object):
         expected_internal_events = \
                 self._events_list[current_input_idx+1:next_input_idx]
         input_to_expected_events[current_input] = expected_internal_events
-      # The last input's expected internal events are anything that follow it
+      # The last input's expected internal events are anything that follow it 
       # in the log.
       last_input = input_events[-1]
       last_input_idx = self._event_to_index[last_input]
@@ -239,20 +239,36 @@ class EventDag(object):
       if expected_internal_events == []:
         newly_inferred_events = []
       else:
-        # Now actually do the peek()'ing! Replay the prefix and record
-        # what happens between current_input's time and wait_time
+        # Now actually do the peek()'ing! First replay the prefix,
+        # plus the next input
+        prefix_dag = EventDag(inferred_events + [current_input])
+        replayer = Replayer(prefix_dag, ignore_unsupported_input_types=True)
+        replayer.simulate(simulation)
+
+        # Now set all internal event buffers (GodScheduler for
+        # ControlMessageReceives and ReplaySyncCallback for state changes)
+        # to "pass through + record", sit tight for wait_seconds and record the
+        # internal events
+
+        # TODO(cs): race condition here -- internal events could occur while
+        # we're getting ready to start polling. Also need to flush the buffers
+        # in case there were any unnacounted internal events waiting around
+        # from before current_input was injected
+
+        # Alternative: instead of "passing though", just poll the buffers for
+        # wait_seconds
+
         # Make sure to ignore any events after the point where the next input
         # is supposed to be injected
-        wait_time = event2wait_time[current_input]
-        # Optimization: don't replay the prefix if there are no events to
-        # replay yet
-        if inferred_events == []:
-          simulation.bootstrap()
-        else:
-          prefix_dag = EventDag()
-          replayer = Replayer(prefix_dag, ignore_unsupported_input_types=True)
-          replayer.simulate(simulation)
+        wait_seconds = event2wait_time[current_input]
+        # Note that this is the monkey patched version of time.sleep
+        time.sleep(wait_seconds)
 
+        # TODO(cs): slurp up the internal events and
+        # do the fingerprint matching
+        # TODO(cs): how long do we wait the next time if
+        # none of expected internal events match? Is it OK to
+        # just inject the next input directly this one?
         newly_inferred_events = []
 
       # Update the trie for this prefix
