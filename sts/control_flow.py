@@ -89,6 +89,7 @@ class Replayer(ControlFlow):
     self.run_simulation_forward(self.dag)
 
   def run_simulation_forward(dag):
+    # Note that bootstrap() flushes any state from previous runs
     self.simulation.bootstrap()
     for event_watcher in dag.event_watchers:
       self.compute_interpolated_time(event_watcher.event)
@@ -554,7 +555,10 @@ class ReplaySyncCallback(STSSyncCallback):
     # TODO(cs): move buffering functionality into the GodScheduler? Or a
     # separate class?
     # Python's Counter object is effectively a multiset
-    # TODO(cs): garbage collect me
+    self.pending_state_changes = Counter()
+
+  def flush(self):
+    ''' Remove any pending state changes '''
     self.pending_state_changes = Counter()
 
   def state_change_pending(self, pending_state_change):

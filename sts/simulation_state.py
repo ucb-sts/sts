@@ -50,8 +50,8 @@ class Simulation (object):
     self._dataplane_trace_path = dataplane_trace_path
     self._io_master = None
     self.god_scheduler = None
-    # TODO(cs): controller_sync_callback is currently stateful -> need to fix
-    # for correct bootstrap()'ing
+    # Note that controller_sync_callback is stateful, so we flush
+    # it at every bootstrap()
     self.controller_sync_callback = controller_sync_callback
     self.snapshot_service = snapshot_service
 
@@ -102,6 +102,7 @@ class Simulation (object):
     # tell sts.console to use our io_master
     msg.set_io_master(self._io_master)
 
+    self.controller_sync_callback.flush()
     self.sync_connection_manager = STSSyncConnectionManager(self._io_master,
                                                             self.controller_sync_callback)
 
