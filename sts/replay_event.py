@@ -47,11 +47,15 @@ class EventDag(object):
   '''A collection of Event objects. EventDags are primarily used to present a
   view of the underlying events with some subset of the input events pruned
   '''
-  def __init__(self, events, is_view=False, prefix_trie=None, label2event=None):
+  def __init__(self, events, is_view=False, prefix_trie=None,
+               label2event=None, ignore_unsupported_input_types=False):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
-    # we need to the events to be ordered, so we keep a copy of the list
-    self._events_list = events
+    if ignore_unsupported_input_types:
+      self._events_list = [ e for e in events
+                            if events not in self._ignored_input_types ]
+    else:
+      self._events_list = events
     self._populate_indices(label2event)
 
     # Fill in domain knowledge about valid input
