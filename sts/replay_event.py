@@ -13,7 +13,6 @@ Author: sw
 from sts.entities import Link
 from sts.god_scheduler import PendingReceive, MessageReceipt
 from sts.input_traces.fingerprints import *
-from sts.control_flow import Replayer, StateChange
 from invariant_checker import InvariantChecker
 import itertools
 import abc

@@ -1,7 +1,8 @@
 from sts.entities import Link
 from sts.god_scheduler import PendingReceive, MessageReceipt
 from sts.input_traces.fingerprints import *
-from sts.control_flow import Replayer, StateChange
+from sts.replay_event import *
+import sts.control_flow
 from invariant_checker import InvariantChecker
 import itertools
 import abc
@@ -229,7 +230,7 @@ class EventDag(object):
         # Now actually do the peek()'ing! First replay the prefix
         # plus the next input
         prefix_dag = EventDag(inferred_events + [current_input])
-        replayer = Replayer(prefix_dag, ignore_unsupported_input_types=True)
+        replayer = control_flow.Replayer(prefix_dag, ignore_unsupported_input_types=True)
         replayer.simulate(simulation)
 
         # Directly after the last input has been injected, flush the internal
@@ -268,7 +269,7 @@ class EventDag(object):
                                                state_change.value)
           newly_inferred_events.append(replay_event)
 
-        simulation.controller_sync_callback.addListener(StateChange,
+        simulation.controller_sync_callback.addListener(control_flow.StateChange,
                                                         state_change_pass_through)
 
         # Now sit tight for wait_seconds
