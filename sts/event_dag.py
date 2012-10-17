@@ -36,7 +36,8 @@ class EventDag(object):
   view of the underlying events with some subset of the input events pruned
   '''
   def __init__(self, events, is_view=False, prefix_trie=None,
-               label2event=None, ignore_unsupported_input_types=False):
+               label2event=None, ignore_unsupported_input_types=False,
+               mark_invalid_input_sequences=False):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
     if ignore_unsupported_input_types:
@@ -50,7 +51,7 @@ class EventDag(object):
     # sequences (e.g. don't prune failure without pruning recovery.)
     # Only do so if this isn't a view of a previously computed DAG
     # TODO(cs): there is probably a cleaner way to implement views
-    if not is_view:
+    if not is_view and mark_invalid_input_sequences:
       self._mark_invalid_input_sequences()
       prefix_trie = pytrie.Trie()
     # The prefix trie stores lists of input events as keys,
@@ -229,7 +230,7 @@ class EventDag(object):
       else:
         # Now actually do the peek()'ing! First replay the prefix
         # plus the next input
-        prefix_dag = EventDag(inferred_events + [current_input])
+        prefix_dag = EventDag(inferred_events + [current_input], mark_invalid_input_sequences=True)
         replayer = control_flow.Replayer(prefix_dag, ignore_unsupported_input_types=True)
         replayer.simulate(simulation)
 

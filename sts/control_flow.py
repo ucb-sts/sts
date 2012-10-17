@@ -49,14 +49,16 @@ class Replayer(ControlFlow):
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
   '''
-  def __init__(self, superlog_path_or_dag, ignore_unsupported_input_types=False):
+  def __init__(self, superlog_path_or_dag, ignore_unsupported_input_types=False,
+               mark_invalid_input_sequences=False):
     ControlFlow.__init__(self, ReplaySyncCallback(self.get_interpolated_time))
     if type(superlog_path_or_dag) == str:
       superlog_path = superlog_path_or_dag
       # The dag is codefied as a list, where each element has
       # a list of its dependents
       self.dag = EventDag(superlog_parser.parse_path(superlog_path),
-                          ignore_unsupported_input_types=ignore_unsupported_input_types)
+                          ignore_unsupported_input_types=ignore_unsupported_input_types,
+                          mark_invalid_input_sequences=mark_invalid_input_sequences)
     else:
       self.dag = superlog_path_or_dag
     # compute interpolate to time to be just before first event
@@ -102,7 +104,8 @@ class MCSFinder(Replayer):
   def __init__(self, superlog_path,
                invariant_check=InvariantChecker.check_correspondence):
     super(MCSFinder, self).__init__(superlog_path,
-                                    ignore_unsupported_input_types=True)
+                                    ignore_unsupported_input_types=True,
+                                    mark_invalid_input_sequences=True)
     self.invariant_check = invariant_check
 
   def simulate(self, simulation):
