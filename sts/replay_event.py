@@ -20,6 +20,7 @@ import logging
 import time
 import json
 import math
+import pytrie
 from collections import namedtuple
 from sts.syncproto.base import SyncTime
 log = logging.getLogger("events")
@@ -51,6 +52,21 @@ class EventDag(object):
     see how this is assembled.'''
     # we need to the events to be ordered, so we keep a copy of the list
     self._events_list = events
+    self._populate_indices(label2event)
+
+    # Fill in domain knowledge about valid input
+    # sequences (e.g. don't prune failure without pruning recovery.)
+    # Only do so if this isn't a view of a previously computed DAG
+    # TODO(cs): there is probably a cleaner way to implement views
+    if not is_view:
+      self._mark_invalid_input_sequences()
+      prefix_trie = pytrie.Trie()
+    # The prefix trie stores lists of input events as keys,
+    # and lists of both input and internal events as values
+    # Note that we pass the trie around between DAG views
+    self._prefix_trie = prefix_trie
+
+  def _populate_indices(self, label2event):
     self._event_to_index = {
       e : i
       for i, e in enumerate(self._events_list)
@@ -64,12 +80,6 @@ class EventDag(object):
       }
     else:
       self._label2event = label2event
-
-    # Fill in domain knowledge about valid input
-    # sequences (e.g. don't prune failure without pruning recovery.)
-    # Only do so if this isn't a view of a previously computed DAG
-    if not is_view:
-      self._mark_invalid_input_sequences()
 
   @property
   def events(self):
@@ -148,26 +158,97 @@ class EventDag(object):
 
   def peek(self):
     ''' Assign dependent labels for each internal event '''
-    # TODO(cs): store prefix in a trie (class variable)
     # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
     # FindMCS again?
-    # TODO(cs): first step should be to look up longest matching prefix from
-    # trie
     input_events = [ e for e in self._events_list if isinstance(e, InputEvent) ]
     if len(input_events) == 0:
+      # Postcondition: input_events[-1] is not None
       return
 
     # Note that we recompute wait times for every view, since the set of
     # internal events changes
-    event2wait_time = {}
-    for i in xrange(0, len(input_events)-1):
-      current_event = input_events[i]
-      next_event = input_events[i+1]
-      wait_time = next_event.time.as_float() + self._peek_seconds
-      event2wait_time[event] = wait_time
-    # For the last event, we wait until the last internal event
-    last_wait_time = self._events_list[-1].time.as_float() + self._peek_seconds
-    event2wait_time[input_events[-1]] = last_wait_time
+    def get_wait_times(input_events):
+      event2wait_time = {}
+      for i in xrange(0, len(input_events)-1):
+        current_input = input_events[i]
+        next_input = input_events[i+1]
+        wait_time = next_input.time.as_float() + self._peek_seconds
+        event2wait_time[current_input] = wait_time
+      # For the last event, we wait until the last internal event
+      last_wait_time = self._events_list[-1].time.as_float() + self._peek_seconds
+      event2wait_time[input_events[-1]] = last_wait_time
+      return event2wait_time
+
+    event2wait_time = get_wait_times(input_events)
+
+    # Also compute the internal events that we expect for each space between
+    # input events
+    def get_expected_internal_events(input_events):
+      input_to_exected_events = {}
+      for i in xrange(0, len(input_events)-1):
+        # Infer the internal events that we expect
+        current_input = input_events[i]
+        current_input_idx = self._event_to_index[current_input]
+        next_input = input_events[i+1]
+        next_input_idx = self._event_to_index[next_input]
+        expected_internal_events = \
+                self._events_list[current_input_idx+1:next_input_idx]
+        input_to_expected_events[current_input] = expected_internal_events
+      # The last input's expected internal events are anything that follow it
+      # in the log.
+      last_input = input_events[-1]
+      last_input_idx = self._event_to_index[last_input]
+      input_to_expected_events[last_input] = self._events_list[last_input_idx:]
+      return input_to_exected_events
+
+    input_to_expected_events = get_expected_internal_events(input_events)
+
+    # Now, play the execution forward iteratively for each input event, and
+    # record what internal events happen between the injection and the
+    # wait_time
+
+    # Initilize current_input_prefix to the longest_match prefix we've
+    # inferred previously (or [] if this is an entirely new prefix)
+    current_input_prefix = self._prefix_trie\
+                               .longest_prefix(input_events, default=[])
+
+    # The value is both internal events and input events (values of the trie)
+    # leading up to, but not including the next input following the tail of the prefix
+    inferred_events = self._prefix_trie\
+                          .longest_prefix_value(input_events, default=[])
+
+    # current_input is the next input after the tail of the prefix
+    if current_input_prefix == []:
+      current_input_idx = 0
+    else:
+      current_input_idx = input_events.index(current_input_prefix[-1]) + 1
+
+    while current_input_idx < len(input_events):
+      current_input = input_events[current_input_idx]
+      expected_internal_events = input_to_expected_events[current_input]
+      # Optimization: if no internal events occured between this input and the
+      # next, no need to peek()
+      if expected_internal_events == []:
+        newly_inferred_events = []
+      else:
+        # TODO(cs): actually do the peek()'ing! Replay the prefix and record
+        # what happens between current_input and wait_time
+        # Make sure to ignore any events after the point where the next input
+        # is supposed to be injected
+        newly_inferred_events = []
+
+      # Update the trie for this prefix
+      current_input_prefix.append(current_input)
+      inferred_events.append(current_input)
+      inferred_events += newly_inferred_events
+      self._prefix_trie[current_input_prefix] = inferred_events
+      current_input_idx += 1
+
+    # Now that the new execution has been inferred,
+    # present a view of ourselves that only includes the updated
+    # events
+    self._events_list = inferred_events
+    self._populate_indices(self._label2event)
 
   def _mark_invalid_input_sequences(self):
     # Note: we treat each failure/recovery pair atomically, since it doesn't
@@ -241,6 +322,16 @@ class Event(object):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     return json.dumps(fields)
+
+  def __hash__(self):
+    ''' Assumption: labels are unique '''
+    return self.label.__hash__()
+
+  def __eq__(self, other):
+    ''' Assumption: labels are unique '''
+    if type(other) != Event:
+      return False
+    return self.label == other.label
 
   def __str__(self):
     return self.__class__.__name__ + ":" + self.label
