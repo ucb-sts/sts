@@ -47,12 +47,16 @@ class Replayer(ControlFlow):
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
   '''
-  def __init__(self, superlog_path, ignore_unsupported_input_types=False):
+  def __init__(self, superlog_path_or_dag, ignore_unsupported_input_types=False):
     ControlFlow.__init__(self, ReplaySyncCallback(self.get_interpolated_time))
-    # The dag is codefied as a list, where each element has
-    # a list of its dependents
-    self.dag = EventDag(superlog_parser.parse_path(superlog_path),
-                        ignore_unsupported_input_types=ignore_unsupported_input_types)
+    if type(superlog_path_or_dag) == str:
+      superlog_path = superlog_path_or_dag
+      # The dag is codefied as a list, where each element has
+      # a list of its dependents
+      self.dag = EventDag(superlog_parser.parse_path(superlog_path),
+                          ignore_unsupported_input_types=ignore_unsupported_input_types)
+    else:
+      self.dag = superlog_path_or_dag
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
 
@@ -141,7 +145,7 @@ class MCSFinder(Replayer):
       ignored_portions = self.dag.split(split_ways)
       for ignored_portion in ignored_portions:
         # Note that ignore_portion() invokes peek()
-        new_dag = self.dag.ignore_portion(ignored_portion)
+        new_dag = self.dag.ignore_portion(ignored_portion, self.simulation)
         # Run the simulation forward
         self.run_simulation_forward(new_dag)
         # Check if there were violations
@@ -155,7 +159,7 @@ class MCSFinder(Replayer):
         else:
           # Violation in the non-pruned half.
           # Prune the ignored portion (including all of its dependents)
-          self.dag.remove_events(ignored_portion)
+          self.dag.remove_events(ignored_portion, self.simulation)
           # Break out of `for ignore_portion`
           split_ways = 2
           break

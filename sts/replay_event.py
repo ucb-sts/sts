@@ -13,6 +13,7 @@ Author: sw
 from sts.entities import Link
 from sts.god_scheduler import PendingReceive
 from sts.input_traces.fingerprints import *
+from sts.control_flow import Replayer
 from invariant_checker import InvariantChecker
 import itertools
 import abc
@@ -77,6 +78,9 @@ class EventDag(object):
     }
     # Optimization: only compute label2event once (at the first unpruned
     # initialization)
+    # TODO(cs): need to ensure that newly added events get labeled
+    # uniquely. (Easy, but inelegant way: set the label generator's
+    # initial value to max(labels) + 1)
     if label2event is None:
       self._label2event = {
         event.label : event
@@ -110,7 +114,7 @@ class EventDag(object):
         if dependent_event in self._event_to_index:
           self._remove_event(dependent_event)
 
-  def remove_events(self, ignored_portion):
+  def remove_events(self, ignored_portion, simulation):
     ''' Mutate the DAG: remove all input events in ignored_inputs,
     as well all of their dependent input events'''
     # Note that we treat failure/recovery as an atomic pair, so we don't prune
@@ -122,16 +126,16 @@ class EventDag(object):
     # Now run peek() to hide the internal events that will no longer occur
     # Note that causal dependencies change depending on what the prefix is!
     # So we have to run peek() once per prefix
-    self.peek()
+    self.peek(simulation)
 
-  def ignore_portion(self, ignored_portion):
+  def ignore_portion(self, ignored_portion, simulation):
     ''' Return a view of the dag with ignored_portion and its dependents
     removed'''
     dag = EventDag(list(self._events_list), is_view=True,
                    prefix_trie=self._prefix_trie,
                    label2event=self._label2event)
     # TODO(cs): potentially some redundant computation here
-    dag.remove_events(ignored_portion)
+    dag.remove_events(ignored_portion, simulation)
     return dag
 
   def split_inputs(self, split_ways):
@@ -160,7 +164,7 @@ class EventDag(object):
       split_idx += split_interval
     return splits
 
-  def peek(self):
+  def peek(self, simulation):
     ''' Assign dependent labels for each internal event '''
     # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
     # FindMCS again?
@@ -235,11 +239,20 @@ class EventDag(object):
       if expected_internal_events == []:
         newly_inferred_events = []
       else:
-        # TODO(cs): actually do the peek()'ing! Replay the prefix and record
+        # Now actually do the peek()'ing! Replay the prefix and record
         # what happens between current_input's time and wait_time
         # Make sure to ignore any events after the point where the next input
         # is supposed to be injected
         wait_time = event2wait_time[current_input]
+        # Optimization: don't replay the prefix if there are no events to
+        # replay yet
+        if inferred_events == []:
+          simulation.bootstrap()
+        else:
+          prefix_dag = EventDag()
+          replayer = Replayer(prefix_dag, ignore_unsupported_input_types=True)
+          replayer.simulate(simulation)
+
         newly_inferred_events = []
 
       # Update the trie for this prefix
