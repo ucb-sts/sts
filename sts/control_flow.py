@@ -154,6 +154,9 @@ class MCSFinder(Replayer):
           # Violation in the non-pruned half.
           # Prune the ignored portion (including all of its dependents)
           self.dag.remove_events(ignored_portion)
+          # Break out of `for ignore_portion`
+          split_ways = 2
+          break
       return mcs
 
 class Fuzzer(ControlFlow):
