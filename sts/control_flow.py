@@ -17,6 +17,7 @@ from sts.replay_event import *
 from sts.syncproto.sts_syncer import STSSyncCallback
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
+from pox.lib.revent import EventMixin, Event
 
 import os
 import sys
@@ -549,7 +550,11 @@ class Interactive(ControlFlow):
 #  Callbacks for controller sync messages  #
 # ---------------------------------------- #
 
-class ReplaySyncCallback(STSSyncCallback):
+class StateChange(Event):
+  def __init__(self, pending_state_change):
+    self.pending_state_change = pending_state_change
+
+class ReplaySyncCallback(STSSyncCallback, EventMixin):
   def __init__(self, get_interpolated_time):
     self.get_interpolated_time = get_interpolated_time
     # TODO(cs): move buffering functionality into the GodScheduler? Or a
@@ -581,6 +586,7 @@ class ReplaySyncCallback(STSSyncCallback):
     pending_state_change = PendingStateChange(controller.uuid, time,
                                               fingerprint, name, value)
     self._pending_state_changes[pending_state_change] += 1
+    self.raiseEventNoError(StateChange(pending_state_change))
 
   def pending_state_changes(self):
     ''' Return any pending state changes '''
