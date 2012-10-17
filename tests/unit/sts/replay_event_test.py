@@ -10,6 +10,7 @@ import types
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 from sts.replay_event import *
+from sts.event_dag import *
 
 class MockEvent(Event):
   def proceed(self, simulation):
