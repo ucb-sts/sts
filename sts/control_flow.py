@@ -92,12 +92,12 @@ class Replayer(ControlFlow):
     self.simulation = simulation
     self.run_simulation_forward(self.dag)
 
-  def run_simulation_forward(dag):
+  def run_simulation_forward(self, dag):
     # Note that bootstrap() flushes any state from previous runs
     self.simulation.bootstrap()
     for event_watcher in dag.event_watchers:
       self.compute_interpolated_time(event_watcher.event)
-      event_watcher.run(simulation)
+      event_watcher.run(self.simulation)
       self.increment_round()
 
 class MCSFinder(Replayer):
