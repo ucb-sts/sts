@@ -6,6 +6,7 @@ log = logging.getLogger("god_scheduler")
 
 class MessageReceipt(Event):
   def __init__(self, pending_receipt):
+    super(MessageReceipt, self).__init__()
     self.pending_receipt = pending_receipt
 
 # TODO(cs): move me to another file?

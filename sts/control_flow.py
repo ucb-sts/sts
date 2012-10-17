@@ -556,6 +556,7 @@ class Interactive(ControlFlow):
 
 class StateChange(Event):
   def __init__(self, pending_state_change):
+    super(StateChange, self).__init__()
     self.pending_state_change = pending_state_change
 
 class ReplaySyncCallback(STSSyncCallback, EventMixin):
