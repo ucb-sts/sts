@@ -13,6 +13,7 @@ import math
 import pytrie
 from collections import namedtuple
 from sts.syncproto.base import SyncTime
+from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
 
 class EventDag(object):
@@ -278,13 +279,13 @@ class EventDag(object):
         # Note that this is the monkey patched version of time.sleep
         time.sleep(wait_seconds)
 
-        # Turn off those listeners
+        # Now turn off those listeners
         simulation.god_scheduler.removeListener(receipt_pass_through)
         simulation.controller_sync_callback.removeListener(state_change_pass_through)
 
         # Finally, insert current_input into the appropriate place in
         # inferred_events (and ignore internal events that come afterward)
-        def match_fingerprints():
+        def match_fingerprints(newly_inferred_events):
           # Find the last internal event in expected_internal_events that
           # matches an event in newly_inferred_events. That is the new causal
           # parent of current_input
@@ -292,9 +293,20 @@ class EventDag(object):
           inferred_fingerprints = set([e.fingerprint
                                        for e in newly_inferred_events])
           for expected in expected_internal_events:
-            pass
+            if expected.fingerprint in inferred_fingerprints:
+              # We've found our insertion point.
+              # Insert the input after the expected internal event, and all
+              # internal events that come after it
+              parent_index = find_index(lambda e: e.fingerprint == expected.fingerprint,
+                                        newly_inferred_events)
+              newly_inferred_events = newly_inferred_events[:parent_index+1]
+              newly_inferred_events.append(current_input)
+              return newly_inferred_events
+          # Else, no expected internal event was observed, so just insert
+          # current_input by itself
+          return [current_input]
 
-        newly_inferred_events = match_fingerprints()
+        newly_inferred_events = match_fingerprints(newly_inferred_events)
 
       # Update the trie for this prefix
       current_input_prefix.append(current_input)
