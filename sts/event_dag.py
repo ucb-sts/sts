@@ -310,7 +310,7 @@ class EventDag(object):
 
       # Update the trie for this prefix
       current_input_prefix.append(current_input)
-      # Note that newly_inferred_events includes current_input
+      # Note that newly_inferred_events already includes current_input
       inferred_events += newly_inferred_events
       self._prefix_trie[current_input_prefix] = inferred_events
 
