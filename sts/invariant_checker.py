@@ -74,8 +74,8 @@ class InvariantChecker(object):
         log.warn(" Controller %s - %s" %  (str(c.config.name), str(msg)))
         controllers_with_violations.append(c)
 
-    log.debug("Snapshotting controller...")
-    for controller in simulation.controller_manager.controllers:
+    log.debug("Snapshotting live controllers...")
+    for controller in simulation.controller_manager.live_controllers:
       controller_snapshot = controller.snapshot_service.fetchSnapshot(controller)
       log.debug("Computing physical omega...")
       physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,

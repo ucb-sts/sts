@@ -47,5 +47,6 @@ class ControllerManager(object):
     for c in self.live_controllers:
       (rc, msg) = c.check_process_status()
       if not rc:
+        c.alive = False
         controllers_with_problems.append ( (c, msg) )
     return controllers_with_problems
