@@ -11,4 +11,4 @@ topology_class = MeshTopology
 topology_params = "num_switches=2"
 patch_panel_class = BufferedPatchPanel
 control_flow = Fuzzer(check_interval=1, input_logger=InputLogger())
-dataplane_trace = "dataplane_traces/ping_pong_fat_tree.trace"
+dataplane_trace = "dataplane_traces/ping_pong_same_subnet.trace"
