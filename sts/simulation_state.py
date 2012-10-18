@@ -18,6 +18,7 @@ from sts.controller_manager import ControllerManager
 from sts.util.deferred_io import DeferredIOWorker
 from sts.god_scheduler import GodScheduler
 from sts.syncproto.sts_syncer import STSSyncConnectionManager
+from pox.lib.util import connect_socket_with_backoff
 
 import logging
 

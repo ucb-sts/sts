@@ -1,6 +1,6 @@
 from sts.input_traces.fingerprints import *
 from sts.replay_event import *
-import sts.control_flow as control_flow
+import sts.control_flow
 import logging
 import time
 import math
