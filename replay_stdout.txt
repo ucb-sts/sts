@@ -1,0 +1,4056 @@
+rcs@c5:~/Research/UCB/sts$ ./simulator.py -c config/pox_list_violation.py
+POX 0.0.0 / Copyright 2011 James McCauley
+Starting controller ('127.0.0.1', 8888)
+DEBUG:Controller:creating symlink /home/rcs/Research/UCB/sts/sts/util/io_master.py -> pox/ext/sts/util/io_master.py
+DEBUG:Controller:creating symlink /home/rcs/Research/UCB/sts/sts/syncproto/base.py -> pox/ext/sts/syncproto/base.py
+DEBUG:Controller:creating symlink /home/rcs/Research/UCB/sts/sts/syncproto/pox_syncer.py -> pox/ext/sts/syncproto/pox_syncer.py
+connect_socket_with_backoff(address=localhost, port=18899)
+Error connecting to localhost:18899 -- [Errno 111] Connection refused. Backing off 1 seconds ...
+c('127.0.0.1', 8888) [9124] POX 0.0.0 / Copyright 2011 James McCauley
+c('127.0.0.1', 8888) [9124] INFO:pox_syncer:starting sts sync for spec: ptcp:0.0.0.0:18899
+c('127.0.0.1', 8888) [9124] INFO:pox_syncer:waiting for sts_sync connection on 0.0.0.0:18899
+INFO:simulation:Launched controller c('127.0.0.1', 8888): ./pox.py --verbose --no-cli openflow.of_01 --address=127.0.0.1 --port=8888 sts.syncproto.pox_syncer samples.topo forwarding.l2_multi messenger.messenger samples.nommessenger [PID 9124]
+DEBUG:sts.topology:Constructing fat tree with 4 pods
+DEBUG:sts.topology:Host 0 / 16
+DEBUG:sts.topology:edge<->agg for pod 0 / 4
+DEBUG:sts.topology:agg<->core 0 / 4
+DEBUG:sts.topology:Fat tree construction: done (4 cores, 8 aggs,8 edges, 16 hosts)
+DEBUG:sts.topology:Connecting 20 switches to 1 controllers (setting up 1 conns per switch)...
+DEBUG:sts.topology:Connecting switch 0 / 20
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+Error connecting to 127.0.0.1:8888 -- [Errno 111] Connection refused. Backing off 1 seconds ...
+c('127.0.0.1', 8888) [9124] DEBUG:core:OpenFlowTopology ready
+c('127.0.0.1', 8888) [9124] INFO:samples.nommessenger:initializing
+c('127.0.0.1', 8888) [9124] INFO:samples.nommessenger:Up...
+c('127.0.0.1', 8888) [9124] DEBUG:core:POX 0.0.0 going up...
+c('127.0.0.1', 8888) [9124] DEBUG:core:Running on CPython (2.7.2+/Jul 20 2012 22:15:08)
+c('127.0.0.1', 8888) [9124] INFO:core:POX 0.0.0 is up.
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.of_01:Listening for connections on 127.0.0.1:8888
+c('127.0.0.1', 8888) [9124] DEBUG:messenger:Listening for connections on 0.0.0.0:7790
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+DEBUG:sts.topology:Controller connections done
+DEBUG:event_dag:Executing SwitchFailure:e1
+Crashing software_switch SoftwareSwitch(dpid=15, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e1
+DEBUG:event_dag:Executing SwitchFailure:e2
+Crashing software_switch SoftwareSwitch(dpid=9, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e2
+DEBUG:event_dag:Executing SwitchFailure:e3
+Crashing software_switch SoftwareSwitch(dpid=5, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e3
+DEBUG:event_dag:Executing SwitchFailure:e4
+Crashing software_switch SoftwareSwitch(dpid=1, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e4
+DEBUG:event_dag:Executing SwitchFailure:e5
+Crashing software_switch SoftwareSwitch(dpid=12, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e5
+DEBUG:event_dag:Executing SwitchFailure:e6
+Crashing software_switch SoftwareSwitch(dpid=20, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e6
+DEBUG:event_dag:Executing LinkFailure:e7
+Cutting link (7:3) -> (15:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e7
+DEBUG:event_dag:Executing LinkFailure:e8
+Cutting link (6:4) -> (14:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e8
+DEBUG:event_dag:Executing LinkFailure:e9
+Cutting link (9:3) -> (17:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e9
+DEBUG:event_dag:Executing LinkFailure:e10
+Cutting link (17:1) -> (9:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e10
+DEBUG:event_dag:Executing LinkFailure:e11
+Cutting link (15:4) -> (18:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e11
+DEBUG:event_dag:Executing LinkFailure:e12
+Cutting link (2:4) -> (10:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e12
+DEBUG:event_dag:Executing LinkFailure:e13
+Cutting link (14:2) -> (6:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e13
+DEBUG:event_dag:Executing LinkFailure:e14
+Cutting link (18:4) -> (15:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e14
+DEBUG:event_dag:Executing LinkFailure:e15
+Cutting link (12:3) -> (19:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e15
+DEBUG:event_dag:Executing LinkFailure:e16
+Cutting link (1:4) -> (10:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e16
+DEBUG:event_dag:Executing LinkFailure:e17
+Cutting link (3:4) -> (12:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e17
+DEBUG:event_dag:Executing LinkFailure:e18
+Cutting link (15:3) -> (17:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e18
+DEBUG:event_dag:Executing LinkFailure:e19
+Cutting link (17:3) -> (13:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e19
+DEBUG:event_dag:Executing LinkFailure:e20
+Cutting link (10:1) -> (1:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e20
+DEBUG:event_dag:Executing LinkFailure:e21
+Cutting link (19:4) -> (16:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e21
+DEBUG:event_dag:Executing LinkFailure:e22
+Cutting link (12:1) -> (3:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e22
+DEBUG:event_dag:Executing LinkFailure:e23
+Cutting link (11:4) -> (18:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e23
+DEBUG:event_dag:Executing LinkFailure:e24
+Cutting link (16:3) -> (19:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e24
+DEBUG:event_dag:Executing LinkFailure:e25
+Cutting link (13:3) -> (17:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e25
+DEBUG:event_dag:Executing LinkFailure:e26
+Cutting link (2:3) -> (9:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e26
+DEBUG:event_dag:Executing LinkFailure:e27
+Cutting link (20:1) -> (10:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e27
+DEBUG:event_dag:Executing LinkFailure:e28
+Cutting link (20:3) -> (14:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e28
+DEBUG:event_dag:Executing LinkFailure:e29
+Cutting link (11:1) -> (3:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e29
+DEBUG:event_dag:Executing LinkFailure:e30
+Cutting link (3:3) -> (11:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e30
+DEBUG:event_dag:Executing ControlMessageReceive:e31
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(15):Receive hello SoftSwitch(15)
+DEBUG:FuzzSoftwareSwitch(15):Send hello SoftSwitch(15)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e31
+DEBUG:event_dag:Executing ControlMessageReceive:e32
+DEBUG:FuzzSoftwareSwitch(8):Receive hello SoftSwitch(8)
+DEBUG:FuzzSoftwareSwitch(8):Send hello SoftSwitch(8)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e32
+DEBUG:event_dag:Executing ControlMessageReceive:e33
+DEBUG:FuzzSoftwareSwitch(17):Receive hello SoftSwitch(17)
+DEBUG:FuzzSoftwareSwitch(17):Send hello SoftSwitch(17)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e33
+DEBUG:event_dag:Executing ControlMessageReceive:e34
+DEBUG:FuzzSoftwareSwitch(2):Receive hello SoftSwitch(2)
+DEBUG:FuzzSoftwareSwitch(2):Send hello SoftSwitch(2)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e34
+DEBUG:event_dag:Executing ControlMessageReceive:e35
+DEBUG:FuzzSoftwareSwitch(3):Receive hello SoftSwitch(3)
+DEBUG:FuzzSoftwareSwitch(3):Send hello SoftSwitch(3)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e35
+DEBUG:event_dag:Executing ControlMessageReceive:e36
+DEBUG:FuzzSoftwareSwitch(12):Receive hello SoftSwitch(12)
+DEBUG:FuzzSoftwareSwitch(12):Send hello SoftSwitch(12)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e36
+DEBUG:event_dag:Executing ControlMessageReceive:e37
+DEBUG:FuzzSoftwareSwitch(16):Receive hello SoftSwitch(16)
+DEBUG:FuzzSoftwareSwitch(16):Send hello SoftSwitch(16)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e37
+DEBUG:event_dag:Executing ControlMessageReceive:e38
+DEBUG:FuzzSoftwareSwitch(10):Receive hello SoftSwitch(10)
+DEBUG:FuzzSoftwareSwitch(10):Send hello SoftSwitch(10)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e38
+DEBUG:event_dag:Executing ControlMessageReceive:e39
+DEBUG:FuzzSoftwareSwitch(11):Receive hello SoftSwitch(11)
+DEBUG:FuzzSoftwareSwitch(11):Send hello SoftSwitch(11)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e39
+DEBUG:event_dag:Executing ControlMessageReceive:e40
+DEBUG:FuzzSoftwareSwitch(1):Receive hello SoftSwitch(1)
+DEBUG:FuzzSoftwareSwitch(1):Send hello SoftSwitch(1)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e40
+DEBUG:event_dag:Executing ControlMessageReceive:e41
+DEBUG:FuzzSoftwareSwitch(18):Receive hello SoftSwitch(18)
+DEBUG:FuzzSoftwareSwitch(18):Send hello SoftSwitch(18)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e41
+DEBUG:event_dag:Executing ControlMessageReceive:e42
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(19):Receive hello SoftSwitch(19)
+DEBUG:FuzzSoftwareSwitch(19):Send hello SoftSwitch(19)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e42
+DEBUG:event_dag:Executing ControlMessageReceive:e43
+DEBUG:FuzzSoftwareSwitch(5):Receive hello SoftSwitch(5)
+DEBUG:FuzzSoftwareSwitch(5):Send hello SoftSwitch(5)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e43
+DEBUG:event_dag:Executing ControlMessageReceive:e44
+DEBUG:FuzzSoftwareSwitch(6):Receive hello SoftSwitch(6)
+DEBUG:FuzzSoftwareSwitch(6):Send hello SoftSwitch(6)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e44
+DEBUG:event_dag:Executing ControlMessageReceive:e45
+DEBUG:FuzzSoftwareSwitch(7):Receive hello SoftSwitch(7)
+DEBUG:FuzzSoftwareSwitch(7):Send hello SoftSwitch(7)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e45
+DEBUG:event_dag:Executing ControlMessageReceive:e46
+DEBUG:FuzzSoftwareSwitch(9):Receive hello SoftSwitch(9)
+DEBUG:FuzzSoftwareSwitch(9):Send hello SoftSwitch(9)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e46
+DEBUG:event_dag:Executing ControlMessageReceive:e47
+DEBUG:FuzzSoftwareSwitch(4):Receive hello SoftSwitch(4)
+DEBUG:FuzzSoftwareSwitch(4):Send hello SoftSwitch(4)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e47
+DEBUG:event_dag:Executing ControlMessageReceive:e48
+DEBUG:FuzzSoftwareSwitch(13):Receive hello SoftSwitch(13)
+DEBUG:FuzzSoftwareSwitch(13):Send hello SoftSwitch(13)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e48
+DEBUG:event_dag:Executing ControlMessageReceive:e49
+DEBUG:FuzzSoftwareSwitch(14):Receive hello SoftSwitch(14)
+DEBUG:FuzzSoftwareSwitch(14):Send hello SoftSwitch(14)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e49
+DEBUG:event_dag:Executing SwitchRecovery:e50
+Rebooting software_switch SoftwareSwitch(dpid=9, num_ports=4)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+DEBUG:event_dag:Finished Executing SwitchRecovery:e50
+DEBUG:event_dag:Executing LinkFailure:e51
+Cutting link (16:1) -> (7:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e51
+DEBUG:event_dag:Executing LinkFailure:e52
+Cutting link (13:2) -> (6:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e52
+DEBUG:event_dag:Executing LinkFailure:e53
+Cutting link (9:2) -> (2:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e53
+DEBUG:event_dag:Executing LinkFailure:e54
+Cutting link (18:2) -> (11:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e54
+DEBUG:event_dag:Executing LinkFailure:e55
+Cutting link (10:2) -> (2:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e55
+DEBUG:event_dag:Executing LinkFailure:e56
+Cutting link (11:3) -> (17:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e56
+DEBUG:event_dag:Executing LinkFailure:e57
+Cutting link (13:1) -> (5:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e57
+DEBUG:event_dag:Executing LinkFailure:e58
+Cutting link (20:2) -> (12:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e58
+DEBUG:event_dag:Executing LinkFailure:e59
+Cutting link (6:3) -> (13:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e59
+DEBUG:event_dag:Executing LinkFailure:e60
+Cutting link (4:3) -> (11:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e60
+DEBUG:event_dag:Executing LinkFailure:e61
+Cutting link (16:4) -> (20:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e61
+DEBUG:event_dag:Executing LinkFailure:e62
+Cutting link (19:1) -> (10:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e62
+DEBUG:event_dag:Executing LinkFailure:e63
+Cutting link (8:3) -> (15:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e63
+DEBUG:event_dag:Executing LinkFailure:e64
+Cutting link (7:4) -> (16:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e64
+DEBUG:event_dag:Executing LinkFailure:e65
+Cutting link (14:4) -> (20:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e65
+DEBUG:event_dag:Executing LinkFailure:e66
+Cutting link (16:2) -> (8:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e66
+DEBUG:event_dag:Executing LinkFailure:e67
+Cutting link (18:3) -> (13:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e67
+DEBUG:event_dag:Executing LinkRecovery:e68
+Restoring link (2:3) -> (9:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e68
+DEBUG:event_dag:Executing LinkRecovery:e69
+Restoring link (17:1) -> (9:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e69
+DEBUG:event_dag:Executing LinkRecovery:e70
+Restoring link (15:3) -> (17:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e70
+DEBUG:event_dag:Executing LinkRecovery:e71
+Restoring link (18:4) -> (15:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e71
+DEBUG:event_dag:Executing LinkRecovery:e72
+Restoring link (19:4) -> (16:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e72
+DEBUG:event_dag:Executing LinkRecovery:e73
+Restoring link (3:3) -> (11:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e73
+DEBUG:event_dag:Executing ControlMessageReceive:e74
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(5):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     73 SoftSwitch(5)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e74
+DEBUG:event_dag:Executing ControlMessageReceive:e75
+DEBUG:FuzzSoftwareSwitch(14):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     63 SoftSwitch(14)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e75
+DEBUG:event_dag:Executing ControlMessageReceive:e76
+DEBUG:FuzzSoftwareSwitch(11):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     55 SoftSwitch(11)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e76
+DEBUG:event_dag:Executing ControlMessageReceive:e77
+DEBUG:FuzzSoftwareSwitch(18):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     43 SoftSwitch(18)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e77
+DEBUG:event_dag:Executing ControlMessageReceive:e78
+DEBUG:FuzzSoftwareSwitch(17):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     41 SoftSwitch(17)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e78
+DEBUG:event_dag:Executing ControlMessageReceive:e79
+DEBUG:FuzzSoftwareSwitch(15):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     37 SoftSwitch(15)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e79
+DEBUG:event_dag:Executing ControlMessageReceive:e80
+DEBUG:FuzzSoftwareSwitch(13):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     77 SoftSwitch(13)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e80
+DEBUG:event_dag:Executing ControlMessageReceive:e81
+DEBUG:FuzzSoftwareSwitch(2):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     45 SoftSwitch(2)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e81
+DEBUG:event_dag:Executing ControlMessageReceive:e82
+DEBUG:FuzzSoftwareSwitch(19):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     75 SoftSwitch(19)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e82
+DEBUG:event_dag:Executing ControlMessageReceive:e83
+DEBUG:FuzzSoftwareSwitch(8):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     51 SoftSwitch(8)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e83
+DEBUG:event_dag:Executing ControlMessageReceive:e84
+DEBUG:FuzzSoftwareSwitch(1):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     47 SoftSwitch(1)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e84
+DEBUG:event_dag:Executing ControlMessageReceive:e85
+DEBUG:FuzzSoftwareSwitch(4):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     67 SoftSwitch(4)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e85
+DEBUG:event_dag:Executing ControlMessageReceive:e86
+DEBUG:FuzzSoftwareSwitch(6):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     71 SoftSwitch(6)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e86
+DEBUG:event_dag:Executing ControlMessageReceive:e87
+DEBUG:FuzzSoftwareSwitch(3):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     49 SoftSwitch(3)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e87
+DEBUG:event_dag:Executing ControlMessageReceive:e88
+DEBUG:FuzzSoftwareSwitch(10):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     53 SoftSwitch(10)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e88
+DEBUG:event_dag:Executing ControlMessageReceive:e89
+DEBUG:FuzzSoftwareSwitch(9):Receive hello SoftSwitch(9)
+DEBUG:FuzzSoftwareSwitch(9):Send hello SoftSwitch(9)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e89
+DEBUG:event_dag:Executing ControlMessageReceive:e90
+DEBUG:FuzzSoftwareSwitch(16):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     39 SoftSwitch(16)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e90
+DEBUG:event_dag:Executing ControlMessageReceive:e91
+DEBUG:FuzzSoftwareSwitch(9):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     69 SoftSwitch(9)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e91
+DEBUG:event_dag:Executing ControlMessageReceive:e92
+DEBUG:FuzzSoftwareSwitch(7):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     65 SoftSwitch(7)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e92
+DEBUG:event_dag:Executing ControlMessageReceive:e93
+DEBUG:FuzzSoftwareSwitch(12):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     57 SoftSwitch(12)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e93
+DEBUG:event_dag:Executing SwitchFailure:e94
+Crashing software_switch SoftwareSwitch(dpid=11, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e94
+DEBUG:event_dag:Executing SwitchFailure:e95
+Crashing software_switch SoftwareSwitch(dpid=18, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e95
+DEBUG:event_dag:Executing SwitchFailure:e96
+Crashing software_switch SoftwareSwitch(dpid=9, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e96
+DEBUG:event_dag:Executing SwitchRecovery:e97
+Rebooting software_switch SoftwareSwitch(dpid=15, num_ports=4)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+DEBUG:event_dag:Finished Executing SwitchRecovery:e97
+DEBUG:event_dag:Executing LinkFailure:e98
+Cutting link (5:4) -> (14:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e98
+DEBUG:event_dag:Executing LinkFailure:e99
+Cutting link (5:3) -> (13:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e99
+DEBUG:event_dag:Executing LinkFailure:e100
+Cutting link (15:3) -> (17:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e100
+DEBUG:event_dag:Executing LinkFailure:e101
+Cutting link (19:2) -> (12:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e101
+DEBUG:event_dag:Executing LinkFailure:e102
+Cutting link (19:4) -> (16:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e102
+DEBUG:event_dag:Executing LinkFailure:e103
+Cutting link (18:1) -> (9:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e103
+DEBUG:event_dag:Executing LinkFailure:e104
+Cutting link (11:2) -> (4:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e104
+DEBUG:event_dag:Executing LinkFailure:e105
+Cutting link (13:4) -> (18:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e105
+DEBUG:event_dag:Executing LinkRecovery:e106
+Restoring link (20:1) -> (10:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e106
+DEBUG:event_dag:Executing LinkRecovery:e107
+Restoring link (6:3) -> (13:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e107
+DEBUG:event_dag:Executing LinkRecovery:e108
+Restoring link (9:2) -> (2:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e108
+DEBUG:event_dag:Executing LinkRecovery:e109
+Restoring link (18:2) -> (11:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e109
+DEBUG:event_dag:Executing LinkRecovery:e110
+Restoring link (2:4) -> (10:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e110
+DEBUG:event_dag:Executing LinkRecovery:e111
+Restoring link (11:3) -> (17:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e111
+DEBUG:event_dag:Executing LinkRecovery:e112
+Restoring link (13:1) -> (5:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e112
+DEBUG:event_dag:Executing LinkRecovery:e113
+Restoring link (10:1) -> (1:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e113
+DEBUG:event_dag:Executing LinkRecovery:e114
+Restoring link (16:3) -> (19:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e114
+DEBUG:event_dag:Executing LinkRecovery:e115
+Restoring link (13:2) -> (6:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e115
+DEBUG:event_dag:Executing LinkRecovery:e116
+Restoring link (16:1) -> (7:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e116
+DEBUG:event_dag:Executing LinkRecovery:e117
+Restoring link (12:1) -> (3:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e117
+DEBUG:event_dag:Executing LinkRecovery:e118
+Restoring link (10:2) -> (2:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e118
+DEBUG:event_dag:Executing LinkRecovery:e119
+Restoring link (8:3) -> (15:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e119
+DEBUG:event_dag:Executing LinkRecovery:e120
+Restoring link (3:4) -> (12:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e120
+DEBUG:event_dag:Executing LinkRecovery:e121
+Restoring link (20:3) -> (14:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e121
+DEBUG:event_dag:Executing LinkRecovery:e122
+Restoring link (12:3) -> (19:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e122
+DEBUG:event_dag:Executing LinkRecovery:e123
+Restoring link (18:3) -> (13:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e123
+DEBUG:event_dag:Executing LinkRecovery:e124
+Restoring link (17:3) -> (13:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e124
+DEBUG:event_dag:Executing LinkRecovery:e125
+Restoring link (11:1) -> (3:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e125
+DEBUG:event_dag:Executing ControlMessageReceive:e126
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(14):Set config SoftSwitch(14) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     113
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e126
+DEBUG:event_dag:Executing ControlMessageReceive:e127
+DEBUG:FuzzSoftwareSwitch(16):Barrier request SoftSwitch(16) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     91
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e127
+DEBUG:event_dag:Executing ControlMessageReceive:e128
+DEBUG:FuzzSoftwareSwitch(18):Flow mod SoftSwitch(18): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     107
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e128
+DEBUG:event_dag:Executing ControlMessageReceive:e129
+DEBUG:FuzzSoftwareSwitch(5):Set config SoftSwitch(5) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     175
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e129
+DEBUG:event_dag:Executing ControlMessageReceive:e130
+DEBUG:FuzzSoftwareSwitch(19):Set config SoftSwitch(19) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     197
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e130
+DEBUG:event_dag:Executing ControlMessageReceive:e131
+DEBUG:FuzzSoftwareSwitch(19):Flow mod SoftSwitch(19): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     199
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e131
+DEBUG:event_dag:Executing ControlMessageReceive:e132
+DEBUG:FuzzSoftwareSwitch(12):Set config SoftSwitch(12) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     203
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e132
+DEBUG:event_dag:Executing ControlMessageReceive:e133
+DEBUG:FuzzSoftwareSwitch(8):Barrier request SoftSwitch(8) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     171
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e133
+DEBUG:event_dag:Executing ControlMessageReceive:e134
+DEBUG:FuzzSoftwareSwitch(19):Barrier request SoftSwitch(19) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     201
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e134
+DEBUG:event_dag:Executing ControlMessageReceive:e135
+DEBUG:FuzzSoftwareSwitch(14):Flow mod SoftSwitch(14): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     115
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e135
+DEBUG:event_dag:Executing ControlMessageReceive:e136
+DEBUG:FuzzSoftwareSwitch(18):Set config SoftSwitch(18) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     105
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e136
+DEBUG:event_dag:Executing ControlMessageReceive:e137
+DEBUG:FuzzSoftwareSwitch(8):Flow mod SoftSwitch(8): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     169
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e137
+DEBUG:event_dag:Executing ControlMessageReceive:e138
+DEBUG:FuzzSoftwareSwitch(4):Flow mod SoftSwitch(4): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     141
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e138
+DEBUG:event_dag:Executing ControlMessageReceive:e139
+DEBUG:FuzzSoftwareSwitch(8):Set config SoftSwitch(8) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     167
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e139
+DEBUG:event_dag:Executing ControlMessageReceive:e140
+DEBUG:FuzzSoftwareSwitch(18):Barrier request SoftSwitch(18) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     109
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e140
+DEBUG:event_dag:Executing ControlMessageReceive:e141
+DEBUG:FuzzSoftwareSwitch(14):Barrier request SoftSwitch(14) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     117
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e141
+DEBUG:event_dag:Executing ControlMessageReceive:e142
+DEBUG:FuzzSoftwareSwitch(15):Receive hello SoftSwitch(15)
+DEBUG:FuzzSoftwareSwitch(15):Send hello SoftSwitch(15)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e142
+DEBUG:event_dag:Executing ControlMessageReceive:e143
+DEBUG:FuzzSoftwareSwitch(12):Barrier request SoftSwitch(12) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     207
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e143
+DEBUG:event_dag:Executing ControlMessageReceive:e144
+DEBUG:FuzzSoftwareSwitch(11):Flow mod SoftSwitch(11): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     193
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e144
+DEBUG:event_dag:Executing ControlMessageReceive:e145
+DEBUG:FuzzSoftwareSwitch(9):Set config SoftSwitch(9) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     153
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e145
+DEBUG:event_dag:Executing ControlMessageReceive:e146
+DEBUG:FuzzSoftwareSwitch(6):Set config SoftSwitch(6) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     159
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e146
+DEBUG:event_dag:Executing ControlMessageReceive:e147
+DEBUG:FuzzSoftwareSwitch(9):Flow mod SoftSwitch(9): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     155
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e147
+DEBUG:event_dag:Executing ControlMessageReceive:e148
+DEBUG:FuzzSoftwareSwitch(2):Flow mod SoftSwitch(2): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     127
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e148
+DEBUG:event_dag:Executing ControlMessageReceive:e149
+DEBUG:FuzzSoftwareSwitch(10):Barrier request SoftSwitch(10) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     185
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e149
+DEBUG:event_dag:Executing ControlMessageReceive:e150
+DEBUG:FuzzSoftwareSwitch(15):Set config SoftSwitch(15) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     81
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e150
+DEBUG:event_dag:Executing ControlMessageReceive:e151
+DEBUG:FuzzSoftwareSwitch(2):Set config SoftSwitch(2) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     125
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e151
+DEBUG:event_dag:Executing ControlMessageReceive:e152
+DEBUG:FuzzSoftwareSwitch(10):Flow mod SoftSwitch(10): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     183
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e152
+DEBUG:event_dag:Executing ControlMessageReceive:e153
+DEBUG:FuzzSoftwareSwitch(4):Barrier request SoftSwitch(4) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     143
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e153
+DEBUG:event_dag:Executing ControlMessageReceive:e154
+DEBUG:FuzzSoftwareSwitch(6):Flow mod SoftSwitch(6): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     161
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e154
+DEBUG:event_dag:Executing ControlMessageReceive:e155
+DEBUG:FuzzSoftwareSwitch(11):Set config SoftSwitch(11) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     191
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e155
+DEBUG:event_dag:Executing ControlMessageReceive:e156
+DEBUG:FuzzSoftwareSwitch(2):Barrier request SoftSwitch(2) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     129
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e156
+DEBUG:event_dag:Executing ControlMessageReceive:e157
+DEBUG:FuzzSoftwareSwitch(15):Barrier request SoftSwitch(15) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     85
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e157
+DEBUG:event_dag:Executing ControlMessageReceive:e158
+DEBUG:FuzzSoftwareSwitch(17):Barrier request SoftSwitch(17) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     101
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e158
+DEBUG:event_dag:Executing ControlMessageReceive:e159
+DEBUG:FuzzSoftwareSwitch(7):Set config SoftSwitch(7) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     119
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e159
+DEBUG:event_dag:Executing ControlMessageReceive:e160
+DEBUG:FuzzSoftwareSwitch(4):Set config SoftSwitch(4) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     139
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e160
+DEBUG:event_dag:Executing ControlMessageReceive:e161
+DEBUG:FuzzSoftwareSwitch(17):Set config SoftSwitch(17) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     97
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e161
+DEBUG:event_dag:Executing ControlMessageReceive:e162
+DEBUG:FuzzSoftwareSwitch(17):Flow mod SoftSwitch(17): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     99
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e162
+DEBUG:event_dag:Executing ControlMessageReceive:e163
+DEBUG:FuzzSoftwareSwitch(11):Barrier request SoftSwitch(11) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     195
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e163
+DEBUG:event_dag:Executing ControlMessageReceive:e164
+DEBUG:FuzzSoftwareSwitch(13):Flow mod SoftSwitch(13): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     211
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e164
+DEBUG:event_dag:Executing ControlMessageReceive:e165
+DEBUG:FuzzSoftwareSwitch(9):Barrier request SoftSwitch(9) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     157
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e165
+DEBUG:event_dag:Executing ControlMessageReceive:e166
+DEBUG:FuzzSoftwareSwitch(6):Barrier request SoftSwitch(6) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     163
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e166
+DEBUG:event_dag:Executing ControlMessageReceive:e167
+DEBUG:FuzzSoftwareSwitch(12):Flow mod SoftSwitch(12): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     205
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e167
+DEBUG:event_dag:Executing ControlMessageReceive:e168
+DEBUG:FuzzSoftwareSwitch(3):Barrier request SoftSwitch(3) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     149
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e168
+DEBUG:event_dag:Executing ControlMessageReceive:e169
+DEBUG:FuzzSoftwareSwitch(15):Flow mod SoftSwitch(15): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     83
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e169
+DEBUG:event_dag:Executing ControlMessageReceive:e170
+DEBUG:FuzzSoftwareSwitch(1):Barrier request SoftSwitch(1) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     137
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e170
+DEBUG:event_dag:Executing ControlMessageReceive:e171
+DEBUG:FuzzSoftwareSwitch(3):Flow mod SoftSwitch(3): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     147
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e171
+DEBUG:event_dag:Executing ControlMessageReceive:e172
+DEBUG:FuzzSoftwareSwitch(1):Set config SoftSwitch(1) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     133
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e172
+DEBUG:event_dag:Executing ControlMessageReceive:e173
+DEBUG:FuzzSoftwareSwitch(13):Barrier request SoftSwitch(13) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     213
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e173
+DEBUG:event_dag:Executing ControlMessageReceive:e174
+DEBUG:FuzzSoftwareSwitch(7):Flow mod SoftSwitch(7): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     121
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e174
+DEBUG:event_dag:Executing ControlMessageReceive:e175
+DEBUG:FuzzSoftwareSwitch(13):Set config SoftSwitch(13) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     209
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e175
+DEBUG:event_dag:Executing ControlMessageReceive:e176
+DEBUG:FuzzSoftwareSwitch(10):Set config SoftSwitch(10) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     181
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e176
+DEBUG:event_dag:Executing ControlMessageReceive:e177
+DEBUG:FuzzSoftwareSwitch(3):Set config SoftSwitch(3) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     145
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e177
+DEBUG:event_dag:Executing ControlMessageReceive:e178
+DEBUG:FuzzSoftwareSwitch(7):Barrier request SoftSwitch(7) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     123
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e178
+DEBUG:event_dag:Executing ControlMessageReceive:e179
+DEBUG:FuzzSoftwareSwitch(5):Barrier request SoftSwitch(5) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     179
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e179
+DEBUG:event_dag:Executing ControlMessageReceive:e180
+DEBUG:FuzzSoftwareSwitch(1):Flow mod SoftSwitch(1): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     135
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e180
+DEBUG:event_dag:Executing ControlMessageReceive:e181
+DEBUG:FuzzSoftwareSwitch(9):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     111 SoftSwitch(9)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e181
+DEBUG:event_dag:Executing ControlMessageReceive:e182
+DEBUG:FuzzSoftwareSwitch(16):Flow mod SoftSwitch(16): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     89
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e182
+DEBUG:event_dag:Executing ControlMessageReceive:e183
+DEBUG:FuzzSoftwareSwitch(5):Flow mod SoftSwitch(5): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     177
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e183
+DEBUG:event_dag:Executing ControlMessageReceive:e184
+DEBUG:FuzzSoftwareSwitch(16):Set config SoftSwitch(16) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     87
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e184
+DEBUG:event_dag:Executing SwitchFailure:e185
+Crashing software_switch SoftwareSwitch(dpid=15, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e185
+DEBUG:event_dag:Executing SwitchRecovery:e186
+Rebooting software_switch SoftwareSwitch(dpid=12, num_ports=4)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+DEBUG:event_dag:Finished Executing SwitchRecovery:e186
+DEBUG:event_dag:Executing LinkFailure:e187
+Cutting link (15:1) -> (7:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e187
+DEBUG:event_dag:Executing LinkFailure:e188
+Cutting link (2:3) -> (9:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e188
+DEBUG:event_dag:Executing LinkFailure:e189
+Cutting link (17:1) -> (9:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e189
+DEBUG:event_dag:Executing LinkFailure:e190
+Cutting link (9:2) -> (2:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e190
+DEBUG:event_dag:Executing LinkFailure:e191
+Cutting link (14:1) -> (5:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e191
+DEBUG:event_dag:Executing LinkFailure:e192
+Cutting link (18:2) -> (11:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e192
+DEBUG:event_dag:Executing LinkFailure:e193
+Cutting link (19:3) -> (14:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e193
+DEBUG:event_dag:Executing LinkFailure:e194
+Cutting link (14:3) -> (19:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e194
+DEBUG:event_dag:Executing LinkFailure:e195
+Cutting link (2:4) -> (10:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e195
+DEBUG:event_dag:Executing LinkFailure:e196
+Cutting link (11:3) -> (17:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e196
+DEBUG:event_dag:Executing LinkFailure:e197
+Cutting link (17:2) -> (11:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e197
+DEBUG:event_dag:Executing LinkFailure:e198
+Cutting link (12:4) -> (20:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e198
+DEBUG:event_dag:Executing LinkFailure:e199
+Cutting link (6:3) -> (13:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e199
+DEBUG:event_dag:Executing LinkFailure:e200
+Cutting link (9:1) -> (1:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e200
+DEBUG:event_dag:Executing LinkFailure:e201
+Cutting link (16:1) -> (7:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e201
+DEBUG:event_dag:Executing LinkFailure:e202
+Cutting link (8:3) -> (15:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e202
+DEBUG:event_dag:Executing LinkFailure:e203
+Cutting link (12:2) -> (4:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e203
+DEBUG:event_dag:Executing LinkFailure:e204
+Cutting link (4:4) -> (12:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e204
+DEBUG:event_dag:Executing LinkFailure:e205
+Cutting link (10:1) -> (1:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e205
+DEBUG:event_dag:Executing LinkFailure:e206
+Cutting link (17:3) -> (13:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e206
+DEBUG:event_dag:Executing LinkFailure:e207
+Cutting link (10:4) -> (20:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e207
+DEBUG:event_dag:Executing LinkFailure:e208
+Cutting link (1:3) -> (9:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e208
+DEBUG:event_dag:Executing LinkFailure:e209
+Cutting link (8:4) -> (16:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e209
+DEBUG:event_dag:Executing LinkFailure:e210
+Cutting link (3:3) -> (11:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e210
+DEBUG:event_dag:Executing LinkRecovery:e211
+Restoring link (13:4) -> (18:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e211
+DEBUG:event_dag:Executing LinkRecovery:e212
+Restoring link (5:4) -> (14:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e212
+DEBUG:event_dag:Executing LinkRecovery:e213
+Restoring link (7:4) -> (16:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e213
+DEBUG:event_dag:Executing LinkRecovery:e214
+Restoring link (6:4) -> (14:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e214
+DEBUG:event_dag:Executing LinkRecovery:e215
+Restoring link (14:4) -> (20:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e215
+DEBUG:event_dag:Executing LinkRecovery:e216
+Restoring link (11:2) -> (4:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e216
+DEBUG:event_dag:Executing LinkRecovery:e217
+Restoring link (19:1) -> (10:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e217
+DEBUG:event_dag:Executing LinkRecovery:e218
+Restoring link (19:4) -> (16:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e218
+DEBUG:event_dag:Executing LinkRecovery:e219
+Restoring link (16:2) -> (8:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e219
+DEBUG:event_dag:Executing ControlMessageReceive:e220
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 15/15] Connected to 00-00-00-00-00-0f
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 15/15]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-0f connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-0f
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     983042
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 16/16] Connected to 00-00-00-00-00-10
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 16/16]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-10 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-10
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     1048578
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 17/17] Connected to 00-00-00-00-00-11
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 17/17]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-11 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-11
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     1114114
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 18/18] Connected to 00-00-00-00-00-12
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 18/18]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-12 connected
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(16):Barrier request SoftSwitch(16) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     235
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e220
+DEBUG:event_dag:Executing ControlMessageReceive:e221
+DEBUG:FuzzSoftwareSwitch(17):Barrier request SoftSwitch(17) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     249
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e221
+DEBUG:event_dag:Executing ControlMessageReceive:e222
+DEBUG:FuzzSoftwareSwitch(18):Flow mod SoftSwitch(18): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     259
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e222
+DEBUG:event_dag:Executing ControlMessageReceive:e223
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-12
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     1179650
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 14/14] Connected to 00-00-00-00-00-0e
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 14/14]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-0e connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-0e
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     917506
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 7/7] Connected to 00-00-00-00-00-07
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 7/7]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-07 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-07
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     458754
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 2/2] Connected to 00-00-00-00-00-02
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 2/2]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-02 connected
+DEBUG:event_dag:.
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-02
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     131074
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 1/1] Connected to 00-00-00-00-00-01
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 1/1]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-01 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-01
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     65538
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 4/4] Connected to 00-00-00-00-00-04
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 4/4]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-04 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-04
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     262146
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 3/3] Connected to 00-00-00-00-00-03
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 3/3]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-03 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-03
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     196610
+DEBUG:event_dag:.
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 9/9] Connected to 00-00-00-00-00-09
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 9/9]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-09 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-09
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     589826
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 6/6] Connected to 00-00-00-00-00-06
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 6/6]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-06 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-06
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     393218
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 8/8] Connected to 00-00-00-00-00-08
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 8/8]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-08 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-08
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     524290
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+DEBUG:event_dag:.
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 5/5] Connected to 00-00-00-00-00-05
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 5/5]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-05 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-05
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     327682
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 10/10] Connected to 00-00-00-00-00-0a
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 10/10]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-0a connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-0a
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     655362
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 11/11] Connected to 00-00-00-00-00-0b
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 11/11]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-0b connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-0b
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     720898
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 19/19] Connected to 00-00-00-00-00-13
+DEBUG:event_dag:.
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 19/19]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-13 connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-13
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     1245186
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 12/12] Connected to 00-00-00-00-00-0c
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 12/12]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-0c connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-0c
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     786434
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 13/13] Connected to 00-00-00-00-00-0d
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 13/13]
+c('127.0.0.1', 8888) [9124] INFO:openflow.topology:Switch 00-00-00-00-00-0d connected
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-0d
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     851970
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(19):Flow mod SoftSwitch(19): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     429
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e223
+DEBUG:event_dag:Executing ControlMessageReceive:e224
+DEBUG:FuzzSoftwareSwitch(19):Barrier request SoftSwitch(19) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     431
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e224
+DEBUG:event_dag:Executing ControlMessageReceive:e225
+DEBUG:FuzzSoftwareSwitch(14):Flow mod SoftSwitch(14): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     279
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e225
+DEBUG:event_dag:Executing ControlMessageReceive:e226
+DEBUG:FuzzSoftwareSwitch(18):Barrier request SoftSwitch(18) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     261
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e226
+DEBUG:event_dag:Executing ControlMessageReceive:e227
+DEBUG:FuzzSoftwareSwitch(14):Barrier request SoftSwitch(14) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     281
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e227
+DEBUG:event_dag:Executing ControlMessageReceive:e228
+DEBUG:FuzzSoftwareSwitch(16):Flow mod SoftSwitch(16): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     1048578
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e228
+DEBUG:event_dag:Executing ControlMessageReceive:e229
+DEBUG:FuzzSoftwareSwitch(19):Flow mod SoftSwitch(19): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     1245186
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e229
+DEBUG:event_dag:Executing ControlMessageReceive:e230
+DEBUG:FuzzSoftwareSwitch(15):Barrier request SoftSwitch(15) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     223
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e230
+DEBUG:event_dag:Executing ControlMessageReceive:e231
+DEBUG:FuzzSoftwareSwitch(12):Receive hello SoftSwitch(12)
+DEBUG:FuzzSoftwareSwitch(12):Send hello SoftSwitch(12)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e231
+DEBUG:event_dag:Executing ControlMessageReceive:e232
+DEBUG:FuzzSoftwareSwitch(17):Flow mod SoftSwitch(17): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     247
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e232
+DEBUG:event_dag:Executing ControlMessageReceive:e233
+DEBUG:FuzzSoftwareSwitch(15):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     271 SoftSwitch(15)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e233
+DEBUG:event_dag:Executing ControlMessageReceive:e234
+DEBUG:FuzzSoftwareSwitch(14):Flow mod SoftSwitch(14): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     917506
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e234
+DEBUG:event_dag:Executing ControlMessageReceive:e235
+DEBUG:FuzzSoftwareSwitch(15):Flow mod SoftSwitch(15): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     221
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e235
+DEBUG:event_dag:Executing ControlMessageReceive:e236
+DEBUG:FuzzSoftwareSwitch(17):Flow mod SoftSwitch(17): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     1114114
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e236
+DEBUG:event_dag:Executing ControlMessageReceive:e237
+DEBUG:FuzzSoftwareSwitch(15):Flow mod SoftSwitch(15): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     983042
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e237
+DEBUG:event_dag:Executing ControlMessageReceive:e238
+DEBUG:FuzzSoftwareSwitch(7):Flow mod SoftSwitch(7): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     293
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e238
+DEBUG:event_dag:Executing ControlMessageReceive:e239
+DEBUG:FuzzSoftwareSwitch(7):Barrier request SoftSwitch(7) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     295
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e239
+DEBUG:event_dag:Executing ControlMessageReceive:e240
+DEBUG:FuzzSoftwareSwitch(16):Flow mod SoftSwitch(16): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     233
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e240
+DEBUG:event_dag:Executing ControlMessageReceive:e241
+DEBUG:FuzzSoftwareSwitch(18):Flow mod SoftSwitch(18): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     1179650
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e241
+DEBUG:event_dag:Executing LinkFailure:e242
+Cutting link (7:4) -> (16:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e242
+DEBUG:event_dag:Executing LinkFailure:e243
+Cutting link (20:4) -> (16:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e243
+DEBUG:event_dag:Executing LinkFailure:e244
+Cutting link (18:4) -> (15:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e244
+DEBUG:event_dag:Executing LinkFailure:e245
+Cutting link (6:4) -> (14:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e245
+DEBUG:event_dag:Executing LinkFailure:e246
+Cutting link (9:4) -> (18:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e246
+DEBUG:event_dag:Executing LinkFailure:e247
+Cutting link (13:4) -> (18:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e247
+DEBUG:event_dag:Executing LinkFailure:e248
+Cutting link (12:1) -> (3:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e248
+DEBUG:event_dag:Executing LinkFailure:e249
+Cutting link (11:2) -> (4:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e249
+DEBUG:event_dag:Executing LinkRecovery:e250
+Restoring link (7:3) -> (15:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e250
+DEBUG:event_dag:Executing LinkRecovery:e251
+Restoring link (14:3) -> (19:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e251
+DEBUG:event_dag:Executing LinkRecovery:e252
+Restoring link (9:2) -> (2:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e252
+DEBUG:event_dag:Executing LinkRecovery:e253
+Restoring link (15:1) -> (7:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e253
+DEBUG:event_dag:Executing LinkRecovery:e254
+Restoring link (14:2) -> (6:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e254
+DEBUG:event_dag:Executing LinkRecovery:e255
+Restoring link (18:2) -> (11:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e255
+DEBUG:event_dag:Executing LinkRecovery:e256
+Restoring link (15:4) -> (18:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e256
+DEBUG:event_dag:Executing LinkRecovery:e257
+Restoring link (2:4) -> (10:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e257
+DEBUG:event_dag:Executing LinkRecovery:e258
+Restoring link (11:3) -> (17:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e258
+DEBUG:event_dag:Executing LinkRecovery:e259
+Restoring link (14:1) -> (5:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e259
+DEBUG:event_dag:Executing LinkRecovery:e260
+Restoring link (5:3) -> (13:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e260
+DEBUG:event_dag:Executing LinkRecovery:e261
+Restoring link (11:4) -> (18:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e261
+DEBUG:event_dag:Executing LinkRecovery:e262
+Restoring link (17:3) -> (13:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e262
+DEBUG:event_dag:Executing LinkRecovery:e263
+Restoring link (16:4) -> (20:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e263
+DEBUG:event_dag:Executing LinkRecovery:e264
+Restoring link (17:2) -> (11:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e264
+DEBUG:event_dag:Executing LinkRecovery:e265
+Restoring link (4:4) -> (12:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e265
+DEBUG:event_dag:Executing LinkRecovery:e266
+Restoring link (2:3) -> (9:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e266
+DEBUG:event_dag:Executing LinkRecovery:e267
+Restoring link (10:4) -> (20:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e267
+DEBUG:event_dag:Executing LinkRecovery:e268
+Restoring link (9:1) -> (1:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e268
+DEBUG:event_dag:Executing ControlMessageReceive:e269
+DEBUG:FuzzSoftwareSwitch(7):Flow mod SoftSwitch(7): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     458754
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e269
+DEBUG:event_dag:Executing ControlMessageReceive:e270
+DEBUG:FuzzSoftwareSwitch(16):Barrier request SoftSwitch(16) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     1048577
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e270
+DEBUG:event_dag:Executing ControlMessageReceive:e271
+DEBUG:FuzzSoftwareSwitch(17):Barrier request SoftSwitch(17) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     1114113
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e271
+DEBUG:event_dag:Executing ControlMessageReceive:e272
+DEBUG:FuzzSoftwareSwitch(19):Barrier request SoftSwitch(19) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     1245185
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e272
+DEBUG:event_dag:Executing ControlMessageReceive:e273
+DEBUG:FuzzSoftwareSwitch(4):Flow mod SoftSwitch(4): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     331
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e273
+DEBUG:event_dag:Executing ControlMessageReceive:e274
+DEBUG:FuzzSoftwareSwitch(18):Barrier request SoftSwitch(18) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     1179649
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e274
+DEBUG:event_dag:Executing ControlMessageReceive:e275
+DEBUG:FuzzSoftwareSwitch(14):Barrier request SoftSwitch(14) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     917505
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e275
+DEBUG:event_dag:Executing ControlMessageReceive:e276
+DEBUG:FuzzSoftwareSwitch(9):Flow mod SoftSwitch(9): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     275
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e276
+DEBUG:event_dag:Executing ControlMessageReceive:e277
+DEBUG:FuzzSoftwareSwitch(2):Flow mod SoftSwitch(2): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     307
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e277
+DEBUG:event_dag:Executing ControlMessageReceive:e278
+DEBUG:FuzzSoftwareSwitch(4):Barrier request SoftSwitch(4) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     333
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e278
+DEBUG:event_dag:Executing ControlMessageReceive:e279
+DEBUG:FuzzSoftwareSwitch(4):Flow mod SoftSwitch(4): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     262146
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e279
+DEBUG:event_dag:Executing ControlMessageReceive:e280
+DEBUG:FuzzSoftwareSwitch(6):Flow mod SoftSwitch(6): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     367
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e280
+DEBUG:event_dag:Executing ControlMessageReceive:e281
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(12):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     483 SoftSwitch(12)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e281
+DEBUG:event_dag:Executing ControlMessageReceive:e282
+DEBUG:FuzzSoftwareSwitch(2):Barrier request SoftSwitch(2) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     309
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e282
+DEBUG:event_dag:Executing ControlMessageReceive:e283
+DEBUG:FuzzSoftwareSwitch(15):Barrier request SoftSwitch(15) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     983041
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e283
+DEBUG:event_dag:Executing ControlMessageReceive:e284
+DEBUG:FuzzSoftwareSwitch(1):Flow mod SoftSwitch(1): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     65538
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e284
+DEBUG:event_dag:Executing ControlMessageReceive:e285
+DEBUG:FuzzSoftwareSwitch(9):Barrier request SoftSwitch(9) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     277
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e285
+DEBUG:event_dag:Executing ControlMessageReceive:e286
+DEBUG:FuzzSoftwareSwitch(6):Barrier request SoftSwitch(6) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     369
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e286
+DEBUG:event_dag:Executing ControlMessageReceive:e287
+DEBUG:FuzzSoftwareSwitch(3):Barrier request SoftSwitch(3) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     345
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e287
+DEBUG:event_dag:Executing ControlMessageReceive:e288
+DEBUG:FuzzSoftwareSwitch(1):Barrier request SoftSwitch(1) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     321
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e288
+DEBUG:event_dag:Executing ControlMessageReceive:e289
+DEBUG:FuzzSoftwareSwitch(3):Flow mod SoftSwitch(3): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     343
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e289
+DEBUG:event_dag:Executing ControlMessageReceive:e290
+DEBUG:FuzzSoftwareSwitch(2):Flow mod SoftSwitch(2): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     131074
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e290
+DEBUG:event_dag:Executing ControlMessageReceive:e291
+DEBUG:FuzzSoftwareSwitch(3):Flow mod SoftSwitch(3): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     196610
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e291
+DEBUG:event_dag:Executing ControlMessageReceive:e292
+DEBUG:FuzzSoftwareSwitch(6):Flow mod SoftSwitch(6): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     393218
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e292
+DEBUG:event_dag:Executing ControlMessageReceive:e293
+DEBUG:FuzzSoftwareSwitch(7):Barrier request SoftSwitch(7) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     458753
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e293
+DEBUG:event_dag:Executing ControlMessageReceive:e294
+DEBUG:FuzzSoftwareSwitch(1):Flow mod SoftSwitch(1): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     319
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e294
+DEBUG:event_dag:Executing ControlMessageReceive:e295
+DEBUG:FuzzSoftwareSwitch(9):Flow mod SoftSwitch(9): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     589826
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e295
+DEBUG:event_dag:Executing SwitchFailure:e296
+Crashing software_switch SoftwareSwitch(dpid=16, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e296
+DEBUG:event_dag:Executing LinkFailure:e297
+Cutting link (3:4) -> (12:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e297
+DEBUG:event_dag:Executing LinkFailure:e298
+Cutting link (7:3) -> (15:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e298
+DEBUG:event_dag:Executing LinkFailure:e299
+Cutting link (9:2) -> (2:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e299
+DEBUG:event_dag:Executing LinkFailure:e300
+Cutting link (5:4) -> (14:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e300
+DEBUG:event_dag:Executing LinkFailure:e301
+Cutting link (2:4) -> (10:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e301
+DEBUG:event_dag:Executing LinkFailure:e302
+Cutting link (5:3) -> (13:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e302
+DEBUG:event_dag:Executing LinkFailure:e303
+Cutting link (17:2) -> (11:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e303
+DEBUG:event_dag:Executing LinkFailure:e304
+Cutting link (10:3) -> (19:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e304
+DEBUG:event_dag:Executing LinkFailure:e305
+Cutting link (4:4) -> (12:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e305
+DEBUG:event_dag:Executing LinkFailure:e306
+Cutting link (10:4) -> (20:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e306
+DEBUG:event_dag:Executing LinkFailure:e307
+Cutting link (16:2) -> (8:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e307
+DEBUG:event_dag:Executing LinkFailure:e308
+Cutting link (16:4) -> (20:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e308
+DEBUG:event_dag:Executing LinkFailure:e309
+Cutting link (11:1) -> (3:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e309
+DEBUG:event_dag:Executing LinkRecovery:e310
+Restoring link (8:3) -> (15:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e310
+DEBUG:event_dag:Executing LinkRecovery:e311
+Restoring link (1:3) -> (9:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e311
+DEBUG:event_dag:Executing LinkRecovery:e312
+Restoring link (8:4) -> (16:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e312
+DEBUG:event_dag:Executing LinkRecovery:e313
+Restoring link (9:3) -> (17:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e313
+DEBUG:event_dag:Executing LinkRecovery:e314
+Restoring link (18:4) -> (15:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e314
+DEBUG:event_dag:Executing LinkRecovery:e315
+Restoring link (19:2) -> (12:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e315
+DEBUG:event_dag:Executing LinkRecovery:e316
+Restoring link (10:1) -> (1:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e316
+DEBUG:event_dag:Executing LinkRecovery:e317
+Restoring link (15:3) -> (17:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e317
+DEBUG:event_dag:Executing LinkRecovery:e318
+Restoring link (6:3) -> (13:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e318
+DEBUG:event_dag:Executing LinkRecovery:e319
+Restoring link (16:1) -> (7:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e319
+DEBUG:event_dag:Executing LinkRecovery:e320
+Restoring link (12:4) -> (20:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e320
+DEBUG:event_dag:Executing LinkRecovery:e321
+Restoring link (12:2) -> (4:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e321
+DEBUG:event_dag:Executing LinkRecovery:e322
+Restoring link (11:2) -> (4:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e322
+DEBUG:event_dag:Executing LinkRecovery:e323
+Restoring link (17:1) -> (9:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e323
+DEBUG:event_dag:Executing LinkRecovery:e324
+Restoring link (3:3) -> (11:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e324
+DEBUG:event_dag:Executing ControlMessageReceive:e325
+DEBUG:FuzzSoftwareSwitch(13):Flow mod SoftSwitch(13): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     851970
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e325
+DEBUG:event_dag:Executing ControlMessageReceive:e326
+DEBUG:FuzzSoftwareSwitch(10):Flow mod SoftSwitch(10): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     655362
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e326
+DEBUG:event_dag:Executing ControlMessageReceive:e327
+DEBUG:FuzzSoftwareSwitch(16):Barrier request SoftSwitch(16) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     1048579
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e327
+DEBUG:event_dag:Executing ControlMessageReceive:e328
+DEBUG:FuzzSoftwareSwitch(17):Barrier request SoftSwitch(17) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     1114115
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e328
+DEBUG:event_dag:Executing ControlMessageReceive:e329
+DEBUG:FuzzSoftwareSwitch(8):Barrier request SoftSwitch(8) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     383
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e329
+DEBUG:event_dag:Executing ControlMessageReceive:e330
+DEBUG:FuzzSoftwareSwitch(19):Barrier request SoftSwitch(19) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     1245187
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e330
+DEBUG:event_dag:Executing ControlMessageReceive:e331
+DEBUG:FuzzSoftwareSwitch(8):Flow mod SoftSwitch(8): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     381
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e331
+DEBUG:event_dag:Executing ControlMessageReceive:e332
+DEBUG:FuzzSoftwareSwitch(18):Barrier request SoftSwitch(18) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     1179651
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e332
+DEBUG:event_dag:Executing ControlMessageReceive:e333
+DEBUG:FuzzSoftwareSwitch(14):Barrier request SoftSwitch(14) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     917507
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e333
+DEBUG:event_dag:Executing ControlMessageReceive:e334
+DEBUG:FuzzSoftwareSwitch(12):Barrier request SoftSwitch(12) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     447
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e334
+DEBUG:event_dag:Executing ControlMessageReceive:e335
+DEBUG:FuzzSoftwareSwitch(11):Flow mod SoftSwitch(11): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     417
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e335
+DEBUG:event_dag:Executing ControlMessageReceive:e336
+DEBUG:FuzzSoftwareSwitch(10):Barrier request SoftSwitch(10) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     407
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e336
+DEBUG:event_dag:Executing ControlMessageReceive:e337
+DEBUG:FuzzSoftwareSwitch(9):Flow mod SoftSwitch(9): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     355
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e337
+DEBUG:event_dag:Executing ControlMessageReceive:e338
+DEBUG:FuzzSoftwareSwitch(9):Set config SoftSwitch(9) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     273
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e338
+DEBUG:event_dag:Executing ControlMessageReceive:e339
+DEBUG:FuzzSoftwareSwitch(12):Flow mod SoftSwitch(12): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     445
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e339
+DEBUG:event_dag:Executing ControlMessageReceive:e340
+DEBUG:FuzzSoftwareSwitch(10):Flow mod SoftSwitch(10): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     405
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e340
+DEBUG:event_dag:Executing ControlMessageReceive:e341
+DEBUG:FuzzSoftwareSwitch(4):Barrier request SoftSwitch(4) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     262145
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e341
+DEBUG:event_dag:Executing ControlMessageReceive:e342
+DEBUG:FuzzSoftwareSwitch(8):Flow mod SoftSwitch(8): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     524290
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e342
+DEBUG:event_dag:Executing ControlMessageReceive:e343
+DEBUG:FuzzSoftwareSwitch(2):Barrier request SoftSwitch(2) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     131073
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e343
+DEBUG:event_dag:Executing ControlMessageReceive:e344
+DEBUG:FuzzSoftwareSwitch(15):Barrier request SoftSwitch(15) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     983043
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e344
+DEBUG:event_dag:Executing ControlMessageReceive:e345
+DEBUG:FuzzSoftwareSwitch(11):Barrier request SoftSwitch(11) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     419
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e345
+DEBUG:event_dag:Executing ControlMessageReceive:e346
+DEBUG:FuzzSoftwareSwitch(5):Flow mod SoftSwitch(5): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     327682
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e346
+DEBUG:event_dag:Executing ControlMessageReceive:e347
+DEBUG:FuzzSoftwareSwitch(13):Flow mod SoftSwitch(13): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     457
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e347
+DEBUG:event_dag:Executing ControlMessageReceive:e348
+DEBUG:FuzzSoftwareSwitch(9):Barrier request SoftSwitch(9) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     357
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e348
+DEBUG:event_dag:Executing ControlMessageReceive:e349
+DEBUG:FuzzSoftwareSwitch(12):Flow mod SoftSwitch(12): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     786434
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e349
+DEBUG:event_dag:Executing ControlMessageReceive:e350
+DEBUG:FuzzSoftwareSwitch(6):Barrier request SoftSwitch(6) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     393217
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e350
+DEBUG:event_dag:Executing ControlMessageReceive:e351
+DEBUG:FuzzSoftwareSwitch(3):Barrier request SoftSwitch(3) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     196609
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e351
+DEBUG:event_dag:Executing ControlMessageReceive:e352
+DEBUG:FuzzSoftwareSwitch(11):Flow mod SoftSwitch(11): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     720898
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e352
+DEBUG:event_dag:Executing ControlMessageReceive:e353
+DEBUG:FuzzSoftwareSwitch(1):Barrier request SoftSwitch(1) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     65537
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e353
+DEBUG:event_dag:Executing ControlMessageReceive:e354
+DEBUG:FuzzSoftwareSwitch(13):Barrier request SoftSwitch(13) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     459
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e354
+DEBUG:event_dag:Executing ControlMessageReceive:e355
+DEBUG:FuzzSoftwareSwitch(7):Barrier request SoftSwitch(7) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     458755
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e355
+DEBUG:event_dag:Executing ControlMessageReceive:e356
+DEBUG:FuzzSoftwareSwitch(5):Barrier request SoftSwitch(5) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     395
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e356
+DEBUG:event_dag:Executing ControlMessageReceive:e357
+DEBUG:FuzzSoftwareSwitch(5):Flow mod SoftSwitch(5): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     393
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e357
+DEBUG:event_dag:Executing SwitchFailure:e358
+Crashing software_switch SoftwareSwitch(dpid=12, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e358
+DEBUG:event_dag:Executing SwitchRecovery:e359
+Rebooting software_switch SoftwareSwitch(dpid=16, num_ports=4)
+connect_socket_with_backoff(address=127.0.0.1, port=8888)
+DEBUG:event_dag:Finished Executing SwitchRecovery:e359
+DEBUG:event_dag:Executing LinkFailure:e360
+Cutting link (15:2) -> (8:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e360
+DEBUG:event_dag:Executing LinkFailure:e361
+Cutting link (17:1) -> (9:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e361
+DEBUG:event_dag:Executing LinkFailure:e362
+Cutting link (13:2) -> (6:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e362
+DEBUG:event_dag:Executing LinkFailure:e363
+Cutting link (14:1) -> (5:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e363
+DEBUG:event_dag:Executing LinkFailure:e364
+Cutting link (19:1) -> (10:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e364
+DEBUG:event_dag:Executing LinkFailure:e365
+Cutting link (18:4) -> (15:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e365
+DEBUG:event_dag:Executing LinkFailure:e366
+Cutting link (17:4) -> (15:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e366
+DEBUG:event_dag:Executing LinkFailure:e367
+Cutting link (12:4) -> (20:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e367
+DEBUG:event_dag:Executing LinkFailure:e368
+Cutting link (15:3) -> (17:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e368
+DEBUG:event_dag:Executing LinkFailure:e369
+Cutting link (9:1) -> (1:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e369
+DEBUG:event_dag:Executing LinkFailure:e370
+Cutting link (18:2) -> (11:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e370
+DEBUG:event_dag:Executing LinkFailure:e371
+Cutting link (12:2) -> (4:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e371
+DEBUG:event_dag:Executing LinkFailure:e372
+Cutting link (8:4) -> (16:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e372
+DEBUG:event_dag:Executing LinkFailure:e373
+Cutting link (18:3) -> (13:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e373
+DEBUG:event_dag:Executing LinkRecovery:e374
+Restoring link (9:2) -> (2:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e374
+DEBUG:event_dag:Executing LinkRecovery:e375
+Restoring link (11:1) -> (3:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e375
+DEBUG:event_dag:Executing LinkRecovery:e376
+Restoring link (5:4) -> (14:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e376
+DEBUG:event_dag:Executing LinkRecovery:e377
+Restoring link (7:4) -> (16:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e377
+DEBUG:event_dag:Executing LinkRecovery:e378
+Restoring link (5:3) -> (13:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e378
+DEBUG:event_dag:Executing LinkRecovery:e379
+Restoring link (10:3) -> (19:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e379
+DEBUG:event_dag:Executing LinkRecovery:e380
+Restoring link (4:3) -> (11:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e380
+DEBUG:event_dag:Executing LinkRecovery:e381
+Restoring link (16:4) -> (20:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e381
+DEBUG:event_dag:Executing LinkRecovery:e382
+Restoring link (3:4) -> (12:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e382
+DEBUG:event_dag:Executing LinkRecovery:e383
+Restoring link (18:1) -> (9:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e383
+DEBUG:event_dag:Executing LinkRecovery:e384
+Restoring link (13:4) -> (18:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e384
+DEBUG:event_dag:Executing ControlMessageReceive:e385
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 20/9] Connected to 00-00-00-00-00-09
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Disconnect [Con 9/9]
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 20/9]
+c('127.0.0.1', 8888) [9124] WARNING:openflow.topology:Switch 00-00-00-00-00-09 connected, but... it's already connected!
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     589828
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-09
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     589830
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     589831
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(16):Receive hello SoftSwitch(16)
+DEBUG:FuzzSoftwareSwitch(16):Send hello SoftSwitch(16)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e385
+DEBUG:event_dag:Executing ControlMessageReceive:e386
+DEBUG:FuzzSoftwareSwitch(12):Set config SoftSwitch(12) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     505
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e386
+DEBUG:event_dag:Executing ControlMessageReceive:e387
+DEBUG:FuzzSoftwareSwitch(8):Barrier request SoftSwitch(8) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     524289
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e387
+DEBUG:event_dag:Executing ControlMessageReceive:e388
+DEBUG:FuzzSoftwareSwitch(12):Barrier request SoftSwitch(12) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     786433
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e388
+DEBUG:event_dag:Executing ControlMessageReceive:e389
+DEBUG:FuzzSoftwareSwitch(10):Barrier request SoftSwitch(10) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     655361
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e389
+DEBUG:event_dag:Executing ControlMessageReceive:e390
+DEBUG:FuzzSoftwareSwitch(15):Set config SoftSwitch(15) ofp_set_config
+  header:
+    version: 1
+    type:    9 (OFPT_SET_CONFIG)
+    length:  12
+    xid:     477
+  flags: 0
+  miss_send_len: 128
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e390
+DEBUG:event_dag:Executing ControlMessageReceive:e391
+DEBUG:FuzzSoftwareSwitch(4):Barrier request SoftSwitch(4) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     262147
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e391
+DEBUG:event_dag:Executing ControlMessageReceive:e392
+DEBUG:FuzzSoftwareSwitch(2):Barrier request SoftSwitch(2) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     131075
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e392
+DEBUG:event_dag:Executing ControlMessageReceive:e393
+DEBUG:FuzzSoftwareSwitch(15):Barrier request SoftSwitch(15) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     481
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e393
+DEBUG:event_dag:Executing ControlMessageReceive:e394
+DEBUG:FuzzSoftwareSwitch(11):Barrier request SoftSwitch(11) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     720897
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e394
+DEBUG:event_dag:Executing ControlMessageReceive:e395
+DEBUG:FuzzSoftwareSwitch(9):Barrier request SoftSwitch(9) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     589825
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e395
+DEBUG:event_dag:Executing ControlMessageReceive:e396
+DEBUG:FuzzSoftwareSwitch(6):Barrier request SoftSwitch(6) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     393219
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e396
+DEBUG:event_dag:Executing ControlMessageReceive:e397
+DEBUG:FuzzSoftwareSwitch(12):Flow mod SoftSwitch(12): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     507
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e397
+DEBUG:event_dag:Executing ControlMessageReceive:e398
+DEBUG:FuzzSoftwareSwitch(3):Barrier request SoftSwitch(3) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     196611
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e398
+DEBUG:event_dag:Executing ControlMessageReceive:e399
+DEBUG:FuzzSoftwareSwitch(15):Flow mod SoftSwitch(15): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     479
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e399
+DEBUG:event_dag:Executing ControlMessageReceive:e400
+DEBUG:FuzzSoftwareSwitch(1):Barrier request SoftSwitch(1) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     65539
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e400
+DEBUG:event_dag:Executing ControlMessageReceive:e401
+DEBUG:FuzzSoftwareSwitch(13):Barrier request SoftSwitch(13) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     851969
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e401
+DEBUG:event_dag:Executing ControlMessageReceive:e402
+DEBUG:FuzzSoftwareSwitch(5):Barrier request SoftSwitch(5) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     327681
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e402
+DEBUG:event_dag:Executing SwitchFailure:e403
+Crashing software_switch SoftwareSwitch(dpid=19, num_ports=4)
+DEBUG:event_dag:Finished Executing SwitchFailure:e403
+DEBUG:event_dag:Executing LinkFailure:e404
+Cutting link (15:1) -> (7:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e404
+DEBUG:event_dag:Executing LinkFailure:e405
+Cutting link (8:3) -> (15:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e405
+DEBUG:event_dag:Executing LinkFailure:e406
+Cutting link (9:2) -> (2:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e406
+DEBUG:event_dag:Executing LinkFailure:e407
+Cutting link (5:4) -> (14:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e407
+DEBUG:event_dag:Executing LinkFailure:e408
+Cutting link (11:4) -> (18:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e408
+DEBUG:event_dag:Executing LinkFailure:e409
+Cutting link (15:4) -> (18:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e409
+DEBUG:event_dag:Executing LinkFailure:e410
+Cutting link (10:2) -> (2:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e410
+DEBUG:event_dag:Executing LinkFailure:e411
+Cutting link (11:3) -> (17:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e411
+DEBUG:event_dag:Executing LinkFailure:e412
+Cutting link (12:3) -> (19:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e412
+DEBUG:event_dag:Executing LinkFailure:e413
+Cutting link (11:2) -> (4:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e413
+DEBUG:event_dag:Executing LinkFailure:e414
+Cutting link (19:4) -> (16:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e414
+DEBUG:event_dag:Executing LinkFailure:e415
+Cutting link (16:4) -> (20:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e415
+DEBUG:event_dag:Executing LinkFailure:e416
+Cutting link (3:4) -> (12:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e416
+DEBUG:event_dag:Executing LinkFailure:e417
+Cutting link (14:4) -> (20:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e417
+DEBUG:event_dag:Executing LinkFailure:e418
+Cutting link (16:3) -> (19:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e418
+DEBUG:event_dag:Executing LinkFailure:e419
+Cutting link (18:1) -> (9:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e419
+DEBUG:event_dag:Executing LinkFailure:e420
+Cutting link (17:3) -> (13:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e420
+DEBUG:event_dag:Executing LinkFailure:e421
+Cutting link (20:3) -> (14:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e421
+DEBUG:event_dag:Executing LinkFailure:e422
+Cutting link (4:3) -> (11:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e422
+DEBUG:event_dag:Executing LinkRecovery:e423
+Restoring link (7:3) -> (15:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e423
+DEBUG:event_dag:Executing LinkRecovery:e424
+Restoring link (12:4) -> (20:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e424
+DEBUG:event_dag:Executing LinkRecovery:e425
+Restoring link (18:3) -> (13:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e425
+DEBUG:event_dag:Executing LinkRecovery:e426
+Restoring link (9:4) -> (18:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e426
+DEBUG:event_dag:Executing LinkRecovery:e427
+Restoring link (2:4) -> (10:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e427
+DEBUG:event_dag:Executing LinkRecovery:e428
+Restoring link (14:1) -> (5:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e428
+DEBUG:event_dag:Executing LinkRecovery:e429
+Restoring link (20:2) -> (12:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e429
+DEBUG:event_dag:Executing LinkRecovery:e430
+Restoring link (13:2) -> (6:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e430
+DEBUG:event_dag:Executing LinkRecovery:e431
+Restoring link (4:4) -> (12:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e431
+DEBUG:event_dag:Executing LinkRecovery:e432
+Restoring link (20:4) -> (16:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e432
+DEBUG:event_dag:Executing ControlMessageReceive:e433
+DEBUG:FuzzSoftwareSwitch(8):Barrier request SoftSwitch(8) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     524291
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e433
+DEBUG:event_dag:Executing ControlMessageReceive:e434
+DEBUG:FuzzSoftwareSwitch(12):Barrier request SoftSwitch(12) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     786435
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e434
+DEBUG:event_dag:Executing ControlMessageReceive:e435
+DEBUG:FuzzSoftwareSwitch(10):Barrier request SoftSwitch(10) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     655363
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e435
+DEBUG:event_dag:Executing ControlMessageReceive:e436
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 21/15] Connected to 00-00-00-00-00-0f
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Disconnect [Con 15/15]
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 21/15]
+c('127.0.0.1', 8888) [9124] WARNING:openflow.topology:Switch 00-00-00-00-00-0f connected, but... it's already connected!
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     983044
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-0f
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     983046
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(15):Barrier request SoftSwitch(15) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     553
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e436
+DEBUG:event_dag:Executing ControlMessageReceive:e437
+DEBUG:FuzzSoftwareSwitch(11):Barrier request SoftSwitch(11) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     720899
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e437
+DEBUG:event_dag:Executing ControlMessageReceive:e438
+DEBUG:FuzzSoftwareSwitch(9):Barrier request SoftSwitch(9) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     589827
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e438
+DEBUG:event_dag:Executing ControlMessageReceive:e439
+DEBUG:FuzzSoftwareSwitch(15):Flow mod SoftSwitch(15): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  72
+  xid:     551
+match:
+  wildcards: nw_tos|tp_dst|dl_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|dl_type|nw_src(/0)|nw_dst(/0) (1110000010000011111111 = 0x3820ff)
+cookie: 0
+command: 3
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 0
+actions:
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e439
+DEBUG:event_dag:Executing ControlMessageReceive:e440
+DEBUG:FuzzSoftwareSwitch(15):Flow mod SoftSwitch(15): header:
+  version: 1
+  type:    14 (OFPT_FLOW_MOD)
+  length:  80
+  xid:     983044
+match:
+  wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+  dl_dst: 01:23:20:00:00:01
+  dl_type: 0x88cc
+cookie: 0
+command: 0
+idle_timeout: 0
+hard_timeout: 0
+priority: 32768
+buffer_id: -1
+out_port: 65535
+flags: 1
+actions:
+  type: 0
+  len: 8
+  port: 65533
+  max_len: 65535
+
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e440
+DEBUG:event_dag:Executing ControlMessageReceive:e441
+DEBUG:FuzzSoftwareSwitch(13):Barrier request SoftSwitch(13) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     851971
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e441
+DEBUG:event_dag:Executing ControlMessageReceive:e442
+DEBUG:FuzzSoftwareSwitch(5):Barrier request SoftSwitch(5) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     327683
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e442
+DEBUG:event_dag:Executing ControlMessageReceive:e443
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+c('127.0.0.1', 8888) [9124] WARNING:openflow.of_01:<class 'pox.openflow.PortStatus'> raised on dummy OpenFlow nexus
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(16):Reply features request of xid ofp_features_request
+  header:
+    version: 1
+    type:    5 (OFPT_FEATURES_REQUEST)
+    length:  8
+    xid:     571 SoftSwitch(16)
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e443
+DEBUG:event_dag:Executing LinkFailure:e444
+Cutting link (7:3) -> (15:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e444
+DEBUG:event_dag:Executing LinkFailure:e445
+Cutting link (7:4) -> (16:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e445
+DEBUG:event_dag:Executing LinkFailure:e446
+Cutting link (20:1) -> (10:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e446
+DEBUG:event_dag:Executing LinkFailure:e447
+Cutting link (13:4) -> (18:3)
+DEBUG:event_dag:Finished Executing LinkFailure:e447
+DEBUG:event_dag:Executing LinkFailure:e448
+Cutting link (14:2) -> (6:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e448
+DEBUG:event_dag:Executing LinkFailure:e449
+Cutting link (2:4) -> (10:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e449
+DEBUG:event_dag:Executing LinkFailure:e450
+Cutting link (12:4) -> (20:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e450
+DEBUG:event_dag:Executing LinkFailure:e451
+Cutting link (2:3) -> (9:2)
+DEBUG:event_dag:Finished Executing LinkFailure:e451
+DEBUG:event_dag:Executing LinkFailure:e452
+Cutting link (1:3) -> (9:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e452
+DEBUG:event_dag:Executing LinkFailure:e453
+Cutting link (20:4) -> (16:4)
+DEBUG:event_dag:Finished Executing LinkFailure:e453
+DEBUG:event_dag:Executing LinkFailure:e454
+Cutting link (3:3) -> (11:1)
+DEBUG:event_dag:Finished Executing LinkFailure:e454
+DEBUG:event_dag:Executing LinkRecovery:e455
+Restoring link (20:3) -> (14:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e455
+DEBUG:event_dag:Executing LinkRecovery:e456
+Restoring link (3:4) -> (12:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e456
+DEBUG:event_dag:Executing LinkRecovery:e457
+Restoring link (5:4) -> (14:1)
+DEBUG:event_dag:Finished Executing LinkRecovery:e457
+DEBUG:event_dag:Executing LinkRecovery:e458
+Restoring link (18:2) -> (11:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e458
+DEBUG:event_dag:Executing LinkRecovery:e459
+Restoring link (17:4) -> (15:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e459
+DEBUG:event_dag:Executing LinkRecovery:e460
+Restoring link (17:3) -> (13:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e460
+DEBUG:event_dag:Executing LinkRecovery:e461
+Restoring link (6:4) -> (14:2)
+DEBUG:event_dag:Finished Executing LinkRecovery:e461
+DEBUG:event_dag:Executing LinkRecovery:e462
+Restoring link (10:2) -> (2:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e462
+DEBUG:event_dag:Executing LinkRecovery:e463
+Restoring link (12:2) -> (4:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e463
+DEBUG:event_dag:Executing LinkRecovery:e464
+Restoring link (13:3) -> (17:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e464
+DEBUG:event_dag:Executing LinkRecovery:e465
+Restoring link (19:3) -> (14:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e465
+DEBUG:event_dag:Executing LinkRecovery:e466
+Restoring link (9:1) -> (1:3)
+DEBUG:event_dag:Finished Executing LinkRecovery:e466
+DEBUG:event_dag:Executing LinkRecovery:e467
+Restoring link (16:4) -> (20:4)
+DEBUG:event_dag:Finished Executing LinkRecovery:e467
+DEBUG:event_dag:Executing ControlMessageReceive:e468
+DEBUG:event_dag:.
+DEBUG:FuzzSoftwareSwitch(16):Barrier request SoftSwitch(16) ofp_barrier_request
+  header:
+    version: 1
+    type:    18 (OFPT_BARRIER_REQUEST)
+    length:  8
+    xid:     583
+DEBUG:event_dag:Finished Executing ControlMessageReceive:e468
+DEBUG:event_dag:Executing ControlMessageReceive:e469
+c('127.0.0.1', 8888) [9124] INFO:openflow.of_01:[Con 23/16] Connected to 00-00-00-00-00-10
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Disconnect [Con 16/16]
+c('127.0.0.1', 8888) [9124] DEBUG:forwarding.l2_multi:Connect [Con 23/16]
+c('127.0.0.1', 8888) [9124] WARNING:openflow.topology:Switch 00-00-00-00-00-10 connected, but... it's already connected!
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     1048580
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+c('127.0.0.1', 8888) [9124] DEBUG:openflow.discovery:Installing flow for 00-00-00-00-00-10
+c('127.0.0.1', 8888) [9124] INFO:FlowTable:NOMFlowTable: _sync_pending: send flow_mod ofp_flow_mod
+c('127.0.0.1', 8888) [9124]   header:
+c('127.0.0.1', 8888) [9124]     version: 1
+c('127.0.0.1', 8888) [9124]     type:    14 (OFPT_FLOW_MOD)
+c('127.0.0.1', 8888) [9124]     length:  8
+c('127.0.0.1', 8888) [9124]     xid:     1048582
+c('127.0.0.1', 8888) [9124]   match:
+c('127.0.0.1', 8888) [9124]     wildcards: nw_tos|tp_dst|dl_src|in_port|dl_vlan_pcp|nw_proto|dl_vlan|tp_src|nw_src(/0)|nw_dst(/0) (1110000010000011100111 = 0x3820e7)
+c('127.0.0.1', 8888) [9124]     dl_dst: 01:23:20:00:00:01
+c('127.0.0.1', 8888) [9124]     dl_type: 0x88cc
+c('127.0.0.1', 8888) [9124]   cookie: 0
+c('127.0.0.1', 8888) [9124]   command: 0
+c('127.0.0.1', 8888) [9124]   idle_timeout: 0
+c('127.0.0.1', 8888) [9124]   hard_timeout: 0
+c('127.0.0.1', 8888) [9124]   priority: 32768
+c('127.0.0.1', 8888) [9124]   buffer_id: -1
+c('127.0.0.1', 8888) [9124]   out_port: 65535
+c('127.0.0.1', 8888) [9124]   flags: 1
+c('127.0.0.1', 8888) [9124]   actions:
+c('127.0.0.1', 8888) [9124]     type: 0
+c('127.0.0.1', 8888) [9124]     len: 8
+c('127.0.0.1', 8888) [9124]     port: 65533
+c('127.0.0.1', 8888) [9124]     max_len: 65535
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+DEBUG:event_dag:.
+^CCaught signal 2, stopping sdndebug
+Killing controller ('127.0.0.1', 8888)
+Terminating child controllers...c('127.0.0.1', 8888) [9124] Traceback (most recent call last):
+c('127.0.0.1', 8888) [9124]   File "./pox.py", line 433, in <module>
+c('127.0.0.1', 8888) [9124]     main()
+c('127.0.0.1', 8888) [9124]   File "./pox.py", line 387, in main
+ OK
+rcs@c5:~/Research/UCB/sts$
