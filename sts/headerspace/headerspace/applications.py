@@ -146,7 +146,8 @@ HASSEL_TF_PATH = HASSEL_C_PATH + "/tfs/sts"
 
 def prepare_hassel_c(name_tf_pairs, TTF):
   if not os.path.exists(HASSEL_C_PATH + "/gen"):
-    raise RuntimeError("You need to make hassel-c!")
+    raise RuntimeError('''You need to make hassel-c! Run:\n'''
+                       '''$ cd sts/headerspace/hassel-c && make -j''')
 
   # Nuke old TF object files
   old_tfs = glob.glob(HASSEL_TF_PATH + "/*tf")
