@@ -43,7 +43,7 @@ class InputLogger(object):
     logged separately.
     '''
     json_hash = event.to_json()
-    log.debug("logging event %s" % event.label)
+    log.debug("logging event %s" % event)
     self.output.write(json_hash + '\n')
     if dp_event is not None:
       self.dp_events.append(dp_event)
