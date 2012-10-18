@@ -31,7 +31,7 @@ This will boot up pox, generate a FatTree network with 16 hosts, and begin feedi
 You can also run sts interactively:
 
 ```
-$ ./simulator.py -c config.mesh
+$ ./simulator.py -c config.interactive
 ```
 
 Finally, you can use sts to replay previous executions of your controller and automatically identify fault-inducing inputs:
