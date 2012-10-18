@@ -104,6 +104,7 @@ class MCSFinder(Replayer):
                                     ignore_unsupported_input_types=True,
                                     mark_invalid_input_sequences=True)
     self.invariant_check = invariant_check
+    self.log = logging.getLogger("mcs_finder")
 
   def simulate(self, simulation):
     # First, run through without pruning to verify that the violation exists
@@ -111,7 +112,7 @@ class MCSFinder(Replayer):
     # Check invariants
     violations = self.invariant_check(simulation)
     if violations == []:
-      log.warn("Unable to reproduce correctness violation!")
+      self.log.warn("Unable to reproduce correctness violation!")
       sys.exit(5)
 
     # Now start pruning
@@ -145,8 +146,9 @@ class MCSFinder(Replayer):
 
     split_ways = 2
     while split_ways <= len(self.dag):
+      self.log.info("Splitting in %d" % split_ways)
       ignored_portions = self.dag.split(split_ways)
-      for ignored_portion in ignored_portions:
+      for i, ignored_portion in enumerate(ignored_portions):
         # Note that ignore_portion() invokes peek()
         new_dag = self.dag.ignore_portion(ignored_portion, self.simulation)
         # Run the simulation forward
@@ -156,17 +158,20 @@ class MCSFinder(Replayer):
         if violations == []:
           # No violation!
           # If singleton, this must be part of the MCS
+          self.log.info("No violation..")
           if len(ignored_portion) == 1:
+            self.log.info("Pruning singleton %s" % str(ignored_portion[0]))
             mcs.append(ignored_portion[0])
-          split_ways *= 2
         else:
           # Violation in the non-pruned half.
           # Prune the ignored portion (including all of its dependents)
+          self.log.info("Violation! Pruning %d'th portion" % i)
           self.dag.remove_events(ignored_portion, self.simulation)
           # Break out of `for ignore_portion`
           split_ways = 2
           break
-      return mcs
+      split_ways *= 2
+    return mcs
 
 class Fuzzer(ControlFlow):
   '''
