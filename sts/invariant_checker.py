@@ -79,8 +79,6 @@ class InvariantChecker(object):
     log.debug("Snapshotting controller...")
     for controller in simulation.controller_manager.controllers:
       controller_snapshot = controller.snapshot_service.fetchSnapshot(controller)
-      for c in controller_snapshot.switches:
-        print "SNAPSHOT s %d : %s" % (c.dpid, c.flow_table.entries)
       log.debug("Computing physical omega...")
       physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
                                                                simulation.topology.live_links,
