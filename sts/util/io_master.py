@@ -8,7 +8,7 @@ import threading
 from pox.lib.util import makePinger
 from pox.lib.ioworker.io_worker import IOWorker
 
-log = logging.getLogger()
+log = logging.getLogger("io_master")
 
 class STSIOWorker(IOWorker):
   """ An IOWorker that works with our IOMaster """
