@@ -19,7 +19,6 @@ import abc
 import logging
 import time
 import json
-import pytrie
 from collections import namedtuple
 from sts.syncproto.base import SyncTime
 log = logging.getLogger("events")
