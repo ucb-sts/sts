@@ -71,7 +71,7 @@ class InvariantChecker(object):
     if dead_controllers:
       log.warn("Problems found while checking controller liveness:")
       for (c, msg) in dead_controllers:
-        log.warn(" Controller {} - {}", c.config.name, msg)
+        log.warn(" Controller %s - %s" %  (str(c.config.name), str(msg)))
         controllers_with_violations.append(c)
 
     log.debug("Snapshotting controller...")
