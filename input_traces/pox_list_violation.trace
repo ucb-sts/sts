@@ -48,3 +48,4 @@
 {"dependent_labels": [], "time": [1350597579, 855177], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e48"}
 {"dependent_labels": [], "time": [1350597579, 855735], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e49"}
 {"end_port_no": 1, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 2, "time": [1350597579, 856248], "class": "LinkRecovery", "label": "e50"}
+{"wait_time": 10, "dependent_labels": [], "time": [1350597580, 856248], "class": "WaitTime", "label": "e51"}
