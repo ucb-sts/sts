@@ -1,0 +1,579 @@
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 9, "time": [1350585743, 974626], "class": "LinkFailure", "label": "e1"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 9, "time": [1350585743, 974937], "class": "LinkFailure", "label": "e2"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 6, "time": [1350585743, 975189], "class": "LinkFailure", "label": "e3"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 19, "time": [1350585743, 975471], "class": "LinkFailure", "label": "e4"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 10, "dependent_labels": [], "start_dpid": 19, "time": [1350585743, 975739], "class": "LinkFailure", "label": "e5"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 9, "time": [1350585743, 976015], "class": "LinkFailure", "label": "e6"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 5, "time": [1350585743, 976267], "class": "LinkFailure", "label": "e7"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 4, "dependent_labels": [], "start_dpid": 11, "time": [1350585743, 976509], "class": "LinkFailure", "label": "e8"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 20, "time": [1350585743, 976779], "class": "LinkFailure", "label": "e9"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 18, "time": [1350585743, 977027], "class": "LinkFailure", "label": "e10"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 18, "time": [1350585743, 977269], "class": "LinkFailure", "label": "e11"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 6, "dependent_labels": [], "start_dpid": 14, "time": [1350585743, 977537], "class": "LinkFailure", "label": "e12"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 17, "time": [1350585743, 977769], "class": "LinkFailure", "label": "e13"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 18, "time": [1350585743, 978024], "class": "LinkFailure", "label": "e14"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 10, "time": [1350585743, 978254], "class": "LinkFailure", "label": "e15"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 15, "time": [1350585743, 978472], "class": "LinkFailure", "label": "e16"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 6, "time": [1350585743, 978724], "class": "LinkFailure", "label": "e17"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 5, "time": [1350585743, 978970], "class": "LinkFailure", "label": "e18"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 16, "time": [1350585743, 979211], "class": "LinkFailure", "label": "e19"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 10, "time": [1350585743, 979455], "class": "LinkFailure", "label": "e20"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 17, "time": [1350585743, 979679], "class": "LinkFailure", "label": "e21"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 4, "time": [1350585743, 979929], "class": "LinkFailure", "label": "e22"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 9, "time": [1350585743, 980198], "class": "LinkFailure", "label": "e23"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 9, "dependent_labels": [], "start_dpid": 2, "time": [1350585743, 980415], "class": "LinkFailure", "label": "e24"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 12, "time": [1350585743, 980659], "class": "LinkFailure", "label": "e25"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 3, "time": [1350585743, 980920], "class": "LinkFailure", "label": "e26"}
+{"dependent_labels": [], "time": [1350585744, 245244], "fingerprint": {"class": "ofp_hello"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e27"}
+{"dependent_labels": [], "time": [1350585744, 245736], "fingerprint": {"class": "ofp_hello"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e28"}
+{"dependent_labels": [], "time": [1350585744, 246292], "fingerprint": {"class": "ofp_hello"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e29"}
+{"dependent_labels": [], "time": [1350585744, 246805], "fingerprint": {"class": "ofp_hello"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e30"}
+{"dependent_labels": [], "time": [1350585744, 247322], "fingerprint": {"class": "ofp_hello"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e31"}
+{"dependent_labels": [], "time": [1350585744, 247833], "fingerprint": {"class": "ofp_hello"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e32"}
+{"dependent_labels": [], "time": [1350585744, 248307], "fingerprint": {"class": "ofp_hello"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e33"}
+{"dependent_labels": [], "time": [1350585744, 248788], "fingerprint": {"class": "ofp_hello"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e34"}
+{"dependent_labels": [], "time": [1350585744, 249269], "fingerprint": {"class": "ofp_hello"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e35"}
+{"dependent_labels": [], "time": [1350585744, 249763], "fingerprint": {"class": "ofp_hello"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e36"}
+{"dependent_labels": [], "time": [1350585744, 250258], "fingerprint": {"class": "ofp_hello"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e37"}
+{"dependent_labels": [], "time": [1350585744, 250744], "fingerprint": {"class": "ofp_hello"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e38"}
+{"dependent_labels": [], "time": [1350585744, 251236], "fingerprint": {"class": "ofp_hello"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e39"}
+{"dependent_labels": [], "time": [1350585744, 251727], "fingerprint": {"class": "ofp_hello"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e40"}
+{"dependent_labels": [], "time": [1350585744, 252219], "fingerprint": {"class": "ofp_hello"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e41"}
+{"dependent_labels": [], "time": [1350585744, 252707], "fingerprint": {"class": "ofp_hello"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e42"}
+{"dependent_labels": [], "time": [1350585744, 253167], "fingerprint": {"class": "ofp_hello"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e43"}
+{"dependent_labels": [], "time": [1350585744, 253721], "fingerprint": {"class": "ofp_hello"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e44"}
+{"dependent_labels": [], "time": [1350585744, 254341], "fingerprint": {"class": "ofp_hello"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e45"}
+{"dependent_labels": [], "time": [1350585744, 254814], "fingerprint": {"class": "ofp_hello"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e46"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 19, "label": "e47", "time": [1350585744, 255084]}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 12, "dependent_labels": [], "start_dpid": 19, "time": [1350585744, 256773], "class": "LinkFailure", "label": "e48"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 2, "time": [1350585744, 257150], "class": "LinkFailure", "label": "e49"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 13, "time": [1350585744, 257535], "class": "LinkFailure", "label": "e50"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 12, "dependent_labels": [], "start_dpid": 20, "time": [1350585744, 257916], "class": "LinkFailure", "label": "e51"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 11, "time": [1350585744, 258315], "class": "LinkFailure", "label": "e52"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 8, "time": [1350585744, 258683], "class": "LinkFailure", "label": "e53"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 10, "time": [1350585744, 259060], "class": "LinkFailure", "label": "e54"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 10, "dependent_labels": [], "start_dpid": 20, "time": [1350585744, 259463], "class": "LinkFailure", "label": "e55"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 13, "time": [1350585744, 259890], "class": "LinkFailure", "label": "e56"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 14, "time": [1350585744, 260280], "class": "LinkFailure", "label": "e57"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 4, "time": [1350585744, 260667], "class": "LinkFailure", "label": "e58"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 5, "time": [1350585744, 261181], "class": "LinkRecovery", "label": "e59"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 10, "dependent_labels": [], "start_dpid": 19, "time": [1350585744, 261469], "class": "LinkRecovery", "label": "e60"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 10, "time": [1350585744, 261957], "class": "LinkRecovery", "label": "e61"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 5, "time": [1350585744, 262475], "class": "LinkRecovery", "label": "e62"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 10, "time": [1350585744, 262902], "class": "LinkRecovery", "label": "e63"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 6, "time": [1350585744, 263344], "class": "LinkRecovery", "label": "e64"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 9, "time": [1350585744, 263938], "class": "LinkRecovery", "label": "e65"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 4, "dependent_labels": [], "start_dpid": 11, "time": [1350585744, 264363], "class": "LinkRecovery", "label": "e66"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 3, "time": [1350585744, 264785], "class": "LinkRecovery", "label": "e67"}
+{"dependent_labels": [], "time": [1350585744, 523646], "fingerprint": {"class": "ofp_features_request"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e68"}
+{"dependent_labels": [], "time": [1350585744, 524277], "fingerprint": {"class": "ofp_features_request"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e69"}
+{"dependent_labels": [], "time": [1350585744, 524890], "fingerprint": {"class": "ofp_features_request"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e70"}
+{"dependent_labels": [], "time": [1350585744, 525443], "fingerprint": {"class": "ofp_features_request"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e71"}
+{"dependent_labels": [], "time": [1350585744, 526038], "fingerprint": {"class": "ofp_features_request"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e72"}
+{"dependent_labels": [], "time": [1350585744, 526647], "fingerprint": {"class": "ofp_features_request"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e73"}
+{"dependent_labels": [], "time": [1350585744, 527254], "fingerprint": {"class": "ofp_features_request"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e74"}
+{"dependent_labels": [], "time": [1350585744, 527836], "fingerprint": {"class": "ofp_features_request"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e75"}
+{"dependent_labels": [], "time": [1350585744, 528380], "fingerprint": {"class": "ofp_features_request"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e76"}
+{"dependent_labels": [], "time": [1350585744, 528930], "fingerprint": {"class": "ofp_features_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e77"}
+{"dependent_labels": [], "time": [1350585744, 529485], "fingerprint": {"class": "ofp_features_request"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e78"}
+{"dependent_labels": [], "time": [1350585744, 530049], "fingerprint": {"class": "ofp_features_request"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e79"}
+{"dependent_labels": [], "time": [1350585744, 530594], "fingerprint": {"class": "ofp_features_request"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e80"}
+{"dependent_labels": [], "time": [1350585744, 531151], "fingerprint": {"class": "ofp_features_request"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e81"}
+{"dependent_labels": [], "time": [1350585744, 531696], "fingerprint": {"class": "ofp_features_request"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e82"}
+{"dependent_labels": [], "time": [1350585744, 532247], "fingerprint": {"class": "ofp_features_request"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e83"}
+{"dependent_labels": [], "time": [1350585744, 532794], "fingerprint": {"class": "ofp_features_request"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e84"}
+{"dependent_labels": [], "time": [1350585744, 533353], "fingerprint": {"class": "ofp_features_request"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e85"}
+{"dependent_labels": [], "time": [1350585744, 533913], "fingerprint": {"class": "ofp_features_request"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e86"}
+{"dependent_labels": [], "time": [1350585744, 534490], "fingerprint": {"class": "ofp_features_request"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e87"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 1, "label": "e88", "time": [1350585744, 534794]}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 11, "label": "e89", "time": [1350585744, 534997]}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 7, "dependent_labels": [], "start_dpid": 15, "time": [1350585744, 536743], "class": "LinkFailure", "label": "e90"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 14, "time": [1350585744, 537209], "class": "LinkFailure", "label": "e91"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 9, "time": [1350585744, 537657], "class": "LinkFailure", "label": "e92"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 13, "time": [1350585744, 538118], "class": "LinkFailure", "label": "e93"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 5, "time": [1350585744, 538558], "class": "LinkFailure", "label": "e94"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 10, "time": [1350585744, 539011], "class": "LinkFailure", "label": "e95"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 17, "time": [1350585744, 539478], "class": "LinkFailure", "label": "e96"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 10, "time": [1350585744, 539907], "class": "LinkFailure", "label": "e97"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 8, "time": [1350585744, 540364], "class": "LinkFailure", "label": "e98"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 7, "time": [1350585744, 540794], "class": "LinkFailure", "label": "e99"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 9, "dependent_labels": [], "start_dpid": 2, "time": [1350585744, 541287], "class": "LinkRecovery", "label": "e100"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 10, "time": [1350585744, 541788], "class": "LinkRecovery", "label": "e101"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 19, "time": [1350585744, 542168], "class": "LinkRecovery", "label": "e102"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 16, "time": [1350585744, 542670], "class": "LinkRecovery", "label": "e103"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 6, "time": [1350585744, 543137], "class": "LinkRecovery", "label": "e104"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 13, "time": [1350585744, 543711], "class": "LinkRecovery", "label": "e105"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 18, "time": [1350585744, 544127], "class": "LinkRecovery", "label": "e106"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 2, "time": [1350585744, 544536], "class": "LinkRecovery", "label": "e107"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 10, "dependent_labels": [], "start_dpid": 20, "time": [1350585744, 544995], "class": "LinkRecovery", "label": "e108"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 4, "time": [1350585744, 545413], "class": "LinkRecovery", "label": "e109"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 17, "time": [1350585744, 545864], "class": "LinkRecovery", "label": "e110"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 9, "time": [1350585744, 546202], "class": "LinkRecovery", "label": "e111"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 8, "time": [1350585744, 546552], "class": "LinkRecovery", "label": "e112"}
+{"dependent_labels": [], "time": [1350585744, 807026], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e113"}
+{"dependent_labels": [], "time": [1350585744, 807530], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e114"}
+{"dependent_labels": [], "time": [1350585744, 808020], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e115"}
+{"dependent_labels": [], "time": [1350585744, 808451], "fingerprint": {"class": "ofp_set_config"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e116"}
+{"dependent_labels": [], "time": [1350585744, 808922], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e117"}
+{"dependent_labels": [], "time": [1350585744, 809337], "fingerprint": {"class": "ofp_set_config"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e118"}
+{"dependent_labels": [], "time": [1350585744, 809711], "fingerprint": {"class": "ofp_set_config"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e119"}
+{"dependent_labels": [], "time": [1350585744, 810112], "fingerprint": {"class": "ofp_set_config"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e120"}
+{"dependent_labels": [], "time": [1350585744, 810974], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e121"}
+{"dependent_labels": [], "time": [1350585744, 811432], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e122"}
+{"dependent_labels": [], "time": [1350585744, 812198], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e123"}
+{"dependent_labels": [], "time": [1350585744, 812627], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e124"}
+{"dependent_labels": [], "time": [1350585744, 813008], "fingerprint": {"class": "ofp_set_config"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e125"}
+{"dependent_labels": [], "time": [1350585744, 813420], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e126"}
+{"dependent_labels": [], "time": [1350585744, 814181], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e127"}
+{"dependent_labels": [], "time": [1350585744, 814606], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e128"}
+{"dependent_labels": [], "time": [1350585744, 815000], "fingerprint": {"class": "ofp_set_config"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e129"}
+{"dependent_labels": [], "time": [1350585744, 815380], "fingerprint": {"class": "ofp_set_config"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e130"}
+{"dependent_labels": [], "time": [1350585744, 815774], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e131"}
+{"dependent_labels": [], "time": [1350585744, 816497], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e132"}
+{"dependent_labels": [], "time": [1350585744, 817221], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e133"}
+{"dependent_labels": [], "time": [1350585744, 818037], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e134"}
+{"dependent_labels": [], "time": [1350585744, 818320], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e135"}
+{"dependent_labels": [], "time": [1350585744, 818590], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e136"}
+{"dependent_labels": [], "time": [1350585744, 819068], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e137"}
+{"dependent_labels": [], "time": [1350585744, 819303], "fingerprint": {"class": "ofp_set_config"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e138"}
+{"dependent_labels": [], "time": [1350585744, 819545], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e139"}
+{"dependent_labels": [], "time": [1350585744, 819762], "fingerprint": {"class": "ofp_set_config"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e140"}
+{"dependent_labels": [], "time": [1350585744, 820190], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e141"}
+{"dependent_labels": [], "time": [1350585744, 820417], "fingerprint": {"class": "ofp_set_config"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e142"}
+{"dependent_labels": [], "time": [1350585744, 820871], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e143"}
+{"dependent_labels": [], "time": [1350585744, 821107], "fingerprint": {"class": "ofp_set_config"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e144"}
+{"dependent_labels": [], "time": [1350585744, 821348], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e145"}
+{"dependent_labels": [], "time": [1350585744, 821825], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e146"}
+{"dependent_labels": [], "time": [1350585744, 822283], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e147"}
+{"dependent_labels": [], "time": [1350585744, 822564], "fingerprint": {"class": "ofp_set_config"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e148"}
+{"dependent_labels": [], "time": [1350585744, 822778], "fingerprint": {"class": "ofp_set_config"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e149"}
+{"dependent_labels": [], "time": [1350585744, 823060], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e150"}
+{"dependent_labels": [], "time": [1350585744, 823339], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e151"}
+{"dependent_labels": [], "time": [1350585744, 823556], "fingerprint": {"class": "ofp_set_config"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e152"}
+{"dependent_labels": [], "time": [1350585744, 823771], "fingerprint": {"class": "ofp_set_config"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e153"}
+{"dependent_labels": [], "time": [1350585744, 824009], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e154"}
+{"dependent_labels": [], "time": [1350585744, 824253], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e155"}
+{"dependent_labels": [], "time": [1350585744, 824683], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e156"}
+{"dependent_labels": [], "time": [1350585744, 825116], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e157"}
+{"dependent_labels": [], "time": [1350585744, 825374], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e158"}
+{"dependent_labels": [], "time": [1350585744, 825634], "fingerprint": {"class": "ofp_set_config"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e159"}
+{"dependent_labels": [], "time": [1350585744, 826099], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e160"}
+{"dependent_labels": [], "time": [1350585744, 826532], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e161"}
+{"dependent_labels": [], "time": [1350585744, 826965], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e162"}
+{"dependent_labels": [], "time": [1350585744, 827397], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e163"}
+{"dependent_labels": [], "time": [1350585744, 827619], "fingerprint": {"class": "ofp_set_config"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e164"}
+{"dependent_labels": [], "time": [1350585744, 827833], "fingerprint": {"class": "ofp_set_config"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e165"}
+{"dependent_labels": [], "time": [1350585744, 828071], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e166"}
+{"dependent_labels": [], "time": [1350585744, 828288], "fingerprint": {"class": "ofp_set_config"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e167"}
+{"dependent_labels": [], "time": [1350585744, 828726], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e168"}
+{"dependent_labels": [], "time": [1350585744, 828972], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e169"}
+{"dependent_labels": [], "time": [1350585744, 829402], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e170"}
+{"dependent_labels": [], "time": [1350585744, 829836], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e171"}
+{"dependent_labels": [], "time": [1350585744, 830095], "fingerprint": {"class": "ofp_set_config"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e172"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 4, "label": "e173", "time": [1350585744, 830328]}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 12, "label": "e174", "time": [1350585744, 830468]}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 7, "time": [1350585744, 831554], "class": "LinkFailure", "label": "e175"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 19, "time": [1350585744, 831770], "class": "LinkFailure", "label": "e176"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 18, "time": [1350585744, 832023], "class": "LinkFailure", "label": "e177"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 6, "time": [1350585744, 832266], "class": "LinkFailure", "label": "e178"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 15, "time": [1350585744, 832525], "class": "LinkFailure", "label": "e179"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 13, "time": [1350585744, 832774], "class": "LinkFailure", "label": "e180"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 7, "dependent_labels": [], "start_dpid": 16, "time": [1350585744, 833003], "class": "LinkFailure", "label": "e181"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 10, "time": [1350585744, 833232], "class": "LinkFailure", "label": "e182"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 17, "time": [1350585744, 833471], "class": "LinkFailure", "label": "e183"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 20, "time": [1350585744, 833716], "class": "LinkFailure", "label": "e184"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 9, "dependent_labels": [], "start_dpid": 1, "time": [1350585744, 833917], "class": "LinkFailure", "label": "e185"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 17, "time": [1350585744, 834153], "class": "LinkFailure", "label": "e186"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 3, "time": [1350585744, 834396], "class": "LinkFailure", "label": "e187"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 7, "dependent_labels": [], "start_dpid": 15, "time": [1350585744, 834663], "class": "LinkRecovery", "label": "e188"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 12, "dependent_labels": [], "start_dpid": 20, "time": [1350585744, 834934], "class": "LinkRecovery", "label": "e189"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 17, "time": [1350585744, 835365], "class": "LinkRecovery", "label": "e190"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 17, "time": [1350585744, 835636], "class": "LinkRecovery", "label": "e191"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 13, "time": [1350585744, 835908], "class": "LinkRecovery", "label": "e192"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 15, "time": [1350585744, 836174], "class": "LinkRecovery", "label": "e193"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 9, "time": [1350585744, 836516], "class": "LinkRecovery", "label": "e194"}
+{"dependent_labels": [], "time": [1350585745, 80013], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e195"}
+{"dependent_labels": [], "time": [1350585745, 80479], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e196"}
+{"dependent_labels": [], "time": [1350585745, 81232], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e197"}
+{"dependent_labels": [], "time": [1350585745, 81987], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e198"}
+{"dependent_labels": [], "time": [1350585745, 82454], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e199"}
+{"dependent_labels": [], "time": [1350585745, 82866], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e200"}
+{"dependent_labels": [], "time": [1350585745, 83673], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e201"}
+{"dependent_labels": [], "time": [1350585745, 84122], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e202"}
+{"dependent_labels": [], "time": [1350585745, 84919], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e203"}
+{"dependent_labels": [], "time": [1350585745, 85728], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e204"}
+{"dependent_labels": [], "time": [1350585745, 86512], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e205"}
+{"dependent_labels": [], "time": [1350585745, 87294], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e206"}
+{"dependent_labels": [], "time": [1350585745, 87733], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e207"}
+{"dependent_labels": [], "time": [1350585745, 88499], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e208"}
+{"dependent_labels": [], "time": [1350585745, 89314], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e209"}
+{"dependent_labels": [], "time": [1350585745, 90132], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e210"}
+{"dependent_labels": [], "time": [1350585745, 90882], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e211"}
+{"dependent_labels": [], "time": [1350585745, 91651], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e212"}
+{"dependent_labels": [], "time": [1350585745, 92090], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e213"}
+{"dependent_labels": [], "time": [1350585745, 92515], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e214"}
+{"dependent_labels": [], "time": [1350585745, 93320], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e215"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 16, "label": "e216", "time": [1350585745, 93596]}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 8, "dependent_labels": [], "start_dpid": 15, "time": [1350585745, 95410], "class": "LinkFailure", "label": "e217"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 4, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 95734], "class": "LinkFailure", "label": "e218"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 2, "time": [1350585745, 96137], "class": "LinkFailure", "label": "e219"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 96478], "class": "LinkFailure", "label": "e220"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 17, "time": [1350585745, 96917], "class": "LinkFailure", "label": "e221"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 12, "dependent_labels": [], "start_dpid": 20, "time": [1350585745, 97389], "class": "LinkFailure", "label": "e222"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 6, "time": [1350585745, 97811], "class": "LinkFailure", "label": "e223"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 3, "dependent_labels": [], "start_dpid": 12, "time": [1350585745, 98146], "class": "LinkFailure", "label": "e224"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 16, "time": [1350585745, 98326], "class": "LinkFailure", "label": "e225"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 98569], "class": "LinkFailure", "label": "e226"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 4, "time": [1350585745, 98784], "class": "LinkFailure", "label": "e227"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 13, "time": [1350585745, 99015], "class": "LinkFailure", "label": "e228"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 9, "dependent_labels": [], "start_dpid": 2, "time": [1350585745, 99238], "class": "LinkFailure", "label": "e229"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 3, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 99412], "class": "LinkFailure", "label": "e230"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 9, "time": [1350585745, 99642], "class": "LinkRecovery", "label": "e231"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 6, "dependent_labels": [], "start_dpid": 14, "time": [1350585745, 99909], "class": "LinkRecovery", "label": "e232"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 15, "time": [1350585745, 100146], "class": "LinkRecovery", "label": "e233"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 14, "time": [1350585745, 100396], "class": "LinkRecovery", "label": "e234"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 100613], "class": "LinkRecovery", "label": "e235"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 4, "time": [1350585745, 100844], "class": "LinkRecovery", "label": "e236"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 101079], "class": "LinkRecovery", "label": "e237"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 101361], "class": "LinkRecovery", "label": "e238"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 7, "time": [1350585745, 101642], "class": "LinkRecovery", "label": "e239"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 5, "time": [1350585745, 101883], "class": "LinkRecovery", "label": "e240"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 17, "time": [1350585745, 102113], "class": "LinkRecovery", "label": "e241"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 8, "time": [1350585745, 102420], "class": "LinkRecovery", "label": "e242"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 14, "time": [1350585745, 102722], "class": "LinkRecovery", "label": "e243"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 9, "time": [1350585745, 102957], "class": "LinkRecovery", "label": "e244"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 13, "time": [1350585745, 103213], "class": "LinkRecovery", "label": "e245"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 3, "time": [1350585745, 103472], "class": "LinkRecovery", "label": "e246"}
+{"dependent_labels": [], "time": [1350585745, 358417], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e247"}
+{"dependent_labels": [], "time": [1350585745, 358923], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e248"}
+{"dependent_labels": [], "time": [1350585745, 359839], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e249"}
+{"dependent_labels": [], "time": [1350585745, 360659], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e250"}
+{"dependent_labels": [], "time": [1350585745, 361094], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e251"}
+{"dependent_labels": [], "time": [1350585745, 361512], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e252"}
+{"dependent_labels": [], "time": [1350585745, 361944], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e253"}
+{"dependent_labels": [], "time": [1350585745, 362720], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e254"}
+{"dependent_labels": [], "time": [1350585745, 363528], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e255"}
+{"dependent_labels": [], "time": [1350585745, 364284], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e256"}
+{"dependent_labels": [], "time": [1350585745, 364704], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e257"}
+{"dependent_labels": [], "time": [1350585745, 365144], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e258"}
+{"dependent_labels": [], "time": [1350585745, 365968], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e259"}
+{"dependent_labels": [], "time": [1350585745, 366399], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e260"}
+{"dependent_labels": [], "time": [1350585745, 366862], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e261"}
+{"dependent_labels": [], "time": [1350585745, 367672], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e262"}
+{"dependent_labels": [], "time": [1350585745, 368095], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e263"}
+{"dependent_labels": [], "time": [1350585745, 368898], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e264"}
+{"dependent_labels": [], "time": [1350585745, 369705], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e265"}
+{"dependent_labels": [], "time": [1350585745, 370119], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e266"}
+{"dependent_labels": [], "time": [1350585745, 370884], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e267"}
+{"dependent_labels": [], "time": [1350585745, 371300], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e268"}
+{"dependent_labels": [], "time": [1350585745, 372046], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e269"}
+{"dependent_labels": [], "time": [1350585745, 372795], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e270"}
+{"dependent_labels": [], "time": [1350585745, 373556], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e271"}
+{"dependent_labels": [], "time": [1350585745, 374014], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e272"}
+{"dependent_labels": [], "time": [1350585745, 374310], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e273"}
+{"dependent_labels": [], "time": [1350585745, 374788], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e274"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 10, "label": "e275", "time": [1350585745, 374975]}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 13, "time": [1350585745, 376128], "class": "LinkFailure", "label": "e276"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 376332], "class": "LinkFailure", "label": "e277"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 17, "time": [1350585745, 376571], "class": "LinkFailure", "label": "e278"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 15, "time": [1350585745, 376827], "class": "LinkFailure", "label": "e279"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 5, "time": [1350585745, 377082], "class": "LinkFailure", "label": "e280"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 1, "time": [1350585745, 377286], "class": "LinkFailure", "label": "e281"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 6, "dependent_labels": [], "start_dpid": 13, "time": [1350585745, 377527], "class": "LinkFailure", "label": "e282"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 12, "time": [1350585745, 377725], "class": "LinkFailure", "label": "e283"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 9, "time": [1350585745, 377970], "class": "LinkFailure", "label": "e284"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 8, "time": [1350585745, 378230], "class": "LinkFailure", "label": "e285"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 4, "dependent_labels": [], "start_dpid": 12, "time": [1350585745, 378434], "class": "LinkFailure", "label": "e286"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 3, "time": [1350585745, 378673], "class": "LinkFailure", "label": "e287"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 14, "time": [1350585745, 378917], "class": "LinkFailure", "label": "e288"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 9, "time": [1350585745, 379148], "class": "LinkFailure", "label": "e289"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 4, "time": [1350585745, 379356], "class": "LinkFailure", "label": "e290"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 18, "time": [1350585745, 379593], "class": "LinkFailure", "label": "e291"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 16, "time": [1350585745, 379792], "class": "LinkFailure", "label": "e292"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 3, "time": [1350585745, 380017], "class": "LinkFailure", "label": "e293"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 12, "dependent_labels": [], "start_dpid": 20, "time": [1350585745, 380296], "class": "LinkRecovery", "label": "e294"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 9, "dependent_labels": [], "start_dpid": 2, "time": [1350585745, 380533], "class": "LinkRecovery", "label": "e295"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 380772], "class": "LinkRecovery", "label": "e296"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 13, "time": [1350585745, 381065], "class": "LinkRecovery", "label": "e297"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 7, "time": [1350585745, 381312], "class": "LinkRecovery", "label": "e298"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 17, "time": [1350585745, 381565], "class": "LinkRecovery", "label": "e299"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 6, "time": [1350585745, 381842], "class": "LinkRecovery", "label": "e300"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 9, "dependent_labels": [], "start_dpid": 1, "time": [1350585745, 382041], "class": "LinkRecovery", "label": "e301"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 2, "time": [1350585745, 382280], "class": "LinkRecovery", "label": "e302"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 382518], "class": "LinkRecovery", "label": "e303"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 18, "time": [1350585745, 382759], "class": "LinkRecovery", "label": "e304"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 3, "dependent_labels": [], "start_dpid": 12, "time": [1350585745, 382945], "class": "LinkRecovery", "label": "e305"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 3, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 383124], "class": "LinkRecovery", "label": "e306"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 20, "time": [1350585745, 383370], "class": "LinkRecovery", "label": "e307"}
+{"dependent_labels": [], "time": [1350585745, 645469], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e308"}
+{"dependent_labels": [], "time": [1350585745, 645949], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e309"}
+{"dependent_labels": [], "time": [1350585745, 646440], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 17, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e310"}
+{"dependent_labels": [], "time": [1350585745, 646927], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e311"}
+{"dependent_labels": [], "time": [1350585745, 647803], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e312"}
+{"dependent_labels": [], "time": [1350585745, 648253], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e313"}
+{"dependent_labels": [], "time": [1350585745, 649078], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e314"}
+{"dependent_labels": [], "time": [1350585745, 649537], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e315"}
+{"dependent_labels": [], "time": [1350585745, 649968], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 9, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e316"}
+{"dependent_labels": [], "time": [1350585745, 650433], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e317"}
+{"dependent_labels": [], "time": [1350585745, 650869], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e318"}
+{"dependent_labels": [], "time": [1350585745, 651687], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e319"}
+{"dependent_labels": [], "time": [1350585745, 652494], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e320"}
+{"dependent_labels": [], "time": [1350585745, 652940], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e321"}
+{"dependent_labels": [], "time": [1350585745, 653368], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e322"}
+{"dependent_labels": [], "time": [1350585745, 654125], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e323"}
+{"dependent_labels": [], "time": [1350585745, 654945], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e324"}
+{"dependent_labels": [], "time": [1350585745, 655403], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e325"}
+{"dependent_labels": [], "time": [1350585745, 655859], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 13, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e326"}
+{"dependent_labels": [], "time": [1350585745, 656618], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e327"}
+{"dependent_labels": [], "time": [1350585745, 657095], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e328"}
+{"dependent_labels": [], "time": [1350585745, 657899], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e329"}
+{"dependent_labels": [], "time": [1350585745, 658384], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e330"}
+{"dependent_labels": [], "time": [1350585745, 658815], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e331"}
+{"dependent_labels": [], "time": [1350585745, 659259], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e332"}
+{"dependent_labels": [], "time": [1350585745, 660026], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e333"}
+{"dependent_labels": [], "time": [1350585745, 660477], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e334"}
+{"dependent_labels": [], "time": [1350585745, 661310], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e335"}
+{"dependent_labels": [], "time": [1350585745, 662114], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e336"}
+{"dependent_labels": [], "time": [1350585745, 662415], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 14, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e337"}
+{"dependent_labels": [], "time": [1350585745, 662686], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e338"}
+{"dependent_labels": [], "time": [1350585745, 663185], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e339"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 6, "label": "e340", "time": [1350585745, 663375]}
+{"dependent_labels": [], "class": "SwitchRecovery", "dpid": 19, "label": "e341", "time": [1350585745, 663868]}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 9, "time": [1350585745, 664944], "class": "LinkFailure", "label": "e342"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 7, "time": [1350585745, 665205], "class": "LinkFailure", "label": "e343"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 665412], "class": "LinkFailure", "label": "e344"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 5, "time": [1350585745, 665646], "class": "LinkFailure", "label": "e345"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 6, "dependent_labels": [], "start_dpid": 14, "time": [1350585745, 665898], "class": "LinkFailure", "label": "e346"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 2, "time": [1350585745, 666117], "class": "LinkFailure", "label": "e347"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 17, "time": [1350585745, 666363], "class": "LinkFailure", "label": "e348"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 13, "time": [1350585745, 666619], "class": "LinkFailure", "label": "e349"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 18, "time": [1350585745, 666853], "class": "LinkFailure", "label": "e350"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 667071], "class": "LinkFailure", "label": "e351"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 15, "time": [1350585745, 667294], "class": "LinkFailure", "label": "e352"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 12, "dependent_labels": [], "start_dpid": 20, "time": [1350585745, 667521], "class": "LinkFailure", "label": "e353"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 6, "time": [1350585745, 667718], "class": "LinkFailure", "label": "e354"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 667907], "class": "LinkFailure", "label": "e355"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 19, "time": [1350585745, 668133], "class": "LinkFailure", "label": "e356"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 9, "dependent_labels": [], "start_dpid": 1, "time": [1350585745, 668334], "class": "LinkFailure", "label": "e357"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 14, "time": [1350585745, 668561], "class": "LinkFailure", "label": "e358"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 3, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 668736], "class": "LinkFailure", "label": "e359"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 17, "time": [1350585745, 668992], "class": "LinkRecovery", "label": "e360"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 7, "dependent_labels": [], "start_dpid": 16, "time": [1350585745, 669188], "class": "LinkRecovery", "label": "e361"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 8, "dependent_labels": [], "start_dpid": 15, "time": [1350585745, 669447], "class": "LinkRecovery", "label": "e362"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 669782], "class": "LinkRecovery", "label": "e363"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 16, "time": [1350585745, 670078], "class": "LinkRecovery", "label": "e364"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 20, "time": [1350585745, 670335], "class": "LinkRecovery", "label": "e365"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 9, "time": [1350585745, 670591], "class": "LinkRecovery", "label": "e366"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 8, "time": [1350585745, 670967], "class": "LinkRecovery", "label": "e367"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 4, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 671161], "class": "LinkRecovery", "label": "e368"}
+{"dependent_labels": [], "time": [1350585745, 959927], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e369"}
+{"dependent_labels": [], "time": [1350585745, 960446], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e370"}
+{"dependent_labels": [], "time": [1350585745, 960896], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e371"}
+{"dependent_labels": [], "time": [1350585745, 961302], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e372"}
+{"dependent_labels": [], "time": [1350585745, 961717], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 3, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e373"}
+{"dependent_labels": [], "time": [1350585745, 962232], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e374"}
+{"dependent_labels": [], "time": [1350585745, 962708], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 1, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e375"}
+{"dependent_labels": [], "time": [1350585745, 963124], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e376"}
+{"dependent_labels": [], "time": [1350585745, 963543], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e377"}
+{"dependent_labels": [], "time": [1350585745, 964048], "fingerprint": {"class": "ofp_hello"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e378"}
+{"dependent_labels": [], "time": [1350585745, 964459], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e379"}
+{"dependent_labels": [], "time": [1350585745, 964862], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e380"}
+{"dependent_labels": [], "time": [1350585745, 965270], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 12, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e381"}
+{"dependent_labels": [], "time": [1350585745, 965677], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 10, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e382"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 15, "label": "e383", "time": [1350585745, 965921]}
+{"dependent_labels": [], "class": "SwitchRecovery", "dpid": 4, "label": "e384", "time": [1350585745, 966756]}
+{"dependent_labels": [], "class": "SwitchRecovery", "dpid": 11, "label": "e385", "time": [1350585745, 967370]}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 7, "dependent_labels": [], "start_dpid": 15, "time": [1350585745, 969096], "class": "LinkFailure", "label": "e386"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 8, "dependent_labels": [], "start_dpid": 15, "time": [1350585745, 969399], "class": "LinkFailure", "label": "e387"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 8, "dependent_labels": [], "start_dpid": 16, "time": [1350585745, 969759], "class": "LinkFailure", "label": "e388"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 20, "time": [1350585745, 970141], "class": "LinkFailure", "label": "e389"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 4, "dependent_labels": [], "start_dpid": 11, "time": [1350585745, 970380], "class": "LinkFailure", "label": "e390"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 3, "time": [1350585745, 970672], "class": "LinkRecovery", "label": "e391"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 7, "time": [1350585745, 970900], "class": "LinkRecovery", "label": "e392"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 5, "time": [1350585745, 971125], "class": "LinkRecovery", "label": "e393"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 5, "time": [1350585745, 971415], "class": "LinkRecovery", "label": "e394"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 12, "time": [1350585745, 971586], "class": "LinkRecovery", "label": "e395"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 18, "time": [1350585745, 971811], "class": "LinkRecovery", "label": "e396"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 15, "time": [1350585745, 972025], "class": "LinkRecovery", "label": "e397"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 1, "time": [1350585745, 972229], "class": "LinkRecovery", "label": "e398"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 972414], "class": "LinkRecovery", "label": "e399"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 6, "time": [1350585745, 972623], "class": "LinkRecovery", "label": "e400"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 9, "dependent_labels": [], "start_dpid": 1, "time": [1350585745, 972812], "class": "LinkRecovery", "label": "e401"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 10, "time": [1350585745, 972976], "class": "LinkRecovery", "label": "e402"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 2, "time": [1350585745, 973201], "class": "LinkRecovery", "label": "e403"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 4, "dependent_labels": [], "start_dpid": 12, "time": [1350585745, 973443], "class": "LinkRecovery", "label": "e404"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 4, "time": [1350585745, 973667], "class": "LinkRecovery", "label": "e405"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 17, "time": [1350585745, 973882], "class": "LinkRecovery", "label": "e406"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 9, "time": [1350585745, 974112], "class": "LinkRecovery", "label": "e407"}
+{"dependent_labels": [], "time": [1350585746, 266371], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e408"}
+{"dependent_labels": [], "time": [1350585746, 266940], "fingerprint": {"class": "ofp_hello"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e409"}
+{"dependent_labels": [], "time": [1350585746, 267438], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e410"}
+{"dependent_labels": [], "time": [1350585746, 267920], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e411"}
+{"dependent_labels": [], "time": [1350585746, 268394], "fingerprint": {"class": "ofp_hello"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e412"}
+{"dependent_labels": [], "time": [1350585746, 268997], "fingerprint": {"class": "ofp_features_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e413"}
+{"dependent_labels": [], "time": [1350585746, 269441], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e414"}
+{"dependent_labels": [], "time": [1350585746, 269854], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 7, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e415"}
+{"dependent_labels": [], "time": [1350585746, 270314], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e416"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 8, "label": "e417", "time": [1350585746, 270616]}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 13, "label": "e418", "time": [1350585746, 270833]}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 7, "time": [1350585746, 272688], "class": "LinkFailure", "label": "e419"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 14, "time": [1350585746, 273086], "class": "LinkFailure", "label": "e420"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 10, "dependent_labels": [], "start_dpid": 20, "time": [1350585746, 273480], "class": "LinkFailure", "label": "e421"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 15, "time": [1350585746, 273822], "class": "LinkFailure", "label": "e422"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 10, "dependent_labels": [], "start_dpid": 19, "time": [1350585746, 274246], "class": "LinkFailure", "label": "e423"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 2, "time": [1350585746, 274635], "class": "LinkFailure", "label": "e424"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 11, "time": [1350585746, 275001], "class": "LinkFailure", "label": "e425"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 5, "time": [1350585746, 275433], "class": "LinkFailure", "label": "e426"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 6, "time": [1350585746, 275773], "class": "LinkFailure", "label": "e427"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 4, "time": [1350585746, 276164], "class": "LinkFailure", "label": "e428"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 9, "time": [1350585746, 276542], "class": "LinkFailure", "label": "e429"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 17, "time": [1350585746, 276895], "class": "LinkFailure", "label": "e430"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 7, "time": [1350585746, 277294], "class": "LinkFailure", "label": "e431"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 8, "dependent_labels": [], "start_dpid": 15, "time": [1350585746, 277686], "class": "LinkRecovery", "label": "e432"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 19, "time": [1350585746, 278135], "class": "LinkRecovery", "label": "e433"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 6, "dependent_labels": [], "start_dpid": 14, "time": [1350585746, 278524], "class": "LinkRecovery", "label": "e434"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 19, "time": [1350585746, 279088], "class": "LinkRecovery", "label": "e435"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 4, "time": [1350585746, 279568], "class": "LinkRecovery", "label": "e436"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 13, "time": [1350585746, 279931], "class": "LinkRecovery", "label": "e437"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 13, "time": [1350585746, 280257], "class": "LinkRecovery", "label": "e438"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 17, "time": [1350585746, 280782], "class": "LinkRecovery", "label": "e439"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 10, "time": [1350585746, 281120], "class": "LinkRecovery", "label": "e440"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 14, "time": [1350585746, 281626], "class": "LinkRecovery", "label": "e441"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 4, "dependent_labels": [], "start_dpid": 11, "time": [1350585746, 282050], "class": "LinkRecovery", "label": "e442"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 11, "dependent_labels": [], "start_dpid": 3, "time": [1350585746, 282371], "class": "LinkRecovery", "label": "e443"}
+{"dependent_labels": [], "time": [1350585746, 580577], "fingerprint": {"class": "ofp_set_config"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e444"}
+{"dependent_labels": [], "time": [1350585746, 581459], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e445"}
+{"dependent_labels": [], "time": [1350585746, 581911], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e446"}
+{"dependent_labels": [], "time": [1350585746, 582590], "fingerprint": {"class": "ofp_features_request"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e447"}
+{"dependent_labels": [], "time": [1350585746, 583580], "fingerprint": {"in_port": 65535, "data": {"class": "lldp"}, "class": "ofp_packet_out", "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"]}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e448"}
+{"dependent_labels": [], "time": [1350585746, 584468], "fingerprint": {"in_port": 65535, "data": {"class": "lldp"}, "class": "ofp_packet_out", "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"]}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e449"}
+{"dependent_labels": [], "time": [1350585746, 585039], "fingerprint": {"class": "ofp_features_request"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e450"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 19, "label": "e451", "time": [1350585746, 585306]}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 18, "label": "e452", "time": [1350585746, 585503]}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 20, "label": "e453", "time": [1350585746, 585692]}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 9, "label": "e454", "time": [1350585746, 585878]}
+{"dependent_labels": [], "class": "SwitchRecovery", "dpid": 6, "label": "e455", "time": [1350585746, 586807]}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 17, "time": [1350585746, 588588], "class": "LinkFailure", "label": "e456"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 3, "time": [1350585746, 588968], "class": "LinkFailure", "label": "e457"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 9, "time": [1350585746, 589295], "class": "LinkFailure", "label": "e458"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 19, "time": [1350585746, 589626], "class": "LinkFailure", "label": "e459"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 5, "time": [1350585746, 590007], "class": "LinkFailure", "label": "e460"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 16, "time": [1350585746, 590346], "class": "LinkFailure", "label": "e461"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 18, "time": [1350585746, 590642], "class": "LinkFailure", "label": "e462"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 17, "time": [1350585746, 591060], "class": "LinkFailure", "label": "e463"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 3, "dependent_labels": [], "start_dpid": 12, "time": [1350585746, 591368], "class": "LinkFailure", "label": "e464"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 12, "time": [1350585746, 591695], "class": "LinkFailure", "label": "e465"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 9, "time": [1350585746, 592016], "class": "LinkFailure", "label": "e466"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 4, "dependent_labels": [], "start_dpid": 12, "time": [1350585746, 592342], "class": "LinkFailure", "label": "e467"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 10, "time": [1350585746, 592669], "class": "LinkFailure", "label": "e468"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 8, "time": [1350585746, 592993], "class": "LinkFailure", "label": "e469"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 14, "time": [1350585746, 593382], "class": "LinkFailure", "label": "e470"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 8, "time": [1350585746, 593718], "class": "LinkFailure", "label": "e471"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 9, "time": [1350585746, 594008], "class": "LinkRecovery", "label": "e472"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 7, "time": [1350585746, 594462], "class": "LinkRecovery", "label": "e473"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 18, "time": [1350585746, 594881], "class": "LinkRecovery", "label": "e474"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 6, "dependent_labels": [], "start_dpid": 13, "time": [1350585746, 595172], "class": "LinkRecovery", "label": "e475"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 5, "dependent_labels": [], "start_dpid": 14, "time": [1350585746, 595598], "class": "LinkRecovery", "label": "e476"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 11, "time": [1350585746, 596032], "class": "LinkRecovery", "label": "e477"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 11, "time": [1350585746, 596537], "class": "LinkRecovery", "label": "e478"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 15, "time": [1350585746, 596929], "class": "LinkRecovery", "label": "e479"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 10, "dependent_labels": [], "start_dpid": 19, "time": [1350585746, 597289], "class": "LinkRecovery", "label": "e480"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 12, "dependent_labels": [], "start_dpid": 19, "time": [1350585746, 597635], "class": "LinkRecovery", "label": "e481"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 4, "time": [1350585746, 598160], "class": "LinkRecovery", "label": "e482"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 18, "time": [1350585746, 598389], "class": "LinkRecovery", "label": "e483"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 3, "dependent_labels": [], "start_dpid": 11, "time": [1350585746, 598694], "class": "LinkRecovery", "label": "e484"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 8, "dependent_labels": [], "start_dpid": 16, "time": [1350585746, 598893], "class": "LinkRecovery", "label": "e485"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 12, "dependent_labels": [], "start_dpid": 20, "time": [1350585746, 599075], "class": "LinkRecovery", "label": "e486"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 14, "time": [1350585746, 599312], "class": "LinkRecovery", "label": "e487"}
+{"dependent_labels": [], "label": "e488", "class": "TrafficInjection", "time": [1350585746, 801276]}
+{"dependent_labels": [], "class": "DataplanePermit", "time": [1350585746, 895814], "label": "e489", "fingerprint": {"class": "lldp"}}
+{"dependent_labels": [], "class": "DataplanePermit", "time": [1350585746, 896894], "label": "e490", "fingerprint": {"dl_dst": "00:00:00:03:00:01", "nw_src": "123.2.0.1", "dl_src": "00:00:00:02:00:01", "nw_dst": "123.3.0.1"}}
+{"dependent_labels": [], "time": [1350585746, 897436], "fingerprint": {"class": "ofp_set_config"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e491"}
+{"dependent_labels": [], "time": [1350585746, 897939], "fingerprint": {"class": "ofp_hello"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e492"}
+{"dependent_labels": [], "time": [1350585746, 898831], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e493"}
+{"dependent_labels": [], "time": [1350585746, 899253], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e494"}
+{"dependent_labels": [], "time": [1350585746, 900003], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e495"}
+{"dependent_labels": [], "time": [1350585746, 900925], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e496"}
+{"dependent_labels": [], "time": [1350585746, 901739], "fingerprint": {"in_port": 65535, "data": {"class": "lldp"}, "class": "ofp_packet_out", "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"]}, "dpid": 16, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e497"}
+{"dependent_labels": [], "time": [1350585746, 902498], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e498"}
+{"dependent_labels": [], "time": [1350585746, 902914], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e499"}
+{"dependent_labels": [], "time": [1350585746, 903315], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e500"}
+{"dependent_labels": [], "time": [1350585746, 903687], "fingerprint": {"class": "ofp_set_config"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e501"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 6, "label": "e502", "time": [1350585746, 903933]}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 7, "label": "e503", "time": [1350585746, 904124]}
+{"dependent_labels": [], "class": "SwitchRecovery", "dpid": 15, "label": "e504", "time": [1350585746, 904947]}
+{"dependent_labels": [], "class": "SwitchRecovery", "dpid": 20, "label": "e505", "time": [1350585746, 905607]}
+{"dependent_labels": [], "class": "SwitchRecovery", "dpid": 18, "label": "e506", "time": [1350585746, 906283]}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 15, "time": [1350585746, 908102], "class": "LinkFailure", "label": "e507"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 20, "time": [1350585746, 908487], "class": "LinkFailure", "label": "e508"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 10, "time": [1350585746, 908813], "class": "LinkFailure", "label": "e509"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 10, "dependent_labels": [], "start_dpid": 1, "time": [1350585746, 909136], "class": "LinkFailure", "label": "e510"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 17, "time": [1350585746, 909543], "class": "LinkFailure", "label": "e511"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 9, "time": [1350585746, 909834], "class": "LinkFailure", "label": "e512"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 12, "dependent_labels": [], "start_dpid": 19, "time": [1350585746, 910124], "class": "LinkFailure", "label": "e513"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 16, "dependent_labels": [], "start_dpid": 19, "time": [1350585746, 910324], "class": "LinkFailure", "label": "e514"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 18, "time": [1350585746, 910561], "class": "LinkFailure", "label": "e515"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 9, "dependent_labels": [], "start_dpid": 1, "time": [1350585746, 910784], "class": "LinkFailure", "label": "e516"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 2, "dependent_labels": [], "start_dpid": 9, "time": [1350585746, 911059], "class": "LinkRecovery", "label": "e517"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 17, "time": [1350585746, 911384], "class": "LinkRecovery", "label": "e518"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 15, "time": [1350585746, 911708], "class": "LinkRecovery", "label": "e519"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 17, "time": [1350585746, 911960], "class": "LinkRecovery", "label": "e520"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 10, "time": [1350585746, 912185], "class": "LinkRecovery", "label": "e521"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 12, "time": [1350585746, 912388], "class": "LinkRecovery", "label": "e522"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 18, "time": [1350585746, 912602], "class": "LinkRecovery", "label": "e523"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 5, "time": [1350585746, 912846], "class": "LinkRecovery", "label": "e524"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 16, "time": [1350585746, 913041], "class": "LinkRecovery", "label": "e525"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 20, "time": [1350585746, 913338], "class": "LinkRecovery", "label": "e526"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 10, "dependent_labels": [], "start_dpid": 20, "time": [1350585746, 913673], "class": "LinkRecovery", "label": "e527"}
+{"dependent_labels": [], "class": "DataplanePermit", "time": [1350585747, 216113], "label": "e528", "fingerprint": {"class": "lldp"}}
+{"dependent_labels": [], "time": [1350585747, 216745], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e529"}
+{"dependent_labels": [], "time": [1350585747, 217246], "fingerprint": {"class": "ofp_hello"}, "dpid": 20, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e530"}
+{"dependent_labels": [], "time": [1350585747, 218234], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e531"}
+{"dependent_labels": [], "time": [1350585747, 218717], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e532"}
+{"dependent_labels": [], "time": [1350585747, 219471], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e533"}
+{"dependent_labels": [], "time": [1350585747, 220360], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e534"}
+{"dependent_labels": [], "time": [1350585747, 220848], "fingerprint": {"class": "ofp_hello"}, "dpid": 15, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e535"}
+{"dependent_labels": [], "time": [1350585747, 221598], "fingerprint": {"hard_timeout": 0, "actions": [], "priority": 32768, "idle_timeout": 0, "flags": 0, "out_port": 65535, "class": "ofp_flow_mod", "match": "x^L"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e536"}
+{"dependent_labels": [], "time": [1350585747, 222205], "fingerprint": {"class": "ofp_features_request"}, "dpid": 6, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e537"}
+{"dependent_labels": [], "time": [1350585747, 223067], "fingerprint": {"in_port": 1, "data": [], "class": "ofp_packet_out", "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"]}, "dpid": 5, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e538"}
+{"dependent_labels": [], "time": [1350585747, 223524], "fingerprint": {"class": "ofp_hello"}, "dpid": 18, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e539"}
+{"dependent_labels": [], "time": [1350585747, 223919], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e540"}
+{"dependent_labels": [], "time": [1350585747, 224767], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e541"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 5, "label": "e542", "time": [1350585747, 225015]}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 15, "dependent_labels": [], "start_dpid": 7, "time": [1350585747, 226819], "class": "LinkFailure", "label": "e543"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 12, "time": [1350585747, 227160], "class": "LinkFailure", "label": "e544"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 8, "dependent_labels": [], "start_dpid": 15, "time": [1350585747, 227512], "class": "LinkFailure", "label": "e545"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 14, "time": [1350585747, 227878], "class": "LinkFailure", "label": "e546"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 11, "time": [1350585747, 228247], "class": "LinkFailure", "label": "e547"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 11, "dependent_labels": [], "start_dpid": 18, "time": [1350585747, 228654], "class": "LinkFailure", "label": "e548"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 18, "time": [1350585747, 229012], "class": "LinkFailure", "label": "e549"}
+{"end_port_no": 4, "start_port_no": 2, "end_dpid": 6, "dependent_labels": [], "start_dpid": 14, "time": [1350585747, 229406], "class": "LinkFailure", "label": "e550"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 15, "time": [1350585747, 229818], "class": "LinkFailure", "label": "e551"}
+{"end_port_no": 2, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 11, "time": [1350585747, 230196], "class": "LinkFailure", "label": "e552"}
+{"end_port_no": 1, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 5, "time": [1350585747, 230517], "class": "LinkFailure", "label": "e553"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 10, "time": [1350585747, 230834], "class": "LinkFailure", "label": "e554"}
+{"end_port_no": 3, "start_port_no": 2, "end_dpid": 6, "dependent_labels": [], "start_dpid": 13, "time": [1350585747, 231121], "class": "LinkFailure", "label": "e555"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 10, "dependent_labels": [], "start_dpid": 20, "time": [1350585747, 231509], "class": "LinkFailure", "label": "e556"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 4, "time": [1350585747, 231899], "class": "LinkFailure", "label": "e557"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 17, "dependent_labels": [], "start_dpid": 13, "time": [1350585747, 232218], "class": "LinkFailure", "label": "e558"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 20, "time": [1350585747, 232632], "class": "LinkFailure", "label": "e559"}
+{"end_port_no": 3, "start_port_no": 1, "end_dpid": 3, "dependent_labels": [], "start_dpid": 11, "time": [1350585747, 233007], "class": "LinkFailure", "label": "e560"}
+{"end_port_no": 4, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 16, "time": [1350585747, 233336], "class": "LinkFailure", "label": "e561"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 12, "dependent_labels": [], "start_dpid": 3, "time": [1350585747, 233762], "class": "LinkRecovery", "label": "e562"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 13, "dependent_labels": [], "start_dpid": 18, "time": [1350585747, 234258], "class": "LinkRecovery", "label": "e563"}
+{"end_port_no": 2, "start_port_no": 4, "end_dpid": 14, "dependent_labels": [], "start_dpid": 6, "time": [1350585747, 234526], "class": "LinkRecovery", "label": "e564"}
+{"end_port_no": 3, "start_port_no": 3, "end_dpid": 14, "dependent_labels": [], "start_dpid": 19, "time": [1350585747, 234735], "class": "LinkRecovery", "label": "e565"}
+{"end_port_no": 1, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 9, "time": [1350585747, 235010], "class": "LinkRecovery", "label": "e566"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 15, "dependent_labels": [], "start_dpid": 17, "time": [1350585747, 235273], "class": "LinkRecovery", "label": "e567"}
+{"end_port_no": 4, "start_port_no": 3, "end_dpid": 19, "dependent_labels": [], "start_dpid": 16, "time": [1350585747, 235603], "class": "LinkRecovery", "label": "e568"}
+{"end_port_no": 4, "start_port_no": 1, "end_dpid": 9, "dependent_labels": [], "start_dpid": 18, "time": [1350585747, 235905], "class": "LinkRecovery", "label": "e569"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 20, "dependent_labels": [], "start_dpid": 14, "time": [1350585747, 236159], "class": "LinkRecovery", "label": "e570"}
+{"end_port_no": 3, "start_port_no": 4, "end_dpid": 18, "dependent_labels": [], "start_dpid": 13, "time": [1350585747, 236362], "class": "LinkRecovery", "label": "e571"}
+{"dependent_labels": [], "class": "DataplaneDrop", "time": [1350585747, 530933], "label": "e572", "fingerprint": {"dl_dst": "00:00:00:03:00:01", "nw_src": "123.2.0.1", "dl_src": "00:00:00:02:00:01", "nw_dst": "123.3.0.1"}}
+{"dependent_labels": [], "time": [1350585747, 531665], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e573"}
+{"dependent_labels": [], "time": [1350585747, 532731], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 11, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e574"}
+{"dependent_labels": [], "time": [1350585747, 533526], "fingerprint": {"in_port": 65535, "data": {"class": "lldp"}, "class": "ofp_packet_out", "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"]}, "dpid": 8, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e575"}
+{"dependent_labels": [], "time": [1350585747, 533965], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 19, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e576"}
+{"dependent_labels": [], "time": [1350585747, 534467], "fingerprint": {"class": "ofp_barrier_request"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e577"}
+{"dependent_labels": [], "time": [1350585747, 535368], "fingerprint": {"hard_timeout": 0, "actions": ["<class 'pox.openflow.libopenflow_01.ofp_action_output'>"], "priority": 32768, "idle_timeout": 0, "flags": 1, "out_port": 65535, "class": "ofp_flow_mod", "match": "dl_dst:01:23:20:00:00:01,dl_type:35020"}, "dpid": 4, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "e578"}
+{"dependent_labels": [], "class": "SwitchFailure", "dpid": 17, "label": "e579", "time": [1350585747, 535683]}
