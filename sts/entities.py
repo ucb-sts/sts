@@ -3,11 +3,10 @@ This module mocks out openflow switches, links, and hosts. These are all the
 'entities' that exist within our simulated environment.
 """
 
-from pox.openflow.software_switch import SoftwareSwitch, DpPacketOut, OFConnection
+from pox.openflow.software_switch import DpPacketOut, OFConnection
 from pox.openflow.nx_software_switch import NXSoftwareSwitch
-from pox.lib.util import assert_type
 from pox.openflow.libopenflow_01 import *
-from pox.lib.revent import Event, EventMixin
+from pox.lib.revent import EventMixin
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
 
@@ -15,7 +14,6 @@ import logging
 import os
 import re
 import pickle
-import signal
 
 class DeferredOFConnection(OFConnection):
   def __init__(self, io_worker, dpid, god_scheduler):
@@ -124,7 +122,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def serialize(self):
     # Skip over non-serializable data, e.g. sockets
     # TODO(cs): is self.log going to be a problem?
-    serializable = MockOpenFlowSwitch(self.dpid, self.parent_controller_name)
+    serializable = FuzzSoftwareSwitch(self.dpid, self.parent_controller_name)
     # Can't serialize files
     serializable.log = None
     # TODO(cs): need a cleaner way to add in the NOM port representation

@@ -19,7 +19,6 @@ import abc
 import logging
 import time
 import json
-import math
 import pytrie
 from collections import namedtuple
 from sts.syncproto.base import SyncTime
@@ -80,8 +79,8 @@ class InternalEvent(Event):
     super(InternalEvent, self).__init__(label=label, time=time)
 
   def proceed(self, simulation):
-     # There might be nothing happening for certain internal events, so default
-     # to just doing nothing for proceed (i.e. proceeding automatically).
+    # There might be nothing happening for certain internal events, so default
+    # to just doing nothing for proceed (i.e. proceeding automatically).
     pass
 
 class InputEvent(Event):
@@ -498,13 +497,13 @@ class ControlMessageReceive(InternalEvent):
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
-   pending_receive = PendingReceive(self.dpid, self.controller_id,
-                                    self.fingerprint)
-   message_waiting = simulation.god_scheduler.message_waiting(pending_receive)
-   if message_waiting:
-     simulation.god_scheduler.schedule(pending_receive)
-     return True
-   return False
+    pending_receive = PendingReceive(self.dpid, self.controller_id,
+                                     self.fingerprint)
+    message_waiting = simulation.god_scheduler.message_waiting(pending_receive)
+    if message_waiting:
+      simulation.god_scheduler.schedule(pending_receive)
+      return True
+    return False
 
   @staticmethod
   def from_json(json_hash):

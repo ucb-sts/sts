@@ -9,7 +9,6 @@ Three control flow types for running the simulation forward.
 '''
 
 import pox.openflow.libopenflow_01 as of
-from invariant_checker import InvariantChecker
 from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.util.console import msg
@@ -20,9 +19,7 @@ import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
 from pox.lib.revent import EventMixin, Event
 
-import os
 import sys
-import threading
 import time
 import random
 import logging
@@ -115,7 +112,7 @@ class MCSFinder(Replayer):
     violations = self.invariant_check(simulation)
     if violations == []:
       log.warn("Unable to reproduce correctness violation!")
-      os.exit(5)
+      sys.exit(5)
 
     # Now start pruning
     mcs = []
@@ -160,7 +157,7 @@ class MCSFinder(Replayer):
           # No violation!
           # If singleton, this must be part of the MCS
           if len(ignored_portion) == 1:
-            mcs.append(pruned_event)
+            mcs.append(ignored_portion[0])
           split_ways *= 2
         else:
           # Violation in the non-pruned half.

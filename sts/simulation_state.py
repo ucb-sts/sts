@@ -10,20 +10,16 @@ Encapsulates the state of the simulation, including:
   - Metadata (e.g. # of failures)
 '''
 
-from sts.util.console import msg
 from sts.util.io_master import IOMaster
 from sts.dataplane_traces.trace import Trace
-from entities import Link, Host, Controller, DeferredOFConnection
+from entities import Link, Controller, DeferredOFConnection
 from sts.topology import *
 from sts.controller_manager import ControllerManager
 from sts.util.deferred_io import DeferredIOWorker
-from sts.control_flow import Replayer
 from sts.god_scheduler import GodScheduler
-from sts.syncproto.base import SyncTime
 from sts.syncproto.sts_syncer import STSSyncConnectionManager
 
 import logging
-import pickle
 
 log = logging.getLogger("simulation")
 

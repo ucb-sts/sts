@@ -1,3 +1,5 @@
+
+import urllib2
 import logging
 import json
 import time
@@ -96,7 +98,7 @@ class FloodlightSnapshotService(SnapshotService):
     l = json.loads(json_data)
     res = []
     for m in l:
-      res.append(nom_snapshot.Snapshot.from_json_map(m))
+      res.append(Snapshot.from_json_map(m))
     return res
 
     # Create local Snapshot object

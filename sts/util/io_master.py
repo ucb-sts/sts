@@ -1,7 +1,5 @@
-import sys
 import errno
 import logging
-import Queue
 import select
 import socket
 import time
@@ -101,7 +99,7 @@ class IOMaster(object):
     for w in list(self._workers):
       try:
         w.close()
-      except Error as e:
+      except Exception as e:
         log.warn("Error closing IOWorker %s: %s (%d)", w, e.strerror, e.errno)
 
     if time.sleep is self.sleep:

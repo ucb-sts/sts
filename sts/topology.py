@@ -18,17 +18,10 @@ of switches, with one host connected to each switch. For example, with N = 3:
 
 from sts.input_traces.fingerprints import DPFingerprint
 from entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink
-from pox.openflow.software_switch import ofp_phy_port, DpPacketOut, SoftwareSwitch
-from pox.lib.addresses import EthAddr, IPAddr
+from pox.openflow.software_switch import DpPacketOut, SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
-from pox.lib.util import connect_socket_with_backoff
 from pox.lib.revent import EventMixin
 from sts.util.console import msg
-import socket
-import abc
-import time
-import errno
-import sys
 import itertools
 import logging
 
@@ -164,7 +157,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
       event.fingerprint = DPFingerprint.from_pkt(event.packet)
       self.buffered_dp_out_events[event.fingerprint] = event
       self.raiseEvent(event)
-    for i, s in enumerate(self.switches):
+    for _, s in enumerate(self.switches):
       s.addListener(DpPacketOut, handle_DpPacketOut)
     for host in self.hosts:
       host.addListener(DpPacketOut, handle_DpPacketOut)
@@ -424,14 +417,14 @@ class Topology(object):
     for switch in self.switches:
       for connection in switch.connections:
         if connection.io_worker.currently_blocked:
-           yield (switch, connection)
+          yield (switch, connection)
 
   @property
   def unblocked_controller_connections(self):
     for switch in self.switches:
       for connection in switch.connections:
         if not connection.io_worker.currently_blocked:
-           yield (switch, connection)
+          yield (switch, connection)
 
   def block_connection(self, connection):
     msg.event("Blocking connection %s" % connection)
@@ -473,7 +466,7 @@ class Topology(object):
         log.debug("Connecting switch %d / %d" % (idx, len(self.switches)))
 
       # Socket from the software_switch to the controller
-      for i in xrange(connections_per_switch):
+      for _ in xrange(connections_per_switch):
         controller_info = controller_info_cycler.next()
         software_switch.add_controller_info(controller_info)
 
@@ -488,20 +481,20 @@ class Topology(object):
 
   @staticmethod
   def populate_from_topology(graph):
-     """
-     Take a pox.lib.graph.graph.Graph and generate arguments needed for the
-     simulator
-     """
-     topology = Topology()
-     topology.hosts = graph.find(is_a=Host)
-     # TODO(cs): broken: can't set attribute
-     topology.switches = graph.find(is_a=SoftwareSwitch)
-     topology.access_links = [AccessLink(host, switch[0], switch[1][0], switch[1][1])
-                              for host in hosts
+    """
+    Take a pox.lib.graph.graph.Graph and generate arguments needed for the
+    simulator
+    """
+    topology = Topology()
+    topology.hosts = graph.find(is_a=Host)
+    # TODO(cs): broken: can't set attribute
+    topology.switches = graph.find(is_a=SoftwareSwitch)
+    topology.access_links = [AccessLink(host, switch[0], switch[1][0], switch[1][1])
+                              for host in topology.hosts
                               for switch in filter(
                                   lambda n: isinstance(n[1][0], SoftwareSwitch),
                                   graph.ports_for_node(host).iteritems())]
-     return topology
+    return topology
 
 class MeshTopology(Topology):
   def __init__(self, num_switches=3):

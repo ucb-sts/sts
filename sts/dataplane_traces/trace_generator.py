@@ -8,7 +8,6 @@ from pox.lib.packet.ethernet import *
 from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
 import sts.topology as topo
-from sts.entities import HostInterface
 from collections import defaultdict
 import pickle
 from trace import DataplaneEvent

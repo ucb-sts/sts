@@ -1,12 +1,10 @@
 
-import urllib2
 
 from pox.openflow.libopenflow_01 import *
 from entities import *
 import sts.headerspace.topology_loader.topology_loader as hsa_topo
 import sts.headerspace.headerspace.applications as hsa
 from sts.headerspace.config_parser.openflow_parser import get_uniq_port_id
-import pickle
 import logging
 import collections
 from sts.util.console import msg

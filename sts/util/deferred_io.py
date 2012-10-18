@@ -3,17 +3,8 @@ Created on Feb 25, 2012
 
 @author: aw, cs
 '''
-import exceptions
-import sys
-import errno
 import logging
 import Queue
-import socket
-
-from sts.input_traces.fingerprints import OFFingerprint
-from pox.lib.util import assert_type, makePinger
-from pox.lib.recoco import Select, Task
-from pox.lib.ioworker.io_worker import IOWorker
 
 log = logging.getLogger()
 

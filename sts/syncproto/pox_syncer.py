@@ -2,11 +2,8 @@ import logging
 import time
 import os
 import socket
-import threading
-import traceback
 
 from pox.core import core
-from pox.lib.ioworker.io_worker import JSONIOWorker
 from pox.lib.graph.nom import Switch, Host, Link
 from pox.lib.graph.util import NOMEncoder
 
@@ -71,7 +68,7 @@ class POXSyncMaster(object):
         are in the stacktrace """
 
     if self._in_get_time:
-      return time._orig_time()
+      return self._orig_time()
 
     try:
       self._in_get_time = True

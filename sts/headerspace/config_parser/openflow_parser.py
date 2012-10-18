@@ -372,6 +372,7 @@ def generate_transfer_function(tf, software_switch):
   return 0
 
 def get_kw_for_field_match(field_match):
+  # TODO(cs): nom_snapshot is not defined
   type_to_name = {
     nom_snapshot.Match.dl_src:"dl_src",
     nom_snapshot.Match.dl_dst:"dl_dst",

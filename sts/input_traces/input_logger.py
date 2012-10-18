@@ -1,10 +1,7 @@
-import json
 import os
 import time
 import logging
 import sts.dataplane_traces.trace_generator as tg
-from sts.syncproto.base import SyncTime
-from sts.replay_event import TrafficInjection
 
 config_template = '''
 from experiment_config_lib import ControllerConfig

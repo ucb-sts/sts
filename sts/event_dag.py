@@ -1,18 +1,10 @@
-from sts.entities import Link
-from sts.god_scheduler import PendingReceive, MessageReceipt
 from sts.input_traces.fingerprints import *
 from sts.replay_event import *
-import sts.control_flow
-from invariant_checker import InvariantChecker
-import itertools
-import abc
+import sts.control_flow as control_flow
 import logging
 import time
-import json
 import math
 import pytrie
-from collections import namedtuple
-from sts.syncproto.base import SyncTime
 from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
 

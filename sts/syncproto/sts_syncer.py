@@ -1,13 +1,10 @@
-import collections
-import itertools
-import json
-import time
 
-from sts.util.io_master import IOMaster
 from sts.syncproto.base import SyncProtocolSpeaker, SyncMessage, SyncTime, SyncIODelegate
 
-from pox.lib.ioworker.io_worker import JSONIOWorker
 from pox.lib.util import parse_openflow_uri, connect_socket_with_backoff
+
+import logging
+log = logging.getLogger("sts_sync_proto")
 
 class STSSyncProtocolSpeaker(SyncProtocolSpeaker):
   def __init__(self, controller, state_master, io_delegate):
@@ -89,7 +86,7 @@ class STSSyncConnectionManager(object):
 class STSSyncCallback(object):
   """ override with your favorite functionality """
   def state_change(self, controller, time, fingerprint, name, value):
-    logger.info("controller: {} time: {} fingerprint: {} name: {} value: {}".format(controller, time, fingerprint, name, value))
+    log.info("controller: {} time: {} fingerprint: {} name: {} value: {}".format(controller, time, fingerprint, name, value))
   def get_deterministic_value(self, controller, name):
     if name == "gettimeofday":
       return SyncTime.now()
