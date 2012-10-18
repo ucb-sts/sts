@@ -230,7 +230,7 @@ class EventDag(object):
       else:
         # Now actually do the peek()'ing! First replay the prefix
         # plus the next input
-        prefix_dag = EventDag(inferred_events + [current_input], mark_invalid_input_sequences=True)
+        prefix_dag = EventDag(inferred_events + [current_input])
         replayer = control_flow.Replayer(prefix_dag, ignore_unsupported_input_types=True)
         replayer.simulate(simulation)
 
