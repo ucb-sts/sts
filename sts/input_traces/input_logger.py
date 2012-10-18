@@ -1,6 +1,7 @@
 import json
 import os
 import time
+import logging
 import sts.dataplane_traces.trace_generator as tg
 from sts.syncproto.base import SyncTime
 from sts.replay_event import TrafficInjection
@@ -17,6 +18,8 @@ patch_panel_class = %s
 control_flow = Replayer("%s")
 dataplane_trace = %s
 '''
+
+log = logging.getLogger("input_logger")
 
 class InputLogger(object):
   '''Log input events injected by a control_flow.Fuzzer'''
@@ -43,6 +46,7 @@ class InputLogger(object):
     logged separately.
     '''
     json_hash = event.to_json()
+    log.debug("logging event %s" % event.label)
     self.output.write(json_hash + '\n')
     if dp_event is not None:
       self.dp_events.append(dp_event)
