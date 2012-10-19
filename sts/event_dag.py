@@ -44,7 +44,10 @@ class EventDag(object):
     # Only do so if this isn't a view of a previously computed DAG
     # TODO(cs): there is probably a cleaner way to implement views
     if not is_view and mark_invalid_input_sequences:
-      import pytrie
+      try:
+        import pytrie
+      except ImportError:
+        raise RuntimeError("Need to install pytrie: `sudo pip install pytrie`")
       self._mark_invalid_input_sequences()
       prefix_trie = pytrie.Trie()
     # The prefix trie stores lists of input events as keys,
