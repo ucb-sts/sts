@@ -424,6 +424,7 @@ class EventWatcher(object):
 
     while round < self.max_rounds and not self.event.proceed(simulation):
       time.sleep(self.wait_time)
+      round += 1
       log.debug(".")
 
     self._post(round)
