@@ -158,7 +158,7 @@ class MCSFinder(Replayer):
         if violations == []:
           # No violation!
           # If singleton, this must be part of the MCS
-          self.log.debug("No violation..")
+          self.log.debug("No violation with %d'th portion ignored..." % i)
           if len(ignored_portion) == 1:
             self.log.debug("Pruning singleton %s" % str(ignored_portion[0]))
             mcs.append(ignored_portion[0])

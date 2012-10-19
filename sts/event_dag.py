@@ -208,6 +208,7 @@ class EventDag(object):
     current_input_prefix = self._prefix_trie\
                                .longest_prefix(input_events, default=[])
 
+    log.debug("Current input prefix: %s" % str(current_input_prefix))
     # The value is both internal events and input events (values of the trie)
     # leading up to, but not including the next input following the tail of the prefix
     inferred_events = self._prefix_trie\
@@ -300,11 +301,21 @@ class EventDag(object):
           expected_internal_events.reverse()
           inferred_fingerprints = set([e.fingerprint
                                        for e in newly_inferred_events])
+          if len(inferred_fingerprints) != len(newly_inferred_events):
+            log.warn("Overlapping fingerprints in peek() (%d unique, %d total)" %
+                     (len(inferred_fingerprints),len(newly_inferred_events)))
+          expected_fingerprints = set([e.fingerprint
+                                       for e in expected_internal_events])
+          if len(expected_fingerprints) !=  len(expected_internal_events):
+            log.warn("Overlapping expected fingerprints (%d unique, %d total)" %
+                     (len(expected_fingerprints),len(expected_internal_events)))
           for expected in expected_internal_events:
             if expected.fingerprint in inferred_fingerprints:
               # We've found our insertion point.
               # Insert the input after the expected internal event, and all
               # internal events that come after it
+              # If there are multiple matching fingerprints, this will find
+              # the first one
               parent_index = find_index(lambda e: e.fingerprint == expected.fingerprint,
                                         newly_inferred_events)
               newly_inferred_events = newly_inferred_events[:parent_index+1]
