@@ -34,7 +34,7 @@ class EventDag(object):
     see how this is assembled.'''
     if ignore_unsupported_input_types:
       self._events_list = [ e for e in events
-                            if events not in self._ignored_input_types ]
+                            if e not in self._ignored_input_types ]
     else:
       self._events_list = events
     self._populate_indices(label2event)
@@ -343,9 +343,9 @@ class EventDag(object):
         if event.fingerprint in fingerprint2previousfailure:
           failure = fingerprint2previousfailure[event.fingerprint]
           failure.dependent_labels.append(event.label)
-      elif type(event) in self._ignored_input_types:
-        raise RuntimeError("No support for %s dependencies" %
-                            type(event).__name__)
+      #elif type(event) in self._ignored_input_types:
+      #  raise RuntimeError("No support for %s dependencies" %
+      #                      type(event).__name__)
 
 class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either
