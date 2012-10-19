@@ -35,7 +35,7 @@ class GodScheduler(EventMixin):
     # Record
     replay_event = sts.replay_event.ControlMessageReceive(pending_receipt.dpid,
                                                           pending_receipt.controller_id,
-                                                          pending_receipt.fingerprint.to_dict())
+                                                          pending_receipt.fingerprint)
     self.passed_through_events.append(replay_event)
 
   def set_pass_through(self):

@@ -104,6 +104,11 @@ class OFFingerprint(Fingerprint):
     'match' : lambda pkt: hsa.hs_format["display"](hsa.ofp_match_to_hsa_match(pkt.match))
   }
 
+  def __init__(self, field2value):
+    if type(field2value) == OFFingerprint:
+      field2value = field2value._field2value
+    super(OFFingerprint, self).__init__(field2value)
+
   @staticmethod
   def from_pkt(pkt):
     pkt_type = type(pkt).__name__
@@ -143,6 +148,11 @@ class OFFingerprint(Fingerprint):
 class DPFingerprint(Fingerprint):
   ''' Fingerprints for dataplane messages '''
   fields = ['dl_src', 'dl_dst', 'nw_src', 'nw_dst']
+
+  def __init__(self, field2value):
+    if type(field2value) == DPFingerprint:
+      field2value = field2value._field2value
+    super(DPFingerprint, self).__init__(field2value)
 
   @staticmethod
   def from_pkt(pkt):

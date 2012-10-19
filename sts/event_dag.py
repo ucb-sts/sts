@@ -366,13 +366,15 @@ class EventDag(object):
 
     # NOTE: mutates self._events
     for event in self._events_list:
+      # Skip over the class name
+      fingerprint = event.fingerprint[1:]
       if type(event) in self._failure_types:
         # Insert it into the previous failure hash
-        fingerprint2previousfailure[event.fingerprint] = event
+        fingerprint2previousfailure[fingerprint] = event
       elif type(event) in self._recovery_types:
         # Check if there were any failure predecessors
-        if event.fingerprint in fingerprint2previousfailure:
-          failure = fingerprint2previousfailure[event.fingerprint]
+        if fingerprint in fingerprint2previousfailure:
+          failure = fingerprint2previousfailure[fingerprint]
           failure.dependent_labels.append(event.label)
       #elif type(event) in self._ignored_input_types:
       #  raise RuntimeError("No support for %s dependencies" %

@@ -292,15 +292,15 @@ class Fuzzer(ControlFlow):
         self.simulation.patch_panel.delay_dp_event(dp_event)
       elif self.random.random() < self.params.dataplane_drop_rate:
         self.simulation.patch_panel.drop_dp_event(dp_event)
-        self._log_input_event(DataplaneDrop(dp_event.fingerprint.to_dict()))
+        self._log_input_event(DataplaneDrop(dp_event.fingerprint))
       elif not self.simulation.topology.ok_to_send(dp_event):
         # Switches have very small buffers! drop it on the floor if the link
         # is down
         self.simulation.patch_panel.drop_dp_event(dp_event)
-        self._log_input_event(DataplaneDrop(dp_event.fingerprint.to_dict()))
+        self._log_input_event(DataplaneDrop(dp_event.fingerprint))
       else:
         self.simulation.patch_panel.permit_dp_event(dp_event)
-        self._log_input_event(DataplanePermit(dp_event.fingerprint.to_dict()))
+        self._log_input_event(DataplanePermit(dp_event.fingerprint))
 
   def check_tcp_connections(self):
     ''' Decide whether to block or unblock control channels '''
@@ -323,7 +323,7 @@ class Fuzzer(ControlFlow):
         self.simulation.god_scheduler.schedule(pending_receipt)
         self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                     pending_receipt.controller_id,
-                                                    pending_receipt.fingerprint.to_dict()))
+                                                    pending_receipt.fingerprint))
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
@@ -534,10 +534,10 @@ class Interactive(ControlFlow):
         if ((answer == '' or answer.lower() == 'a') and
                 self.simulation.topology.ok_to_send(dp_event)):
           self.simulation.patch_panel.permit_dp_event(dp_event)
-          self._log_input_event(DataplanePermit(dp_event.fingerprint.to_dict()))
+          self._log_input_event(DataplanePermit(dp_event.fingerprint))
         elif answer.lower() == 'd':
           self.simulation.patch_panel.drop_dp_event(dp_event)
-          self._log_input_event(DataplaneDrop(dp_event.fingerprint.to_dict()))
+          self._log_input_event(DataplaneDrop(dp_event.fingerprint))
         elif answer.lower() == 'e':
           self.simulation.patch_panel.delay_dp_event(dp_event)
         else:
@@ -551,7 +551,7 @@ class Interactive(ControlFlow):
       self.simulation.god_scheduler.schedule(pending_receipt)
       self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                   pending_receipt.controller_id,
-                                                  pending_receipt.fingerprint.to_dict()))
+                                                  pending_receipt.fingerprint))
 
   # TODO(cs): add support for control channel blocking + switch, link,
   # controller failures, host migration, god scheduling

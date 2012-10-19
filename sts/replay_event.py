@@ -450,10 +450,12 @@ class ControlChannelUnblock(InputEvent):
 class DataplaneDrop(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplaneDrop, self).__init__(label=label, time=time)
+    if type(fingerprint) == dict or type(fingerprint) != tuple:
+      fingerprint = (self.__class__.__name__,DPFingerprint(fingerprint))
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
-    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint)
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1])
     if dp_event is not None:
       simulation.patch_panel.drop_dp_event(dp_event)
       return True
@@ -470,12 +472,12 @@ class DataplaneDrop(InputEvent):
 class DataplanePermit(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplanePermit, self).__init__(label=label, time=time)
-    if type(fingerprint) == dict:
+    if type(fingerprint) == dict or type(fingerprint) != tuple:
       fingerprint = (self.__class__.__name__, DPFingerprint(fingerprint))
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
-    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint)
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1])
     if dp_event is not None:
       simulation.patch_panel.permit_dp_event(dp_event)
       return True
@@ -507,14 +509,14 @@ class ControlMessageReceive(InternalEvent):
     super(ControlMessageReceive, self).__init__(label=label, time=time)
     self.dpid = dpid
     self.controller_id = controller_id
-    if type(fingerprint) == dict:
-      fingerprint = OFFingerprint(fingerprint)
+    if type(fingerprint) == dict or type(fingerprint) != tuple:
+      fingerprint = (self.__class__.__name__, OFFingerprint(fingerprint))
 
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
     pending_receive = PendingReceive(self.dpid, self.controller_id,
-                                     self.fingerprint)
+                                     self.fingerprint[1])
     message_waiting = simulation.god_scheduler.message_waiting(pending_receive)
     if message_waiting:
       simulation.god_scheduler.schedule(pending_receive)
@@ -544,6 +546,8 @@ class ControllerStateChange(InternalEvent):
   def __init__(self, controller_id, fingerprint, name, value, label=None, time=None):
     super(ControllerStateChange, self).__init__(label=label, time=time)
     self.controller_id = controller_id
+    if type(fingerprint) != tuple:
+      fingerprint = (self.__class__.__name__, fingerprint)
     self.fingerprint = fingerprint
     self.name = name
     self.value = value
