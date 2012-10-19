@@ -414,4 +414,4 @@ class EventWatcher(object):
     if round < self.maxrounds:
       log.debug("Finished Executing %s" % str(self.event))
     else:
-      log.debug("Timing out waiting for Event %s" % str(self.event))
+      log.warn("Timing out waiting for Event %s" % str(self.event))
