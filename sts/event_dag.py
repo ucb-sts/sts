@@ -215,14 +215,14 @@ class EventDag(object):
 
     # Initilize current_input_prefix to the longest_match prefix we've
     # inferred previously (or [] if this is an entirely new prefix)
-    current_input_prefix = self._prefix_trie\
-                               .longest_prefix(input_events, default=[])
+    current_input_prefix = list(self._prefix_trie\
+                               .longest_prefix(input_events, default=[]))
 
     log.debug("Current input prefix: %s" % str(current_input_prefix))
     # The value is both internal events and input events (values of the trie)
     # leading up to, but not including the next input following the tail of the prefix
-    inferred_events = self._prefix_trie\
-                          .longest_prefix_value(input_events, default=[])
+    inferred_events = list(self._prefix_trie\
+                          .longest_prefix_value(input_events, default=[]))
 
     # current_input is the next input after the tail of the prefix
     if current_input_prefix == []:
