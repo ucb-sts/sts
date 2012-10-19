@@ -1,5 +1,6 @@
 from sts.input_traces.fingerprints import *
 from sts.replay_event import *
+from pox.openflow.software_switch import DpPacketOut
 import sts.control_flow
 import logging
 import time
@@ -232,12 +233,18 @@ class EventDag(object):
         log.debug("Optimization: no expected internal events")
         newly_inferred_events = [current_input]
       else:
-        # Now actually do the peek()'ing! First replay the prefix
-        # plus the next input
+        # Now actually do the peek()'ing!
+        # First set the BufferedPatchPanel to "pass through"
+        def pass_through_packets(event):
+          simulation.patch_panel.permit_dp_event(event)
+        def post_bootstrap_hook():
+          simulation.patch_panel.addListener(DpPacketOut,
+                                                  pass_through_packets)
+        # Now replay the prefix plus the next input
         prefix_dag = EventDag(inferred_events + [current_input])
         replayer = sts.control_flow.Replayer(prefix_dag)
         log.debug("Replaying prefix")
-        replayer.simulate(simulation)
+        replayer.simulate(simulation, post_bootstrap_hook=post_bootstrap_hook)
 
         # Directly after the last input has been injected, flush the internal
         # event buffers in case there were unaccounted internal events

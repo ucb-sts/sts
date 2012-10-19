@@ -85,13 +85,15 @@ class Replayer(ControlFlow):
   def increment_round(self):
     pass
 
-  def simulate(self, simulation):
+  def simulate(self, simulation, post_bootstrap_hook=None):
     self.simulation = simulation
-    self.run_simulation_forward(self.dag)
+    self.run_simulation_forward(self.dag, post_bootstrap_hook)
 
-  def run_simulation_forward(self, dag):
+  def run_simulation_forward(self, dag, post_bootstrap_hook=None):
     # Note that bootstrap() flushes any state from previous runs
     self.simulation.bootstrap()
+    if post_bootstrap_hook is not None:
+      post_bootstrap_hook()
     for event_watcher in dag.event_watchers:
       self.compute_interpolated_time(event_watcher.event)
       event_watcher.run(self.simulation)
