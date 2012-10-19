@@ -122,6 +122,10 @@ class Simulation (object):
                                                self.topology.hosts,
                                                self.topology.get_connected_port)
     self.god_scheduler = GodScheduler()
+    # Set to pass-through during bootstrap, so that switch initialization
+    # messages don't get buffered
+    self.god_scheduler.set_pass_through()
+    self.controller_sync_callback.set_pass_through()
 
     if self._dataplane_trace_path is not None:
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
@@ -136,5 +140,11 @@ class Simulation (object):
         io_worker = DeferredIOWorker(self._io_master.create_worker_for_socket(socket))
         return DeferredOFConnection(io_worker, switch.dpid, self.god_scheduler)
 
+    # TODO(cs): this should block until all switches have finished
+    # initializing with the controller
     self.topology.connect_to_controllers(self.controller_configs,
                                          create_connection=create_connection)
+
+    # Now unset pass-through mode
+    self.god_scheduler.unset_pass_through()
+    self.controller_sync_callback.unset_pass_through()
