@@ -337,16 +337,16 @@ class EventDag(object):
                                           if e.fingerprint == expected.fingerprint]
               # 1-based indexing
               instance_of_expected = len(expected_internal_events)
-              i = 0
-              def find_ith_instance(event):
+              observed_instance = 0
+              parent_index = -1
+              for index, event in enumerate(newly_inferred_events):
                 if event.fingerprint == expected.fingerprint:
-                  i += 1
-                  if i == instance_of_expected:
-                    return True
-                return False
+                  observed_instance += 1
+                  if observed_instance == instance_of_expected:
+                    parent_index = index
+                    break
 
-              parent_index = find_index(find_ith_instance, newly_inferred_events)
-              if parent_index is None:
+              if parent_index == -1:
                 raise NotImplementedError('''There were fewer instances of '''
                                           '''inferred %s fingerprint than expected %s ''' %
                                           (str(newly_inferred_events),str(expected_internal_events)))
