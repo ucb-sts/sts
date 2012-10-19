@@ -88,7 +88,6 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
                    for interface, switch in interface_switch_pairs ]
   return (host, access_links)
 
-
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
       Listens to the SwitchDPPacketOut event on the switches.
@@ -244,7 +243,6 @@ class LinkTracker(object):
     return (port in self.port2access_link or
             port in self.interface2access_link or
             port in self.port2internal_link)
-
 
   def __call__(self, node, port):
     ''' Given a node and a port, return a tuple (node, port) that is directly
