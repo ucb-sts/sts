@@ -306,7 +306,7 @@ class EventDag(object):
 
         # Finally, insert current_input into the appropriate place in
         # inferred_events (and ignore internal events that come afterward)
-        def match_fingerprints(newly_inferred_events):
+        def match_fingerprints(newly_inferred_events, expected_internal_events):
           # Find the last internal event in expected_internal_events that
           # matches an event in newly_inferred_events. That is the new causal
           # parent of current_input
@@ -360,7 +360,8 @@ class EventDag(object):
         log.debug("Matching fingerprints")
         log.debug("Expected: %s" % str(expected_internal_events))
         log.debug("Inferred: %s" % str(newly_inferred_events))
-        newly_inferred_events = match_fingerprints(newly_inferred_events)
+        newly_inferred_events = match_fingerprints(newly_inferred_events,
+                                                   expected_internal_events)
         log.debug("Matched events: %s" % str(newly_inferred_events))
 
       # Update the trie for this prefix
