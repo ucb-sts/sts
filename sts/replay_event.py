@@ -465,7 +465,7 @@ class DataplaneDrop(InputEvent):
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
-    fingerprint = (self.__class__.__name__,
+    fingerprint = (DataplaneDrop.__class__.__name__,
                    DPFingerprint(json_hash['fingerprint']))
     return DataplaneDrop(fingerprint, label=label, time=time)
 
@@ -487,7 +487,7 @@ class DataplanePermit(InputEvent):
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
-    fingerprint = (self.__class__.__name__, DPFingerprint(json_hash['fingerprint']))
+    fingerprint = (DataplanePermit.__class__.__name__, DPFingerprint(json_hash['fingerprint']))
     return DataplanePermit(fingerprint, label=label, time=time)
 
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
@@ -529,7 +529,7 @@ class ControlMessageReceive(InternalEvent):
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
     dpid = json_hash['dpid']
     controller_id = tuple(json_hash['controller_id'])
-    fingerprint = (self.__class__.__name__,
+    fingerprint = (ControlMessageReceive.__class__.__name__,
                    OFFingerprint(json_hash['fingerprint']))
     return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time)
 
@@ -569,7 +569,7 @@ class ControllerStateChange(InternalEvent):
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint',
                         'name', 'value')
     controller_id = tuple(json_hash['controller_id'])
-    fingerprint = (self.__class__.__name__,json_hash['fingerprint'])
+    fingerprint = (ControllerStateChange.__class__.__name__,json_hash['fingerprint'])
     name = json_hash['name']
     value = json_hash['value']
     return ControllerStateChange(controller_id, fingerprint, name, value, label=label, time=time)
