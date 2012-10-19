@@ -316,20 +316,40 @@ class EventDag(object):
           if len(inferred_fingerprints) != len(newly_inferred_events):
             log.warn("Overlapping fingerprints in peek() (%d unique, %d total)" %
                      (len(inferred_fingerprints),len(newly_inferred_events)))
+
           expected_fingerprints = set([e.fingerprint
                                        for e in expected_internal_events])
-          if len(expected_fingerprints) !=  len(expected_internal_events):
+          if len(expected_fingerprints) != len(expected_internal_events):
             log.warn("Overlapping expected fingerprints (%d unique, %d total)" %
                      (len(expected_fingerprints),len(expected_internal_events)))
+
           for expected in expected_internal_events:
             if expected.fingerprint in inferred_fingerprints:
               # We've found our insertion point.
-              # Insert the input after the expected internal event, and all
-              # internal events that come after it
-              # If there are multiple matching fingerprints, this will find
-              # the first one
-              parent_index = find_index(lambda e: e.fingerprint == expected.fingerprint,
-                                        newly_inferred_events)
+              # Insert the input after the expected internal event, and ignore all
+              # internal events that come after it.
+
+              # If there are multiple matching fingerprints, find the instance of
+              # the expected fingerprint (e.g., 2nd instance of the expected
+              # fingerprint), and match it up with the same instance
+              # of the inferred fingerprints
+              expected_internal_events = [e for e in expected_internal_events
+                                          if e.fingerprint == expected.fingerprint]
+              # 1-based indexing
+              instance_of_expected = len(expected_internal_events)
+              i = 0
+              def find_ith_instance(event):
+                if event.fingerprint == expected.fingerprint:
+                  i += 1
+                  if i == instance_of_expected:
+                    return True
+                return False
+
+              parent_index = find_index(find_ith_instance, newly_inferred_events)
+              if parent_index is None:
+                raise NotImplementedError('''There were fewer instances of '''
+                                          '''inferred %s fingerprint than expected %s ''' %
+                                          (str(newly_inferred_events),str(expected_internal_events)))
               newly_inferred_events = newly_inferred_events[:parent_index+1]
               newly_inferred_events.append(current_input)
               return newly_inferred_events
