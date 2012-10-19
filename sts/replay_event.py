@@ -28,14 +28,19 @@ class Event(object):
 
   # Create unique labels for events
   _label_gen = itertools.count(1)
+  # Ensure globally unique labels
+  _all_labels = set()
 
   def __init__(self, label=None, time=None, dependent_labels=None):
     if label is None:
       label = 'e' + str(Event._label_gen.next())
+      while label in Event._all_labels:
+        label = 'e' + str(Event._label_gen.next())
     if time is None:
       # TODO(cs): compress time for interactive mode?
       time = SyncTime.now()
     self.label = label
+    Event._all_labels.add(label)
     self.time = time
     # Add on dependent labels to appease log_processing.superlog_parser.
     # TODO(cs): Replayer shouldn't depend on superlog_parser
