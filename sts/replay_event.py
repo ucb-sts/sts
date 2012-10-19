@@ -32,10 +32,14 @@ class Event(object):
   _all_labels = set()
 
   def __init__(self, label=None, time=None, dependent_labels=None):
-    if label is None:
-      label = 'e' + str(Event._label_gen.next())
+    if label is None or label == 'i' or label == 'e':
+      if label is None:
+        prefix = 'e'
+      else:
+        prefix = label
+      label = prefix + str(Event._label_gen.next())
       while label in Event._all_labels:
-        label = 'e' + str(Event._label_gen.next())
+        label = prefix + str(Event._label_gen.next())
     if time is None:
       # TODO(cs): compress time for interactive mode?
       time = SyncTime.now()
@@ -80,6 +84,8 @@ class InternalEvent(Event):
   simulation. Derivatives of this class verify that the internal event has
   occured in its proceed method before it returns.'''
   def __init__(self, label=None, time=None):
+    if label is None:
+      label = 'i'
     super(InternalEvent, self).__init__(label=label, time=time)
 
   def proceed(self, simulation):
@@ -98,6 +104,8 @@ class InputEvent(Event):
   events', which is a term that may be used elsewhere in documentation or
   code.'''
   def __init__(self, label=None, time=None, dependent_labels=None):
+    if label is None:
+      label = 'e'
     super(InputEvent, self).__init__(label=label, time=time,
                                      dependent_labels=dependent_labels)
 
