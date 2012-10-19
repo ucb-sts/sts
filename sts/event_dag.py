@@ -34,7 +34,7 @@ class EventDag(object):
     see how this is assembled.'''
     if ignore_unsupported_input_types:
       self._events_list = [ e for e in events
-                            if e not in self._ignored_input_types ]
+                            if type(e) not in self._ignored_input_types ]
     else:
       self._events_list = events
     self._populate_indices(label2event)
