@@ -50,7 +50,6 @@ class Replayer(ControlFlow):
   constructor of this class, which will pass them on to the EventDay object it creates.
   '''
   def __init__(self, superlog_path_or_dag, **kwargs):
-    import pdb; pdb.set_trace()
     ControlFlow.__init__(self, ReplaySyncCallback(self.get_interpolated_time))
     if type(superlog_path_or_dag) == str:
       superlog_path = superlog_path_or_dag
