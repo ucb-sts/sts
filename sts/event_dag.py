@@ -169,6 +169,7 @@ class EventDag(object):
       event2wait_time[input_events[-1]] = last_wait_time
       return event2wait_time
 
+    log.debug("Computing wait times")
     event2wait_time = get_wait_times(input_events)
 
     # Also compute the internal events that we expect for each interval between
@@ -191,6 +192,7 @@ class EventDag(object):
       input_to_expected_events[last_input] = self._events_list[last_input_idx:]
       return input_to_exected_events
 
+    log.debug("Computing expected internal events")
     input_to_expected_events = get_expected_internal_events(input_events)
 
     # Now, play the execution forward iteratively for each input event, and
@@ -214,17 +216,20 @@ class EventDag(object):
       current_input_idx = input_events.index(current_input_prefix[-1]) + 1
 
     while current_input_idx < len(input_events):
+      log.debug("Pruning input index %d" % current_input_idx)
       current_input = input_events[current_input_idx]
       expected_internal_events = input_to_expected_events[current_input]
       # Optimization: if no internal events occured between this input and the
       # next, no need to peek()
       if expected_internal_events == []:
+        log.debug("Optimization: no expected internal events")
         newly_inferred_events = [current_input]
       else:
         # Now actually do the peek()'ing! First replay the prefix
         # plus the next input
         prefix_dag = EventDag(inferred_events + [current_input])
-        replayer = control_flow.Replayer(prefix_dag, ignore_unsupported_input_types=True)
+        replayer = control_flow.Replayer(prefix_dag)
+        log.debug("Replaying prefix")
         replayer.simulate(simulation)
 
         # Directly after the last input has been injected, flush the internal
@@ -269,6 +274,7 @@ class EventDag(object):
         # Now sit tight for wait_seconds
         wait_seconds = event2wait_time[current_input]
         # Note that this is the monkey patched version of time.sleep
+        log.debug("peek()'ing for %f seconds" % wait_seconds)
         time.sleep(wait_seconds)
 
         # Now turn off those listeners
@@ -298,6 +304,9 @@ class EventDag(object):
           # current_input by itself
           return [current_input]
 
+        log.debug("Matching fingerprints")
+        log.debug("Expected: %s" % str(expected_internal_events))
+        log.debug("Inferred: %s" % str(newly_inferred_events))
         newly_inferred_events = match_fingerprints(newly_inferred_events)
 
       # Update the trie for this prefix
