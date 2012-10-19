@@ -139,7 +139,7 @@ class SwitchFailure(InputEvent):
 
   @property
   def fingerprint(self):
-    return (self.dpid,)
+    return (self.__class__.__name__,self.dpid,)
 
 class SwitchRecovery(InputEvent):
   def __init__(self, dpid, label=None, time=None):
@@ -160,7 +160,7 @@ class SwitchRecovery(InputEvent):
 
   @property
   def fingerprint(self):
-    return (self.dpid,)
+    return (self.__class__.__name__,self.dpid,)
 
 def get_link(link_event, simulation):
   start_software_switch = simulation.topology.get_switch(link_event.start_dpid)
@@ -197,7 +197,8 @@ class LinkFailure(InputEvent):
 
   @property
   def fingerprint(self):
-    return (self.start_dpid, self.start_port_no,
+    return (self.__class__.__name__,
+            self.start_dpid, self.start_port_no,
             self.end_dpid, self.end_port_no)
 
 class LinkRecovery(InputEvent):
@@ -228,7 +229,8 @@ class LinkRecovery(InputEvent):
 
   @property
   def fingerprint(self):
-    return (self.start_dpid, self.start_port_no,
+    return (self.__class__.__name__,
+            self.start_dpid, self.start_port_no,
             self.end_dpid, self.end_port_no)
 
 class ControllerFailure(InputEvent):
@@ -251,7 +253,7 @@ class ControllerFailure(InputEvent):
 
   @property
   def fingerprint(self):
-    return self.controller_id
+    return (self.__class__.__name__,self.controller_id)
 
 class ControllerRecovery(InputEvent):
   def __init__(self, controller_id, label=None, time=None):
@@ -273,7 +275,7 @@ class ControllerRecovery(InputEvent):
 
   @property
   def fingerprint(self):
-    return self.controller_id
+    return (self.__class__.__name__,self.controller_id)
 
 class HostMigration(InputEvent):
   def __init__(self, old_ingress_dpid, old_ingress_port_no,
@@ -404,7 +406,8 @@ class ControlChannelBlock(InputEvent):
 
   @property
   def fingerprint(self):
-    return (self.dpid, self.controller_id)
+    return (self.__class__.__name__,
+            self.dpid, self.controller_id)
 
   @staticmethod
   def from_json(json_hash):
@@ -430,7 +433,8 @@ class ControlChannelUnblock(InputEvent):
 
   @property
   def fingerprint(self):
-    return (self.dpid, self.controller_id)
+    return (self.__class__.__name__,
+            self.dpid, self.controller_id)
 
   @staticmethod
   def from_json(json_hash):
@@ -459,14 +463,15 @@ class DataplaneDrop(InputEvent):
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
-    fingerprint = DPFingerprint(json_hash['fingerprint'])
+    fingerprint = (self.__class__.__name__,
+                   DPFingerprint(json_hash['fingerprint']))
     return DataplaneDrop(fingerprint, label=label, time=time)
 
 class DataplanePermit(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplanePermit, self).__init__(label=label, time=time)
     if type(fingerprint) == dict:
-      fingerprint = DPFingerprint(fingerprint)
+      fingerprint = (self.__class__.__name__, DPFingerprint(fingerprint))
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
@@ -480,7 +485,7 @@ class DataplanePermit(InputEvent):
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
-    fingerprint = DPFingerprint(json_hash['fingerprint'])
+    fingerprint = (self.__class__.__name__, DPFingerprint(json_hash['fingerprint']))
     return DataplanePermit(fingerprint, label=label, time=time)
 
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
@@ -522,7 +527,8 @@ class ControlMessageReceive(InternalEvent):
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
     dpid = json_hash['dpid']
     controller_id = tuple(json_hash['controller_id'])
-    fingerprint = OFFingerprint(json_hash['fingerprint'])
+    fingerprint = (self.__class__.__name__,
+                   OFFingerprint(json_hash['fingerprint']))
     return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time)
 
 # TODO(cs): move me?
@@ -559,7 +565,7 @@ class ControllerStateChange(InternalEvent):
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint',
                         'name', 'value')
     controller_id = tuple(json_hash['controller_id'])
-    fingerprint = json_hash['fingerprint']
+    fingerprint = (self.__class__.__name__,json_hash['fingerprint'])
     name = json_hash['name']
     value = json_hash['value']
     return ControllerStateChange(controller_id, fingerprint, name, value, label=label, time=time)
