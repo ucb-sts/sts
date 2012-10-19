@@ -70,7 +70,6 @@ class EventDag(object):
   def filter_unsupported_input_types(self):
     self._events_list = [ e for e in self._events_list
                           if type(e) not in self._ignored_input_types ]
-    log.debug("Events list after filtering: %s" % str(self._events_list))
 
   @property
   def events(self):
