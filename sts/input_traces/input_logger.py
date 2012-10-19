@@ -49,6 +49,8 @@ class InputLogger(object):
       self.dp_events.append(dp_event)
 
   def close(self, simulation):
+    # First, insert a WaitTime, in case there was a controller crash
+    self.log_input_event(WaitTime(1.0))
     # Flush the json input log
     self.output.close()
 
