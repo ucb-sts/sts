@@ -235,7 +235,7 @@ class EventDag(object):
         # Now actually do the peek()'ing! First replay the prefix
         # plus the next input
         prefix_dag = EventDag(inferred_events + [current_input])
-        replayer = control_flow.Replayer(prefix_dag)
+        replayer = sts.control_flow.Replayer(prefix_dag)
         log.debug("Replaying prefix")
         replayer.simulate(simulation)
 
@@ -275,7 +275,7 @@ class EventDag(object):
                                                state_change.value)
           newly_inferred_events.append(replay_event)
 
-        simulation.controller_sync_callback.addListener(control_flow.StateChange,
+        simulation.controller_sync_callback.addListener(sts.control_flow.StateChange,
                                                         state_change_pass_through)
 
         # Now sit tight for wait_seconds
