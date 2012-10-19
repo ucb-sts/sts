@@ -28,7 +28,7 @@ class ControllerManager(object):
     return self.uuid2controller[uuid]
 
   def kill_all(self):
-    for c in self.controllers:
+    for c in self.live_controllers:
       c.kill()
     self.uuid2controller = {}
 
