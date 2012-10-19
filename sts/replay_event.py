@@ -458,6 +458,8 @@ class DataplaneDrop(InputEvent):
 class DataplanePermit(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplanePermit, self).__init__(label=label, time=time)
+    if type(fingerprint) == dict:
+      fingerprint = DPFingerprint(fingerprint)
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
@@ -493,6 +495,9 @@ class ControlMessageReceive(InternalEvent):
     super(ControlMessageReceive, self).__init__(label=label, time=time)
     self.dpid = dpid
     self.controller_id = controller_id
+    if type(fingerprint) == dict:
+      fingerprint = OFFingerprint(fingerprint)
+
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
