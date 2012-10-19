@@ -115,6 +115,7 @@ class MCSFinder(Replayer):
       self.log.warn("Unable to reproduce correctness violation!")
       sys.exit(5)
 
+    self.log.info("Violation reproduced succesfully! Proceeding with pruning")
     # Now start pruning
     mcs = []
     # TODO(cs): perhaps we should implement the full-blown delta-debugging
