@@ -23,34 +23,26 @@ class EventDag(object):
   # For now, we're ignoring these input types, since their dependencies with
   # other inputs are too complicated to model
   # TODO(cs): model these!
-  _ignored_input_types = set([DataplaneDrop, DataplanePermit, HostMigration])
+  _ignored_input_types = set([DataplaneDrop, DataplanePermit, HostMigration,
+                              WaitTime, CheckInvariants])
 
   '''A collection of Event objects. EventDags are primarily used to present a
   view of the underlying events with some subset of the input events pruned
   '''
   def __init__(self, events, is_view=False, prefix_trie=None,
-               label2event=None, ignore_unsupported_input_types=False,
-               mark_invalid_input_sequences=False):
+               label2event=None):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
-    if ignore_unsupported_input_types:
-      self._events_list = [ e for e in events
-                            if type(e) not in self._ignored_input_types ]
-    else:
-      self._events_list = events
+    self._events_list = events
     self._events_set = set(self._events_list)
     self._populate_indices(label2event)
 
-    # Fill in domain knowledge about valid input
-    # sequences (e.g. don't prune failure without pruning recovery.)
-    # Only do so if this isn't a view of a previously computed DAG
     # TODO(cs): there is probably a cleaner way to implement views
-    if not is_view and mark_invalid_input_sequences:
+    if not is_view:
       try:
         import pytrie
       except ImportError:
         raise RuntimeError("Need to install pytrie: `sudo pip install pytrie`")
-      self._mark_invalid_input_sequences()
       prefix_trie = pytrie.Trie()
     # The prefix trie stores lists of input events as keys,
     # and lists of both input and internal events as values
@@ -74,6 +66,11 @@ class EventDag(object):
       }
     else:
       self._label2event = label2event
+
+  def filter_unsupported_input_types(self):
+    self._events_list = [ e for e in self._events_list
+                          if type(e) not in self._ignored_input_types ]
+    log.debug("Events list after filtering: %s" % str(self._events_list))
 
   @property
   def events(self):
@@ -338,7 +335,11 @@ class EventDag(object):
     self._events_list = inferred_events
     self._populate_indices(self._label2event)
 
-  def _mark_invalid_input_sequences(self):
+  def mark_invalid_input_sequences(self):
+    '''Fill in domain knowledge about valid input
+    sequences (e.g. don't prune failure without pruning recovery.)
+    Only do so if this isn't a view of a previously computed DAG'''
+
     # Note: we treat each failure/recovery pair atomically, since it doesn't
     # make much sense to prune recovery events. Also note that that we will
     # never see two failures (for a particular node) in a row without an

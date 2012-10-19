@@ -46,16 +46,13 @@ class Replayer(ControlFlow):
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
   '''
-  def __init__(self, superlog_path_or_dag, ignore_unsupported_input_types=False,
-               mark_invalid_input_sequences=False):
+  def __init__(self, superlog_path_or_dag):
     ControlFlow.__init__(self, ReplaySyncCallback(self.get_interpolated_time))
     if type(superlog_path_or_dag) == str:
       superlog_path = superlog_path_or_dag
       # The dag is codefied as a list, where each element has
       # a list of its dependents
-      self.dag = EventDag(superlog_parser.parse_path(superlog_path),
-                          ignore_unsupported_input_types=ignore_unsupported_input_types,
-                          mark_invalid_input_sequences=mark_invalid_input_sequences)
+      self.dag = EventDag(superlog_parser.parse_path(superlog_path))
     else:
       self.dag = superlog_path_or_dag
     # compute interpolate to time to be just before first event
@@ -102,9 +99,7 @@ class Replayer(ControlFlow):
 class MCSFinder(Replayer):
   def __init__(self, superlog_path,
                invariant_check=InvariantChecker.check_correspondence):
-    super(MCSFinder, self).__init__(superlog_path,
-                                    ignore_unsupported_input_types=True,
-                                    mark_invalid_input_sequences=True)
+    super(MCSFinder, self).__init__(superlog_path)
     self.invariant_check = invariant_check
     self.log = logging.getLogger("mcs_finder")
 
@@ -119,6 +114,8 @@ class MCSFinder(Replayer):
 
     self.log.info("Violation reproduced successfully! Proceeding with pruning")
     # Now start pruning
+    self.dag.mark_invalid_input_sequences()
+    self.dag.filter_unsupported_input_types()
     mcs = []
     # TODO(cs): perhaps we should implement the full-blown delta-debugging
     # algorithm? See http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf,
