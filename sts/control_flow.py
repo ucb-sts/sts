@@ -577,6 +577,31 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     self._pending_state_changes = Counter()
     self.log = logging.getLogger("synccallback")
 
+  def _pass_through_handler(self, state_change_event):
+    state_change = state_change_event.pending_state_change
+    # Pass through
+    self.gc_pending_state_change(state_change)
+    # Record
+    replay_event = ControllerStateChange(state_change.controller_id,
+                                         state_change.time,
+                                         state_change.fingerprint,
+                                         state_change.name,
+                                         state_change.value)
+    self.passed_through_events.append(replay_event)
+
+  def set_pass_through(self):
+    '''Cause all pending state changes to pass through without being buffered'''
+    self.passed_through_events = []
+    self.addListener(StateChange, self._pass_through_handler)
+
+  def unset_pass_through(self):
+    '''Unset pass through mode, and return any events that were passed through
+    since pass through mode was set'''
+    self.removeListener(self._pass_through_handler)
+    passed_events = self.passed_through_events
+    self.passed_through_events = []
+    return passed_events
+
   def flush(self):
     ''' Remove any pending state changes '''
     num_pending_state_changes = len(self._pending_state_changes)

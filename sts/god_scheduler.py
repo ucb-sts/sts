@@ -1,5 +1,6 @@
 from collections import defaultdict, namedtuple
 from sts.input_traces.fingerprints import *
+from sts.replay_event import ControlMessageReceive
 from pox.lib.revent import Event, EventMixin
 import logging
 log = logging.getLogger("god_scheduler")
@@ -25,6 +26,31 @@ class GodScheduler(EventMixin):
     # { pending receive -> [(connection, pending ofp)_1, (connection, pending ofp)_2, ...] }
     # TODO(cs): garbage collect me
     self.pendingreceive2conn_messages = defaultdict(list)
+
+  def _pass_through_handler(self, receipt_event):
+    ''' Handler for pass-through mode '''
+    pending_receipt = receipt_event.pending_receipt
+    # Pass through
+    self.schedule(pending_receipt)
+    # Record
+    replay_event = ControlMessageReceive(pending_receipt.dpid,
+                                         pending_receipt.controller_id,
+                                         pending_receipt.fingerprint.to_dict())
+    self.passed_through_events.append(replay_event)
+
+  def set_pass_through(self):
+    ''' Cause all message receipts to pass through immediately without being
+    buffered'''
+    self.passed_through_events = []
+    self.addListener(MessageReceipt, self._pass_through_handler)
+
+  def unset_pass_through(self):
+    '''Unset pass through mode, and return any events that were passed through
+    since pass through mode was set'''
+    self.removeListener(self._pass_through_handler)
+    passed_events = self.passed_through_events
+    self.passed_through_events = []
+    return passed_events
 
   def message_waiting(self, pending_receipt):
     '''

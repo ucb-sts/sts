@@ -264,35 +264,9 @@ class EventDag(object):
 
         # Now set all internal event buffers (GodScheduler for
         # ControlMessageReceives and ReplaySyncCallback for state changes)
-        # to "pass through + record" by defining event handlers
-        newly_inferred_events = []
-        def receipt_pass_through(receipt_event):
-          pending_receipt = receipt_event.pending_receipt
-          # Pass through
-          simulation.god_scheduler.schedule(pending_receipt)
-          # Record
-          replay_event = ControlMessageReceive(pending_receipt.dpid,
-                                               pending_receipt.controller_id,
-                                               pending_receipt.fingerprint.to_dict())
-          newly_inferred_events.append(replay_event)
-
-        simulation.god_scheduler.addListener(MessageReceipt,
-                                             receipt_pass_through)
-
-        def state_change_pass_through(state_change_event):
-          state_change = state_change_event.pending_state_change
-          # Pass through
-          simulation.controller_sync_callback.gc_pending_state_change(state_change)
-          # Record
-          replay_event = ControllerStateChange(state_change.controller_id,
-                                               state_change.time,
-                                               state_change.fingerprint,
-                                               state_change.name,
-                                               state_change.value)
-          newly_inferred_events.append(replay_event)
-
-        simulation.controller_sync_callback.addListener(sts.control_flow.StateChange,
-                                                        state_change_pass_through)
+        # to "pass through + record"
+        simulation.god_scheduler.set_pass_through()
+        simulation.controller_sync_callback.set_pass_through()
 
         # Now sit tight for wait_seconds
         wait_seconds = event2wait_time[current_input]
@@ -300,9 +274,10 @@ class EventDag(object):
         log.debug("peek()'ing for %f seconds" % wait_seconds)
         time.sleep(wait_seconds)
 
-        # Now turn off those listeners
-        simulation.god_scheduler.removeListener(receipt_pass_through)
-        simulation.controller_sync_callback.removeListener(state_change_pass_through)
+        # Now turn off those pass-through and grab the inferred events
+        newly_inferred_events = []
+        newly_inferred_events += simulation.god_scheduler.unset_pass_through()
+        newly_inferred_events += simulation.controller_sync_callback.unset_pass_through()
 
         # Finally, insert current_input into the appropriate place in
         # inferred_events (and ignore internal events that come afterward)
