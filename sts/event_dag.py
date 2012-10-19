@@ -169,10 +169,10 @@ class EventDag(object):
       for i in xrange(0, len(input_events)-1):
         current_input = input_events[i]
         next_input = input_events[i+1]
-        wait_time = next_input.time.as_float() + self._peek_seconds
+        wait_time = (next_input.time.as_float() - current_input.time.as_float()) + self._peek_seconds
         event2wait_time[current_input] = wait_time
       # For the last event, we wait until the last internal event
-      last_wait_time = self._events_list[-1].time.as_float() + self._peek_seconds
+      last_wait_time = (self._events_list[-1].time.as_float() - input_events[-1].time.as_float()) + self._peek_seconds
       event2wait_time[input_events[-1]] = last_wait_time
       return event2wait_time
 
