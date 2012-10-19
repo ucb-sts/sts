@@ -1,6 +1,6 @@
 from collections import defaultdict, namedtuple
 from sts.input_traces.fingerprints import *
-from sts.replay_event import ControlMessageReceive
+import sts.replay_event
 from pox.lib.revent import Event, EventMixin
 import logging
 log = logging.getLogger("god_scheduler")
@@ -33,9 +33,9 @@ class GodScheduler(EventMixin):
     # Pass through
     self.schedule(pending_receipt)
     # Record
-    replay_event = ControlMessageReceive(pending_receipt.dpid,
-                                         pending_receipt.controller_id,
-                                         pending_receipt.fingerprint.to_dict())
+    replay_event = sts.replay_event.ControlMessageReceive(pending_receipt.dpid,
+                                                          pending_receipt.controller_id,
+                                                          pending_receipt.fingerprint.to_dict())
     self.passed_through_events.append(replay_event)
 
   def set_pass_through(self):
