@@ -239,7 +239,7 @@ class EventDag(object):
           simulation.patch_panel.permit_dp_event(event)
         def post_bootstrap_hook():
           simulation.patch_panel.addListener(DpPacketOut,
-                                                  pass_through_packets)
+                                             pass_through_packets)
         # Now replay the prefix plus the next input
         prefix_dag = EventDag(inferred_events + [current_input])
         replayer = sts.control_flow.Replayer(prefix_dag)
