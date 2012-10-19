@@ -32,14 +32,14 @@ class EventDag(object):
   view of the underlying events with some subset of the input events pruned
   '''
   def __init__(self, events, is_view=False, prefix_trie=None,
-               label2event=None, waittime=0.05, maxrounds=None):
+               label2event=None, wait_time=0.05, max_rounds=None):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
-    self.waittime=waittime
-    if type(maxrounds) == int:
-      self.maxrounds = maxrounds
+    self.wait_time=wait_time
+    if type(max_rounds) == int:
+      self.max_rounds = max_rounds
     else:
-      self.maxrounds = maxint
+      self.max_rounds = maxint
 
     self._events_list = events
     self._events_set = set(self._events_list)
@@ -88,7 +88,7 @@ class EventDag(object):
   def event_watchers(self):
     '''Return a generator of the EventWatchers in the DAG'''
     for e in self._events_list:
-      yield EventWatcher(e, waittime=self.waittime, maxrounds=self.maxrounds)
+      yield EventWatcher(e, wait_time=self.wait_time, max_rounds=self.max_rounds)
 
   def _remove_event(self, event):
     ''' Recursively remove the event and its dependents '''
@@ -127,7 +127,7 @@ class EventDag(object):
     dag = EventDag(list(self._events_list), is_view=True,
                    prefix_trie=self._prefix_trie,
                    label2event=self._label2event,
-                   waittime=self.waittime, maxrounds=self.maxrounds)
+                   wait_time=self.wait_time, max_rounds=self.max_rounds)
     # TODO(cs): potentially some redundant computation here
     dag.remove_events(ignored_portion, simulation)
     return dag
@@ -249,8 +249,8 @@ class EventDag(object):
                                              pass_through_packets)
         # Now replay the prefix plus the next input
         prefix_dag = EventDag(inferred_events + [current_input],
-                              waittime=self.waittime,
-                              maxrounds=self.maxrounds)
+                              wait_time=self.wait_time,
+                              max_rounds=self.max_rounds)
         replayer = sts.control_flow.Replayer(prefix_dag)
         log.debug("Replaying prefix")
         replayer.simulate(simulation, post_bootstrap_hook=post_bootstrap_hook)
@@ -410,20 +410,20 @@ class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either
   InternalEvents or ExternalEvents to perform pre and post functionality.'''
 
-  kwargs = set(['waittime', 'maxrounds'])
+  kwargs = set(['wait_time', 'max_rounds'])
 
-  def __init__(self, event, waittime, maxrounds):
-    assert(maxrounds > 0 and waittime > 0)
-    self.waittime = waittime
-    self.maxrounds = maxrounds
+  def __init__(self, event, wait_time, max_rounds):
+    assert(max_rounds > 0 and wait_time > 0)
+    self.wait_time = wait_time
+    self.max_rounds = max_rounds
     self.event = event
 
   def run(self, simulation):
     self._pre()
     round = 0
 
-    while round < self.maxrounds and not self.event.proceed(simulation):
-      time.sleep(self.waittime)
+    while round < self.max_rounds and not self.event.proceed(simulation):
+      time.sleep(self.wait_time)
       log.debug(".")
 
     self._post(round)
@@ -432,7 +432,7 @@ class EventWatcher(object):
     log.debug("Executing %s" % str(self.event))
 
   def _post(self, round):
-    if round < self.maxrounds:
+    if round < self.max_rounds:
       log.debug("Finished Executing %s" % str(self.event))
     else:
       log.warn("Timing out waiting for Event %s" % str(self.event))

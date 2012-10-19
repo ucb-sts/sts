@@ -45,8 +45,12 @@ class Replayer(ControlFlow):
 
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
+
+  To set the wait_time and max_rounds, pass them as keyword args to the
+  constructor of this class, which will pass them on to the EventDay object it creates.
   '''
   def __init__(self, superlog_path_or_dag, **kwargs):
+    import pdb; pdb.set_trace()
     ControlFlow.__init__(self, ReplaySyncCallback(self.get_interpolated_time))
     if type(superlog_path_or_dag) == str:
       superlog_path = superlog_path_or_dag
@@ -99,8 +103,8 @@ class Replayer(ControlFlow):
 
 class MCSFinder(Replayer):
   def __init__(self, superlog_path,
-               invariant_check=InvariantChecker.check_correspondence):
-    super(MCSFinder, self).__init__(superlog_path)
+               invariant_check=InvariantChecker.check_correspondence, **kwargs):
+    super(MCSFinder, self).__init__(superlog_path, **kwargs)
     self.invariant_check = invariant_check
     self.log = logging.getLogger("mcs_finder")
 
