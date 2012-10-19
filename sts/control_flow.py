@@ -147,7 +147,7 @@ class MCSFinder(Replayer):
     split_ways = 2
     while split_ways <= len(self.dag):
       self.log.debug("Splitting in %d" % split_ways)
-      ignored_portions = self.dag.split(split_ways)
+      ignored_portions = self.dag.split_inputs(split_ways)
       for i, ignored_portion in enumerate(ignored_portions):
         # Note that ignore_portion() invokes peek()
         new_dag = self.dag.ignore_portion(ignored_portion, self.simulation)

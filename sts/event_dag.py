@@ -56,10 +56,10 @@ class EventDag(object):
     self._prefix_trie = prefix_trie
 
   def _populate_indices(self, label2event):
-    self._event_to_index = {
-      e : i
-      for i, e in enumerate(self._events_list)
-    }
+    #self._event_to_index = {
+    #  e : i
+    #  for i, e in enumerate(self._events_list)
+    #}
     # Optimization: only compute label2event once (at the first unpruned
     # initialization)
     # TODO(cs): need to ensure that newly added events get labeled
@@ -178,7 +178,7 @@ class EventDag(object):
     # Also compute the internal events that we expect for each interval between
     # input events
     def get_expected_internal_events(input_events):
-      input_to_exected_events = {}
+      input_to_expected_events = {}
       for i in xrange(0, len(input_events)-1):
         # Infer the internal events that we expect
         current_input = input_events[i]
@@ -193,7 +193,7 @@ class EventDag(object):
       last_input = input_events[-1]
       last_input_idx = self._event_to_index[last_input]
       input_to_expected_events[last_input] = self._events_list[last_input_idx:]
-      return input_to_exected_events
+      return input_to_expected_events
 
     log.debug("Computing expected internal events")
     input_to_expected_events = get_expected_internal_events(input_events)
@@ -346,6 +346,9 @@ class EventDag(object):
       #elif type(event) in self._ignored_input_types:
       #  raise RuntimeError("No support for %s dependencies" %
       #                      type(event).__name__)
+
+  def __len__(self):
+    return len(self._events_list)
 
 class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either
