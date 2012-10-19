@@ -13,7 +13,7 @@ class EventDag(object):
   # event
   # TODO(cs): be smarter about this -- peek() too far, and peek()'ing not far
   # enough can both have negative consequences
-  _peek_seconds = 1.0
+  _peek_seconds = 0.5
   # If we prune a failure, make sure that the subsequent
   # recovery doesn't occur
   _failure_types = set([SwitchFailure, LinkFailure, ControllerFailure, ControlChannelBlock])
