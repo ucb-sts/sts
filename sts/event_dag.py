@@ -37,6 +37,7 @@ class EventDag(object):
                             if type(e) not in self._ignored_input_types ]
     else:
       self._events_list = events
+    self._events_set = set(self._events_list)
     self._populate_indices(label2event)
 
     # Fill in domain knowledge about valid input
@@ -85,18 +86,20 @@ class EventDag(object):
 
   def _remove_event(self, event):
     ''' Recursively remove the event and its dependents '''
-    if event in self._event_to_index:
-      list_idx = self._event_to_index[event]
-      del self._event_to_index[event]
-      self._event_list.pop(list_idx)
+    if event in self._events_set:
+      # TODO(cs): This shifts other indices and screws up self._event_to_index!
+      #list_idx = self._event_to_index[event]
+      #del self._event_to_index[event]
+      #self._events_list.pop(list_idx)
+      self._events_list.remove(event)
+      self._events_set.remove(event)
 
     # Note that dependent_labels only contains dependencies between input
     # events. We run peek() to infer dependencies with internal events
     for label in event.dependent_labels:
       if label in self._label2event:
         dependent_event = self._label2event[label]
-        if dependent_event in self._event_to_index:
-          self._remove_event(dependent_event)
+        self._remove_event(dependent_event)
 
   def remove_events(self, ignored_portion, simulation):
     ''' Mutate the DAG: remove all input events in ignored_inputs,
@@ -182,16 +185,17 @@ class EventDag(object):
       for i in xrange(0, len(input_events)-1):
         # Infer the internal events that we expect
         current_input = input_events[i]
-        current_input_idx = self._event_to_index[current_input]
+        # TODO(cs): ineffient
+        current_input_idx = self._events_list.index(current_input)
         next_input = input_events[i+1]
-        next_input_idx = self._event_to_index[next_input]
+        next_input_idx = self._events_list.index(next_input)
         expected_internal_events = \
                 self._events_list[current_input_idx+1:next_input_idx]
         input_to_expected_events[current_input] = expected_internal_events
       # The last input's expected internal events are anything that follow it
       # in the log.
       last_input = input_events[-1]
-      last_input_idx = self._event_to_index[last_input]
+      last_input_idx = self._events_list.index(last_input)
       input_to_expected_events[last_input] = self._events_list[last_input_idx:]
       return input_to_expected_events
 
