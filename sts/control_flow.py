@@ -146,7 +146,7 @@ class MCSFinder(Replayer):
 
     split_ways = 2
     while split_ways <= len(self.dag):
-      self.log.info("Splitting in %d" % split_ways)
+      self.log.debug("Splitting in %d" % split_ways)
       ignored_portions = self.dag.split(split_ways)
       for i, ignored_portion in enumerate(ignored_portions):
         # Note that ignore_portion() invokes peek()
@@ -158,14 +158,14 @@ class MCSFinder(Replayer):
         if violations == []:
           # No violation!
           # If singleton, this must be part of the MCS
-          self.log.info("No violation..")
+          self.log.debug("No violation..")
           if len(ignored_portion) == 1:
-            self.log.info("Pruning singleton %s" % str(ignored_portion[0]))
+            self.log.debug("Pruning singleton %s" % str(ignored_portion[0]))
             mcs.append(ignored_portion[0])
         else:
           # Violation in the non-pruned half.
           # Prune the ignored portion (including all of its dependents)
-          self.log.info("Violation! Pruning %d'th portion" % i)
+          self.log.debug("Violation! Pruning %d'th portion" % i)
           self.dag.remove_events(ignored_portion, self.simulation)
           # Break out of `for ignore_portion`
           split_ways = 2
