@@ -29,22 +29,20 @@ class Event(object):
   # Create unique labels for events
   _label_gen = itertools.count(1)
   # Ensure globally unique labels
-  _all_labels = set()
+  _all_label_ids = set()
 
-  def __init__(self, label=None, time=None, dependent_labels=None):
-    if label is None or label == 'i' or label == 'e':
-      if label is None:
-        prefix = 'e'
-      else:
-        prefix = label
-      label = prefix + str(Event._label_gen.next())
-      while label in Event._all_labels:
-        label = prefix + str(Event._label_gen.next())
+  def __init__(self, prefix="e", label=None, time=None, dependent_labels=None):
+    if label is None:
+      label_id = Event._label_gen.next()
+      label = prefix + str(label_id)
+      while label_id in Event._all_label_ids:
+        label_id = Event._label_gen.next()
+        label = prefix + str(label_id)
     if time is None:
       # TODO(cs): compress time for interactive mode?
       time = SyncTime.now()
     self.label = label
-    Event._all_labels.add(label)
+    Event._all_label_ids.add(int(label[1:]))
     self.time = time
     # Add on dependent labels to appease log_processing.superlog_parser.
     # TODO(cs): Replayer shouldn't depend on superlog_parser
@@ -84,9 +82,7 @@ class InternalEvent(Event):
   simulation. Derivatives of this class verify that the internal event has
   occured in its proceed method before it returns.'''
   def __init__(self, label=None, time=None):
-    if label is None:
-      label = 'i'
-    super(InternalEvent, self).__init__(label=label, time=time)
+    super(InternalEvent, self).__init__(prefix='i', label=label, time=time)
 
   def proceed(self, simulation):
     # There might be nothing happening for certain internal events, so default
@@ -104,9 +100,7 @@ class InputEvent(Event):
   events', which is a term that may be used elsewhere in documentation or
   code.'''
   def __init__(self, label=None, time=None, dependent_labels=None):
-    if label is None:
-      label = 'e'
-    super(InputEvent, self).__init__(label=label, time=time,
+    super(InputEvent, self).__init__(prefix='e', label=label, time=time,
                                      dependent_labels=dependent_labels)
 
 # --------------------------------- #
