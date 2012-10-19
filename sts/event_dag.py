@@ -322,6 +322,7 @@ class EventDag(object):
         log.debug("Expected: %s" % str(expected_internal_events))
         log.debug("Inferred: %s" % str(newly_inferred_events))
         newly_inferred_events = match_fingerprints(newly_inferred_events)
+        log.debug("Matched events: %s" % str(newly_inferred_events))
 
       # Update the trie for this prefix
       current_input_prefix.append(current_input)
