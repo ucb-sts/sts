@@ -10,7 +10,6 @@ from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
 
 class EventDag(object):
-
   # We peek ahead this many seconds after the timestamp of the subseqeunt
   # event
   # TODO(cs): be smarter about this -- peek() too far, and peek()'ing not far
@@ -367,18 +366,19 @@ class EventDag(object):
     # NOTE: mutates self._events
     for event in self._events_list:
       # Skip over the class name
-      fingerprint = event.fingerprint[1:]
-      if type(event) in self._failure_types:
-        # Insert it into the previous failure hash
-        fingerprint2previousfailure[fingerprint] = event
-      elif type(event) in self._recovery_types:
-        # Check if there were any failure predecessors
-        if fingerprint in fingerprint2previousfailure:
-          failure = fingerprint2previousfailure[fingerprint]
-          failure.dependent_labels.append(event.label)
-      #elif type(event) in self._ignored_input_types:
-      #  raise RuntimeError("No support for %s dependencies" %
-      #                      type(event).__name__)
+      if hasattr(event, 'fingerprint'):
+        fingerprint = event.fingerprint[1:]
+        if type(event) in self._failure_types:
+          # Insert it into the previous failure hash
+          fingerprint2previousfailure[fingerprint] = event
+        elif type(event) in self._recovery_types:
+          # Check if there were any failure predecessors
+          if fingerprint in fingerprint2previousfailure:
+            failure = fingerprint2previousfailure[fingerprint]
+            failure.dependent_labels.append(event.label)
+        #elif type(event) in self._ignored_input_types:
+        #  raise RuntimeError("No support for %s dependencies" %
+        #                      type(event).__name__)
 
   def __len__(self):
     return len(self._events_list)
