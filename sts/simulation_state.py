@@ -125,7 +125,8 @@ class Simulation (object):
     # Set to pass-through during bootstrap, so that switch initialization
     # messages don't get buffered
     self.god_scheduler.set_pass_through()
-    self.controller_sync_callback.set_pass_through()
+    if hasattr(self.controller_sync_callback, "set_pass_through"):
+      self.controller_sync_callback.set_pass_through()
 
     if self._dataplane_trace_path is not None:
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
