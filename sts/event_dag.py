@@ -9,6 +9,105 @@ from sys import maxint
 from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
 
+def get_expected_internal_events(input1_index, input2_index, input_events,
+                                 events_list):
+  ''' Return previously observed internal events between input1_index and
+  input2_index*
+
+  *indices of input_events, not events_list
+
+  input1_index may be before the beginning of input_events, in which
+  case we return any input events before input2
+
+  input2_index may also be past the end of input_events, in which case we return
+  all internal events following input1
+  '''
+  if input1_index < 0:
+    left_idx = 0
+  else:
+    left_sentinel = input_events[input1_index]
+    left_idx = events_list.index(left_sentinel)
+
+  if input2_index >= len(input_events):
+    right_idx = len(events_list)
+  else:
+    right_sentinel = input_events[input2_index]
+    right_idx = events_list.index(right_sentinel)
+
+  return [ i for i in events_list[left_idx:right_idx]
+             if isinstance(i, InternalEvent) ]
+
+# Note that we recompute wait times for every view, since the set of
+# inputs and intervening expected internal events changes
+def get_wait_times(input_events, events_list):
+  idxrange2wait_seconds = {}
+  for i in xrange(0, len(input_events)-1):
+    start_input = input_events[i]
+    next_input = input_events[i+1]
+    wait_time = (next_input.time.as_float() -
+                 start_input.time.as_float() + EventDag._peek_seconds)
+    idxrange2wait_seconds[(i,i+1)] = wait_time
+  # For the last event, we wait until the last internal event
+  last_wait_time = (events_list[-1].time.as_float() -
+                    input_events[-1].time.as_float() +
+                    EventDag._peek_seconds)
+  final_idx_range = (len(input_events)-1,len(input_events))
+  idxrange2wait_seconds[final_idx_range] = last_wait_time
+  return idxrange2wait_seconds
+
+# Truncate the newly inferred events based on the expected
+# predecessors of next_input+1
+# inferred_events (and ignore internal events that come afterward)
+def match_fingerprints(newly_inferred_events, expected_internal_events):
+  # Find the last internal event in expected_internal_events that
+  # matches an event in newly_inferred_events. That is the new causal
+  # parent of following_input
+  expected_internal_events.reverse()
+  inferred_fingerprints = set([e.fingerprint for e in
+                               newly_inferred_events])
+  if len(inferred_fingerprints) != len(newly_inferred_events):
+    log.warn("Overlapping fingerprints in peek() (%d unique, %d total)" %
+             (len(inferred_fingerprints),len(newly_inferred_events)))
+
+  expected_fingerprints = set([e.fingerprint
+                               for e in expected_internal_events])
+  if len(expected_fingerprints) != len(expected_internal_events):
+    log.warn("Overlapping expected fingerprints (%d unique, %d total)" %
+             (len(expected_fingerprints),len(expected_internal_events)))
+
+  for expected in expected_internal_events:
+    if expected.fingerprint in inferred_fingerprints:
+      # We've found our truncation point
+      # following_input goes after the expected internal event
+      # (we ignore all internal events that come after it)
+
+      # If there are multiple matching fingerprints, find the instance of
+      # the expected fingerprint (e.g., 2nd instance of the expected
+      # fingerprint), and match it up with the same instance
+      # of the inferred fingerprints
+      expected_internal_events = [e for e in expected_internal_events
+                                  if e.fingerprint == expected.fingerprint]
+      # 1-based indexing
+      instance_of_expected = len(expected_internal_events)
+      observed_instance = 0
+      parent_index = -1
+      for index, event in enumerate(newly_inferred_events):
+        if event.fingerprint == expected.fingerprint:
+          observed_instance += 1
+          if observed_instance == instance_of_expected:
+            parent_index = index
+            break
+
+      if parent_index == -1:
+        raise NotImplementedError('''There were fewer instances of '''
+                                  '''inferred %s fingerprint than expected %s ''' %
+                                  (str(newly_inferred_events),str(expected_internal_events)))
+      newly_inferred_events = newly_inferred_events[:parent_index+1]
+      check_for_duplicates(newly_inferred_events)
+      return newly_inferred_events
+  # Else, no expected internal event was observed.
+  return []
+
 def check_for_duplicates(events):
   if len(set(events)) != len(events):
     raise AssertionError("Duplicate inputs %s" % str(events))
@@ -175,53 +274,8 @@ class EventDag(object):
       #                and self._events_list[-1] is not None
       return
 
-    # Note that we recompute wait times for every view, since the set of
-    # inputs and intervening expected internal events changes
-    def get_wait_times(input_events):
-      idxrange2wait_seconds = {}
-      for i in xrange(0, len(input_events)-1):
-        start_input = input_events[i]
-        next_input = input_events[i+1]
-        wait_time = (next_input.time.as_float() -
-                     start_input.time.as_float() + self._peek_seconds)
-        idxrange2wait_seconds[(i,i+1)] = wait_time
-      # For the last event, we wait until the last internal event
-      last_wait_time = (self._events_list[-1].time.as_float() -
-                        input_events[-1].time.as_float() +
-                        self._peek_seconds)
-      final_idx_range = (len(input_events)-1,len(input_events))
-      idxrange2wait_seconds[final_idx_range] = last_wait_time
-      return idxrange2wait_seconds
-
     log.debug("Computing wait times")
-    idxrange2wait_seconds = get_wait_times(input_events)
-
-    def get_expected_internal_events(input1_index, input2_index, input_events):
-      ''' Return previously observed internal events between input1_index and
-      input2_index*
-
-      *indices of input_events, not self._events_list
-
-      input1_index may be before the beginning of input_events, in which
-      case we return any input events before input2
-
-      input2_index may also be past the end of input_events, in which case we return
-      all internal events following input1
-      '''
-      if input1_index < 0:
-        left_idx = 0
-      else:
-        left_sentinel = input_events[input1_index]
-        left_idx = self._events_list.index(left_sentinel)
-
-      if input2_index >= len(input_events):
-        right_idx = len(self._events_list)
-      else:
-        right_sentinel = input_events[input2_index]
-        right_idx = self._events_list.index(right_sentinel)
-
-      return [ i for i in self._events_list[left_idx:right_idx]
-                 if isinstance(i, InternalEvent) ]
+    idxrange2wait_seconds = get_wait_times(input_events, self._events_list)
 
     # Now, play the execution forward iteratively for each input event, and
     # record what internal events happen between the injection and the
@@ -261,7 +315,8 @@ class EventDag(object):
                 (inject_input_idx, following_input_idx))
       expected_internal_events = get_expected_internal_events(inject_input_idx,
                                                               following_input_idx,
-                                                              input_events)
+                                                              input_events,
+                                                              self._events_list)
       check_for_duplicates(expected_internal_events)
 
       # Optimization: if no internal events occured between this input and the
@@ -312,59 +367,6 @@ class EventDag(object):
         check_for_duplicates(newly_inferred_events)
         newly_inferred_events += simulation.controller_sync_callback.unset_pass_through()
         check_for_duplicates(newly_inferred_events)
-
-        # Finally, truncate the newly inferred events based on the expected
-        # predecessors of next_input+1
-        # inferred_events (and ignore internal events that come afterward)
-        def match_fingerprints(newly_inferred_events, expected_internal_events):
-          # Find the last internal event in expected_internal_events that
-          # matches an event in newly_inferred_events. That is the new causal
-          # parent of following_input
-          expected_internal_events.reverse()
-          inferred_fingerprints = set([e.fingerprint for e in
-                                       newly_inferred_events])
-          if len(inferred_fingerprints) != len(newly_inferred_events):
-            log.warn("Overlapping fingerprints in peek() (%d unique, %d total)" %
-                     (len(inferred_fingerprints),len(newly_inferred_events)))
-
-          expected_fingerprints = set([e.fingerprint
-                                       for e in expected_internal_events])
-          if len(expected_fingerprints) != len(expected_internal_events):
-            log.warn("Overlapping expected fingerprints (%d unique, %d total)" %
-                     (len(expected_fingerprints),len(expected_internal_events)))
-
-          for expected in expected_internal_events:
-            if expected.fingerprint in inferred_fingerprints:
-              # We've found our truncation point
-              # following_input goes after the expected internal event
-              # (we ignore all internal events that come after it)
-
-              # If there are multiple matching fingerprints, find the instance of
-              # the expected fingerprint (e.g., 2nd instance of the expected
-              # fingerprint), and match it up with the same instance
-              # of the inferred fingerprints
-              expected_internal_events = [e for e in expected_internal_events
-                                          if e.fingerprint == expected.fingerprint]
-              # 1-based indexing
-              instance_of_expected = len(expected_internal_events)
-              observed_instance = 0
-              parent_index = -1
-              for index, event in enumerate(newly_inferred_events):
-                if event.fingerprint == expected.fingerprint:
-                  observed_instance += 1
-                  if observed_instance == instance_of_expected:
-                    parent_index = index
-                    break
-
-              if parent_index == -1:
-                raise NotImplementedError('''There were fewer instances of '''
-                                          '''inferred %s fingerprint than expected %s ''' %
-                                          (str(newly_inferred_events),str(expected_internal_events)))
-              newly_inferred_events = newly_inferred_events[:parent_index+1]
-              check_for_duplicates(newly_inferred_events)
-              return newly_inferred_events
-          # Else, no expected internal event was observed.
-          return []
 
         log.debug("Matching fingerprints")
         log.debug("Expected: %s" % str(expected_internal_events))
