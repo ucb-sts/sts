@@ -133,12 +133,12 @@ class Simulation (object):
     # Connect switches to controllers
     # TODO(cs): move this into a ConnectionFactory class
     def create_connection(controller_info, switch):
-        socket = connect_socket_with_backoff(controller_info.address,
-                                             controller_info.port)
-        # Set non-blocking
-        socket.setblocking(0)
-        io_worker = DeferredIOWorker(self._io_master.create_worker_for_socket(socket))
-        return DeferredOFConnection(io_worker, switch.dpid, self.god_scheduler)
+      socket = connect_socket_with_backoff(controller_info.address,
+                                           controller_info.port)
+      # Set non-blocking
+      socket.setblocking(0)
+      io_worker = DeferredIOWorker(self._io_master.create_worker_for_socket(socket))
+      return DeferredOFConnection(io_worker, switch.dpid, self.god_scheduler)
 
     # TODO(cs): this should block until all switches have finished
     # initializing with the controller
