@@ -27,9 +27,6 @@ class EventDag(object):
   _ignored_input_types = set([DataplaneDrop, DataplanePermit, HostMigration,
                               WaitTime, CheckInvariants])
 
-  '''A collection of Event objects. EventDags are primarily used to present a
-  view of the underlying events with some subset of the input events pruned
-  '''
   def __init__(self, events, is_view=False, prefix_trie=None,
                label2event=None, wait_time=0.05, max_rounds=None):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
