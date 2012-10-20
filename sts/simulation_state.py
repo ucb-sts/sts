@@ -148,4 +148,5 @@ class Simulation (object):
 
     # Now unset pass-through mode
     self.god_scheduler.unset_pass_through()
-    self.controller_sync_callback.unset_pass_through()
+    if hasattr(self.controller_sync_callback, "unset_pass_through"):
+      self.controller_sync_callback.unset_pass_through()
