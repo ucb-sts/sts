@@ -181,8 +181,9 @@ class EventDag(object):
       last_wait_time = (self._events_list[-1].time.as_float() -
                         input_events[-1].time.as_float() +
                         self._peek_seconds)
-      idxrange2wait_seconds[(len(input_events),len(input_events)+1] = last_wait_time
-      return event2wait_time
+      final_idx_range = (len(input_events)-1,len(input_events))
+      idxrange2wait_seconds[final_idx_range] = last_wait_time
+      return idxrange2wait_seconds
 
     log.debug("Computing wait times")
     idxrange2wait_seconds = get_wait_times(input_events)
@@ -205,7 +206,7 @@ class EventDag(object):
         left_sentinel = input_events[input1_index]
         left_idx = self._events_list.index(left_sentinel)
 
-      if input2_index > len(input_events):
+      if input2_index >= len(input_events):
         right_idx = len(self._events_list)
       else:
         right_sentinel = input_events[input2_index]
@@ -256,8 +257,7 @@ class EventDag(object):
       # next, no need to peek()
       if expected_internal_events == []:
         log.debug("Optimization: no expected internal events")
-        # Only the input we've injected, no internal events following it
-        newly_inferred_events = [inject_input]
+        newly_inferred_events = []
       else:
         # Now actually do the peek()'ing!
         # First set the BufferedPatchPanel to "pass through"
@@ -288,15 +288,14 @@ class EventDag(object):
         simulation.controller_sync_callback.set_pass_through()
 
         # Now sit tight for wait_seconds
-        idx_range = (inject_input_idx,following_input,idx)
+        idx_range = (inject_input_idx,following_input_idx)
         wait_seconds = idxrange2wait_seconds[idx_range]
         # Note that this is the monkey patched version of time.sleep
         log.debug("peek()'ing for %f seconds" % wait_seconds)
         time.sleep(wait_seconds)
 
         # Now turn off those pass-through and grab the inferred events
-        # (starting with the input we injected)
-        newly_inferred_events = [inject_input]
+        newly_inferred_events = []
         newly_inferred_events += simulation.god_scheduler.unset_pass_through()
         newly_inferred_events += simulation.controller_sync_callback.unset_pass_through()
 
@@ -308,8 +307,8 @@ class EventDag(object):
           # matches an event in newly_inferred_events. That is the new causal
           # parent of following_input
           expected_internal_events.reverse()
-          inferred_fingerprints = set([e.fingerprint
-                                       for e in newly_inferred_events])
+          inferred_fingerprints = set([e.fingerprint for e in
+                                       newly_inferred_events])
           if len(inferred_fingerprints) != len(newly_inferred_events):
             log.warn("Overlapping fingerprints in peek() (%d unique, %d total)" %
                      (len(inferred_fingerprints),len(newly_inferred_events)))
@@ -349,9 +348,8 @@ class EventDag(object):
                                           (str(newly_inferred_events),str(expected_internal_events)))
               newly_inferred_events = newly_inferred_events[:parent_index+1]
               return newly_inferred_events
-          # Else, no expected internal event was observed. Only return the
-          # injected input (0th element)
-          return newly_inferred_events[0:1]
+          # Else, no expected internal event was observed.
+          return []
 
         log.debug("Matching fingerprints")
         log.debug("Expected: %s" % str(expected_internal_events))
@@ -362,7 +360,8 @@ class EventDag(object):
 
       # Update the trie for this prefix
       current_input_prefix.append(inject_input)
-      # Note that newly_inferred_events already includes current_input
+      # Make sure to prepend the input we just injected
+      inferred_events.append(inject_input)
       inferred_events += newly_inferred_events
       self._prefix_trie[current_input_prefix] = inferred_events
 
