@@ -9,7 +9,15 @@ from sys import maxint
 from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
 
+def check_for_duplicates(events):
+  if len(set(events)) != len(events):
+    raise AssertionError("Duplicate inputs %s" % str(events))
+
 class EventDag(object):
+  '''A collection of Event objects. EventDags are primarily used to present a
+  view of the underlying events with some subset of the input events pruned
+  '''
+
   # We peek ahead this many seconds after the timestamp of the subseqeunt
   # event
   # TODO(cs): be smarter about this -- peek() too far, and peek()'ing not far
@@ -47,7 +55,7 @@ class EventDag(object):
         import pytrie
       except ImportError:
         raise RuntimeError("Need to install pytrie: `sudo pip install pytrie`")
-      prefix_trie = pytrie.Trie()
+      prefix_trie = pytrie.SortedTrie()
     # The prefix trie stores lists of input events as keys,
     # and lists of both input and internal events as values
     # Note that we pass the trie around between DAG views
@@ -159,6 +167,9 @@ class EventDag(object):
     # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
     # FindMCS again?
     input_events = [ e for e in self._events_list if isinstance(e, InputEvent) ]
+    check_for_duplicates(input_events)
+    check_for_duplicates(self._events_list)
+
     if len(input_events) == 0:
       # Postcondition: input_events[-1] is not None
       #                and self._events_list[-1] is not None
@@ -220,6 +231,7 @@ class EventDag(object):
     # inferred previously (or [] if this is an entirely new prefix)
     current_input_prefix = list(self._prefix_trie\
                                 .longest_prefix(input_events, default=[]))
+    check_for_duplicates(current_input_prefix)
 
     log.debug("Current input prefix: %s" % str(current_input_prefix))
     # The value is both internal events and input events (values of the trie)
@@ -229,6 +241,7 @@ class EventDag(object):
     # input event (i.e. we assume quiescence)
     inferred_events = list(self._prefix_trie\
                            .longest_prefix_value(input_events, default=[]))
+    check_for_duplicates(inferred_events)
 
     # prefix_tail is the last input in the prefix
     if current_input_prefix == []:
@@ -249,6 +262,7 @@ class EventDag(object):
       expected_internal_events = get_expected_internal_events(inject_input_idx,
                                                               following_input_idx,
                                                               input_events)
+      check_for_duplicates(expected_internal_events)
 
       # Optimization: if no internal events occured between this input and the
       # next, no need to peek()
@@ -264,6 +278,7 @@ class EventDag(object):
           simulation.patch_panel.addListener(DpPacketOut,
                                              pass_through_packets)
         # Now replay the prefix plus the next input
+        check_for_duplicates(inferred_events + [inject_input])
         prefix_dag = EventDag(inferred_events + [inject_input],
                               wait_time=self.wait_time,
                               max_rounds=self.max_rounds)
@@ -294,7 +309,9 @@ class EventDag(object):
         # Now turn off those pass-through and grab the inferred events
         newly_inferred_events = []
         newly_inferred_events += simulation.god_scheduler.unset_pass_through()
+        check_for_duplicates(newly_inferred_events)
         newly_inferred_events += simulation.controller_sync_callback.unset_pass_through()
+        check_for_duplicates(newly_inferred_events)
 
         # Finally, truncate the newly inferred events based on the expected
         # predecessors of next_input+1
@@ -344,6 +361,7 @@ class EventDag(object):
                                           '''inferred %s fingerprint than expected %s ''' %
                                           (str(newly_inferred_events),str(expected_internal_events)))
               newly_inferred_events = newly_inferred_events[:parent_index+1]
+              check_for_duplicates(newly_inferred_events)
               return newly_inferred_events
           # Else, no expected internal event was observed.
           return []
@@ -353,13 +371,22 @@ class EventDag(object):
         log.debug("Inferred: %s" % str(newly_inferred_events))
         newly_inferred_events = match_fingerprints(newly_inferred_events,
                                                    expected_internal_events)
+        check_for_duplicates(newly_inferred_events)
         log.debug("Matched events: %s" % str(newly_inferred_events))
 
       # Update the trie for this prefix
       current_input_prefix.append(inject_input)
+      check_for_duplicates(current_input_prefix)
+      check_for_duplicates(inferred_events)
       # Make sure to prepend the input we just injected
       inferred_events.append(inject_input)
+      try:
+        check_for_duplicates(inferred_events)
+      except:
+        log.warn("prefix_tail_idx %d, len %d" % (prefix_tail_idx,len(input_events)))
+        check_for_duplicates(inferred_events)
       inferred_events += newly_inferred_events
+      check_for_duplicates(inferred_events)
       self._prefix_trie[current_input_prefix] = inferred_events
 
       prefix_tail_idx += 1
@@ -368,6 +395,7 @@ class EventDag(object):
     # present a view of ourselves that only includes the updated
     # events
     self._events_list = inferred_events
+    check_for_duplicates(self._events_list)
     self._populate_indices(self._label2event)
 
   def mark_invalid_input_sequences(self):
