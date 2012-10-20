@@ -1,6 +1,7 @@
 import os
 import time
 import logging
+from sts.replay_event import WaitTime
 import sts.dataplane_traces.trace_generator as tg
 
 config_template = '''
