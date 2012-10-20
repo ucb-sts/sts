@@ -170,43 +170,49 @@ class EventDag(object):
     # Note that we recompute wait times for every view, since the set of
     # inputs and intervening expected internal events changes
     def get_wait_times(input_events):
-      event2wait_time = {}
+      idxrange2wait_seconds = {}
       for i in xrange(0, len(input_events)-1):
-        current_input = input_events[i]
+        start_input = input_events[i]
         next_input = input_events[i+1]
-        wait_time = (next_input.time.as_float() - current_input.time.as_float()) + self._peek_seconds
-        event2wait_time[current_input] = wait_time
+        wait_time = (next_input.time.as_float() -
+                     start_input.time.as_float() + self._peek_seconds)
+        idxrange2wait_seconds[(i,i+1)] = wait_time
       # For the last event, we wait until the last internal event
-      last_wait_time = (self._events_list[-1].time.as_float() - input_events[-1].time.as_float()) + self._peek_seconds
-      event2wait_time[input_events[-1]] = last_wait_time
+      last_wait_time = (self._events_list[-1].time.as_float() -
+                        input_events[-1].time.as_float() +
+                        self._peek_seconds)
+      idxrange2wait_seconds[(len(input_events),len(input_events)+1] = last_wait_time
       return event2wait_time
 
     log.debug("Computing wait times")
-    event2wait_time = get_wait_times(input_events)
+    idxrange2wait_seconds = get_wait_times(input_events)
 
-    # Also compute the internal events that we expect for each interval between
-    # input events
-    def get_expected_internal_events(input_events):
-      input_to_expected_events = {}
-      for i in xrange(0, len(input_events)-1):
-        # Infer the internal events that we expect
-        current_input = input_events[i]
-        # TODO(cs): ineffient
-        current_input_idx = self._events_list.index(current_input)
-        next_input = input_events[i+1]
-        next_input_idx = self._events_list.index(next_input)
-        expected_internal_events = \
-                self._events_list[current_input_idx+1:next_input_idx]
-        input_to_expected_events[current_input] = expected_internal_events
-      # The last input's expected internal events are anything that follow it
-      # in the log.
-      last_input = input_events[-1]
-      last_input_idx = self._events_list.index(last_input)
-      input_to_expected_events[last_input] = self._events_list[last_input_idx:]
-      return input_to_expected_events
+    def get_expected_internal_events(input1_index, input2_index, input_events):
+      ''' Return previously observed internal events between input1_index and
+      input2_index*
 
-    log.debug("Computing expected internal events")
-    input_to_expected_events = get_expected_internal_events(input_events)
+      *indices of input_events, not self._events_list
+
+      input1_index may be before the beginning of input_events, in which
+      case we return any input events before input2
+
+      input2_index may also be past the end of input_events, in which case we return
+      all internal events following input1
+      '''
+      if input1_index < 0:
+        left_idx = 0
+      else:
+        left_sentinel = input_events[input1_index]
+        left_idx = self._events_list.index(left_sentinel)
+
+      if input2_index > len(input_events):
+        right_idx = len(self._events_list)
+      else:
+        right_sentinel = input_events[input2_index]
+        right_idx = self._events_list.index(right_sentinel)
+
+      return [ i for i in self._events_list[left_idx:right_idx]
+                 if isinstance(i, InternalEvent) ]
 
     # Now, play the execution forward iteratively for each input event, and
     # record what internal events happen between the injection and the
@@ -219,25 +225,39 @@ class EventDag(object):
 
     log.debug("Current input prefix: %s" % str(current_input_prefix))
     # The value is both internal events and input events (values of the trie)
-    # leading up to, but not including the next input following the tail of the prefix
+    # leading up, but not including the next input following the tail of the
+    # prefix.
+    # Note that we assume that there are no internal events before the first
+    # input event (i.e. we assume quiescence)
     inferred_events = list(self._prefix_trie\
                            .longest_prefix_value(input_events, default=[]))
 
-    # current_input is the next input after the tail of the prefix
+    # prefix_tail is the last input in the prefix
     if current_input_prefix == []:
-      current_input_idx = 0
+      # We start by injecting the 0th input (not included in prefix)
+      prefix_tail_idx = -1
     else:
-      current_input_idx = input_events.index(current_input_prefix[-1]) + 1
+      prefix_tail_idx = input_events.index(current_input_prefix[-1])
 
-    while current_input_idx < len(input_events):
-      log.debug("Pruning input index %d" % current_input_idx)
-      current_input = input_events[current_input_idx]
-      expected_internal_events = input_to_expected_events[current_input]
+    # While we still have inputs to inject
+    while prefix_tail_idx + 1 < len(input_events):
+      # The input we're about to inject
+      inject_input_idx = prefix_tail_idx + 1
+      inject_input = input_events[inject_input_idx]
+      # The input following the one we're going to inject
+      following_input_idx = inject_input_idx + 1
+      log.debug("peek()'ing between input %d and %d" %
+                (inject_input_idx, following_input_idx))
+      expected_internal_events = get_expected_internal_events(inject_input_idx,
+                                                              following_input_idx,
+                                                              input_events)
+
       # Optimization: if no internal events occured between this input and the
       # next, no need to peek()
       if expected_internal_events == []:
         log.debug("Optimization: no expected internal events")
-        newly_inferred_events = [current_input]
+        # Only the input we've injected, no internal events following it
+        newly_inferred_events = [inject_input]
       else:
         # Now actually do the peek()'ing!
         # First set the BufferedPatchPanel to "pass through"
@@ -247,7 +267,7 @@ class EventDag(object):
           simulation.patch_panel.addListener(DpPacketOut,
                                              pass_through_packets)
         # Now replay the prefix plus the next input
-        prefix_dag = EventDag(inferred_events + [current_input],
+        prefix_dag = EventDag(inferred_events + [inject_input],
                               wait_time=self.wait_time,
                               max_rounds=self.max_rounds)
         replayer = sts.control_flow.Replayer(prefix_dag)
@@ -268,22 +288,25 @@ class EventDag(object):
         simulation.controller_sync_callback.set_pass_through()
 
         # Now sit tight for wait_seconds
-        wait_seconds = event2wait_time[current_input]
+        idx_range = (inject_input_idx,following_input,idx)
+        wait_seconds = idxrange2wait_seconds[idx_range]
         # Note that this is the monkey patched version of time.sleep
         log.debug("peek()'ing for %f seconds" % wait_seconds)
         time.sleep(wait_seconds)
 
         # Now turn off those pass-through and grab the inferred events
-        newly_inferred_events = []
+        # (starting with the input we injected)
+        newly_inferred_events = [inject_input]
         newly_inferred_events += simulation.god_scheduler.unset_pass_through()
         newly_inferred_events += simulation.controller_sync_callback.unset_pass_through()
 
-        # Finally, insert current_input into the appropriate place in
+        # Finally, truncate the newly inferred events based on the expected
+        # predecessors of next_input+1
         # inferred_events (and ignore internal events that come afterward)
         def match_fingerprints(newly_inferred_events, expected_internal_events):
           # Find the last internal event in expected_internal_events that
           # matches an event in newly_inferred_events. That is the new causal
-          # parent of current_input
+          # parent of following_input
           expected_internal_events.reverse()
           inferred_fingerprints = set([e.fingerprint
                                        for e in newly_inferred_events])
@@ -299,9 +322,9 @@ class EventDag(object):
 
           for expected in expected_internal_events:
             if expected.fingerprint in inferred_fingerprints:
-              # We've found our insertion point.
-              # Insert the input after the expected internal event, and ignore all
-              # internal events that come after it.
+              # We've found our truncation point
+              # following_input goes after the expected internal event
+              # (we ignore all internal events that come after it)
 
               # If there are multiple matching fingerprints, find the instance of
               # the expected fingerprint (e.g., 2nd instance of the expected
@@ -325,11 +348,10 @@ class EventDag(object):
                                           '''inferred %s fingerprint than expected %s ''' %
                                           (str(newly_inferred_events),str(expected_internal_events)))
               newly_inferred_events = newly_inferred_events[:parent_index+1]
-              newly_inferred_events.append(current_input)
               return newly_inferred_events
-          # Else, no expected internal event was observed, so just insert
-          # current_input by itself
-          return [current_input]
+          # Else, no expected internal event was observed. Only return the
+          # injected input (0th element)
+          return newly_inferred_events[0:1]
 
         log.debug("Matching fingerprints")
         log.debug("Expected: %s" % str(expected_internal_events))
@@ -339,12 +361,12 @@ class EventDag(object):
         log.debug("Matched events: %s" % str(newly_inferred_events))
 
       # Update the trie for this prefix
-      current_input_prefix.append(current_input)
+      current_input_prefix.append(inject_input)
       # Note that newly_inferred_events already includes current_input
       inferred_events += newly_inferred_events
       self._prefix_trie[current_input_prefix] = inferred_events
 
-      current_input_idx += 1
+      prefix_tail_idx += 1
 
     # Now that the new execution has been inferred,
     # present a view of ourselves that only includes the updated
