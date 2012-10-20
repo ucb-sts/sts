@@ -73,6 +73,12 @@ class Event(object):
   def __str__(self):
     return self.__class__.__name__ + ":" + self.label
 
+  def __repr__(self):
+    s = self.__class__.__name__ + ":" + self.label
+    if hasattr(self, "fingerprint"):
+      s += ":" + str(self.fingerprint)
+    return s
+
 # -------------------------------------------------------- #
 # Semi-abstract classes for internal and external events   #
 # -------------------------------------------------------- #
