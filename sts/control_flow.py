@@ -175,6 +175,8 @@ class MCSFinder(Replayer):
           split_ways = 2
           break
       split_ways *= 2
+
+    msg.interactive("Final MCS: %s" % str(mcs))
     return mcs
 
 class Fuzzer(ControlFlow):
