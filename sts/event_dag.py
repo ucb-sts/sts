@@ -87,7 +87,9 @@ def match_fingerprints(newly_inferred_events, expected_internal_events):
       # of the inferred fingerprints
       expected_internal_events = [e for e in expected_internal_events
                                   if e.fingerprint == expected.fingerprint]
-      # 1-based indexing
+      # 1-based indexing of observed instances
+      # Note that we are iterating through expected_internal_events in reverse
+      # order
       instance_of_expected = len(expected_internal_events)
       observed_instance = 0
       parent_index = -1
