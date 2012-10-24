@@ -461,7 +461,7 @@ class DataplaneDrop(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplaneDrop, self).__init__(label=label, time=time)
     if type(fingerprint) == list:
-      fingerprint = tuple(fingerprint)
+      fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]))
     if type(fingerprint) == dict or type(fingerprint) != tuple:
       fingerprint = (self.__class__.__name__,DPFingerprint(fingerprint))
     self.fingerprint = fingerprint
@@ -484,7 +484,7 @@ class DataplanePermit(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplanePermit, self).__init__(label=label, time=time)
     if type(fingerprint) == list:
-      fingerprint = tuple(fingerprint)
+      fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]))
     if type(fingerprint) == dict or type(fingerprint) != tuple:
       fingerprint = (self.__class__.__name__, DPFingerprint(fingerprint))
     self.fingerprint = fingerprint
@@ -523,7 +523,7 @@ class ControlMessageReceive(InternalEvent):
     self.dpid = dpid
     self.controller_id = controller_id
     if type(fingerprint) == list:
-      fingerprint = tuple(fingerprint)
+      fingerprint = (fingerprint[0], OFFingerprint(fingerprint[1]))
     if type(fingerprint) == dict or type(fingerprint) != tuple:
       fingerprint = (self.__class__.__name__, OFFingerprint(fingerprint))
 
@@ -561,7 +561,7 @@ class ControllerStateChange(InternalEvent):
     super(ControllerStateChange, self).__init__(label=label, time=time)
     self.controller_id = controller_id
     if type(fingerprint) == list:
-      fingerprint = tuple(fingerprint)
+      fingerprint = (fingerprint[0], OFFingerprint(fingerprint[1]))
     self.fingerprint = fingerprint
     self.name = name
     self.value = value
