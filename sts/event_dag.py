@@ -58,6 +58,7 @@ def get_wait_times(input_events, events_list):
 # Truncate the newly inferred events based on the expected
 # predecessors of next_input+1
 # inferred_events (and ignore internal events that come afterward)
+# TODO(cs): perhaps these should be unordered
 def match_fingerprints(newly_inferred_events, expected_internal_events):
   # Find the last internal event in expected_internal_events that
   # matches an event in newly_inferred_events. That is the new causal
