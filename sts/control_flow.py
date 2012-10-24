@@ -13,7 +13,7 @@ from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.util.console import msg
 from sts.replay_event import *
-from sts.event_dag import EventDag, EventWatcher
+import sts.event_dag
 from sts.syncproto.sts_syncer import STSSyncCallback
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
@@ -55,8 +55,9 @@ class Replayer(ControlFlow):
       superlog_path = superlog_path_or_dag
       # The dag is codefied as a list, where each element has
       # a list of its dependents
-      event_dag_kwargs = { k: v for k,v in kwargs.items() if k in EventWatcher.kwargs }
-      self.dag = EventDag(superlog_parser.parse_path(superlog_path), **event_dag_kwargs)
+      event_dag_kwargs = { k: v for k,v in kwargs.items()
+                          if k in sts.event_dag.EventWatcher.kwargs }
+      self.dag = sts.event_dag.EventDag(superlog_parser.parse_path(superlog_path), **event_dag_kwargs)
     else:
       self.dag = superlog_path_or_dag
     # compute interpolate to time to be just before first event
