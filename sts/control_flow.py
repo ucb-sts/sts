@@ -188,7 +188,8 @@ class Fuzzer(ControlFlow):
   def __init__(self, fuzzer_params="config.fuzzer_params",
                check_interval=None, trace_interval=10, random_seed=None,
                delay=0.1, steps=None, input_logger=None,
-               invariant_check=InvariantChecker.check_correspondence):
+               invariant_check=InvariantChecker.check_correspondence,
+               halt_on_violation=False):
     ControlFlow.__init__(self, RecordingSyncCallback(input_logger))
 
     self.check_interval = check_interval
@@ -206,6 +207,7 @@ class Fuzzer(ControlFlow):
     self.params = object()
     self._load_fuzzer_params(fuzzer_params)
     self._input_logger = input_logger
+    self.halt_on_violation = halt_on_violation
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
@@ -239,7 +241,9 @@ class Fuzzer(ControlFlow):
         self.logical_time += 1
         self.trigger_events()
         msg.event("Round %d completed." % self.logical_time)
-        self.maybe_check_invariant()
+        halt = self.maybe_check_invariant()
+        if halt:
+          break
         self.maybe_inject_trace_event()
         time.sleep(self.delay)
     finally:
@@ -259,6 +263,8 @@ class Fuzzer(ControlFlow):
         if controllers_with_violations != []:
           msg.fail("The following controllers had correctness violations!: %s"
                    % str(controllers_with_violations))
+          if self.halt_on_violation:
+           return True
         else:
           msg.interactive("No correctness violations!")
       # use a non-threaded version of correspondence for now. otherwise
