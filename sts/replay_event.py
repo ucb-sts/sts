@@ -460,6 +460,8 @@ class ControlChannelUnblock(InputEvent):
 class DataplaneDrop(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplaneDrop, self).__init__(label=label, time=time)
+    if type(fingerprint) == list:
+      fingerprint = tuple(fingerprint)
     if type(fingerprint) == dict or type(fingerprint) != tuple:
       fingerprint = (self.__class__.__name__,DPFingerprint(fingerprint))
     self.fingerprint = fingerprint
@@ -475,13 +477,14 @@ class DataplaneDrop(InputEvent):
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
-    fingerprint = (DataplaneDrop.__class__.__name__,
-                   DPFingerprint(json_hash['fingerprint']))
+    fingerprint = json_hash['fingerprint']
     return DataplaneDrop(fingerprint, label=label, time=time)
 
 class DataplanePermit(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplanePermit, self).__init__(label=label, time=time)
+    if type(fingerprint) == list:
+      fingerprint = tuple(fingerprint)
     if type(fingerprint) == dict or type(fingerprint) != tuple:
       fingerprint = (self.__class__.__name__, DPFingerprint(fingerprint))
     self.fingerprint = fingerprint
@@ -497,7 +500,7 @@ class DataplanePermit(InputEvent):
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
-    fingerprint = (DataplanePermit.__class__.__name__, DPFingerprint(json_hash['fingerprint']))
+    fingerprint = json_hash['fingerprint']
     return DataplanePermit(fingerprint, label=label, time=time)
 
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
@@ -519,6 +522,8 @@ class ControlMessageReceive(InternalEvent):
     super(ControlMessageReceive, self).__init__(label=label, time=time)
     self.dpid = dpid
     self.controller_id = controller_id
+    if type(fingerprint) == list:
+      fingerprint = tuple(fingerprint)
     if type(fingerprint) == dict or type(fingerprint) != tuple:
       fingerprint = (self.__class__.__name__, OFFingerprint(fingerprint))
 
@@ -539,8 +544,7 @@ class ControlMessageReceive(InternalEvent):
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
     dpid = json_hash['dpid']
     controller_id = tuple(json_hash['controller_id'])
-    fingerprint = (ControlMessageReceive.__class__.__name__,
-                   OFFingerprint(json_hash['fingerprint']))
+    fingerprint = json_hash['fingerprint']
     return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time)
 
 # TODO(cs): move me?
@@ -556,8 +560,8 @@ class ControllerStateChange(InternalEvent):
   def __init__(self, controller_id, fingerprint, name, value, label=None, time=None):
     super(ControllerStateChange, self).__init__(label=label, time=time)
     self.controller_id = controller_id
-    if type(fingerprint) != tuple:
-      fingerprint = (self.__class__.__name__, fingerprint)
+    if type(fingerprint) == list:
+      fingerprint = tuple(fingerprint)
     self.fingerprint = fingerprint
     self.name = name
     self.value = value
@@ -579,7 +583,7 @@ class ControllerStateChange(InternalEvent):
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint',
                         'name', 'value')
     controller_id = tuple(json_hash['controller_id'])
-    fingerprint = (ControllerStateChange.__class__.__name__,json_hash['fingerprint'])
+    fingerprint = json_hash['fingerprint']
     name = json_hash['name']
     value = json_hash['value']
     return ControllerStateChange(controller_id, fingerprint, name, value, label=label, time=time)
