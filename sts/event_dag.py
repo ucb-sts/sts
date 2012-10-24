@@ -299,6 +299,7 @@ class EventDag(object):
     inferred_events = list(self._prefix_trie\
                            .longest_prefix_value(input_events, default=[]))
     check_for_duplicates(inferred_events)
+    log.debug("Current inferred_events: %s" % str(inferred_events))
 
     # prefix_tail is the last input in the prefix
     if current_input_prefix == []:
@@ -380,10 +381,12 @@ class EventDag(object):
         log.debug("Matched events: %s" % str(newly_inferred_events))
 
       # Update the trie for this prefix
+      current_input_prefix = list(current_input_prefix)
       current_input_prefix.append(inject_input)
       check_for_duplicates(current_input_prefix)
       check_for_duplicates(inferred_events)
       # Make sure to prepend the input we just injected
+      inferred_events = list(inferred_events)
       inferred_events.append(inject_input)
       try:
         check_for_duplicates(inferred_events)
