@@ -106,14 +106,68 @@ def match_fingerprints(newly_inferred_events, expected_internal_events):
                                   '''inferred %s fingerprint than expected %s ''' %
                                   (str(newly_inferred_events),str(expected_internal_events)))
       newly_inferred_events = newly_inferred_events[:parent_index+1]
-      check_for_duplicates(newly_inferred_events)
       return newly_inferred_events
   # Else, no expected internal event was observed.
   return []
 
-def check_for_duplicates(events):
-  if len(set(events)) != len(events):
-    raise AssertionError("Duplicate inputs %s" % str(events))
+def get_prefix_tail_idx(current_input_prefix, input_events):
+  # prefix_tail is the last input in the prefix
+  if current_input_prefix == []:
+    # We start by injecting the 0th input (not included in prefix)
+    prefix_tail_idx = -1
+  else:
+    prefix_tail_idx = input_events.index(current_input_prefix[-1])
+  return prefix_tail_idx
+
+def actual_peek(simulation, inferred_events, inject_input, wait_time,
+                max_rounds, idxrange2wait_seconds, expected_internal_events):
+  ''' Do the peek()'ing! '''
+  # First set the BufferedPatchPanel to "pass through"
+  def pass_through_packets(event):
+    simulation.patch_panel.permit_dp_event(event)
+  def post_bootstrap_hook():
+    simulation.patch_panel.addListener(DpPacketOut,
+                                       pass_through_packets)
+  # Now replay the prefix plus the next input
+  prefix_dag = EventDag(inferred_events + [inject_input],
+                        wait_time=self.wait_time,
+                        max_rounds=self.max_rounds)
+  replayer = sts.control_flow.Replayer(prefix_dag)
+  log.debug("Replaying prefix")
+  replayer.simulate(simulation, post_bootstrap_hook=post_bootstrap_hook)
+
+  # Directly after the last input has been injected, flush the internal
+  # event buffers in case there were unaccounted internal events
+  # Note that there isn't a race condition between flush()'ing and
+  # incoming internal events, since sts is single-threaded
+  simulation.god_scheduler.flush()
+  simulation.controller_sync_callback.flush()
+
+  # Now set all internal event buffers (GodScheduler for
+  # ControlMessageReceives and ReplaySyncCallback for state changes)
+  # to "pass through + record"
+  simulation.god_scheduler.set_pass_through()
+  simulation.controller_sync_callback.set_pass_through()
+
+  # Now sit tight for wait_seconds
+  idx_range = (inject_input_idx,following_input_idx)
+  wait_seconds = idxrange2wait_seconds[idx_range]
+  # Note that this is the monkey patched version of time.sleep
+  log.debug("peek()'ing for %f seconds" % wait_seconds)
+  time.sleep(wait_seconds)
+
+  # Now turn off those pass-through and grab the inferred events
+  newly_inferred_events = []
+  newly_inferred_events += simulation.god_scheduler.unset_pass_through()
+  newly_inferred_events += simulation.controller_sync_callback.unset_pass_through()
+
+  log.debug("Matching fingerprints")
+  log.debug("Expected: %s" % str(expected_internal_events))
+  log.debug("Inferred: %s" % str(newly_inferred_events))
+  newly_inferred_events = match_fingerprints(newly_inferred_events,
+                                             expected_internal_events)
+  log.debug("Matched events: %s" % str(newly_inferred_events))
+  return newly_inferred_events
 
 class EventDag(object):
   '''A collection of Event objects. EventDags are primarily used to present a
@@ -269,8 +323,6 @@ class EventDag(object):
     # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
     # FindMCS again?
     input_events = [ e for e in self._events_list if isinstance(e, InputEvent) ]
-    check_for_duplicates(input_events)
-    check_for_duplicates(self._events_list)
 
     if len(input_events) == 0:
       # Postcondition: input_events[-1] is not None
@@ -288,7 +340,6 @@ class EventDag(object):
     # inferred previously (or [] if this is an entirely new prefix)
     current_input_prefix = list(self._prefix_trie\
                                 .longest_prefix(input_events, default=[]))
-    check_for_duplicates(current_input_prefix)
 
     log.debug("Current input prefix: %s" % str(current_input_prefix))
     # The value is both internal events and input events (values of the trie)
@@ -298,15 +349,9 @@ class EventDag(object):
     # input event (i.e. we assume quiescence)
     inferred_events = list(self._prefix_trie\
                            .longest_prefix_value(input_events, default=[]))
-    check_for_duplicates(inferred_events)
     log.debug("Current inferred_events: %s" % str(inferred_events))
 
-    # prefix_tail is the last input in the prefix
-    if current_input_prefix == []:
-      # We start by injecting the 0th input (not included in prefix)
-      prefix_tail_idx = -1
-    else:
-      prefix_tail_idx = input_events.index(current_input_prefix[-1])
+    prefix_tail_idx = get_prefix_tail_idx(current_input_prefix, input_events)
 
     # While we still have inputs to inject
     while prefix_tail_idx + 1 < len(input_events):
@@ -321,7 +366,6 @@ class EventDag(object):
                                                               following_input_idx,
                                                               input_events,
                                                               self._events_list)
-      check_for_duplicates(expected_internal_events)
 
       # Optimization: if no internal events occured between this input and the
       # next, no need to peek()
@@ -329,82 +373,32 @@ class EventDag(object):
         log.debug("Optimization: no expected internal events")
         newly_inferred_events = []
       else:
-        # Now actually do the peek()'ing!
-        # First set the BufferedPatchPanel to "pass through"
-        def pass_through_packets(event):
-          simulation.patch_panel.permit_dp_event(event)
-        def post_bootstrap_hook():
-          simulation.patch_panel.addListener(DpPacketOut,
-                                             pass_through_packets)
-        # Now replay the prefix plus the next input
-        check_for_duplicates(inferred_events + [inject_input])
-        prefix_dag = EventDag(inferred_events + [inject_input],
-                              wait_time=self.wait_time,
-                              max_rounds=self.max_rounds)
-        replayer = sts.control_flow.Replayer(prefix_dag)
-        log.debug("Replaying prefix")
-        replayer.simulate(simulation, post_bootstrap_hook=post_bootstrap_hook)
+        newly_inferred_events = actual_peek(simulation, inferred_events,
+                                            inject_input, self.wait_time,
+                                            self.max_rounds,
+                                            idxrange2wait_seconds,
+                                            expected_internal_events)
 
-        # Directly after the last input has been injected, flush the internal
-        # event buffers in case there were unaccounted internal events
-        # Note that there isn't a race condition between flush()'ing and
-        # incoming internal events, since sts is single-threaded
-        simulation.god_scheduler.flush()
-        simulation.controller_sync_callback.flush()
-
-        # Now set all internal event buffers (GodScheduler for
-        # ControlMessageReceives and ReplaySyncCallback for state changes)
-        # to "pass through + record"
-        simulation.god_scheduler.set_pass_through()
-        simulation.controller_sync_callback.set_pass_through()
-
-        # Now sit tight for wait_seconds
-        idx_range = (inject_input_idx,following_input_idx)
-        wait_seconds = idxrange2wait_seconds[idx_range]
-        # Note that this is the monkey patched version of time.sleep
-        log.debug("peek()'ing for %f seconds" % wait_seconds)
-        time.sleep(wait_seconds)
-
-        # Now turn off those pass-through and grab the inferred events
-        newly_inferred_events = []
-        newly_inferred_events += simulation.god_scheduler.unset_pass_through()
-        check_for_duplicates(newly_inferred_events)
-        newly_inferred_events += simulation.controller_sync_callback.unset_pass_through()
-        check_for_duplicates(newly_inferred_events)
-
-        log.debug("Matching fingerprints")
-        log.debug("Expected: %s" % str(expected_internal_events))
-        log.debug("Inferred: %s" % str(newly_inferred_events))
-        newly_inferred_events = match_fingerprints(newly_inferred_events,
-                                                   expected_internal_events)
-        check_for_duplicates(newly_inferred_events)
-        log.debug("Matched events: %s" % str(newly_inferred_events))
-
-      # Update the trie for this prefix
-      current_input_prefix = list(current_input_prefix)
-      current_input_prefix.append(inject_input)
-      check_for_duplicates(current_input_prefix)
-      check_for_duplicates(inferred_events)
-      # Make sure to prepend the input we just injected
-      inferred_events = list(inferred_events)
-      inferred_events.append(inject_input)
-      try:
-        check_for_duplicates(inferred_events)
-      except:
-        log.warn("prefix_tail_idx %d, len %d" % (prefix_tail_idx,len(input_events)))
-        check_for_duplicates(inferred_events)
-      inferred_events += newly_inferred_events
-      check_for_duplicates(inferred_events)
-      self._prefix_trie[current_input_prefix] = inferred_events
-
+      self._update_trie(current_input_prefix, inject_input, inferred_events,
+                        newly_inferred_events)
       prefix_tail_idx += 1
 
     # Now that the new execution has been inferred,
     # present a view of ourselves that only includes the updated
     # events
     self._events_list = inferred_events
-    check_for_duplicates(self._events_list)
     self._populate_indices(self._label2event)
+
+  def _update_trie(self, current_input_prefix, inject_input, inferred_events,
+                   newly_inferred_events):
+    ''' Update the trie for this prefix '''
+    current_input_prefix = list(current_input_prefix)
+    current_input_prefix.append(inject_input)
+    # Make sure to prepend the input we just injected
+    inferred_events = list(inferred_events)
+    inferred_events.append(inject_input)
+    inferred_events += newly_inferred_events
+    self._prefix_trie[current_input_prefix] = inferred_events
 
   def mark_invalid_input_sequences(self):
     '''Fill in domain knowledge about valid input
