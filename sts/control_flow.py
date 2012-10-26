@@ -102,83 +102,99 @@ class Replayer(ControlFlow):
       self.increment_round()
 
 class MCSFinder(Replayer):
-  def __init__(self, superlog_path,
+  def __init__(self, superlog_path_or_dag,
                invariant_check=InvariantChecker.check_correspondence, **kwargs):
-    super(MCSFinder, self).__init__(superlog_path, **kwargs)
+    super(MCSFinder, self).__init__(superlog_path_or_dag, **kwargs)
     self.invariant_check = invariant_check
     self.log = logging.getLogger("mcs_finder")
 
-  def simulate(self, simulation):
-    # First, run through without pruning to verify that the violation exists
-    Replayer.simulate(self, simulation)
-    # Check invariants
-    violations = self.invariant_check(simulation)
-    if violations == []:
-      self.log.warn("Unable to reproduce correctness violation!")
-      sys.exit(5)
+  def simulate(self, simulation, check_reproducability=True):
+    self.simulation = simulation
+    if check_reproducability:
+      # First, run through without pruning to verify that the violation exists
+      Replayer.simulate(self, self.simulation)
+      # Check invariants
+      violations = self.invariant_check(self.simulation)
+      if violations == []:
+        self.log.warn("Unable to reproduce correctness violation!")
+        sys.exit(5)
 
-    self.log.info("Violation reproduced successfully! Proceeding with pruning")
+      self.log.info("Violation reproduced successfully! Proceeding with pruning")
+
     # Now start pruning
     self.dag.mark_invalid_input_sequences()
     self.dag.filter_unsupported_input_types()
-    mcs = []
-    # TODO(cs): perhaps we should implement the full-blown delta-debugging
-    # algorithm? See http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf,
+    self._ddmin(2)
+    msg.interactive("Final MCS: %s" % str(self.dag.events))
+    return self.dag.events
+
+  def _ddmin(self, split_ways, precomputed_subsets=None):
+    # This is the delta-debugging algorithm from:
+    #   http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf,
     # Section 3.2
-    # We could also be pretty smart about what we prune first, since we can
-    # leverage domain knowledge
+    # TODO(cs): we could do much better if we leverage domain knowledge (e.g.,
+    # start by pruning all LinkFailures)
+    if split_ways > len(self.dag):
+      self.log.debug("Done")
+      return
 
-    # For now, just do a modified version of binary search:
-    #  - split into 2
-    #  - ignore left half.
-    #  - If violation
-    #      - prune entire left half, and recurse!
-    #  - Else, at least one member of MCS was in left half
-    #      - Prune right half. If violation, prune entire right half and
-    #        recurse!
-    #      - Else, elements of MCS on both right and left sides. Split
-    #        entire input into 4 pieces and proceed with quadary search!
+    if precomputed_subsets is None:
+      precomputed_subsets = set()
 
-    # Principles here are:
-    #  - If violation, prune everything that was ignored
-    #  - If no violation, at least one member of the ignored portion was part
-    #    of MCS. (If the ignored portion was a singleton, add it to MCS!)
+    self.log.debug("Checking %d subsets" % split_ways)
+    subsets = self.dag.split_inputs(split_ways)
+    self.log.debug("Subsets: %s" % str(subsets))
+    for i, subset in enumerate(subsets):
+      # Note that subset() invokes peek()
+      new_dag = self.dag.subset(subset, self.simulation)
+      input_sequence = tuple(new_dag.input_events)
+      self.log.debug("Current subset: %s" % str(input_sequence))
+      if input_sequence in precomputed_subsets:
+        self.log.debug("Already computed. Skipping")
+        continue
+      precomputed_subsets.add(input_sequence)
 
-    # If the MCS hasn't been found in the first N splits, this devolves into the
-    # original MCS algorithm (prune one at a time). In the average case, this
-    # should do better -- in the worst case, it will take N extra iterations,
-    # for a total of 2N replays
+      violation = self._check_violation(new_dag, i)
+      if violation:
+        self.dag = new_dag
+        return self._ddmin(2, precomputed_subsets=precomputed_subsets)
 
-    split_ways = 2
-    while split_ways <= len(self.dag):
-      self.log.debug("Splitting in %d" % split_ways)
-      ignored_portions = self.dag.split_inputs(split_ways)
-      for i, ignored_portion in enumerate(ignored_portions):
-        # Note that ignore_portion() invokes peek()
-        new_dag = self.dag.ignore_portion(ignored_portion, self.simulation)
-        # Run the simulation forward
-        self.run_simulation_forward(new_dag)
-        # Check if there were violations
-        violations = self.invariant_check(simulation)
-        if violations == []:
-          # No violation!
-          # If singleton, this must be part of the MCS
-          self.log.debug("No violation with %d'th portion ignored..." % i)
-          if len(ignored_portion) == 1:
-            self.log.debug("Pruning singleton %s" % str(ignored_portion[0]))
-            mcs.append(ignored_portion[0])
-        else:
-          # Violation in the non-pruned half.
-          # Prune the ignored portion (including all of its dependents)
-          self.log.debug("Violation! Pruning %d'th portion" % i)
-          self.dag.remove_events(ignored_portion, self.simulation)
-          # Break out of `for ignore_portion`
-          split_ways = 2
-          break
-      split_ways *= 2
+    self.log.debug("No subsets with violations. Checking complements")
+    for i, subset in enumerate(subsets):
+      # Note that complement() invokes peek()
+      new_dag = self.dag.complement(subset, self.simulation)
+      input_sequence = tuple(new_dag.input_events)
+      self.log.debug("Current complement: %s" % str(input_sequence))
+      if input_sequence in precomputed_subsets:
+        self.log.debug("Already computed. Skipping")
+        continue
+      precomputed_subsets.add(input_sequence)
+      violation = self._check_violation(new_dag, i)
+      if violation:
+        self.dag = new_dag
+        return self._ddmin(max(split_ways - 1, 2),
+                           precomputed_subsets=precomputed_subsets)
 
-    msg.interactive("Final MCS: %s" % str(mcs))
-    return mcs
+    self.log.debug("No complements with violations.")
+    if split_ways < len(self.dag):
+      self.log.debug("Increasing granularity.")
+      return self._ddmin(min(len(self.dag), split_ways*2),
+                         precomputed_subsets=precomputed_subsets)
+
+  def _check_violation(self, new_dag, subset_index):
+    ''' Check if there were violations '''
+    # Run the simulation forward
+    self.run_simulation_forward(new_dag)
+    violations = self.invariant_check(self.simulation)
+    if violations == []:
+      # No violation!
+      # If singleton, this must be part of the MCS
+      self.log.debug("No violation in %d'th..." % subset_index)
+      return False
+    else:
+      # Violation in the subset
+      self.log.debug("Violation! Considering %d'th" % subset_index)
+      return True
 
 class Fuzzer(ControlFlow):
   '''

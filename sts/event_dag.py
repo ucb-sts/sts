@@ -283,15 +283,25 @@ class EventDag(object):
     # So we have to run peek() once per prefix
     self.peek(simulation)
 
-  def ignore_portion(self, ignored_portion, simulation):
-    ''' Return a view of the dag with ignored_portion and its dependents
+  def subset(self, subset, simulation):
+    ''' Return a view of the dag with only the subset dependents
     removed'''
     dag = EventDag(list(self._events_list), is_view=True,
                    prefix_trie=self._prefix_trie,
                    label2event=self._label2event,
                    wait_time=self.wait_time, max_rounds=self.max_rounds)
-    # TODO(cs): potentially some redundant computation here
-    dag.remove_events(ignored_portion, simulation)
+    remaining_events = self._events_set - set(subset)
+    dag.remove_events(remaining_events, simulation)
+    return dag
+
+  def complement(self, subset, simulation):
+    ''' Return a view of the dag with only the subset dependents
+    removed'''
+    dag = EventDag(list(self._events_list), is_view=True,
+                   prefix_trie=self._prefix_trie,
+                   label2event=self._label2event,
+                   wait_time=self.wait_time, max_rounds=self.max_rounds)
+    dag.remove_events(subset, simulation)
     return dag
 
   def split_inputs(self, split_ways):

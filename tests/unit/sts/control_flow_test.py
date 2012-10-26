@@ -10,10 +10,13 @@ import signal
 import tempfile
 
 from config.experiment_config_lib import ControllerConfig
-from sts.control_flow import Replayer
+from sts.control_flow import Replayer, MCSFinder
 from sts.topology import FatTree, PatchPanel, MeshTopology
 from sts.simulation_state import Simulation
+from sts.replay_event import Event, InternalEvent, InputEvent
+from sts.event_dag import EventDag
 from sts.entities import Host, Controller
+import logging
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
@@ -179,6 +182,59 @@ class ReplayerTest(unittest.TestCase):
       self.assertTrue(type(host) == Host)
     finally:
       os.unlink(self.tmp_migration_superlog)
+
+class MockMCSFinder(MCSFinder):
+  ''' Overrides self.invariant_check and run_simulation_forward() '''
+  def __init__(self, event_dag, mcs):
+    self.dag = event_dag
+    self.new_dag = None
+    self.mcs = mcs
+    self.log = logging.getLogger("mock_mcs_finder")
+
+  def invariant_check(self, _):
+    for e in self.mcs:
+      if e not in self.new_dag._events_set:
+        return []
+    return ["violation"]
+
+  def run_simulation_forward(self, new_dag, hook=None):
+    self.new_dag = new_dag
+
+class MockInputEvent(InputEvent):
+  def __init__(self, fingerprint=None, **kws):
+    super(MockInputEvent, self).__init__(**kws)
+    self.fingerprint = fingerprint
+
+  def proceed(self, simulation):
+    return True
+
+class MCSFinderTest(unittest.TestCase):
+  def test_basic(self):
+    trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
+    dag = EventDag(trace)
+    mcs = [trace[0]]
+    mcs_finder = MockMCSFinder(dag, mcs)
+    # passing in None as simulation works b/c actual_peek() is never invoked
+    result = mcs_finder.simulate(None)
+    self.assertEqual(mcs, result)
+
+  def test_straddle(self):
+    trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
+    dag = EventDag(trace)
+    mcs = [trace[0],trace[5]]
+    mcs_finder = MockMCSFinder(dag, mcs)
+    # passing in None as simulation works b/c actual_peek() is never invoked
+    result = mcs_finder.simulate(None)
+    self.assertEqual(mcs, result)
+
+  def test_all(self):
+    trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
+    dag = EventDag(trace)
+    mcs = trace
+    mcs_finder = MockMCSFinder(dag, mcs)
+    # passing in None as simulation works b/c actual_peek() is never invoked
+    result = mcs_finder.simulate(None)
+    self.assertEqual(mcs, result)
 
 if __name__ == '__main__':
   unittest.main()
