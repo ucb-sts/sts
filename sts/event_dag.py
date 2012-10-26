@@ -93,18 +93,22 @@ def match_fingerprints(newly_inferred_events, expected_internal_events):
       # order
       instance_of_expected = len(expected_internal_events)
       observed_instance = 0
+      idx_of_last_observed_instance = -1
       parent_index = -1
       for index, event in enumerate(newly_inferred_events):
         if event.fingerprint == expected.fingerprint:
           observed_instance += 1
+          idx_of_last_observed_instance = index
           if observed_instance == instance_of_expected:
             parent_index = index
             break
 
       if parent_index == -1:
-        raise NotImplementedError('''There were fewer instances of '''
-                                  '''inferred %s fingerprint than expected %s ''' %
-                                  (str(newly_inferred_events),str(expected_internal_events)))
+        log.warn(('''There were fewer instances of '''
+                  '''inferred %s fingerprint than expected %s ''' %
+                  (str(newly_inferred_events),str(expected_internal_events))))
+        # Set parent_index to the index of the last occurrence
+        parent_index = idx_of_last_observed_instance
       newly_inferred_events = newly_inferred_events[:parent_index+1]
       return newly_inferred_events
   # Else, no expected internal event was observed.
@@ -179,7 +183,7 @@ class EventDag(object):
   # event
   # TODO(cs): be smarter about this -- peek() too far, and peek()'ing not far
   # enough can both have negative consequences
-  _peek_seconds = 0.5
+  _peek_seconds = 0.3
   # If we prune a failure, make sure that the subsequent
   # recovery doesn't occur
   _failure_types = set([SwitchFailure, LinkFailure, ControllerFailure, ControlChannelBlock])
