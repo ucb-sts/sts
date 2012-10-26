@@ -211,7 +211,7 @@ class EventDag(object):
         import pytrie
       except ImportError:
         raise RuntimeError("Need to install pytrie: `sudo pip install pytrie`")
-      prefix_trie = pytrie.SortedTrie()
+      prefix_trie = pytrie.Trie()
     # The prefix trie stores lists of input events as keys,
     # and lists of both input and internal events as values
     # Note that we pass the trie around between DAG views
@@ -224,9 +224,6 @@ class EventDag(object):
     #}
     # Optimization: only compute label2event once (at the first unpruned
     # initialization)
-    # TODO(cs): need to ensure that newly added events get labeled
-    # uniquely. (Easy, but inelegant way: set the label generator's
-    # initial value to max(labels) + 1)
     if label2event is None:
       self._label2event = {
         event.label : event
@@ -249,6 +246,11 @@ class EventDag(object):
     '''Return a generator of the EventWatchers in the DAG'''
     for e in self._events_list:
       yield EventWatcher(e, wait_time=self.wait_time, max_rounds=self.max_rounds)
+
+  @property
+  def input_events(self):
+    # TODO(cs): memoize?
+    return [ e for e in self._events_list if isinstance(e, InputEvent) ]
 
   def _remove_event(self, event):
     ''' Recursively remove the event and its dependents '''
@@ -322,7 +324,7 @@ class EventDag(object):
     ''' Infer which internal events are/aren't going to occur, '''
     # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
     # FindMCS again?
-    input_events = [ e for e in self._events_list if isinstance(e, InputEvent) ]
+    input_events = self.input_events
 
     if len(input_events) == 0:
       # Postcondition: input_events[-1] is not None
