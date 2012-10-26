@@ -381,8 +381,9 @@ class EventDag(object):
                                             idxrange2wait_seconds,
                                             expected_internal_events)
 
-      self._update_trie(current_input_prefix, inject_input, inferred_events,
-                        newly_inferred_events)
+      (current_input_prefix,
+       inferred_events) = self._update_trie(current_input_prefix, inject_input,
+                                            inferred_events, newly_inferred_events)
       prefix_tail_idx += 1
 
     # Now that the new execution has been inferred,
@@ -401,6 +402,8 @@ class EventDag(object):
     inferred_events.append(inject_input)
     inferred_events += newly_inferred_events
     self._prefix_trie[current_input_prefix] = inferred_events
+    log.debug("Prefix trie update: %s" % str(self._prefix_trie))
+    return (current_input_prefix, inferred_events)
 
   def mark_invalid_input_sequences(self):
     '''Fill in domain knowledge about valid input
