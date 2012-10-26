@@ -120,6 +120,7 @@ def get_prefix_tail_idx(current_input_prefix, input_events):
   return prefix_tail_idx
 
 def actual_peek(simulation, inferred_events, inject_input, wait_time,
+                inject_input_idx, following_input_idx,
                 max_rounds, idxrange2wait_seconds, expected_internal_events):
   ''' Do the peek()'ing! '''
   # First set the BufferedPatchPanel to "pass through"
@@ -130,8 +131,8 @@ def actual_peek(simulation, inferred_events, inject_input, wait_time,
                                        pass_through_packets)
   # Now replay the prefix plus the next input
   prefix_dag = EventDag(inferred_events + [inject_input],
-                        wait_time=self.wait_time,
-                        max_rounds=self.max_rounds)
+                        wait_time=wait_time,
+                        max_rounds=max_rounds)
   replayer = sts.control_flow.Replayer(prefix_dag)
   log.debug("Replaying prefix")
   replayer.simulate(simulation, post_bootstrap_hook=post_bootstrap_hook)
@@ -387,6 +388,8 @@ class EventDag(object):
       else:
         newly_inferred_events = actual_peek(simulation, inferred_events,
                                             inject_input, self.wait_time,
+                                            inject_input_idx,
+                                            following_input_idx,
                                             self.max_rounds,
                                             idxrange2wait_seconds,
                                             expected_internal_events)
