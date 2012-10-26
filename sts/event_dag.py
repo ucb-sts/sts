@@ -419,7 +419,6 @@ class EventDag(object):
     inferred_events.append(inject_input)
     inferred_events += newly_inferred_events
     self._prefix_trie[current_input_prefix] = inferred_events
-    log.debug("Prefix trie update: %s" % str(self._prefix_trie))
     return (current_input_prefix, inferred_events)
 
   def mark_invalid_input_sequences(self):
