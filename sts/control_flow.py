@@ -125,7 +125,7 @@ class MCSFinder(Replayer):
     self.dag.mark_invalid_input_sequences()
     self.dag.filter_unsupported_input_types()
     self._ddmin(2)
-    msg.interactive("Final MCS: %s" % str(self.dag.events))
+    msg.interactive("Final MCS (%d elts): %s" % (len(self.dag.input_events),str(self.dag.input_events)))
     return self.dag.events
 
   def _ddmin(self, split_ways, precomputed_subsets=None):
