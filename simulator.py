@@ -1,23 +1,4 @@
-#!/bin/bash -
-
-# If you have PyPy 1.6+ in a directory called pypy alongside pox.py, we
-# use it.
-# Otherwise, we try to use a Python interpreter called python2.7, which
-# is a good idea if you're using Python from MacPorts, for example.
-# We fall back to just "python" and hope that works.
-
-''''echo -n
-export OPT="-O"
-
-if [ -x pypy/bin/pypy ]; then
-  exec pypy/bin/pypy $OPT "$0" $FLG "$@"
-fi
-
-if [ "$(type -P python2.7)" != "" ]; then
-  exec python2.7 $OPT "$0" "$@"
-fi
-exec python $OPT "$0" "$@"
-'''
+#!/usr/bin/env python2.7
 
 from sts.util.procutils import kill_procs
 

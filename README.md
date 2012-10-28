@@ -6,7 +6,7 @@ sts is intended for distributed SDN control software such as [Floodlight](http:/
  
 ![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/sts_arch.jpg)
 
-Beyond troubleshooting, sts is also useful as a framework for programmatically generating integration tests.
+Besides troubleshooting, sts can be used to programmatically generate integration tests.
 
 ### Installation
 
@@ -51,8 +51,6 @@ See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README) fo
 ### Dependencies
 
 sts requires python 2.7+
-
-sts will automatically use [pypy](http://pypy.org/) as its interpreter if you place a pypy/ directory at the top-level of the repository.
 
 To use the replay features of sts, you will need to install and make two dependencies:
 ```
