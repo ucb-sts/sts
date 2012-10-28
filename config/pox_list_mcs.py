@@ -10,5 +10,6 @@ topology_params = "num_switches=2"
 patch_panel_class = BufferedPatchPanel
 control_flow = MCSFinder("input_traces/pox_list_violation.trace",
                          wait_time=0.2, max_rounds=5,
-                         invariant_check=InvariantChecker.check_liveness)
+                         invariant_check=InvariantChecker.check_liveness,
+                         switch_init_sleep_seconds=2.0)
 dataplane_trace = "dataplane_traces/ping_pong_same_subnet.trace"
