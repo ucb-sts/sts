@@ -49,7 +49,8 @@ class Replayer(ControlFlow):
   To set the wait_time and max_rounds, pass them as keyword args to the
   constructor of this class, which will pass them on to the EventDay object it creates.
   '''
-  def __init__(self, superlog_path_or_dag, **kwargs):
+  def __init__(self, superlog_path_or_dag,
+               switch_init_sleep_seconds=False, **kwargs):
     ControlFlow.__init__(self, ReplaySyncCallback(self.get_interpolated_time))
     if type(superlog_path_or_dag) == str:
       superlog_path = superlog_path_or_dag
@@ -57,9 +58,12 @@ class Replayer(ControlFlow):
       # a list of its dependents
       event_dag_kwargs = { k: v for k,v in kwargs.items()
                           if k in sts.event_dag.EventWatcher.kwargs }
-      self.dag = sts.event_dag.EventDag(superlog_parser.parse_path(superlog_path), **event_dag_kwargs)
+      self.dag = sts.event_dag.EventDag(superlog_parser.parse_path(superlog_path),
+                                        switch_init_sleep_seconds=switch_init_sleep_seconds,
+                                        **event_dag_kwargs)
     else:
       self.dag = superlog_path_or_dag
+    self._switch_init_sleep_seconds = switch_init_sleep_seconds
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
 
@@ -93,7 +97,7 @@ class Replayer(ControlFlow):
 
   def run_simulation_forward(self, dag, post_bootstrap_hook=None):
     # Note that bootstrap() flushes any state from previous runs
-    self.simulation.bootstrap()
+    self.simulation.bootstrap(self._switch_init_sleep_seconds)
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()
     for event_watcher in dag.event_watchers:
@@ -103,7 +107,7 @@ class Replayer(ControlFlow):
 
 class MCSFinder(Replayer):
   def __init__(self, superlog_path_or_dag,
-               invariant_check=InvariantChecker.check_correspondence, **kwargs):
+               invariant_check=InvariantChecker.check_correspondence ,**kwargs):
     super(MCSFinder, self).__init__(superlog_path_or_dag, **kwargs)
     self.invariant_check = invariant_check
     self.log = logging.getLogger("mcs_finder")
@@ -205,7 +209,7 @@ class Fuzzer(ControlFlow):
                check_interval=None, trace_interval=10, random_seed=None,
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
-               halt_on_violation=False):
+               halt_on_violation=False, switch_init_sleep_seconds=False):
     ControlFlow.__init__(self, RecordingSyncCallback(input_logger))
 
     self.check_interval = check_interval
@@ -224,6 +228,7 @@ class Fuzzer(ControlFlow):
     self._load_fuzzer_params(fuzzer_params)
     self._input_logger = input_logger
     self.halt_on_violation = halt_on_violation
+    self._switch_init_sleep_seconds = switch_init_sleep_seconds
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
@@ -242,7 +247,7 @@ class Fuzzer(ControlFlow):
   def simulate(self, simulation):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     self.simulation = simulation
-    self.simulation.bootstrap()
+    self.simulation.bootstrap(self._switch_init_sleep_seconds)
     assert(isinstance(simulation.patch_panel, BufferedPatchPanel))
     self.loop()
 

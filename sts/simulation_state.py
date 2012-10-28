@@ -21,6 +21,7 @@ from sts.syncproto.sts_syncer import STSSyncConnectionManager
 from pox.lib.util import connect_socket_with_backoff
 
 import logging
+import time
 
 log = logging.getLogger("simulation")
 
@@ -81,12 +82,17 @@ class Simulation (object):
       self._io_master.close_all()
     msg.unset_io_master()
 
-  def bootstrap(self):
+  def bootstrap(self, switch_init_sleep_seconds=False):
     '''Set up the state of the system to its initial starting point:
        - boots controllers
        - connects switches to controllers
 
        May be invoked multiple times!
+
+       Optional parameter:
+       - switch_init_sleep_seconds: an integer, sleep time in seconds, to wait
+             for switches to initialize their TCP connections with the
+             controller(s). Defaults to False
     '''
     # Clean up state from any previous runs
     self.clean_up()
@@ -145,6 +151,11 @@ class Simulation (object):
     # initializing with the controller
     self.topology.connect_to_controllers(self.controller_configs,
                                          create_connection=create_connection)
+
+    if switch_init_sleep_seconds:
+      log.debug("Waiting %d seconds for switch initialization" %
+                switch_init_sleep_seconds)
+      time.sleep(switch_init_sleep_seconds)
 
     # Now unset pass-through mode
     self.god_scheduler.unset_pass_through()

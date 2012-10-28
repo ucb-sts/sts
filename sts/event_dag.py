@@ -125,7 +125,8 @@ def get_prefix_tail_idx(current_input_prefix, input_events):
 
 def actual_peek(simulation, inferred_events, inject_input, wait_time,
                 inject_input_idx, following_input_idx,
-                max_rounds, idxrange2wait_seconds, expected_internal_events):
+                max_rounds, idxrange2wait_seconds, expected_internal_events,
+                switch_init_sleep_seconds):
   ''' Do the peek()'ing! '''
   # First set the BufferedPatchPanel to "pass through"
   def pass_through_packets(event):
@@ -136,8 +137,10 @@ def actual_peek(simulation, inferred_events, inject_input, wait_time,
   # Now replay the prefix plus the next input
   prefix_dag = EventDag(inferred_events + [inject_input],
                         wait_time=wait_time,
-                        max_rounds=max_rounds)
-  replayer = sts.control_flow.Replayer(prefix_dag)
+                        max_rounds=max_rounds,
+                        switch_init_sleep_seconds=switch_init_sleep_seconds)
+  replayer = sts.control_flow.Replayer(prefix_dag,
+                        switch_init_sleep_seconds=switch_init_sleep_seconds)
   log.debug("Replaying prefix")
   replayer.simulate(simulation, post_bootstrap_hook=post_bootstrap_hook)
 
@@ -197,7 +200,8 @@ class EventDag(object):
                               WaitTime, CheckInvariants])
 
   def __init__(self, events, is_view=False, prefix_trie=None,
-               label2event=None, wait_time=0.05, max_rounds=None):
+               label2event=None, wait_time=0.05, max_rounds=None,
+               switch_init_sleep_seconds=False):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
     self.wait_time=wait_time
@@ -206,6 +210,7 @@ class EventDag(object):
     else:
       self.max_rounds = maxint
 
+    self._switch_init_sleep_seconds = switch_init_sleep_seconds
     self._events_list = events
     self._events_set = set(self._events_list)
     self._populate_indices(label2event)
@@ -294,7 +299,8 @@ class EventDag(object):
     dag = EventDag(list(self._events_list), is_view=True,
                    prefix_trie=self._prefix_trie,
                    label2event=self._label2event,
-                   wait_time=self.wait_time, max_rounds=self.max_rounds)
+                   wait_time=self.wait_time, max_rounds=self.max_rounds,
+                   switch_init_sleep_seconds=self._switch_init_sleep_seconds)
     remaining_events = self._events_set - set(subset)
     dag.remove_events(remaining_events, simulation)
     return dag
@@ -305,7 +311,8 @@ class EventDag(object):
     dag = EventDag(list(self._events_list), is_view=True,
                    prefix_trie=self._prefix_trie,
                    label2event=self._label2event,
-                   wait_time=self.wait_time, max_rounds=self.max_rounds)
+                   wait_time=self.wait_time, max_rounds=self.max_rounds,
+                   switch_init_sleep_seconds=self._switch_init_sleep_seconds)
     dag.remove_events(subset, simulation)
     return dag
 
@@ -396,7 +403,8 @@ class EventDag(object):
                                             following_input_idx,
                                             self.max_rounds,
                                             idxrange2wait_seconds,
-                                            expected_internal_events)
+                                            expected_internal_events,
+                                            self._switch_init_sleep_seconds)
 
       (current_input_prefix,
        inferred_events) = self._update_trie(current_input_prefix, inject_input,
