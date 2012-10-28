@@ -22,7 +22,7 @@ controllers = [ControllerConfig(command_line)]
 topology_class = MeshTopology
 topology_params = "num_switches=4"
 patch_panel_class = BufferedPatchPanel
-control_flow = Fuzzer(steps=40, fuzzer_params='config.fuzzer_simple_test_params')
+control_flow = Fuzzer(steps=10, fuzzer_params='config.fuzzer_simple_test_params')
 dataplane_trace = None
 '''
 
