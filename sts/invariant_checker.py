@@ -23,6 +23,18 @@ class InvariantChecker(object):
   # for no violations, and non-empty for violations
 
   @staticmethod
+  def check_liveness(simulation):
+    ''' Very simple: have the controllers crashed? '''
+    log.debug("Checking controller liveness...")
+    dead_controllers = simulation.controller_manager.check_controller_processes_alive()
+    if dead_controllers:
+      log.warn("Problems found while checking controller liveness:")
+      for (c, msg) in dead_controllers:
+        log.warn(" Controller %s - %s" %  (str(c.config.name), str(msg)))
+        controllers_with_violations.append(c)
+    return dead_controllers
+
+  @staticmethod
   def check_loops(simulation):
     # Warning! depends on python Hassell -- may be really slow!
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
@@ -66,13 +78,7 @@ class InvariantChecker(object):
     ''' Return if there were any policy-violations '''
     controllers_with_violations = []
 
-    log.debug("Checking controller liveness...")
-    dead_controllers = simulation.controller_manager.check_controller_processes_alive()
-    if dead_controllers:
-      log.warn("Problems found while checking controller liveness:")
-      for (c, msg) in dead_controllers:
-        log.warn(" Controller %s - %s" %  (str(c.config.name), str(msg)))
-        controllers_with_violations.append(c)
+    controllers_with_violations += InvariantChecker.check_liveness()
 
     log.debug("Snapshotting live controllers...")
     for controller in simulation.controller_manager.live_controllers:
