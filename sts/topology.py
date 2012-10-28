@@ -88,10 +88,6 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
                    for interface, switch in interface_switch_pairs ]
   return (host, access_links)
 
-class BootstrapComplete(Event):
-  """ An event that is raised when a controller has succesfully booted. """
-  pass
-
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
       Listens to the SwitchDPPacketOut event on the switches.

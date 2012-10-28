@@ -6,10 +6,9 @@ This module mocks out openflow switches, links, and hosts. These are all the
 from pox.openflow.software_switch import DpPacketOut, OFConnection
 from pox.openflow.nx_software_switch import NXSoftwareSwitch
 from pox.openflow.libopenflow_01 import *
-from pox.lib.revent import EventMixin, Event
+from pox.lib.revent import EventMixin
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
-from sts.topology import BootstrapComplete
 
 import logging
 import os
@@ -41,8 +40,15 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
   A mock switch implementation for testing purposes. Can simulate dropping dead.
   """
+  class ConnectionFSM(object):
+    # TODO(cs): this FSM is specific to pox!
+    START = 1
+    OFP_HELLO = 2
+    FEATURES_REQUEST = 3
+    SET_CONFIG = 4
+    BOOTED = 5
 
-  _eventMixin_events = NXSoftwareSwitch._eventMixin_events.union(BootstrapComplete)
+  _eventMixin_events = set([DpPacketOut])
 
   def __init__ (self, dpid, name=None, ports=4, miss_send_len=128,
                 n_buffers=100, n_tables=1, capabilities=None,
@@ -62,27 +68,16 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
 
     # controller (ip, port) -> connection
     self.uuid2connection = {}
-
-    # a set of connections that are awaiting a barrier request
-    # this is specific to POX, as the barrier request is not required by the
-    # openflow protocol.
-    self.connection2needs_barrier = set()
+    # We keep a finite state machine for each connection to track whether the
+    # initialization handshake has completed
+    self.connection2fsm = {}
     self.error_handler = error_handler
     self.controller_info = []
 
-  def on_message_received(self, connection, msg):
-    """ @overrides NX_Software_Switch.on_message_received """
-    if connection in self.connection2needs_barrier and type(msg) == ofp_barrier_request:
-      self.connection2needs_barrier.remove(connection)
-
-      if len(self.connection2needs_barrier) == 0:
-        self.raiseEvent(BootstrapComplete())
-
-    super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)
-
   @property
   def booted(self):
-    return len(self.connection2needs_barrier) == 0 and len(self.connections) > 0
+    return (self.connection2fsm != {} and
+            set(self.connection2fsm.values()) == set([self.ConnectionFSM.BOOTED]))
 
   def add_controller_info(self, info):
     self.controller_info.append(info)
@@ -104,10 +99,6 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       # Don't connect to down controllers
       if info.uuid not in down_controller_ids:
         conn = create_connection(info, self)
-
-        # TODO(sw): do floodlight replicas send barrier requests?
-        # this is pox-specific for now. all pox controllers do barrier requests
-        self.connection2needs_barrier.add(conn)
         self.set_connection(conn)
         # cause errors to be raised
         conn.error_handler = self.error_handler
