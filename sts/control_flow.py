@@ -285,7 +285,7 @@ class Fuzzer(ControlFlow):
           msg.interactive("No correctness violations!")
       # use a non-threaded version of correspondence for now. otherwise
       # communication / snapshotting has to be done in the main thread.
-      do_invariant_check()
+      return do_invariant_check()
       #thread = threading.Thread(target=do_correspondence)
       #thread.start()
       #while thread.isAlive():
