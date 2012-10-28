@@ -1,13 +1,12 @@
 #!/usr/bin/env python2.7
 
 from sts.util.procutils import kill_procs
-
 from sts.topology import FatTree, BufferedPatchPanel
 from sts.control_flow import Fuzzer
 from sts.invariant_checker import InvariantChecker
 from sts.simulation_state import Simulation
-from pox.lib.recoco.recoco import Scheduler
 import sts.snapshot as snapshot
+from pox.lib.recoco.recoco import Scheduler
 
 import signal
 import sys
@@ -17,7 +16,6 @@ import time
 import argparse
 import logging
 logging.basicConfig(level=logging.DEBUG)
-
 log = logging.getLogger("sts")
 
 description = """
