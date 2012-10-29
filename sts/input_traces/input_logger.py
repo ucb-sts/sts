@@ -15,8 +15,8 @@ controllers = %s
 topology_class = %s
 topology_params = "%s"
 patch_panel_class = %s
-# Output path: %s
 control_flow = Replayer("%s")
+# MCS trace path: %s
 dataplane_trace = %s
 '''
 
@@ -47,6 +47,7 @@ class InputLogger(object):
       now = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
       output_path = "input_traces/" + now + ".trace"
     self.output_path = output_path
+    self.mcs_output_path = output_path.replace(".trace", "_mcs_final.trace")
     self.output = open(output_path, 'a')
     self.dp_events = []
     basename = os.path.basename(output_path)
@@ -83,9 +84,9 @@ class InputLogger(object):
       self.dp_trace_path = None
 
     # Write the config files
-    path_templates = [(self.replay_cfg_path, replay_cfg_template)]
+    path_templates = [(self.replay_cfg_path, replay_config_template)]
     if not skip_mcs_cfg:
-      path_templates.append((self.mcs_cfg_path, mcs_cfg_template))
+      path_templates.append((self.mcs_cfg_path, mcs_config_template))
 
     for path, template in path_templates:
       with open(path, 'w') as cfg_out:
@@ -94,6 +95,6 @@ class InputLogger(object):
                                     simulation._topology_params,
                                     simulation._patch_panel_class.__name__,
                                     self.output_path,
-                                    self.output_path,
+                                    self.mcs_output_path,
                                     self.dp_trace_path)
         cfg_out.write(config_string)

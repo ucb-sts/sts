@@ -18,6 +18,7 @@ from sts.syncproto.sts_syncer import STSSyncCallback
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
 from pox.lib.revent import EventMixin, Event
+from sts.input_traces.input_logger import InputLogger
 
 import sys
 import time
