@@ -15,6 +15,7 @@ controllers = %s
 topology_class = %s
 topology_params = "%s"
 patch_panel_class = %s
+# Output path: %s
 control_flow = Replayer("%s")
 dataplane_trace = %s
 '''
@@ -28,7 +29,7 @@ controllers = %s
 topology_class = %s
 topology_params = "%s"
 patch_panel_class = %s
-control_flow = MCSFinder("%s")
+control_flow = MCSFinder("%s", mcs_trace_path="%s")
 dataplane_trace = %s
 '''
 
@@ -60,12 +61,12 @@ class InputLogger(object):
     logged separately.
     '''
     json_hash = event.to_json()
-    log.debug("logging event %s" % event)
+    log.debug("logging event %r" % event)
     self.output.write(json_hash + '\n')
     if dp_event is not None:
       self.dp_events.append(dp_event)
 
-  def close(self, simulation):
+  def close(self, simulation, skip_mcs_cfg=False):
     # First, insert a WaitTime, in case there was a controller crash
     self.log_input_event(WaitTime(1.0))
     # Flush the json input log
@@ -82,13 +83,17 @@ class InputLogger(object):
       self.dp_trace_path = None
 
     # Write the config files
-    for path, template in [(self.replay_cfg_path, replay_cfg_template),
-                           (self.mcs_cfg_path, mcs_cfg_template)]:
+    path_templates = [(self.replay_cfg_path, replay_cfg_template)]
+    if not skip_mcs_cfg:
+      path_templates.append((self.mcs_cfg_path, mcs_cfg_template))
+
+    for path, template in path_templates:
       with open(path, 'w') as cfg_out:
         config_string = template % (str(simulation.controller_configs),
                                     simulation._topology_class.__name__,
                                     simulation._topology_params,
                                     simulation._patch_panel_class.__name__,
+                                    self.output_path,
                                     self.output_path,
                                     self.dp_trace_path)
         cfg_out.write(config_string)

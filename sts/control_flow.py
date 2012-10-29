@@ -109,11 +109,13 @@ class Replayer(ControlFlow):
 class MCSFinder(Replayer):
   def __init__(self, superlog_path_or_dag,
                event_dag_class=WaitingEventDag,
-               invariant_check=InvariantChecker.check_correspondence, **kwargs):
+               invariant_check=InvariantChecker.check_correspondence,
+               mcs_trace_path=None, **kwargs):
     super(MCSFinder, self).__init__(superlog_path_or_dag,
                                     event_dag_class=event_dag_class, **kwargs)
     self.invariant_check = invariant_check
     self.log = logging.getLogger("mcs_finder")
+    self.mcs_trace_path = mcs_trace_path
 
   def simulate(self, simulation, check_reproducability=True):
     self.simulation = simulation
@@ -134,6 +136,8 @@ class MCSFinder(Replayer):
     self._ddmin(2)
     msg.interactive("Final MCS (%d elts): %s" %
                     (len(self.dag.input_events),str(self.dag.input_events)))
+    if self.mcs_trace_path is not None:
+      self._dump_mcs_trace()
     return self.dag.events
 
   def _ddmin(self, split_ways, precomputed_subsets=None):
@@ -209,6 +213,13 @@ class MCSFinder(Replayer):
       # Violation in the subset
       self.log.debug("Violation! Considering %d'th" % subset_index)
       return True
+
+  def _dump_mcs_trace(self):
+    # Dump the mcs trace
+    input_logger = InputLogger(output_path=self.mcs_trace_path)
+    for e in self.dag.events:
+      input_logger.log_input_event(e)
+    input_logger.close(self.simulation, skip_mcs_cfg=True)
 
 class Fuzzer(ControlFlow):
   '''
