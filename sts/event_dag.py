@@ -519,11 +519,11 @@ class EventWatcher(object):
     self._post(round)
 
   def _pre(self):
-    log.debug("Executing %s" % str(self.event))
+    log.debug("Executing %s" % self.event)
 
   def _post(self, round):
     if round < self.max_rounds:
-      log.debug("Finished Executing %s" % str(self.event))
+      log.debug("Finished Executing %s" % self.event)
     else:
-      log.warn("Timing out waiting for Event %s" % str(self.event))
+      log.warn("Timed out waiting for Event %s" % self.event)
 
