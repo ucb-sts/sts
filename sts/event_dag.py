@@ -366,8 +366,7 @@ def actual_peek(simulation, inferred_events, inject_input, wait_time,
   # Now set all internal event buffers (GodScheduler for
   # ControlMessageReceives and ReplaySyncCallback for state changes)
   # to "pass through + record"
-  simulation.god_scheduler.set_pass_through()
-  simulation.controller_sync_callback.set_pass_through()
+  simulation.set_pass_through()
 
   # Now sit tight for wait_seconds
   idx_range = (inject_input_idx,following_input_idx)
@@ -377,9 +376,7 @@ def actual_peek(simulation, inferred_events, inject_input, wait_time,
   time.sleep(wait_seconds)
 
   # Now turn off those pass-through and grab the inferred events
-  newly_inferred_events = []
-  newly_inferred_events += simulation.god_scheduler.unset_pass_through()
-  newly_inferred_events += simulation.controller_sync_callback.unset_pass_through()
+  newly_inferred_events = simulation.unset_pass_through()
 
   log.debug("Matching fingerprints")
   log.debug("Expected: %s" % str(expected_internal_events))

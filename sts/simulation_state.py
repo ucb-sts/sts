@@ -128,11 +128,7 @@ class Simulation (object):
                                                self.topology.hosts,
                                                self.topology.get_connected_port)
     self.god_scheduler = GodScheduler()
-    # Set to pass-through during bootstrap, so that switch initialization
-    # messages don't get buffered
-    self.god_scheduler.set_pass_through()
-    if hasattr(self.controller_sync_callback, "set_pass_through"):
-      self.controller_sync_callback.set_pass_through()
+    self.set_pass_through()
 
     if self._dataplane_trace_path is not None:
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
@@ -158,6 +154,19 @@ class Simulation (object):
       time.sleep(switch_init_sleep_seconds)
 
     # Now unset pass-through mode
-    self.god_scheduler.unset_pass_through()
+    self.unset_pass_through()
+
+  def set_pass_through(self):
+    ''' Set to pass-through during bootstrap, so that switch initialization
+    messages don't get buffered '''
+    self.god_scheduler.set_pass_through()
+    if hasattr(self.controller_sync_callback, "set_pass_through"):
+      self.controller_sync_callback.set_pass_through()
+
+  def unset_pass_through(self):
+    ''' unset pass-through mode '''
+    observed_events = []
+    observed_events += self.god_scheduler.unset_pass_through()
     if hasattr(self.controller_sync_callback, "unset_pass_through"):
-      self.controller_sync_callback.unset_pass_through()
+      observed_events += self.controller_sync_callback.unset_pass_through()
+    return observed_events
