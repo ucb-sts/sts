@@ -28,9 +28,9 @@ class InvariantChecker(object):
     log.debug("Checking controller liveness...")
     dead_controllers = simulation.controller_manager.check_controller_processes_alive()
     if dead_controllers:
-      log.warn("Problems found while checking controller liveness:")
+      log.info("Problems found while checking controller liveness:")
       for (c, msg) in dead_controllers:
-        log.warn(" Controller %s - %s" %  (str(c.config.name), str(msg)))
+        log.info(" Controller %s - %s" %  (str(c.config.name), str(msg)))
     return dead_controllers
 
   @staticmethod

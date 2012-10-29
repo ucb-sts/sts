@@ -153,7 +153,7 @@ class Simulation (object):
                                          create_connection=create_connection)
 
     if switch_init_sleep_seconds:
-      log.debug("Waiting %d seconds for switch initialization" %
+      log.debug("Waiting %f seconds for switch initialization" %
                 switch_init_sleep_seconds)
       time.sleep(switch_init_sleep_seconds)
 

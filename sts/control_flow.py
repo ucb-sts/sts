@@ -160,6 +160,9 @@ class MCSFinder(Replayer):
         self.log.debug("Already computed. Skipping")
         continue
       precomputed_subsets.add(input_sequence)
+      if input_sequence == ():
+        self.log.info("Subset after pruning dependencies was empty. Skipping")
+        continue
 
       violation = self._check_violation(new_dag, i)
       if violation:
@@ -175,6 +178,10 @@ class MCSFinder(Replayer):
         self.log.debug("Already computed. Skipping")
         continue
       precomputed_subsets.add(input_sequence)
+      if input_sequence == ():
+        self.log.info("Subset after pruning dependencies was empty. Skipping")
+        continue
+
       violation = self._check_violation(new_dag, i)
       if violation:
         self.dag = new_dag
