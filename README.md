@@ -1,9 +1,9 @@
 See http://ucb-sts.github.com/sts/ for an html version of this file.
 
-Ever had to painstakingly dig through logs to find the one or two inputs that lead your controller software to break? sts seeks to eliminate this need, freeing you to debug the problematic code itself. 
+Ever had to painstakingly dig through logs to find the one or two inputs that lead your controller software to break? sts seeks to eliminate this need, freeing you to debug the problematic code itself.
 
-sts is intended for distributed SDN control software such as [Floodlight](http://floodlight.openflowhub.org/).  sts simulates the devices of your network, allowing fine-grained control over the inputs to your unmodified controller(s). 
- 
+sts is intended for distributed SDN control software such as [Floodlight](http://floodlight.openflowhub.org/).  sts simulates the devices of your network, allowing fine-grained control over the inputs to your unmodified controller(s).
+
 ![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/sts_arch.jpg)
 
 Besides troubleshooting, sts can be used to programmatically generate integration tests.
@@ -46,7 +46,7 @@ The config/ directory contains sample configurations. You can specify your own c
 $ ./simulator.py -c config/my_config.py
 ```
 
-See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README) for more information. 
+See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README) for more information.
 
 ### Dependencies
 
@@ -60,7 +60,7 @@ $ cd sts/headerspace/hassel-c && make -j
 
 ### Research
 
-For more information about the research behind sts, see our paper [draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf). 
+For more information about the research behind sts, see our paper [draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf).
 
 ### Questions?
 
