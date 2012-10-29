@@ -6,7 +6,7 @@ import sts.dataplane_traces.trace_generator as tg
 
 # TODO(cs): need to copy some optional params from Fuzzer ctor to Replayer
 # ctor
-config_template = '''
+replay_config_template = '''
 from experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import Replayer
@@ -16,6 +16,19 @@ topology_class = %s
 topology_params = "%s"
 patch_panel_class = %s
 control_flow = Replayer("%s")
+dataplane_trace = %s
+'''
+
+mcs_config_template = '''
+from experiment_config_lib import ControllerConfig
+from sts.topology import *
+from sts.control_flow import MCSFinder
+
+controllers = %s
+topology_class = %s
+topology_params = "%s"
+patch_panel_class = %s
+control_flow = MCSFinder("%s")
 dataplane_trace = %s
 '''
 
@@ -37,7 +50,8 @@ class InputLogger(object):
     self.dp_events = []
     basename = os.path.basename(output_path)
     self.dp_trace_path = "./dataplane_traces/" + basename
-    self.cfg_path = "./config/" + basename.replace(".trace", ".py")
+    self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
+    self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
 
   def log_input_event(self, event, dp_event=None):
     '''
@@ -67,12 +81,14 @@ class InputLogger(object):
     else:
       self.dp_trace_path = None
 
-    # Write the config file
-    with open(self.cfg_path, 'w') as cfg_out:
-      config_string = config_template % (str(simulation.controller_configs),
-                                         simulation._topology_class.__name__,
-                                         simulation._topology_params,
-                                         simulation._patch_panel_class.__name__,
-                                         self.output_path,
-                                         self.dp_trace_path)
-      cfg_out.write(config_string)
+    # Write the config files
+    for path, template in [(self.replay_cfg_path, replay_cfg_template),
+                           (self.mcs_cfg_path, mcs_cfg_template)]:
+      with open(path, 'w') as cfg_out:
+        config_string = template % (str(simulation.controller_configs),
+                                    simulation._topology_class.__name__,
+                                    simulation._topology_params,
+                                    simulation._patch_panel_class.__name__,
+                                    self.output_path,
+                                    self.dp_trace_path)
+        cfg_out.write(config_string)
