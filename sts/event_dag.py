@@ -1,13 +1,220 @@
 from sts.input_traces.fingerprints import *
 from sts.replay_event import *
 from pox.openflow.software_switch import DpPacketOut
-import sts.control_flow
 import logging
 import time
 import math
 from sys import maxint
 from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
+
+class EventDag(object):
+  '''A collection of Event objects. EventDags are primarily used to present a
+  view of the underlying events with some subset of the input events pruned
+  '''
+
+  # We peek ahead this many seconds after the timestamp of the subseqeunt
+  # event
+  # TODO(cs): be smarter about this -- peek() too far, and peek()'ing not far
+  # enough can both have negative consequences
+  _peek_seconds = 0.3
+  # If we prune a failure, make sure that the subsequent
+  # recovery doesn't occur
+  _failure_types = set([SwitchFailure, LinkFailure, ControllerFailure, ControlChannelBlock])
+  # NOTE: we treat failure/recovery as an atomic pair, since it doesn't make
+  # much sense to prune a recovery event
+  _recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery, ControlChannelUnblock])
+  # For now, we're ignoring these input types, since their dependencies with
+  # other inputs are too complicated to model
+  # TODO(cs): model these!
+  _ignored_input_types = set([DataplaneDrop, DataplanePermit, HostMigration,
+                              WaitTime, CheckInvariants])
+
+  def __init__(self, events, prefix_trie=None,
+               label2event=None, wait_time=0.05, max_rounds=None,
+               switch_init_sleep_seconds=False):
+    '''events is a list of EventWatcher objects. Refer to log_parser.parse to
+    see how this is assembled.'''
+    self.wait_time=wait_time
+    if type(max_rounds) == int:
+      self.max_rounds = max_rounds
+    else:
+      self.max_rounds = maxint
+
+    # TODO(cs): ugly that the superclass has to keep track of
+    # PeekingEventDag's data
+    self._prefix_trie = prefix_trie
+    self._switch_init_sleep_seconds = switch_init_sleep_seconds
+    self._events_list = events
+    self._events_set = set(self._events_list)
+    self._populate_indices(label2event)
+
+  def _populate_indices(self, label2event):
+    #self._event_to_index = {
+    #  e : i
+    #  for i, e in enumerate(self._events_list)
+    #}
+    # Optimization: only compute label2event once (at the first unpruned
+    # initialization)
+    if label2event is None:
+      self._label2event = {
+        event.label : event
+        for event in self._events_list
+      }
+    else:
+      self._label2event = label2event
+
+  def filter_unsupported_input_types(self):
+    self._events_list = [ e for e in self._events_list
+                          if type(e) not in self._ignored_input_types ]
+
+  @property
+  def events(self):
+    '''Return the events in the DAG'''
+    return self._events_list
+
+  @property
+  def event_watchers(self):
+    '''Return a generator of the EventWatchers in the DAG'''
+    for e in self._events_list:
+      yield EventWatcher(e, wait_time=self.wait_time, max_rounds=self.max_rounds)
+
+  @property
+  def input_events(self):
+    # TODO(cs): memoize?
+    return [ e for e in self._events_list if isinstance(e, InputEvent) ]
+
+  def _remove_event(self, event):
+    ''' Recursively remove the event and its dependents '''
+    if event in self._events_set:
+      # TODO(cs): This shifts other indices and screws up self._event_to_index!
+      #list_idx = self._event_to_index[event]
+      #del self._event_to_index[event]
+      #self._events_list.pop(list_idx)
+      self._events_list.remove(event)
+      self._events_set.remove(event)
+
+    # Note that dependent_labels only contains dependencies between input
+    # events. We run peek() to infer dependencies with internal events
+    for label in event.dependent_labels:
+      if label in self._label2event:
+        dependent_event = self._label2event[label]
+        self._remove_event(dependent_event)
+
+  def remove_events(self, ignored_portion, simulation):
+    ''' Mutate the DAG: remove all input events in ignored_inputs,
+    as well all of their dependent input events'''
+    # Note that we treat failure/recovery as an atomic pair, so we don't prune
+    # recovery events on their own
+    for event in [ e for e in ignored_portion
+                   if (isinstance(e, InputEvent) and
+                       type(e) not in self._recovery_types) ]:
+      self._remove_event(event)
+
+  def prepare_for_replay(self, simulation):
+    '''Perform whatever computation we need to prepare our internal/external
+    events for replay '''
+    pass
+
+  def subset(self, subset, simulation):
+    ''' Return a view of the dag with only the subset dependents
+    removed'''
+    dag = self.__class__(list(self._events_list),
+                         prefix_trie=self._prefix_trie,
+                         label2event=self._label2event,
+                         wait_time=self.wait_time, max_rounds=self.max_rounds,
+                         switch_init_sleep_seconds=self._switch_init_sleep_seconds)
+    remaining_events = self._events_set - set(subset)
+    dag.remove_events(remaining_events, simulation)
+    return dag
+
+  def complement(self, subset, simulation):
+    ''' Return a view of the dag with only the subset dependents
+    removed'''
+    dag = self.__class__(list(self._events_list),
+                         prefix_trie=self._prefix_trie,
+                         label2event=self._label2event,
+                         wait_time=self.wait_time, max_rounds=self.max_rounds,
+                         switch_init_sleep_seconds=self._switch_init_sleep_seconds)
+    dag.remove_events(subset, simulation)
+    return dag
+
+  def split_inputs(self, split_ways):
+    ''' Split our inputs into split_ways separate lists '''
+    events = self.input_events
+    if len(events) == 0:
+      return [[]]
+    if split_ways == 1:
+      return [events]
+    if split_ways < 1:
+      raise ValueError("Split ways must be greater than 0")
+    if split_ways > len(events):
+      raise ValueError("Split ways %d greater than length %d" %
+                       (split_ways, len(events)))
+
+    splits = []
+    split_interval = int(math.ceil(len(events) * 1.0 / split_ways))
+    start_idx = 0
+    split_idx = start_idx + split_interval
+    while start_idx < len(events):
+      splits.append(events[start_idx:split_idx])
+      start_idx = split_idx
+      # Account for odd numbered splits -- if we're about to eat up
+      # all elements even though we will only have added split_ways-1
+      # splits, back up the split interval by 1
+      if (split_idx + split_interval >= len(events) and
+          len(splits) == split_ways - 2):
+        split_interval -= 1
+      split_idx += split_interval
+    return splits
+
+  def mark_invalid_input_sequences(self):
+    '''Fill in domain knowledge about valid input
+    sequences (e.g. don't prune failure without pruning recovery.)
+    Only do so if this isn't a view of a previously computed DAG'''
+
+    # Note: we treat each failure/recovery pair atomically, since it doesn't
+    # make much sense to prune recovery events. Also note that that we will
+    # never see two failures (for a particular node) in a row without an
+    # interleaving recovery event
+    fingerprint2previousfailure = {}
+
+    # NOTE: mutates self._events
+    for event in self._events_list:
+      # Skip over the class name
+      if hasattr(event, 'fingerprint'):
+        fingerprint = event.fingerprint[1:]
+        if type(event) in self._failure_types:
+          # Insert it into the previous failure hash
+          fingerprint2previousfailure[fingerprint] = event
+        elif type(event) in self._recovery_types:
+          # Check if there were any failure predecessors
+          if fingerprint in fingerprint2previousfailure:
+            failure = fingerprint2previousfailure[fingerprint]
+            failure.dependent_labels.append(event.label)
+        #elif type(event) in self._ignored_input_types:
+        #  raise RuntimeError("No support for %s dependencies" %
+        #                      type(event).__name__)
+
+  def __len__(self):
+    return len(self._events_list)
+
+class WaitingEventDag(EventDag):
+  ''' Insert WaitTime's between each input '''
+  @property
+  def event_watchers(self):
+    '''Return a generator of the EventWatchers in the DAG'''
+    # Rather than peek()'ing, we implement a best-effort replay.
+    # Prune all internal events, and insert WaitTime's between each
+    # input event.
+    idxrange2wait_seconds = get_wait_times(self._events_list,
+                                           self._events_list, peek_seconds=0.0)
+    for i, e in enumerate(self._events_list):
+      yield EventWatcher(e, wait_time=self.wait_time, max_rounds=self.max_rounds)
+      wait_seconds = idxrange2wait_seconds[(i,i+1)]
+      wait_event = WaitTime(wait_seconds)
+      yield EventWatcher(wait_event, wait_time=self.wait_time,
+                         max_rounds=self.max_rounds)
 
 def get_expected_internal_events(input1_index, input2_index, input_events,
                                  events_list):
@@ -39,18 +246,19 @@ def get_expected_internal_events(input1_index, input2_index, input_events,
 
 # Note that we recompute wait times for every view, since the set of
 # inputs and intervening expected internal events changes
-def get_wait_times(input_events, events_list):
+def get_wait_times(input_events, events_list,
+                   peek_seconds=EventDag._peek_seconds):
   idxrange2wait_seconds = {}
   for i in xrange(0, len(input_events)-1):
     start_input = input_events[i]
     next_input = input_events[i+1]
     wait_time = (next_input.time.as_float() -
-                 start_input.time.as_float() + EventDag._peek_seconds)
+                 start_input.time.as_float() + peek_seconds)
     idxrange2wait_seconds[(i,i+1)] = wait_time
   # For the last event, we wait until the last internal event
   last_wait_time = (events_list[-1].time.as_float() -
                     input_events[-1].time.as_float() +
-                    EventDag._peek_seconds)
+                    peek_seconds)
   final_idx_range = (len(input_events)-1,len(input_events))
   idxrange2wait_seconds[final_idx_range] = last_wait_time
   return idxrange2wait_seconds
@@ -135,12 +343,14 @@ def actual_peek(simulation, inferred_events, inject_input, wait_time,
     simulation.patch_panel.addListener(DpPacketOut,
                                        pass_through_packets)
   # Now replay the prefix plus the next input
-  prefix_dag = EventDag(inferred_events + [inject_input],
-                        wait_time=wait_time,
-                        max_rounds=max_rounds,
-                        switch_init_sleep_seconds=switch_init_sleep_seconds)
-  replayer = sts.control_flow.Replayer(prefix_dag,
-                        switch_init_sleep_seconds=switch_init_sleep_seconds)
+  prefix_dag = PeekingEventDag(inferred_events + [inject_input],
+                               wait_time=wait_time,
+                               max_rounds=max_rounds,
+                               switch_init_sleep_seconds=switch_init_sleep_seconds)
+  # Avoid circular dependencies!
+  from sts.control_flow import Replayer
+  replayer = Replayer(prefix_dag,
+                      switch_init_sleep_seconds=switch_init_sleep_seconds)
   log.debug("Replaying prefix")
   replayer.simulate(simulation, post_bootstrap_hook=post_bootstrap_hook)
 
@@ -177,170 +387,26 @@ def actual_peek(simulation, inferred_events, inject_input, wait_time,
   log.debug("Matched events: %s" % str(newly_inferred_events))
   return newly_inferred_events
 
-class EventDag(object):
-  '''A collection of Event objects. EventDags are primarily used to present a
-  view of the underlying events with some subset of the input events pruned
-  '''
 
-  # We peek ahead this many seconds after the timestamp of the subseqeunt
-  # event
-  # TODO(cs): be smarter about this -- peek() too far, and peek()'ing not far
-  # enough can both have negative consequences
-  _peek_seconds = 0.3
-  # If we prune a failure, make sure that the subsequent
-  # recovery doesn't occur
-  _failure_types = set([SwitchFailure, LinkFailure, ControllerFailure, ControlChannelBlock])
-  # NOTE: we treat failure/recovery as an atomic pair, since it doesn't make
-  # much sense to prune a recovery event
-  _recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery, ControlChannelUnblock])
-  # For now, we're ignoring these input types, since their dependencies with
-  # other inputs are too complicated to model
-  # TODO(cs): model these!
-  _ignored_input_types = set([DataplaneDrop, DataplanePermit, HostMigration,
-                              WaitTime, CheckInvariants])
-
-  def __init__(self, events, is_view=False, prefix_trie=None,
-               label2event=None, wait_time=0.05, max_rounds=None,
-               switch_init_sleep_seconds=False):
-    '''events is a list of EventWatcher objects. Refer to log_parser.parse to
-    see how this is assembled.'''
-    self.wait_time=wait_time
-    if type(max_rounds) == int:
-      self.max_rounds = max_rounds
-    else:
-      self.max_rounds = maxint
-
-    self._switch_init_sleep_seconds = switch_init_sleep_seconds
-    self._events_list = events
-    self._events_set = set(self._events_list)
-    self._populate_indices(label2event)
-
-    # TODO(cs): there is probably a cleaner way to implement views
-    if not is_view:
-      try:
-        import pytrie
-      except ImportError:
-        raise RuntimeError("Need to install pytrie: `sudo pip install pytrie`")
-      prefix_trie = pytrie.Trie()
+class PeekingEventDag(object):
+  def __init__(self, events, **kwargs):
+    super(PeekingEventDag, self).__init__(events, **kwargs)
+    try:
+      import pytrie
+    except ImportError:
+      raise RuntimeError("Need to install pytrie: `sudo pip install pytrie`")
     # The prefix trie stores lists of input events as keys,
     # and lists of both input and internal events as values
     # Note that we pass the trie around between DAG views
-    self._prefix_trie = prefix_trie
+    self._prefix_trie = pytrie.Trie()
 
-  def _populate_indices(self, label2event):
-    #self._event_to_index = {
-    #  e : i
-    #  for i, e in enumerate(self._events_list)
-    #}
-    # Optimization: only compute label2event once (at the first unpruned
-    # initialization)
-    if label2event is None:
-      self._label2event = {
-        event.label : event
-        for event in self._events_list
-      }
-    else:
-      self._label2event = label2event
-
-  def filter_unsupported_input_types(self):
-    self._events_list = [ e for e in self._events_list
-                          if type(e) not in self._ignored_input_types ]
-
-  @property
-  def events(self):
-    '''Return the events in the DAG'''
-    return self._events_list
-
-  @property
-  def event_watchers(self):
-    '''Return a generator of the EventWatchers in the DAG'''
-    for e in self._events_list:
-      yield EventWatcher(e, wait_time=self.wait_time, max_rounds=self.max_rounds)
-
-  @property
-  def input_events(self):
-    # TODO(cs): memoize?
-    return [ e for e in self._events_list if isinstance(e, InputEvent) ]
-
-  def _remove_event(self, event):
-    ''' Recursively remove the event and its dependents '''
-    if event in self._events_set:
-      # TODO(cs): This shifts other indices and screws up self._event_to_index!
-      #list_idx = self._event_to_index[event]
-      #del self._event_to_index[event]
-      #self._events_list.pop(list_idx)
-      self._events_list.remove(event)
-      self._events_set.remove(event)
-
-    # Note that dependent_labels only contains dependencies between input
-    # events. We run peek() to infer dependencies with internal events
-    for label in event.dependent_labels:
-      if label in self._label2event:
-        dependent_event = self._label2event[label]
-        self._remove_event(dependent_event)
-
-  def remove_events(self, ignored_portion, simulation):
-    ''' Mutate the DAG: remove all input events in ignored_inputs,
-    as well all of their dependent input events'''
-    # Note that we treat failure/recovery as an atomic pair, so we don't prune
-    # recovery events on their own
-    for event in [ e for e in ignored_portion
-                   if (isinstance(e, InputEvent) and
-                       type(e) not in self._recovery_types) ]:
-      self._remove_event(event)
+  def prepare_for_replay(self, simulation):
+    '''Perform whatever computation we need to prepare our internal/external
+    events for replay '''
     # Now run peek() to hide the internal events that will no longer occur
     # Note that causal dependencies change depending on what the prefix is!
     # So we have to run peek() once per prefix
     self.peek(simulation)
-
-  def subset(self, subset, simulation):
-    ''' Return a view of the dag with only the subset dependents
-    removed'''
-    dag = EventDag(list(self._events_list), is_view=True,
-                   prefix_trie=self._prefix_trie,
-                   label2event=self._label2event,
-                   wait_time=self.wait_time, max_rounds=self.max_rounds,
-                   switch_init_sleep_seconds=self._switch_init_sleep_seconds)
-    remaining_events = self._events_set - set(subset)
-    dag.remove_events(remaining_events, simulation)
-    return dag
-
-  def complement(self, subset, simulation):
-    ''' Return a view of the dag with only the subset dependents
-    removed'''
-    dag = EventDag(list(self._events_list), is_view=True,
-                   prefix_trie=self._prefix_trie,
-                   label2event=self._label2event,
-                   wait_time=self.wait_time, max_rounds=self.max_rounds,
-                   switch_init_sleep_seconds=self._switch_init_sleep_seconds)
-    dag.remove_events(subset, simulation)
-    return dag
-
-  def split_inputs(self, split_ways):
-    ''' Split our events into split_ways separate lists '''
-    events = self._events_list
-    if len(events) == 0:
-      return [[]]
-    if split_ways == 1:
-      return [events]
-    if split_ways < 1 or split_ways > len(events):
-      raise ValueError("Invalid split ways %d" % split_ways)
-
-    splits = []
-    split_interval = int(math.ceil(len(events) * 1.0 / split_ways))
-    start_idx = 0
-    split_idx = start_idx + split_interval
-    while start_idx < len(events):
-      splits.append(events[start_idx:split_idx])
-      start_idx = split_idx
-      # Account for odd numbered splits -- if we're about to eat up
-      # all elements even though we will only have added split_ways-1
-      # splits, back up the split interval by 1
-      if (split_idx + split_interval >= len(events) and
-          len(splits) == split_ways - 2):
-        split_interval -= 1
-      split_idx += split_interval
-    return splits
 
   def peek(self, simulation):
     ''' Infer which internal events are/aren't going to occur, '''
@@ -429,37 +495,6 @@ class EventDag(object):
     self._prefix_trie[current_input_prefix] = inferred_events
     return (current_input_prefix, inferred_events)
 
-  def mark_invalid_input_sequences(self):
-    '''Fill in domain knowledge about valid input
-    sequences (e.g. don't prune failure without pruning recovery.)
-    Only do so if this isn't a view of a previously computed DAG'''
-
-    # Note: we treat each failure/recovery pair atomically, since it doesn't
-    # make much sense to prune recovery events. Also note that that we will
-    # never see two failures (for a particular node) in a row without an
-    # interleaving recovery event
-    fingerprint2previousfailure = {}
-
-    # NOTE: mutates self._events
-    for event in self._events_list:
-      # Skip over the class name
-      if hasattr(event, 'fingerprint'):
-        fingerprint = event.fingerprint[1:]
-        if type(event) in self._failure_types:
-          # Insert it into the previous failure hash
-          fingerprint2previousfailure[fingerprint] = event
-        elif type(event) in self._recovery_types:
-          # Check if there were any failure predecessors
-          if fingerprint in fingerprint2previousfailure:
-            failure = fingerprint2previousfailure[fingerprint]
-            failure.dependent_labels.append(event.label)
-        #elif type(event) in self._ignored_input_types:
-        #  raise RuntimeError("No support for %s dependencies" %
-        #                      type(event).__name__)
-
-  def __len__(self):
-    return len(self._events_list)
-
 class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either
   InternalEvents or ExternalEvents to perform pre and post functionality.'''
@@ -491,3 +526,4 @@ class EventWatcher(object):
       log.debug("Finished Executing %s" % str(self.event))
     else:
       log.warn("Timing out waiting for Event %s" % str(self.event))
+

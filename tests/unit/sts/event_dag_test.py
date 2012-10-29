@@ -12,11 +12,11 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 from sts.replay_event import *
 from sts.event_dag import *
 
-class MockEvent(Event):
+class MockEvent(InputEvent):
   def proceed(self, simulation):
     pass
 
-class MockInternalEvent(InternalEvent):
+class MockInternalEvent(InputEvent):
   def __init__(self, fingerprint, label="a"):
     self.fingerprint = fingerprint
     self.label = label

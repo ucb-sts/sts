@@ -13,7 +13,7 @@ from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.util.console import msg
 from sts.replay_event import *
-import sts.event_dag
+from sts.event_dag import EventDag, WaitingEventDag, PeekingEventDag, EventWatcher
 from sts.syncproto.sts_syncer import STSSyncCallback
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
@@ -50,17 +50,18 @@ class Replayer(ControlFlow):
   constructor of this class, which will pass them on to the EventDay object it creates.
   '''
   def __init__(self, superlog_path_or_dag,
-               switch_init_sleep_seconds=False, **kwargs):
+               switch_init_sleep_seconds=False,
+               event_dag_class=EventDag, **kwargs):
     ControlFlow.__init__(self, ReplaySyncCallback(self.get_interpolated_time))
     if type(superlog_path_or_dag) == str:
       superlog_path = superlog_path_or_dag
       # The dag is codefied as a list, where each element has
       # a list of its dependents
       event_dag_kwargs = { k: v for k,v in kwargs.items()
-                          if k in sts.event_dag.EventWatcher.kwargs }
-      self.dag = sts.event_dag.EventDag(superlog_parser.parse_path(superlog_path),
-                                        switch_init_sleep_seconds=switch_init_sleep_seconds,
-                                        **event_dag_kwargs)
+                          if k in EventWatcher.kwargs }
+      self.dag = event_dag_class(superlog_parser.parse_path(superlog_path),
+                                 switch_init_sleep_seconds=switch_init_sleep_seconds,
+                                 **event_dag_kwargs)
     else:
       self.dag = superlog_path_or_dag
     self._switch_init_sleep_seconds = switch_init_sleep_seconds
@@ -107,8 +108,10 @@ class Replayer(ControlFlow):
 
 class MCSFinder(Replayer):
   def __init__(self, superlog_path_or_dag,
-               invariant_check=InvariantChecker.check_correspondence ,**kwargs):
-    super(MCSFinder, self).__init__(superlog_path_or_dag, **kwargs)
+               event_dag_class=WaitingEventDag,
+               invariant_check=InvariantChecker.check_correspondence, **kwargs):
+    super(MCSFinder, self).__init__(superlog_path_or_dag,
+                                    event_dag_class=event_dag_class, **kwargs)
     self.invariant_check = invariant_check
     self.log = logging.getLogger("mcs_finder")
 
@@ -129,7 +132,8 @@ class MCSFinder(Replayer):
     self.dag.mark_invalid_input_sequences()
     self.dag.filter_unsupported_input_types()
     self._ddmin(2)
-    msg.interactive("Final MCS (%d elts): %s" % (len(self.dag.input_events),str(self.dag.input_events)))
+    msg.interactive("Final MCS (%d elts): %s" %
+                    (len(self.dag.input_events),str(self.dag.input_events)))
     return self.dag.events
 
   def _ddmin(self, split_ways, precomputed_subsets=None):
@@ -138,7 +142,7 @@ class MCSFinder(Replayer):
     # Section 3.2
     # TODO(cs): we could do much better if we leverage domain knowledge (e.g.,
     # start by pruning all LinkFailures)
-    if split_ways > len(self.dag):
+    if split_ways > len(self.dag.input_events):
       self.log.debug("Done")
       return
 
@@ -149,7 +153,6 @@ class MCSFinder(Replayer):
     subsets = self.dag.split_inputs(split_ways)
     self.log.debug("Subsets: %s" % str(subsets))
     for i, subset in enumerate(subsets):
-      # Note that subset() invokes peek()
       new_dag = self.dag.subset(subset, self.simulation)
       input_sequence = tuple(new_dag.input_events)
       self.log.debug("Current subset: %s" % str(input_sequence))
@@ -165,7 +168,6 @@ class MCSFinder(Replayer):
 
     self.log.debug("No subsets with violations. Checking complements")
     for i, subset in enumerate(subsets):
-      # Note that complement() invokes peek()
       new_dag = self.dag.complement(subset, self.simulation)
       input_sequence = tuple(new_dag.input_events)
       self.log.debug("Current complement: %s" % str(input_sequence))
@@ -180,14 +182,15 @@ class MCSFinder(Replayer):
                            precomputed_subsets=precomputed_subsets)
 
     self.log.debug("No complements with violations.")
-    if split_ways < len(self.dag):
+    if split_ways < len(self.dag.input_events):
       self.log.debug("Increasing granularity.")
-      return self._ddmin(min(len(self.dag), split_ways*2),
+      return self._ddmin(min(len(self.dag.input_events), split_ways*2),
                          precomputed_subsets=precomputed_subsets)
 
   def _check_violation(self, new_dag, subset_index):
     ''' Check if there were violations '''
     # Run the simulation forward
+    new_dag.prepare_for_replay(self.simulation)
     self.run_simulation_forward(new_dag)
     violations = self.invariant_check(self.simulation)
     if violations == []:
