@@ -39,6 +39,9 @@ class Fingerprint(object):
   def __str__(self):
     return str(self._field2value)
 
+  def __repr__(self):
+    return self.__class__.__name__ + str(self._field2value)
+
 def process_data(msg):
   if msg.data == b'':
     return ()

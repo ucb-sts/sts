@@ -201,6 +201,8 @@ class EventDag(object):
 
 class WaitingEventDag(EventDag):
   ''' Insert WaitTime's between each input '''
+  # Note that this eliminates "time compression" benefits
+
   @property
   def event_watchers(self):
     '''Return a generator of the EventWatchers in the DAG'''
@@ -519,11 +521,11 @@ class EventWatcher(object):
     self._post(round)
 
   def _pre(self):
-    log.debug("Executing %s" % self.event)
+    log.debug("Executing %r" % self.event)
 
   def _post(self, round):
     if round < self.max_rounds:
-      log.debug("Finished Executing %s" % self.event)
+      log.debug("Finished Executing %r" % self.event)
     else:
-      log.warn("Timed out waiting for Event %s" % self.event)
+      log.warn("Timed out waiting for Event %r" % self.event)
 
