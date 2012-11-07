@@ -17,76 +17,22 @@ of switches, with one host connected to each switch. For example, with N = 3:
 '''
 
 from sts.input_traces.fingerprints import DPFingerprint
-from entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink
+from sts.util.console import msg
+from sts.gui.launcher import STSGui
+from sts.entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink
 from pox.openflow.software_switch import DpPacketOut, SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
-from sts.util.console import msg
+
+import socket
+import abc
+import time
+import errno
+import sys
 import itertools
 import logging
 
 log = logging.getLogger("sts.topology")
-
-def create_switch(switch_id, num_ports, can_connect_to_endhosts=True):
-  ports = []
-  for port_no in range(1, num_ports+1):
-    eth_addr = EthAddr("00:00:00:00:%02x:%02x" % (switch_id, port_no))
-    port = ofp_phy_port( port_no=port_no, hw_addr=eth_addr )
-    # monkey patch an IP address onto the port for anteater purposes
-    port.ip_addr = "1.1.%d.%d" % (switch_id, port_no)
-    ports.append(port)
-
-  def unitialized_io_worker(switch):
-    raise SystemError("Not initialialized")
-
-  return FuzzSoftwareSwitch(dpid=switch_id, name="SoftSwitch(%d)" % switch_id,
-                            ports=ports,
-                            can_connect_to_endhosts=can_connect_to_endhosts)
-
-def get_switchs_host_port(switch):
-  ''' return the switch's ofp_phy_port connected to the host '''
-  # We wire up the last port of the switch to the host
-  # TODO(cs): this is arbitrary and hacky
-  return switch.ports[sorted(switch.ports.keys())[-1]]
-
-def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
-                get_switch_port=get_switchs_host_port):
-  ''' Create a Host, wired up to the given ingress switches '''
-  switches = ingress_switch_or_switches
-  if type(switches) != list:
-    switches = [ingress_switch_or_switches]
-
-  macs = mac_or_macs
-  if mac_or_macs and type(mac_or_macs) != list:
-    macs = [mac_or_macs]
-
-  ips = ip_or_ips
-  if ip_or_ips and type(ip_or_ips) != list:
-    ips = [ip_or_ips]
-
-  interfaces = []
-  interface_switch_pairs = []
-  for switch in switches:
-    port = get_switch_port(switch)
-    if macs:
-      mac = macs.pop(0)
-    else:
-      mac = EthAddr("12:34:56:78:%02x:%02x" % (switch.dpid, port.port_no))
-    if ips:
-      ip_addr = ips.pop(0)
-    else:
-      ip_addr = IPAddr("123.123.%d.%d" % (switch.dpid, port.port_no))
-
-    name = "eth%d" % switch.dpid
-    interface = HostInterface(mac, ip_addr, name)
-    interface_switch_pairs.append((interface, switch))
-    interfaces.append(interface)
-
-  name = "host:" + ",".join(map(lambda interface: "%s" % str(interface.ips), interfaces))
-  host = Host(interfaces, name)
-  access_links = [ AccessLink(host, interface, switch, get_switch_port(switch))
-                   for interface, switch in interface_switch_pairs ]
-  return (host, access_links)
 
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
@@ -217,6 +163,74 @@ class LinkTracker(object):
   def live_links(self):
     return set(self.network_links) - self.cut_links
 
+  def create_access_link(self, host, host_interface, switch, switch_port):
+      
+    if not (isinstance(host, Host) and isinstance(switch, SoftwareSwitch)):
+      raise ValueError("Cannot create access link across non-host or non-switch! (%s, %s)!" % (host, switch)) 
+
+    # TODO(ao): There is a better place to do this
+    # Find a switch's unused port; if no such port exists, create a new one
+    def find_unused_port(s):
+      for port_number, port in s.ports.iteritems():
+        if port not in self.port2internal_link.keys() and \
+            port not in self.port2access_link.keys(): return port
+      new_port_number = max([port_number for port_number in s.ports.keys()])+1
+      new_port = ofp_phy_port(port_no=new_port_number)
+      s.ports[new_port_number] = new_port
+      return new_port
+    
+    # TODO(ao): There is a better place to do this
+    # Find a host's unused interface; if no such interface exists, create a new one
+    def find_unused_interface(h):
+      for interface in h.interfaces:
+        if interface not in self.interface2access_link.keys(): return interface
+      new_interface_addr = max([interface.hw_addr.toInt() for interface in h.interfaces])+1
+      new_interface_addr = hex(new_interface_addr)[2:].zfill(12)
+      new_interface_addr = new_interface_addr[0:2]+":"+new_interface_addr[2:4]+":"+\
+                            new_interface_addr[4:6]+":"+new_interface_addr[6:8]+":"+\
+                            new_interface_addr[8:10]+":"+new_interface_addr[10:12]
+      new_interface_addr = EthAddr(new_interface_addr)
+      new_interface = HostInterface(new_interface_addr)
+      h.interfaces.append(new_interface)
+      return new_interface
+    
+    host_interface = host_interface if (host_interface!=None and \
+                        isinstance(host_interface, HostInterface)) else find_unused_interface(host)
+    switch_port = switch_port if (switch_port!=None and \
+                    isinstance(switch_port, ofp_phy_port)) else find_unused_port(switch)
+    new_access_link = AccessLink(host, host_interface, switch, switch_port)
+    self.port2access_link[switch_port] = new_access_link
+    self.interface2access_link[host_interface] = new_access_link
+
+  def create_network_link(self, switch1, port1, switch2, port2):
+    '''
+    Creates a unidirectional network (internal) link from switch1 to switch2
+    '''
+    if not (isinstance(switch1, SoftwareSwitch) and isinstance(switch2, SoftwareSwitch)):
+      raise ValueError("Cannot create network link between non-switches (%s, %s)!" % (switch1, switch2)) 
+    
+    # TODO(ao): There is a better place to do this
+    # Find a switch's unused port; if no such port exists, create a new one
+    def find_unused_port(s):
+      for port_number, port in s.ports.iteritems():
+        if port not in self.port2internal_link.keys() and \
+            port not in self.port2access_link.keys(): return port
+      new_port_number = max([port_number for port_number in s.ports.keys()])+1
+      new_port = ofp_phy_port(port_no=new_port_number)
+      s.ports[new_port_number] = new_port
+      return new_port
+    
+    port1 = port1 if (port1!=None and isinstance(port1, ofp_phy_port)) else find_unused_port(switch1)
+    port2 = port2 if (port2!=None and isinstance(port2, ofp_phy_port)) else find_unused_port(switch2)
+    
+    # TODO(ao): bring_port_up raises Wrong Thread runtime error if called from GUI
+    #switch1.bring_port_up(port1)
+    #switch2.bring_port_up(port2)
+    
+    new_link = Link(switch1, port1, switch2, port2)
+    self.port2internal_link[port1] = new_link
+    
+    
   def sever_link(self, link):
     msg.event("Cutting link %s" % str(link))
     if link not in self.network_links:
@@ -316,19 +330,100 @@ class Topology(object):
   Abstract base class of all topology types. Wraps the edges and vertices of
   the network.
   '''
-  def __init__(self):
+  def __init__(self, gui=False):
     self.dpid2switch = {}
     self.hosts = []
 
     # SoftwareSwitch objects
     self.failed_switches = set()
     self.link_tracker = None
+    self.gui = None
 
   def _populate_dpid2switch(self, switches):
     self.dpid2switch = {
       switch.dpid : switch
       for switch in switches
     }
+
+  def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
+    ports = []
+    for port_no in range(1, num_ports+1):
+      eth_addr = EthAddr("00:00:00:00:%02x:%02x" % (switch_id, port_no))
+      port = ofp_phy_port( port_no=port_no, hw_addr=eth_addr )
+      # monkey patch an IP address onto the port for anteater purposes
+      port.ip_addr = "1.1.%d.%d" % (switch_id, port_no)
+      ports.append(port)
+  
+    def unitialized_io_worker(switch):
+      raise SystemError("Not initialialized")
+      
+    return FuzzSoftwareSwitch(dpid=switch_id, name="SoftSwitch(%d)" % switch_id,
+                            ports=ports,
+                            can_connect_to_endhosts=can_connect_to_endhosts)
+  
+  def create_host(self, ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, get_switch_port=None):
+    ''' Create a Host, wired up to the given ingress switches '''
+    switches = ingress_switch_or_switches
+    if type(switches) != list:
+      switches = [ingress_switch_or_switches]
+
+    macs = mac_or_macs
+    if mac_or_macs and type(mac_or_macs) != list:
+      macs = [mac_or_macs]
+
+    ips = ip_or_ips
+    if ip_or_ips and type(ip_or_ips) != list:
+      ips = [ip_or_ips]
+
+    def get_switchs_host_port(switch):
+      ''' return the switch's ofp_phy_port connected to the host '''
+      # We wire up the last port of the switch to the host
+      # TODO(cs): this is arbitrary and hacky
+      return switch.ports[sorted(switch.ports.keys())[-1]]
+
+    if get_switch_port==None: get_switch_port=get_switchs_host_port
+
+    interfaces = []
+    interface_switch_pairs = []
+    for switch in switches:
+      port = get_switch_port(switch)
+      if macs:
+        mac = macs.pop(0)
+      else:
+        mac = EthAddr("12:34:56:78:%02x:%02x" % (switch.dpid, port.port_no))
+      if ips:
+        ip_addr = ips.pop(0)
+      else:
+        ip_addr = IPAddr("123.123.%d.%d" % (switch.dpid, port.port_no))
+
+    name = "eth%d" % switch.dpid
+    interface = HostInterface(mac, ip_addr, name)
+    interface_switch_pairs.append((interface, switch))
+    interfaces.append(interface)
+
+    name = "host:" + ",".join(map(lambda interface: "%s" % str(interface.ips), interfaces))
+    host = Host(interfaces, name)
+    access_links = [ AccessLink(host, interface, switch, get_switch_port(switch))
+                   for interface, switch in interface_switch_pairs ]
+    return (host, access_links)
+
+  def create_network_link(self, node1, node1_port, node2, node2_port):
+    '''
+    Creates a network link between two switches;
+    If either port is None, then the first free port of the corresponding switch will be used;
+    If there are no free ports, a new one is created
+    '''
+    if not isinstance(node1, SoftwareSwitch) or not isinstance(node2, SoftwareSwitch): return
+    self.link_tracker.create_network_link(node1, node1_port, node2, node2_port)
+
+  def create_access_link(self, host, host_interface, switch, switch_port):
+    '''
+    Creates an access link between a host and a switch;
+    If port or interface is None, then the first free port or interface will be used;
+    If there are no free ports or interfaces, a new one is created
+    '''
+    if not isinstance(host, Host) or not isinstance(switch, SoftwareSwitch): return
+    self.link_tracker.create_access_link(host, host_interface, switch, switch_port)
 
   @property
   def access_links(self):
@@ -495,7 +590,8 @@ class Topology(object):
     return topology
 
 class MeshTopology(Topology):
-  def __init__(self, num_switches=3):
+    
+  def __init__(self, num_switches=3, gui=False):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers
@@ -510,10 +606,10 @@ class MeshTopology(Topology):
     ports_per_switch = (num_switches - 1) + 1
 
     # Initialize switches
-    switches = [ create_switch(switch_id, ports_per_switch)
+    switches = [ self.create_switch(switch_id, ports_per_switch)
                   for switch_id in range(1, num_switches+1) ]
     self._populate_dpid2switch(switches)
-    host_access_link_pairs = [ create_host(switch) for switch in self.switches ]
+    host_access_link_pairs = [ self.create_host(switch) for switch in self.switches ]
     self.hosts = map(lambda pair: pair[0], host_access_link_pairs)
     access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
     # this is python's .flatten:
@@ -522,6 +618,8 @@ class MeshTopology(Topology):
     # grab a fully meshed patch panel to wire up these guys
     self.link_tracker = MeshTopology.FullyMeshedLinks(self.dpid2switch, access_links)
     self.get_connected_port = self.link_tracker
+    
+    self.gui = STSGui(self) if gui else None
 
   class FullyMeshedLinks(LinkTracker):
     """
@@ -558,7 +656,7 @@ class MeshTopology(Topology):
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
-  def __init__(self, num_pods=4):
+  def __init__(self, num_pods=4, gui=False):
     if num_pods < 2:
       raise "Can't handle Fat Trees with less than 2 pods"
     Topology.__init__(self)
@@ -567,6 +665,8 @@ class FatTree (Topology):
     self.aggs = []
     self.edges = []
 
+    self.gui = STSGui(self) if gui else None
+    
     self.dpid2switch = {}
     self.link_tracker = None
     self.construct_tree(num_pods)
@@ -606,7 +706,7 @@ class FatTree (Topology):
 
       if (i % self.hosts_per_edge) == 0:
         current_dpid += 1
-        edge_switch = create_switch(current_dpid, self.ports_per_switch)
+        edge_switch = self.create_switch(current_dpid, self.ports_per_switch)
         edge_switch.pod_id = current_pod_id
         self.edges.append(edge_switch)
 
@@ -627,7 +727,7 @@ class FatTree (Topology):
       # exactly the same # of flow entries for HSA, right?
       portland_ip_addr = IPAddr("123.%d.%d.%d" %
                                 (current_pod_id, position, edge_port_no))
-      (host, host_access_links) = create_host(edge, portland_mac, portland_ip_addr,
+      (host, host_access_links) = self.create_host(edge, portland_mac, portland_ip_addr,
                                               lambda switch: switch.ports[edge_port_no])
       host.pod_id = current_pod_id
       self.hosts.append(host)
@@ -640,7 +740,7 @@ class FatTree (Topology):
       current_aggs = []
       for _ in  range(self.agg_per_pod):
         current_dpid += 1
-        agg = create_switch(current_dpid, self.ports_per_switch,
+        agg = self.create_switch(current_dpid, self.ports_per_switch,
                             can_connect_to_endhosts=False)
         agg.pod_id = pod_id
         current_aggs.append(agg)
@@ -667,7 +767,7 @@ class FatTree (Topology):
       if not i % 100:
         log.debug("agg<->core %d / %d" % (i, self.total_core))
       current_dpid += 1
-      self.cores.append(create_switch(current_dpid, self.ports_per_switch,
+      self.cores.append(self.create_switch(current_dpid, self.ports_per_switch,
                                       can_connect_to_endhosts=False))
 
     core_cycler = itertools.cycle(self.cores)
