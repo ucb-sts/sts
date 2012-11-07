@@ -77,7 +77,7 @@ class InvariantChecker(object):
     ''' Return if there were any policy-violations '''
     controllers_with_violations = []
 
-    controllers_with_violations += InvariantChecker.check_liveness()
+    controllers_with_violations += InvariantChecker.check_liveness(simulation)
 
     log.debug("Snapshotting live controllers...")
     for controller in simulation.controller_manager.live_controllers:
