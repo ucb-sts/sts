@@ -26,6 +26,7 @@ mcs_config_template = '''
 from experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import MCSFinder
+from sts.invariant_checker import InvariantChecker
 
 controllers = %s
 topology_class = %s
@@ -34,6 +35,7 @@ patch_panel_class = %s
 control_flow = MCSFinder("%s",
                          wait_time=0.2, max_rounds=5,
                          switch_init_sleep_seconds=2.0,
+                         invariant_check=InvariantChecker.check_liveness,
                          mcs_trace_path="%s")
 dataplane_trace = %s
 '''
