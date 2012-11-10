@@ -111,12 +111,19 @@ class MCSFinder(Replayer):
   def __init__(self, superlog_path_or_dag,
                event_dag_class=WaitingEventDag,
                invariant_check=InvariantChecker.check_correspondence,
-               mcs_trace_path=None, **kwargs):
+               mcs_trace_path=None, extra_log=None, **kwargs):
     super(MCSFinder, self).__init__(superlog_path_or_dag,
                                     event_dag_class=event_dag_class, **kwargs)
     self.invariant_check = invariant_check
-    self.log = logging.getLogger("mcs_finder")
+    self._log = logging.getLogger("mcs_finder")
+    self._extra_log = extra_log
     self.mcs_trace_path = mcs_trace_path
+
+  def log(self, msg):
+    ''' Output a message to both self._log and self._extra_log '''
+    self._log.info(msg)
+    if self._extra_log is not None:
+     self._extra_log.write(msg + '\n')
 
   def simulate(self, simulation, check_reproducability=True):
     self.simulation = simulation
@@ -126,16 +133,16 @@ class MCSFinder(Replayer):
       # Check invariants
       violations = self.invariant_check(self.simulation)
       if violations == []:
-        self.log.warn("Unable to reproduce correctness violation!")
+        self.log("Unable to reproduce correctness violation!")
         sys.exit(5)
 
-      self.log.info("Violation reproduced successfully! Proceeding with pruning")
+      self.log("Violation reproduced successfully! Proceeding with pruning")
 
     # Now start pruning
     self.dag.mark_invalid_input_sequences()
     self.dag.filter_unsupported_input_types()
     self._ddmin(2)
-    msg.interactive("Final MCS (%d elts): %s" %
+    msg.interactive("Final MCS (%d elements): %s" %
                     (len(self.dag.input_events),str(self.dag.input_events)))
     if self.mcs_trace_path is not None:
       self._dump_mcs_trace()
@@ -148,25 +155,25 @@ class MCSFinder(Replayer):
     # TODO(cs): we could do much better if we leverage domain knowledge (e.g.,
     # start by pruning all LinkFailures)
     if split_ways > len(self.dag.input_events):
-      self.log.debug("Done")
+      self.log("Done")
       return
 
     if precomputed_subsets is None:
       precomputed_subsets = set()
 
-    self.log.debug("Checking %d subsets" % split_ways)
+    self.log("Checking %d subsets" % split_ways)
     subsets = self.dag.split_inputs(split_ways)
-    self.log.debug("Subsets: %s" % str(subsets))
+    self.log("Subsets: %s" % str(subsets))
     for i, subset in enumerate(subsets):
       new_dag = self.dag.subset(subset, self.simulation)
       input_sequence = tuple(new_dag.input_events)
-      self.log.debug("Current subset: %s" % str(input_sequence))
+      self.log("Current subset: %s" % str(input_sequence))
       if input_sequence in precomputed_subsets:
-        self.log.debug("Already computed. Skipping")
+        self.log("Already computed. Skipping")
         continue
       precomputed_subsets.add(input_sequence)
       if input_sequence == ():
-        self.log.info("Subset after pruning dependencies was empty. Skipping")
+        self.log("Subset after pruning dependencies was empty. Skipping")
         continue
 
       violation = self._check_violation(new_dag, i)
@@ -174,17 +181,17 @@ class MCSFinder(Replayer):
         self.dag = new_dag
         return self._ddmin(2, precomputed_subsets=precomputed_subsets)
 
-    self.log.debug("No subsets with violations. Checking complements")
+    self.log("No subsets with violations. Checking complements")
     for i, subset in enumerate(subsets):
       new_dag = self.dag.complement(subset, self.simulation)
       input_sequence = tuple(new_dag.input_events)
-      self.log.debug("Current complement: %s" % str(input_sequence))
+      self.log("Current complement: %s" % str(input_sequence))
       if input_sequence in precomputed_subsets:
-        self.log.debug("Already computed. Skipping")
+        self.log("Already computed. Skipping")
         continue
       precomputed_subsets.add(input_sequence)
       if input_sequence == ():
-        self.log.info("Subset after pruning dependencies was empty. Skipping")
+        self.log("Subset after pruning dependencies was empty. Skipping")
         continue
 
       violation = self._check_violation(new_dag, i)
@@ -193,9 +200,9 @@ class MCSFinder(Replayer):
         return self._ddmin(max(split_ways - 1, 2),
                            precomputed_subsets=precomputed_subsets)
 
-    self.log.debug("No complements with violations.")
+    self.log("No complements with violations.")
     if split_ways < len(self.dag.input_events):
-      self.log.debug("Increasing granularity.")
+      self.log("Increasing granularity.")
       return self._ddmin(min(len(self.dag.input_events), split_ways*2),
                          precomputed_subsets=precomputed_subsets)
 
@@ -208,11 +215,11 @@ class MCSFinder(Replayer):
     if violations == []:
       # No violation!
       # If singleton, this must be part of the MCS
-      self.log.debug("No violation in %d'th..." % subset_index)
+      self.log("No violation in %d'th..." % subset_index)
       return False
     else:
       # Violation in the subset
-      self.log.debug("Violation! Considering %d'th" % subset_index)
+      self.log("Violation! Considering %d'th" % subset_index)
       return True
 
   def _dump_mcs_trace(self):
