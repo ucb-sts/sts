@@ -1,3 +1,7 @@
+import time
+
+def timestamp_string():
+  return time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
 
 def find(f, seq):
   """Return first item in sequence where f(item) == True."""

@@ -2,6 +2,7 @@ import os
 import time
 import logging
 from sts.replay_event import WaitTime
+from sts.util.convenience import timestamp_string
 import sts.dataplane_traces.trace_generator as tg
 
 # TODO(cs): need to copy some optional params from Fuzzer ctor to Replayer
@@ -51,7 +52,7 @@ class InputLogger(object):
     if one is not provided.
     '''
     if output_path is None:
-      now = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
+      now = timestamp_string()
       output_path = "input_traces/" + now + ".trace"
     self.output_path = output_path
     self.mcs_output_path = output_path.replace(".trace", "_mcs_final.trace")
