@@ -26,6 +26,7 @@ sts/headerspace/hassel-c/i2
 sts/headerspace/hassel-c/stanford
 sts/headerspace/hassel-c/test
 sts/headerspace/hassel-c/hs-test
+runtime_stats/*
 nox/
 nox_classic/
 
@@ -36,3 +37,6 @@ nox_classic/
 
 # ignore ctags file
 tags
+
+# ignore  mcs log
+mcs_log.txt
