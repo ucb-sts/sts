@@ -28,9 +28,14 @@ class msg():
   def raw_input(message):
     prompt = msg.BEGIN + msg.WHITE + message + msg.END
     if msg.global_io_master:
-      return msg.global_io_master.raw_input(prompt)
+      s = msg.global_io_master.raw_input(prompt)
     else:
-      return raw_input(prompt)
+      s = raw_input(prompt)
+
+    if s == "debug":
+      import pdb
+      pdb.set_trace()
+    return s
 
   @staticmethod
   def success(message):
