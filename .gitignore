@@ -26,7 +26,7 @@ sts/headerspace/hassel-c/i2
 sts/headerspace/hassel-c/stanford
 sts/headerspace/hassel-c/test
 sts/headerspace/hassel-c/hs-test
-runtime_stats/*
+runtime_stats/*json
 nox/
 nox_classic/
 
