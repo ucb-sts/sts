@@ -148,13 +148,13 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     self.get_connected_port = connected_port_mapping
     self.switches = sorted(switches, key=lambda(sw): sw.dpid)
     self.hosts = hosts
-    # dp out id -> dp_out object
-    self.buffered_dp_out_events = {}
+    # dp out event
+    self.buffered_dp_out_events = []
     self.dropped_dp_events = []
     def handle_DpPacketOut(event):
       # Monkey patch on a fingerprint for this event
       event.fingerprint = DPFingerprint.from_pkt(event.packet)
-      self.buffered_dp_out_events[event.fingerprint] = event
+      self.buffered_dp_out_events.append(event)
       self.raiseEvent(event)
     for _, s in enumerate(self.switches):
       s.addListener(DpPacketOut, handle_DpPacketOut)
@@ -163,7 +163,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
 
   @property
   def queued_dataplane_events(self):
-    return self.buffered_dp_out_events.values()
+    return self.buffered_dp_out_events
 
   def permit_dp_event(self, dp_event):
     ''' Given a SwitchDpPacketOut event, permit it to be forwarded  '''
@@ -171,7 +171,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     msg.event("Forwarding dataplane event")
     # Invoke superclass DpPacketOut handler
     self.handle_DpPacketOut(dp_event)
-    del self.buffered_dp_out_events[dp_event.fingerprint]
+    self.buffered_dp_out_events.remove(dp_event)
 
   def drop_dp_event(self, dp_event):
     '''
@@ -179,7 +179,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     Return the dropped event.
     '''
     msg.event("Dropping dataplane event")
-    del self.buffered_dp_out_events[dp_event.fingerprint]
+    self.buffered_dp_out_events.remove(dp_event)
     self.dropped_dp_events.append(dp_event)
     return dp_event
 
@@ -191,9 +191,8 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     dp_event.delayed_rounds += 1
 
   def get_buffered_dp_event(self, fingerprint):
-    if fingerprint not in self.buffered_dp_out_events:
-      return None
-    return self.buffered_dp_out_events[fingerprint]
+    # TODO this is currently not used by the replayer
+    raise NotImplementedError("Not implemented right now")
 
 class LinkTracker(object):
   def __init__(self, dpid2switch, port2access_link, interface2access_link):
