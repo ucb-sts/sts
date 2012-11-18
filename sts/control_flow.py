@@ -230,7 +230,9 @@ class MCSFinder(Replayer):
 
   def _track_iteration_size(self, iteration):
     if self._runtime_stats is not None:
-      self._runtime_stats[iteration] = len(self.dag.input_events)
+      if "iteration_size" not in self._runtime_stats:
+        self._runtime_stats["iteration_size"] = {}
+      self._runtime_stats["iteration_size"][iteration] = len(self.dag.input_events)
 
   def _check_violation(self, new_dag, subset_index, iteration):
     ''' Check if there were violations '''
