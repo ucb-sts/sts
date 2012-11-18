@@ -27,6 +27,9 @@ sts/headerspace/hassel-c/stanford
 sts/headerspace/hassel-c/test
 sts/headerspace/hassel-c/hs-test
 runtime_stats/*json
+runtime_stats/*pdf
+runtime_stats/*gpi
+runtime_stats/*dat
 nox/
 nox_classic/
 
