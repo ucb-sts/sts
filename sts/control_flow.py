@@ -172,6 +172,7 @@ class MCSFinder(Replayer):
     # TODO(cs): we could do much better if we leverage domain knowledge (e.g.,
     # start by pruning all LinkFailures)
     if split_ways > len(self.dag.input_events):
+      self._track_iteration_size(iteration + 1)
       self.log("Done")
       return
 
@@ -227,6 +228,7 @@ class MCSFinder(Replayer):
       return self._ddmin(min(len(self.dag.input_events), split_ways*2),
                          precomputed_subsets=precomputed_subsets,
                          iteration=iteration)
+    self._track_iteration_size(iteration + 1)
 
   def _track_iteration_size(self, iteration):
     if self._runtime_stats is not None:
