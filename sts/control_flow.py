@@ -12,6 +12,7 @@ import pox.openflow.libopenflow_01 as of
 from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
 from sts.util.console import msg
+from sts.util.convenience import timestamp_string
 from sts.replay_event import *
 from sts.event_dag import EventDag, WaitingEventDag, PeekingEventDag, EventWatcher
 from sts.syncproto.sts_syncer import STSSyncCallback
@@ -24,6 +25,7 @@ import sys
 import time
 import random
 import logging
+import json
 from collections import Counter
 
 log = logging.getLogger("control_flow")
@@ -111,13 +113,17 @@ class MCSFinder(Replayer):
   def __init__(self, superlog_path_or_dag,
                event_dag_class=WaitingEventDag,
                invariant_check=InvariantChecker.check_correspondence,
-               mcs_trace_path=None, extra_log=None, **kwargs):
+               mcs_trace_path=None, extra_log=None, dump_runtime_stats=False,
+               **kwargs):
     super(MCSFinder, self).__init__(superlog_path_or_dag,
                                     event_dag_class=event_dag_class, **kwargs)
     self.invariant_check = invariant_check
     self._log = logging.getLogger("mcs_finder")
-    self._extra_log = extra_log
     self.mcs_trace_path = mcs_trace_path
+    self._extra_log = extra_log
+    self._runtime_stats = None
+    if dump_runtime_stats:
+      self._runtime_stats = {}
 
   def log(self, msg):
     ''' Output a message to both self._log and self._extra_log '''
@@ -129,7 +135,11 @@ class MCSFinder(Replayer):
     self.simulation = simulation
     if check_reproducability:
       # First, run through without pruning to verify that the violation exists
+      if self._runtime_stats is not None:
+        self._runtime_stats["replay_start_epoch"] = time.time()
       Replayer.simulate(self, self.simulation)
+      if self._runtime_stats is not None:
+        self._runtime_stats["replay_end_epoch"] = time.time()
       # Check invariants
       violations = self.invariant_check(self.simulation)
       if violations == []:
@@ -141,14 +151,21 @@ class MCSFinder(Replayer):
     # Now start pruning
     self.dag.mark_invalid_input_sequences()
     self.dag.filter_unsupported_input_types()
+    if self._runtime_stats is not None:
+      self._runtime_stats["prune_start_epoch"] = time.time()
     self._ddmin(2)
+    if self._runtime_stats is not None:
+      self._runtime_stats["prune_end_epoch"] = time.time()
+      self._dump_runtime_stats()
     msg.interactive("Final MCS (%d elements): %s" %
                     (len(self.dag.input_events),str(self.dag.input_events)))
     if self.mcs_trace_path is not None:
       self._dump_mcs_trace()
     return self.dag.events
 
-  def _ddmin(self, split_ways, precomputed_subsets=None):
+  def _ddmin(self, split_ways, precomputed_subsets=None, iteration=0):
+    ''' - iteration is the # of times we've replayed (not the number of times
+    we've invoked _ddmin)'''
     # This is the delta-debugging algorithm from:
     #   http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf,
     # Section 3.2
@@ -176,10 +193,12 @@ class MCSFinder(Replayer):
         self.log("Subset after pruning dependencies was empty. Skipping")
         continue
 
-      violation = self._check_violation(new_dag, i)
+      iteration += 1
+      violation = self._check_violation(new_dag, i, iteration)
       if violation:
         self.dag = new_dag
-        return self._ddmin(2, precomputed_subsets=precomputed_subsets)
+        return self._ddmin(2, precomputed_subsets=precomputed_subsets,
+                           iteration=iteration)
 
     self.log("No subsets with violations. Checking complements")
     for i, subset in enumerate(subsets):
@@ -194,20 +213,28 @@ class MCSFinder(Replayer):
         self.log("Subset after pruning dependencies was empty. Skipping")
         continue
 
-      violation = self._check_violation(new_dag, i)
+      iteration += 1
+      violation = self._check_violation(new_dag, i, iteration)
       if violation:
         self.dag = new_dag
         return self._ddmin(max(split_ways - 1, 2),
-                           precomputed_subsets=precomputed_subsets)
+                           precomputed_subsets=precomputed_subsets,
+                           iteration=iteration)
 
     self.log("No complements with violations.")
     if split_ways < len(self.dag.input_events):
       self.log("Increasing granularity.")
       return self._ddmin(min(len(self.dag.input_events), split_ways*2),
-                         precomputed_subsets=precomputed_subsets)
+                         precomputed_subsets=precomputed_subsets,
+                         iteration=iteration)
 
-  def _check_violation(self, new_dag, subset_index):
+  def _track_iteration_size(self, iteration):
+    if self._runtime_stats is not None:
+      self._runtime_stats[iteration] = len(self.dag.input_events)
+
+  def _check_violation(self, new_dag, subset_index, iteration):
     ''' Check if there were violations '''
+    self._track_iteration_size(iteration)
     # Run the simulation forward
     new_dag.prepare_for_replay(self.simulation)
     self.run_simulation_forward(new_dag)
@@ -228,6 +255,21 @@ class MCSFinder(Replayer):
     for e in self.dag.events:
       input_logger.log_input_event(e)
     input_logger.close(self.simulation, skip_mcs_cfg=True)
+
+  def _dump_runtime_stats(self):
+    if self._runtime_stats is not None:
+      # First compute durations
+      self._runtime_stats["replay_duration_seconds"] =\
+        (self._runtime_stats["replay_end_epoch"] -
+         self._runtime_stats["replay_start_epoch"])
+      self._runtime_stats["prune_duration_seconds"] =\
+        (self._runtime_stats["prune_end_epoch"] -
+         self._runtime_stats["prune_start_epoch"])
+      # Now write contents to a file
+      now = timestamp_string()
+      with file("runtime_stats/" + now + ".json", "w") as output:
+        json_string = json.dumps(self._runtime_stats)
+        output.write(json_string)
 
 class Fuzzer(ControlFlow):
   '''
