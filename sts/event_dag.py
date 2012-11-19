@@ -31,15 +31,9 @@ class EventDag(object):
                               WaitTime, CheckInvariants])
 
   def __init__(self, events, prefix_trie=None,
-               label2event=None, wait_time=0.05, max_rounds=None,
-               switch_init_sleep_seconds=False):
+               label2event=None, switch_init_sleep_seconds=False):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
-    self.wait_time=wait_time
-    if type(max_rounds) == int:
-      self.max_rounds = max_rounds
-    else:
-      self.max_rounds = maxint
 
     # TODO(cs): ugly that the superclass has to keep track of
     # PeekingEventDag's data
@@ -72,12 +66,6 @@ class EventDag(object):
   def events(self):
     '''Return the events in the DAG'''
     return self._events_list
-
-  @property
-  def event_watchers(self):
-    '''Return a generator of the EventWatchers in the DAG'''
-    for e in self._events_list:
-      yield EventWatcher(e, wait_time=self.wait_time, max_rounds=self.max_rounds)
 
   @property
   def input_events(self):
@@ -122,7 +110,6 @@ class EventDag(object):
     dag = self.__class__(list(self._events_list),
                          prefix_trie=self._prefix_trie,
                          label2event=self._label2event,
-                         wait_time=self.wait_time, max_rounds=self.max_rounds,
                          switch_init_sleep_seconds=self._switch_init_sleep_seconds)
     remaining_events = self._events_set - set(subset)
     dag.remove_events(remaining_events, simulation)
@@ -134,7 +121,6 @@ class EventDag(object):
     dag = self.__class__(list(self._events_list),
                          prefix_trie=self._prefix_trie,
                          label2event=self._label2event,
-                         wait_time=self.wait_time, max_rounds=self.max_rounds,
                          switch_init_sleep_seconds=self._switch_init_sleep_seconds)
     dag.remove_events(subset, simulation)
     return dag
@@ -204,19 +190,18 @@ class WaitingEventDag(EventDag):
   # Note that this eliminates "time compression" benefits
 
   @property
-  def event_watchers(self):
+  def event_watchers(self, io_master):
     '''Return a generator of the EventWatchers in the DAG'''
     # Rather than peek()'ing, we implement a best-effort replay.
     # Prune all internal events, and insert WaitTime's between each
     # input event.
     idxrange2wait_seconds = get_wait_times(self._events_list,
-                                           self._events_list, peek_seconds=0.0)
+                                           self._events_list, peek_seconds=2.0)
     for i, e in enumerate(self._events_list):
-      yield EventWatcher(e, wait_time=self.wait_time, max_rounds=self.max_rounds)
+      yield EventWatcher(e, io_master, wait_time=self.wait_time)
       wait_seconds = idxrange2wait_seconds[(i,i+1)]
       wait_event = WaitTime(wait_seconds)
-      yield EventWatcher(wait_event, wait_time=self.wait_time,
-                         max_rounds=self.max_rounds)
+      yield EventWatcher(wait_event, io_master, wait_time=self.wait_time)
 
 def get_expected_internal_events(input1_index, input2_index, input_events,
                                  events_list):
@@ -335,7 +320,7 @@ def get_prefix_tail_idx(current_input_prefix, input_events):
 
 def actual_peek(simulation, inferred_events, inject_input, wait_time,
                 inject_input_idx, following_input_idx,
-                max_rounds, idxrange2wait_seconds, expected_internal_events,
+                idxrange2wait_seconds, expected_internal_events,
                 switch_init_sleep_seconds):
   ''' Do the peek()'ing! '''
   # First set the BufferedPatchPanel to "pass through"
@@ -347,7 +332,6 @@ def actual_peek(simulation, inferred_events, inject_input, wait_time,
   # Now replay the prefix plus the next input
   prefix_dag = PeekingEventDag(inferred_events + [inject_input],
                                wait_time=wait_time,
-                               max_rounds=max_rounds,
                                switch_init_sleep_seconds=switch_init_sleep_seconds)
   # Avoid circular dependencies!
   from sts.control_flow import Replayer
@@ -466,7 +450,6 @@ class PeekingEventDag(object):
                                             inject_input, self.wait_time,
                                             inject_input_idx,
                                             following_input_idx,
-                                            self.max_rounds,
                                             idxrange2wait_seconds,
                                             expected_internal_events,
                                             self._switch_init_sleep_seconds)
@@ -498,31 +481,38 @@ class EventWatcher(object):
   '''EventWatchers watch events. This class can be used to wrap either
   InternalEvents or ExternalEvents to perform pre and post functionality.'''
 
-  kwargs = set(['wait_time', 'max_rounds'])
+  kwargs = set(['wait_time' ])
 
-  def __init__(self, event, wait_time, max_rounds):
-    assert(max_rounds > 0 and wait_time > 0)
+  def __init__(self, event, io_master, wait_time):
+    assert(wait_time > 0)
+    self.io_master = io_master
     self.wait_time = wait_time
-    self.max_rounds = max_rounds
     self.event = event
 
   def run(self, simulation):
     self._pre()
-    round = 0
+    start = time.time()
+    timeout = start + self.wait_time
 
-    while round < self.max_rounds and not self.event.proceed(simulation):
-      time.sleep(self.wait_time)
-      round += 1
-      log.debug(".")
+    proceed = False
+    while True:
+      now = time.time()
+      if self.event.proceed(simulation):
+        proceed = True
+        break
+      elif now > timeout:
+        break
+      self.io_master.select( timeout - now)
 
-    self._post(round)
+    self._post(proceed)
 
   def _pre(self):
-    log.debug("Executing %r" % self.event)
+    log.debug("Executing / waiting for %r (maximum wait time: %.0f ms)" %
+          ( self.event , (self.wait_time) * 1000 ))
 
-  def _post(self, round):
-    if round < self.max_rounds:
-      log.debug("Finished Executing %r" % self.event)
+  def _post(self, proceed):
+    if proceed:
+      log.debug("Succcessfully executed %r" % self.event)
     else:
       log.warn("Timed out waiting for Event %r" % self.event)
 

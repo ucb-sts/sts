@@ -11,10 +11,11 @@ Three control flow types for running the simulation forward.
 import pox.openflow.libopenflow_01 as of
 from topology import BufferedPatchPanel
 from traffic_generator import TrafficGenerator
+from sts.event_scheduler import EventScheduler
 from sts.util.console import msg
 from sts.util.convenience import timestamp_string
 from sts.replay_event import *
-from sts.event_dag import EventDag, WaitingEventDag, PeekingEventDag, EventWatcher
+from sts.event_dag import EventDag, WaitingEventDag, PeekingEventDag
 from sts.syncproto.sts_syncer import STSSyncCallback
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
@@ -49,10 +50,10 @@ class Replayer(ControlFlow):
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
 
-  To set the wait_time and max_rounds, pass them as keyword args to the
+  To set the wait_time, pass them as keyword args to the
   constructor of this class, which will pass them on to the EventDay object it creates.
   '''
-  def __init__(self, superlog_path_or_dag,
+  def __init__(self, superlog_path_or_dag, create_event_scheduler=None,
                switch_init_sleep_seconds=False,
                event_dag_class=EventDag, **kwargs):
     ControlFlow.__init__(self, ReplaySyncCallback(self.get_interpolated_time))
@@ -60,16 +61,20 @@ class Replayer(ControlFlow):
       superlog_path = superlog_path_or_dag
       # The dag is codefied as a list, where each element has
       # a list of its dependents
-      event_dag_kwargs = { k: v for k,v in kwargs.items()
-                          if k in EventWatcher.kwargs }
-      self.dag = event_dag_class(superlog_parser.parse_path(superlog_path),
-                                 switch_init_sleep_seconds=switch_init_sleep_seconds,
-                                 **event_dag_kwargs)
+      self.dag = event_dag_class(superlog_parser.parse_path(superlog_path))
     else:
       self.dag = superlog_path_or_dag
     self._switch_init_sleep_seconds = switch_init_sleep_seconds
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
+
+    if create_event_scheduler:
+      self.create_event_scheduler = create_event_scheduler
+    else:
+      self.create_event_scheduler = \
+        lambda simulation: EventScheduler(simulation,
+            **{ k: v for k,v in kwargs.items()
+                if k in EventScheduler.kwargs })
 
   def get_interpolated_time(self):
     '''
@@ -102,21 +107,22 @@ class Replayer(ControlFlow):
   def run_simulation_forward(self, dag, post_bootstrap_hook=None):
     # Note that bootstrap() flushes any state from previous runs
     self.simulation.bootstrap(self._switch_init_sleep_seconds)
+    event_scheduler = self.create_event_scheduler(self.simulation)
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()
-    for event_watcher in dag.event_watchers:
-      self.compute_interpolated_time(event_watcher.event)
-      event_watcher.run(self.simulation)
+    for event in dag.events:
+      self.compute_interpolated_time(event)
+      event_scheduler.schedule(event)
       self.increment_round()
 
 class MCSFinder(Replayer):
+  # TODO: this is most likely broken due to the introduction of EventScheduler. Check and 
+  # refactor
   def __init__(self, superlog_path_or_dag,
-               event_dag_class=WaitingEventDag,
                invariant_check=InvariantChecker.check_correspondence,
                mcs_trace_path=None, extra_log=None, dump_runtime_stats=False,
                **kwargs):
-    super(MCSFinder, self).__init__(superlog_path_or_dag,
-                                    event_dag_class=event_dag_class, **kwargs)
+    super(MCSFinder, self).__init__(superlog_path_or_dag, **kwargs)
     self.invariant_check = invariant_check
     self._log = logging.getLogger("mcs_finder")
     self.mcs_trace_path = mcs_trace_path

@@ -17,8 +17,8 @@ topology_class = %s
 topology_params = "%s"
 patch_panel_class = %s
 control_flow = Replayer("%s",
-                        wait_time=0.2, max_rounds=5,
-                        switch_init_sleep_seconds=2.0)
+                        wait_time=2.0,
+                        switch_init_sleep_seconds=0.0)
 # MCS trace path: %s
 dataplane_trace = %s
 '''
@@ -34,8 +34,8 @@ topology_class = %s
 topology_params = "%s"
 patch_panel_class = %s
 control_flow = MCSFinder("%s",
-                         wait_time=0.2, max_rounds=5,
-                         switch_init_sleep_seconds=2.0,
+                         wait_time=2.0,
+                         switch_init_sleep_seconds=0.0,
                          invariant_check=InvariantChecker.check_liveness,
                          mcs_trace_path="%s")
 dataplane_trace = %s
