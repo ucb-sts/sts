@@ -192,7 +192,10 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
 
   def get_buffered_dp_event(self, fingerprint):
     # TODO this is currently not used by the replayer
-    raise NotImplementedError("Not implemented right now")
+    for i in self.buffered_dp_out_events:
+      if i.fingerprint == fingerprint:
+        return i
+    return None
 
 class LinkTracker(object):
   def __init__(self, dpid2switch, port2access_link, interface2access_link):
