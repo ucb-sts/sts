@@ -56,7 +56,7 @@ class InputLogger(object):
       output_path = "input_traces/" + now + ".trace"
     self.output_path = output_path
     self.mcs_output_path = output_path.replace(".trace", "_mcs_final.trace")
-    self.output = open(output_path, 'a')
+    self.output = open(output_path, 'w')
     self.dp_events = []
     basename = os.path.basename(output_path)
     self.dp_trace_path = "./dataplane_traces/" + basename
