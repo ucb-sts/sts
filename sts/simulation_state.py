@@ -128,7 +128,9 @@ class Simulation (object):
                                                self.topology.hosts,
                                                self.topology.get_connected_port)
     self.god_scheduler = GodScheduler()
-    self.set_pass_through()
+
+    if switch_init_sleep_seconds:
+      self.set_pass_through()
 
     if self._dataplane_trace_path is not None:
       self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
@@ -154,7 +156,12 @@ class Simulation (object):
       time.sleep(switch_init_sleep_seconds)
 
     # Now unset pass-through mode
-    self.unset_pass_through()
+    if switch_init_sleep_seconds:
+      self.unset_pass_through()
+
+  @property
+  def io_master(self):
+    return self._io_master
 
   def set_pass_through(self):
     ''' Set to pass-through during bootstrap, so that switch initialization
