@@ -9,7 +9,7 @@ controllers = [ControllerConfig(command_line)]
 
 # Use a FatTree with 3 pods
 topology_class = FatTree
-topology_params = "num_pods=2, gui=True"
+topology_params = "num_pods=3, gui=True"
 
 # Use a BufferedPatchPanel (already the default)
 patch_panel_class = BufferedPatchPanel

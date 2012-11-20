@@ -4,7 +4,7 @@ This file creates the main application window in a separate thread and
 invokes the topology widget.
 '''
 
-from sts.gui.topology import TopoWidget
+from sts.gui.topology_widget import TopoWidget
 
 import struct
 import sys
