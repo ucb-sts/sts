@@ -18,7 +18,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
 
 from sts.input_traces.fingerprints import DPFingerprint
 from sts.util.console import msg
-from sts.gui.launcher import STSGui
+from sts.gui.launcher import GuiLauncher
 from sts.entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink
 from pox.openflow.software_switch import DpPacketOut, SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
@@ -72,7 +72,8 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None, ge
     # TODO(cs): this is arbitrary and hacky
     return switch.ports[sorted(switch.ports.keys())[-1]]
 
-  if get_switch_port==None: get_switch_port=get_switchs_host_port
+  if get_switch_port is None:
+    get_switch_port=get_switchs_host_port
 
   interfaces = []
   interface_switch_pairs = []
@@ -398,6 +399,9 @@ class Topology(object):
 
   def restart(self, new_hosts, new_dpid2switch, new_port2access_link,
               new_port2internal_link, new_interface2access_link):
+    '''
+    Repopulate topology WITHOUT connecting any switches to controllers
+    '''
     self.hosts = new_hosts
     self.dpid2switch = new_dpid2switch
     if self.link_tracker is not None:
@@ -428,7 +432,8 @@ class Topology(object):
     If either port is None, then the first free port of the corresponding switch will be used;
     If there are no free ports, a new one is created
     '''
-    if not isinstance(node1, SoftwareSwitch) or not isinstance(node2, SoftwareSwitch): return
+    if not isinstance(node1, SoftwareSwitch) or not isinstance(node2, SoftwareSwitch):
+      return
     self.link_tracker.create_network_link(node1, node1_port, node2, node2_port)
 
   def create_access_link(self, host, host_interface, switch, switch_port):
@@ -437,7 +442,8 @@ class Topology(object):
     If port or interface is None, then the first free port or interface will be used;
     If there are no free ports or interfaces, a new one is created
     '''
-    if not isinstance(host, Host) or not isinstance(switch, SoftwareSwitch): return
+    if not isinstance(host, Host) or not isinstance(switch, SoftwareSwitch):
+      return
     self.link_tracker.create_access_link(host, host_interface, switch, switch_port)
 
   @property
@@ -571,7 +577,7 @@ class Topology(object):
           Takes a socket as a paramter
         - create_connection is a factory method for creating Connection objects
           which are connected to controllers. Takes a ControllerConfig object
-          as a paramter
+          as a parameter
     '''
     controller_info_cycler = itertools.cycle(controller_info_list)
     connections_per_switch = len(controller_info_list)
@@ -644,7 +650,7 @@ class MeshTopology(Topology):
     # grab a fully meshed patch panel to wire up these guys
     self.link_tracker = MeshTopology.FullyMeshedLinks(self.dpid2switch, access_links)
     self.get_connected_port = self.link_tracker
-    self.gui = STSGui(self) if gui else None
+    self.gui = GuiLauncher(self) if gui else None
 
   class FullyMeshedLinks(LinkTracker):
     '''
@@ -691,7 +697,7 @@ class FatTree (Topology):
     self.dpid2switch = {}
     self.link_tracker = None
     self.construct_tree(num_pods)
-    self.gui = STSGui(self) if gui else None
+    self.gui = GuiLauncher(self) if gui else None
 
   def construct_tree(self, num_pods):
     '''
