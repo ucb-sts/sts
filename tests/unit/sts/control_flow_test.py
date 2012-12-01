@@ -189,7 +189,12 @@ class MockMCSFinder(MCSFinder):
     self.dag = event_dag
     self.new_dag = None
     self.mcs = mcs
-    self.log = logging.getLogger("mock_mcs_finder")
+    self.mcs_trace_path = None
+    self._runtime_stats = {}
+    self._log = logging.getLogger("mock_mcs_finder")
+
+  def log(self, message):
+    self._log.info(message)
 
   def invariant_check(self, _):
     for e in self.mcs:
