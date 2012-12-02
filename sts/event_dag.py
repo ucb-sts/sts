@@ -27,8 +27,7 @@ class EventDag(object):
   # For now, we're ignoring these input types, since their dependencies with
   # other inputs are too complicated to model
   # TODO(cs): model these!
-  _ignored_input_types = set([DataplaneDrop, DataplanePermit, HostMigration,
-                              WaitTime, CheckInvariants])
+  _ignored_input_types = set([DataplaneDrop, WaitTime, DataplanePermit, HostMigration, CheckInvariants])
 
   def __init__(self, events, prefix_trie=None,
                label2event=None, switch_init_sleep_seconds=False):
@@ -184,24 +183,6 @@ class EventDag(object):
 
   def __len__(self):
     return len(self._events_list)
-
-class WaitingEventDag(EventDag):
-  ''' Insert WaitTime's between each input '''
-  # Note that this eliminates "time compression" benefits
-
-  @property
-  def event_watchers(self, io_master):
-    '''Return a generator of the EventWatchers in the DAG'''
-    # Rather than peek()'ing, we implement a best-effort replay.
-    # Prune all internal events, and insert WaitTime's between each
-    # input event.
-    idxrange2wait_seconds = get_wait_times(self._events_list,
-                                           self._events_list, peek_seconds=2.0)
-    for i, e in enumerate(self._events_list):
-      yield EventWatcher(e, io_master, wait_time=self.wait_time)
-      wait_seconds = idxrange2wait_seconds[(i,i+1)]
-      wait_event = WaitTime(wait_seconds)
-      yield EventWatcher(wait_event, io_master, wait_time=self.wait_time)
 
 def get_expected_internal_events(input1_index, input2_index, input_events,
                                  events_list):
@@ -476,43 +457,4 @@ class PeekingEventDag(object):
     inferred_events += newly_inferred_events
     self._prefix_trie[current_input_prefix] = inferred_events
     return (current_input_prefix, inferred_events)
-
-class EventWatcher(object):
-  '''EventWatchers watch events. This class can be used to wrap either
-  InternalEvents or ExternalEvents to perform pre and post functionality.'''
-
-  kwargs = set(['wait_time' ])
-
-  def __init__(self, event, io_master, wait_time):
-    assert(wait_time > 0)
-    self.io_master = io_master
-    self.wait_time = wait_time
-    self.event = event
-
-  def run(self, simulation):
-    self._pre()
-    start = time.time()
-    timeout = start + self.wait_time
-
-    proceed = False
-    while True:
-      now = time.time()
-      if self.event.proceed(simulation):
-        proceed = True
-        break
-      elif now > timeout:
-        break
-      self.io_master.select( timeout - now)
-
-    self._post(proceed)
-
-  def _pre(self):
-    log.debug("Executing / waiting for %r (maximum wait time: %.0f ms)" %
-          ( self.event , (self.wait_time) * 1000 ))
-
-  def _post(self, proceed):
-    if proceed:
-      log.debug("Succcessfully executed %r" % self.event)
-    else:
-      log.warn("Timed out waiting for Event %r" % self.event)
 

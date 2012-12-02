@@ -77,6 +77,7 @@ class GodScheduler(EventMixin):
     ''' Called by DefferedOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
     pending_receive = PendingReceive(dpid, controller_id, fingerprint)
+    #log.debug("Inserting pending message c:%s sw:%d fp: %s" % (controller_id, dpid, fingerprint))
     conn_message = (conn, ofp_message)
     self.pendingreceive2conn_messages[pending_receive].append(conn_message)
     self.raiseEventNoErrors(MessageReceipt(pending_receive))

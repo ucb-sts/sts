@@ -15,7 +15,7 @@ from sts.event_scheduler import EventScheduler
 from sts.util.console import msg
 from sts.util.convenience import timestamp_string
 from sts.replay_event import *
-from sts.event_dag import EventDag, WaitingEventDag, PeekingEventDag
+from sts.event_dag import EventDag, PeekingEventDag
 from sts.syncproto.sts_syncer import STSSyncCallback
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
@@ -139,11 +139,16 @@ class MCSFinder(Replayer):
 
   def simulate(self, simulation, check_reproducability=True):
     self.simulation = simulation
+    # Now start pruning
+    self.dag.mark_invalid_input_sequences()
+    self.dag.filter_unsupported_input_types()
     if check_reproducability:
       # First, run through without pruning to verify that the violation exists
       if self._runtime_stats is not None:
         self._runtime_stats["replay_start_epoch"] = time.time()
-      Replayer.simulate(self, self.simulation)
+
+      self._run_simulation_for_dag(self.dag)
+      # Replayer.simulate(self, self.simulation)
       if self._runtime_stats is not None:
         self._runtime_stats["replay_end_epoch"] = time.time()
       # Check invariants
@@ -154,9 +159,6 @@ class MCSFinder(Replayer):
 
       self.log("Violation reproduced successfully! Proceeding with pruning")
 
-    # Now start pruning
-    self.dag.mark_invalid_input_sequences()
-    self.dag.filter_unsupported_input_types()
     if self._runtime_stats is not None:
       self._runtime_stats["prune_start_epoch"] = time.time()
     self._ddmin(2)
@@ -242,12 +244,15 @@ class MCSFinder(Replayer):
         self._runtime_stats["iteration_size"] = {}
       self._runtime_stats["iteration_size"][iteration] = len(self.dag.input_events)
 
+  def _run_simulation_for_dag(self, dag):
+    dag.prepare_for_replay(self.simulation)
+    self.run_simulation_forward(dag)
+
   def _check_violation(self, new_dag, subset_index, iteration):
     ''' Check if there were violations '''
     self._track_iteration_size(iteration)
     # Run the simulation forward
-    new_dag.prepare_for_replay(self.simulation)
-    self.run_simulation_forward(new_dag)
+    self._run_simulation_for_dag(new_dag)
     violations = self.invariant_check(self.simulation)
     if violations == []:
       # No violation!
