@@ -127,30 +127,26 @@ class EventDag(object):
   def split_inputs(self, split_ways):
     ''' Split our inputs into split_ways separate lists '''
     events = self.input_events
-    if len(events) == 0:
-      return [[]]
-    if split_ways == 1:
-      return [events]
     if split_ways < 1:
       raise ValueError("Split ways must be greater than 0")
-    if split_ways > len(events):
-      raise ValueError("Split ways %d greater than length %d" %
-                       (split_ways, len(events)))
 
     splits = []
-    split_interval = int(math.ceil(len(events) * 1.0 / split_ways))
+    split_interval = len(events) / split_ways # integer division = floor
+    remainder = len(events) % split_ways # remainder is guaranteed to be less than splitways
+
     start_idx = 0
-    split_idx = start_idx + split_interval
-    while start_idx < len(events):
+    while len(splits) < split_ways:
+      split_idx = start_idx + split_interval
+      # the first 'remainder' chunks are made one element larger to chew
+      # up the remaining elements (remainder < splitways)
+      # note: len(events) = split_ways *  split_interval + remainder
+      if remainder > 0:
+        split_idx += 1
+        remainder -= 1
+
       splits.append(events[start_idx:split_idx])
       start_idx = split_idx
-      # Account for odd numbered splits -- if we're about to eat up
-      # all elements even though we will only have added split_ways-1
-      # splits, back up the split interval by 1
-      if (split_idx + split_interval >= len(events) and
-          len(splits) == split_ways - 2):
-        split_interval -= 1
-      split_idx += split_interval
+
     return splits
 
   def mark_invalid_input_sequences(self):
