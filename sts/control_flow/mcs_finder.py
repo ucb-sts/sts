@@ -78,12 +78,7 @@ class MCSFinder(ControlFlow):
       # First, run through without pruning to verify that the violation exists
       if self._runtime_stats is not None:
         self._runtime_stats["replay_start_epoch"] = time.time()
-
-      replayer = Replayer(self.dag, **self.kwargs)
-      # TODO get rid of this hack
-      self.current_replayer = replayer
-      replayer.simulate(simulation)
-
+      self.replay(self.dag)
       if self._runtime_stats is not None:
         self._runtime_stats["replay_end_epoch"] = time.time()
       # Check invariants
@@ -182,11 +177,7 @@ class MCSFinder(ControlFlow):
   def _check_violation(self, new_dag, subset_index, iteration):
     ''' Check if there were violations '''
     self._track_iteration_size(iteration)
-    # Run the simulation forward
-    replayer = Replayer(new_dag, **self.kwargs)
-    # TODO get rid of this hack
-    self.current_replayer = replayer
-    replayer.simulate(self.simulation)
+    self.replay(new_dag)
     violations = self.invariant_check(self.simulation)
     if violations == []:
       # No violation!
@@ -197,6 +188,13 @@ class MCSFinder(ControlFlow):
       # Violation in the subset
       self.log("Violation! Considering %d'th" % subset_index)
       return True
+
+  def replay(self, new_dag):
+    # Run the simulation forward
+    replayer = Replayer(new_dag, **self.kwargs)
+    # TODO get rid of this hack
+    self.current_replayer = replayer
+    replayer.simulate(self.simulation)
 
   def _dump_mcs_trace(self):
     # Dump the mcs trace

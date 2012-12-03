@@ -202,7 +202,7 @@ class MockMCSFinder(MCSFinder):
         return []
     return ["violation"]
 
-  def run_simulation_forward(self, new_dag, hook=None):
+  def replay(self, new_dag, hook=None):
     self.new_dag = new_dag
 
 class MockInputEvent(InputEvent):
