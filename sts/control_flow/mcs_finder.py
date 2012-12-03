@@ -23,15 +23,9 @@ class MCSFinder(ControlFlow):
   def __init__(self, superlog_path_or_dag,
                invariant_check=InvariantChecker.check_correspondence,
                mcs_trace_path=None, extra_log=None, dump_runtime_stats=False,
-               sync_callback=None,
                **kwargs):
-
-    # TODO: Get rid of this hack
-    self.current_replayer = None
-    sync_callback = ReplaySyncCallback(lambda: self.current_replayer.get_interpolated_time())
-
-    super(MCSFinder, self).__init__(sync_callback=sync_callback)
-
+    super(MCSFinder, self).__init__()
+    self.sync_callback = None
     self._log = logging.getLogger("mcs_finder")
 
     if type(superlog_path_or_dag) == str:
@@ -49,6 +43,10 @@ class MCSFinder(ControlFlow):
     self.kwargs = kwargs
     if dump_runtime_stats:
       self._runtime_stats = {}
+
+  def get_sync_callback(self):
+    ''' Override of ControlFlow's factory '''
+    return self.sync_callback
 
   def log(self, msg):
     ''' Output a message to both self._log and self._extra_log '''
@@ -184,8 +182,7 @@ class MCSFinder(ControlFlow):
   def replay(self, new_dag):
     # Run the simulation forward
     replayer = Replayer(new_dag, **self.kwargs)
-    # TODO get rid of this hack
-    self.current_replayer = replayer
+    self.sync_callback = ReplaySyncCallback(replayer.get_interpolated_time)
     replayer.simulate(self.simulation)
 
   def _dump_mcs_trace(self):

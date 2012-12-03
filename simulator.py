@@ -41,10 +41,8 @@ if args.config.endswith('.py'):
 try:
   config = __import__(args.config, globals(), locals(), ["*"])
 except ImportError:
-  # try again, but look in the config director/module
+  # try again, but prepend config module path
   config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
-
-# If we get here, either *both* of the imports failed. config is defined if execution reaches here.
 
 # For booting controllers
 if hasattr(config, 'controllers'):
@@ -90,26 +88,28 @@ else:
   # We default to no dataplane trace
   dataplane_trace_path = None
 
+# Set an interrupt handler
 def handle_int(signal, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
-  if simulation is not None:
-    simulation.clean_up()
+  if (simulation_cfg is not None and
+      simulation_cfg.current_simulation is not None):
+    simulation_cfg.current_simulation.clean_up()
   sys.exit(0)
+
+simulation_cfg = None
 
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
 
-simulation = None
-
+# Start the simulation
 try:
-  # TODO: Make Simulation a one-shot (one run object) to be instantiated by
-  # the control flow. Also make sync_callback a one-shot object
-  simulation = Simulation(controller_configs, topology_class,
-                          topology_params, patch_panel_class,
-                          dataplane_trace_path=dataplane_trace_path,
-                          controller_sync_callback=simulator.get_sync_callback(),
-                          snapshot_service=snapshot_service)
-  simulator.simulate(simulation)
+  simulation_cfg = SimulationConfig(controller_configs, topology_class,
+                                    topology_params, patch_panel_class,
+                                    dataplane_trace_path=dataplane_trace_path,
+                                    controller_sync_callback_factory=simulator.get_sync_callback,
+                                    snapshot_service=snapshot_service)
+  simulator.simulate(simulation_cfg)
 finally:
-  if simulation is not None:
-    simulation.clean_up()
+  if (simulation_cfg is not None and
+      simulation_cfg.current_simulation is not None):
+    simulation_cfg.current_simulation.clean_up()

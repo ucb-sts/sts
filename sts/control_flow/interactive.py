@@ -21,7 +21,8 @@ class Interactive(ControlFlow):
   #           the user to examine the state of the network interactively (i.e.,
   #           provide them with the normal POX cli + the simulated events
   def __init__(self, input_logger=None):
-    ControlFlow.__init__(self, RecordingSyncCallback(input_logger))
+    ControlFlow.__init__(self)
+    self.sync_callback = RecordingSyncCallback(input_logger)
     self.logical_time = 0
     self._input_logger = input_logger
     # TODO(cs): future feature: allow the user to interactively choose the order

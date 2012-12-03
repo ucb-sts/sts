@@ -30,7 +30,8 @@ class Fuzzer(ControlFlow):
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
                halt_on_violation=False, switch_init_sleep_seconds=False):
-    ControlFlow.__init__(self, RecordingSyncCallback(input_logger))
+    ControlFlow.__init__(self)
+    self.sync_callback = RecordingSyncCallback(input_logger)
 
     self.check_interval = check_interval
     self.invariant_check = invariant_check

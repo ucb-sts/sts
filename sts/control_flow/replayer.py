@@ -29,12 +29,13 @@ class Replayer(ControlFlow):
   '''
   def __init__(self, superlog_path_or_dag, create_event_scheduler=None,
                switch_init_sleep_seconds=False,
-               sync_callback=None, **kwargs):
+               sync_callback_factory=None, **kwargs):
+    ControlFlow.__init__(self)
+    if sync_callback_factory is None:
+      self.sync_callback = ReplaySyncCallback(self.get_interpolated_time)
+    else:
+      self.sync_callback = sync_callback_factory()
 
-    if sync_callback is None:
-      sync_callback = ReplaySyncCallback(self.get_interpolated_time)
-
-    ControlFlow.__init__(self, sync_callback)
     if type(superlog_path_or_dag) == str:
       superlog_path = superlog_path_or_dag
       # The dag is codefied as a list, where each element has
