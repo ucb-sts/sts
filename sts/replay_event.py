@@ -60,8 +60,8 @@ class Event(object):
     fields['class'] = self.__class__.__name__
     if ('fingerprint' in fields and
             isinstance(fields['fingerprint'][1], Fingerprint)):
-       fields['fingerprint'] = (fields['fingerprint'][0],
-                                fields['fingerprint'][1].to_dict())
+      fields['fingerprint'] = (fields['fingerprint'][0],
+                               fields['fingerprint'][1].to_dict())
     return json.dumps(fields)
 
   def __hash__(self):

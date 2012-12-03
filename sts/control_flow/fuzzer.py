@@ -6,19 +6,10 @@ Three control flow types for running the simulation forward.
     checking for invariants at the users' discretion
 '''
 
-import pox.openflow.libopenflow_01 as of
 from sts.topology import BufferedPatchPanel
 from sts.traffic_generator import TrafficGenerator
-from sts.event_scheduler import EventScheduler
 from sts.util.console import msg
-from sts.util.convenience import timestamp_string
 from sts.replay_event import *
-from sts.event_dag import EventDag, PeekingEventDag, split_list
-from sts.syncproto.sts_syncer import STSSyncCallback
-import sts.log_processing.superlog_parser as superlog_parser
-from sts.syncproto.base import SyncTime
-from pox.lib.revent import EventMixin, Event
-from sts.input_traces.input_logger import InputLogger
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -26,8 +17,6 @@ import sys
 import time
 import random
 import logging
-import json
-from collections import Counter
 
 log = logging.getLogger("control_flow")
 
@@ -116,7 +105,7 @@ class Fuzzer(ControlFlow):
           msg.fail("The following controllers had correctness violations!: %s"
                    % str(controllers_with_violations))
           if self.halt_on_violation:
-           return True
+            return True
         else:
           msg.interactive("No correctness violations!")
       # use a non-threaded version of correspondence for now. otherwise

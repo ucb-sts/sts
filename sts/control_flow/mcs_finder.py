@@ -3,18 +3,11 @@ An orchestrating control flow that invokes replayer several times to
 find the minimal causal set (MCS) of a failure.
 '''
 
-import pox.openflow.libopenflow_01 as of
-from sts.topology import BufferedPatchPanel
-from sts.traffic_generator import TrafficGenerator
-from sts.event_scheduler import EventScheduler
 from sts.util.console import msg
 from sts.util.convenience import timestamp_string
 from sts.replay_event import *
-from sts.event_dag import EventDag, PeekingEventDag, split_list
-from sts.syncproto.sts_syncer import STSSyncCallback
+from sts.event_dag import EventDag, split_list
 import sts.log_processing.superlog_parser as superlog_parser
-from sts.syncproto.base import SyncTime
-from pox.lib.revent import EventMixin, Event
 from sts.input_traces.input_logger import InputLogger
 
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
@@ -25,7 +18,6 @@ import time
 import random
 import logging
 import json
-from collections import Counter
 
 class MCSFinder(ControlFlow):
   def __init__(self, superlog_path_or_dag,
@@ -62,7 +54,7 @@ class MCSFinder(ControlFlow):
     ''' Output a message to both self._log and self._extra_log '''
     self._log.info(msg)
     if self._extra_log is not None:
-     self._extra_log.write(msg + '\n')
+      self._extra_log.write(msg + '\n')
 
   def simulate(self, simulation, check_reproducability=True):
     self.simulation = simulation

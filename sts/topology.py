@@ -234,7 +234,6 @@ class LinkTracker(object):
     msg.event("Restoring link %s" % str(link))
     if link not in self.network_links:
       raise ValueError("Unknown link %s" % str(link))
-    port = ofp_phy_port(port_no=link.start_port)
     link.start_software_switch.bring_port_up(link.start_port)
     self.cut_links.remove(link)
     # TODO(cs): the switch on the other end of the link should eventually

@@ -1,7 +1,7 @@
 import logging
 import pox.lib.revent
 from pox.lib.revent import EventMixin
-from sts.replay_event import Event, ControllerStateChange
+from sts.replay_event import ControllerStateChange, PendingStateChange
 from sts.syncproto.base import SyncTime
 from sts.syncproto.sts_syncer import STSSyncCallback
 
@@ -122,7 +122,6 @@ class RecordingSyncCallback(STSSyncCallback):
     value = None
     if name == "gettimeofday":
       value = SyncTime.now()
-      time = value
     else:
       raise ValueError("unsupported deterministic value: %s" % name)
 

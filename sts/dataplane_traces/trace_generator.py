@@ -23,8 +23,6 @@ def generate_example_trace():
   trace = []
 
   mesh = topo.MeshTopology(num_switches=2)
-  switches = mesh.switches
-  network_links = mesh.network_links
   hosts = mesh.hosts
   access_links = mesh.access_links
 
@@ -55,8 +53,6 @@ def generate_example_trace_same_subnet():
   trace = []
 
   mesh = topo.MeshTopology(num_switches=2)
-  switches = mesh.switches
-  network_links = mesh.network_links
   hosts = mesh.hosts
   access_links = mesh.access_links
 
@@ -86,8 +82,7 @@ def generate_example_trace_fat_tree(num_pods=4):
   # TODO(cs): highly redundant
 
   fat_tree = topo.FatTree(num_pods)
-  patch_panel = topo.BufferedPatchPanel(fat_tree.switches, fat_tree.hosts, fat_tree.get_connected_port)
-  (switches, network_links, hosts, access_links) = (fat_tree.switches,
+  (_, _, hosts, access_links) = (fat_tree.switches,
           fat_tree.network_links, fat_tree.hosts, fat_tree.access_links)
 
   host2pings = defaultdict(lambda: [])

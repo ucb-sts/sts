@@ -91,13 +91,13 @@ class POXSyncConnection(object):
     listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     host = self.host if self.host else "0.0.0.0"
-    listen_socket.bind( (self.host, self.port) )
+    listen_socket.bind( (host, self.port) )
     listen_socket.listen(1)
     self.listen_socket = listen_socket
 
   def wait_for_connect(self):
     log.info("waiting for sts_sync connection on %s:%d" % (self.host, self.port))
-    (socket, addr) = self.listen_socket.accept()
+    (socket, _) = self.listen_socket.accept()
     self.speaker = POXSyncProtocolSpeaker(SyncIODelegate(self.io_master, socket))
 
   def request(self, messageClass, name):
