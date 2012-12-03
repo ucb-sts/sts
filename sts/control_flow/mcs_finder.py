@@ -27,17 +27,34 @@ import logging
 import json
 from collections import Counter
 
-class MCSFinder(Replayer):
+class MCSFinder(ControlFlow):
   def __init__(self, superlog_path_or_dag,
                invariant_check=InvariantChecker.check_correspondence,
                mcs_trace_path=None, extra_log=None, dump_runtime_stats=False,
+               sync_callback=None,
                **kwargs):
-    super(MCSFinder, self).__init__(superlog_path_or_dag, **kwargs)
-    self.invariant_check = invariant_check
+
+    # TODO: Get rid of this hack
+    self.current_replayer = None
+    sync_callback = ReplaySyncCallback(lambda: self.current_replayer.get_interpolated_time())
+
+    super(MCSFinder, self).__init__(sync_callback=sync_callback)
+
     self._log = logging.getLogger("mcs_finder")
+
+    if type(superlog_path_or_dag) == str:
+      superlog_path = superlog_path_or_dag
+      # The dag is codefied as a list, where each element has
+      # a list of its dependents
+      self.dag = EventDag(superlog_parser.parse_path(superlog_path))
+    else:
+      self.dag = superlog_path_or_dag
+
+    self.invariant_check = invariant_check
     self.mcs_trace_path = mcs_trace_path
     self._extra_log = extra_log
     self._runtime_stats = None
+    self.kwargs = kwargs
     if dump_runtime_stats:
       self._runtime_stats = {}
 
@@ -49,9 +66,11 @@ class MCSFinder(Replayer):
 
   def simulate(self, simulation, check_reproducability=True):
     self.simulation = simulation
-    # Now start pruning
+
+    # inject domain knowledge into the dag
     self.dag.mark_invalid_input_sequences()
     self.dag = self.dag.filter_unsupported_input_types()
+
     if len(self.dag) == 0:
       raise RuntimeError("No supported input types?")
 
@@ -60,8 +79,11 @@ class MCSFinder(Replayer):
       if self._runtime_stats is not None:
         self._runtime_stats["replay_start_epoch"] = time.time()
 
-      self._run_simulation_for_dag(self.dag)
-      # Replayer.simulate(self, self.simulation)
+      replayer = Replayer(self.dag, **self.kwargs)
+      # TODO get rid of this hack
+      self.current_replayer = replayer
+      replayer.simulate(simulation)
+
       if self._runtime_stats is not None:
         self._runtime_stats["replay_end_epoch"] = time.time()
       # Check invariants
@@ -157,15 +179,14 @@ class MCSFinder(Replayer):
         self._runtime_stats["iteration_size"] = {}
       self._runtime_stats["iteration_size"][iteration] = len(self.dag.input_events)
 
-  def _run_simulation_for_dag(self, dag):
-    dag.prepare_for_replay(self.simulation)
-    self.run_simulation_forward(dag)
-
   def _check_violation(self, new_dag, subset_index, iteration):
     ''' Check if there were violations '''
     self._track_iteration_size(iteration)
     # Run the simulation forward
-    self._run_simulation_for_dag(new_dag)
+    replayer = Replayer(new_dag, **self.kwargs)
+    # TODO get rid of this hack
+    self.current_replayer = replayer
+    replayer.simulate(self.simulation)
     violations = self.invariant_check(self.simulation)
     if violations == []:
       # No violation!

@@ -102,6 +102,8 @@ signal.signal(signal.SIGTERM, handle_int)
 simulation = None
 
 try:
+  # TODO: Make Simulation a one-shot (one run object) to be instantiated by
+  # the control flow. Also make sync_callback a one-shot object
   simulation = Simulation(controller_configs, topology_class,
                           topology_params, patch_panel_class,
                           dataplane_trace_path=dataplane_trace_path,
