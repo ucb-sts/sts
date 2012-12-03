@@ -25,9 +25,9 @@ import time
 
 log = logging.getLogger("simulation")
 
-class Simulation (object):
+class SimulationConfig(object):
   """
-  Maintains the current state of:
+  Maintains the configuration for:
     - The controllers: a list of ControllerConfig objects
     - The topology
     - Patch panel (dataplane forwarding)
@@ -35,55 +35,22 @@ class Simulation (object):
   """
   def __init__(self, controller_configs, topology_class,
                topology_params, patch_panel_class, dataplane_trace_path=None,
-               controller_sync_callback=None, snapshot_service=None):
+               controller_sync_callback_factory=lambda: None, snapshot_service=None):
     self.controller_configs = controller_configs
-    self.controller_manager = None
-    self.topology = None
     # keep around topology_class and topology_params so we can construct
     # clean topology objects for (multiple invocations of) bootstrapping later
     self._topology_class = topology_class
     self._topology_params = topology_params
     self._patch_panel_class = patch_panel_class
-    self.dataplane_trace = None
     self._dataplane_trace_path = dataplane_trace_path
-    self._io_master = None
-    self.god_scheduler = None
-    # Note that controller_sync_callback is stateful, so we flush
-    # it at every bootstrap()
-    self.controller_sync_callback = controller_sync_callback
+    self._controller_sync_callback_factory = controller_sync_callback_factory
+    # TODO(cs): is the snapshot service stateful?
     self.snapshot_service = snapshot_service
-
-  # TODO(cs): the next three next methods should go in a separate
-  #           ControllerContainer class
-  def _instantiate_topology(self):
-    '''construct a clean topology object from topology_class and
-    topology_params'''
-    # If you want to shoot yourself in the foot, feel free :)
-    self.topology = eval("%s(%s)" %
-                         (self._topology_class.__name__, self._topology_params))
-
-  def clean_up(self):
-    '''Ensure that state from previous runs (old controller processes,
-    sockets, IOLoop object) are cleaned before the next time we
-    bootstrap'''
-    # kill controllers
-    if self.controller_manager is not None:
-      self.controller_manager.kill_all()
-
-    # Garbage collect sockets
-    if self.topology is not None:
-      for switch in self.topology.switches:
-        for connection in switch.connections:
-          connection.close()
-
-    # Just to make sure there isn't any state lying around, throw out the old
-    # RecocoIOLoop
-    if self._io_master is not None:
-      self._io_master.close_all()
-    msg.unset_io_master()
+    self.current_simulation = None
 
   def bootstrap(self, switch_init_sleep_seconds=False):
-    '''Set up the state of the system to its initial starting point:
+    '''Return a simulation object encapsulating the state of
+       the system in its initial starting point:
        - boots controllers
        - connects switches to controllers
 
@@ -94,61 +61,74 @@ class Simulation (object):
              for switches to initialize their TCP connections with the
              controller(s). Defaults to False
     '''
-    # Clean up state from any previous runs
-    self.clean_up()
+    def initialize_io_loop():
+      ''' boot the IOLoop (needed for the controllers) '''
+      _io_master = IOMaster()
+      # monkey patch time.sleep for all our friends
+      _io_master.monkey_time_sleep()
+      # tell sts.console to use our io_master
+      msg.set_io_master(_io_master)
+      return _io_master
 
-    # boot the IOLoop (needed for the controllers)
-    self._io_master = IOMaster()
+    def boot_controllers(sync_connection_manager):
+      # Boot the controllers
+      controllers = []
+      for c in self.controller_configs:
+        controller = Controller(c, sync_connection_manager,
+                                self.snapshot_service)
+        controller.start()
+        log.info("Launched controller c%s: %s [PID %d]" %
+                 (str(c.uuid), " ".join(c.expanded_cmdline), controller.pid))
+        controllers.append(controller)
+      return ControllerManager(controllers)
 
-    # monkey patch time.sleep for all our friends
-    self._io_master.monkey_time_sleep()
-    # tell sts.console to use our io_master
-    msg.set_io_master(self._io_master)
+    def instantiate_topology():
+      '''construct a clean topology object from topology_class and
+      topology_params'''
+      # If you want to shoot yourself in the foot, feel free :)
+      topology = eval("%s(%s)" %
+                      (self._topology_class.__name__,
+                       self._topology_params))
+      return topology
 
-    if hasattr(self.controller_sync_callback, 'flush'):
-      self.controller_sync_callback.flush()
-    self.sync_connection_manager = STSSyncConnectionManager(self._io_master,
-                                                            self.controller_sync_callback)
-
-    # Boot the controllers
-    controllers = []
-    for c in self.controller_configs:
-      controller = Controller(c, self.sync_connection_manager,
-                              self.snapshot_service)
-      controller.start()
-      log.info("Launched controller c%s: %s [PID %d]" %
-               (str(c.uuid), " ".join(c.expanded_cmdline), controller.pid))
-      controllers.append(controller)
-
-    self.controller_manager = ControllerManager(controllers)
-
-    # Instantiate network
-    self._instantiate_topology()
-    self.patch_panel = self._patch_panel_class(self.topology.switches,
-                                               self.topology.hosts,
-                                               self.topology.get_connected_port)
-    self.god_scheduler = GodScheduler()
-
-    if switch_init_sleep_seconds:
-      self.set_pass_through()
-
+    # Instantiate the pieces needed for Simulation's constructor
+    io_master = initialize_io_loop()
+    sync_callback = self._controller_sync_callback_factory()
+    sync_connection_manager = STSSyncConnectionManager(io_master,
+                                                       sync_callback)
+    controller_manager = boot_controllers(sync_connection_manager)
+    topology = instantiate_topology()
+    patch_panel = self._patch_panel_class(topology.switches, topology.hosts,
+                                          topology.get_connected_port)
+    god_scheduler = GodScheduler()
+    dataplane_trace = None
     if self._dataplane_trace_path is not None:
-      self.dataplane_trace = Trace(self._dataplane_trace_path, self.topology)
+      dataplane_trace = Trace(self._dataplane_trace_path, topology)
 
-    # Connect switches to controllers
-    # TODO(cs): move this into a ConnectionFactory class
+    simulation = Simulation(topology, controller_manager, dataplane_trace,
+                            god_scheduler, io_master, patch_panel,
+                            sync_callback)
+    self.current_simulation = simulation
+
+    # Connect to controllers
+    # TODO(cs): somewhat hacky that we do this after instantiating Simulation
     def create_connection(controller_info, switch):
+      ''' Connect switches to controllers '''
+      # TODO(cs): move this into a ConnectionFactory class
       socket = connect_socket_with_backoff(controller_info.address,
                                            controller_info.port)
       # Set non-blocking
       socket.setblocking(0)
-      io_worker = DeferredIOWorker(self._io_master.create_worker_for_socket(socket))
-      return DeferredOFConnection(io_worker, switch.dpid, self.god_scheduler)
+      io_worker = DeferredIOWorker(io_master.create_worker_for_socket(socket))
+      return DeferredOFConnection(io_worker, switch.dpid, god_scheduler)
+
+    if switch_init_sleep_seconds:
+      simulation.set_pass_through()
 
     # TODO(cs): this should block until all switches have finished
     # initializing with the controller
-    self.topology.connect_to_controllers(self.controller_configs,
-                                         create_connection=create_connection)
+    topology.connect_to_controllers(self.controller_configs,
+                                    create_connection=create_connection)
 
     if switch_init_sleep_seconds:
       log.debug("Waiting %f seconds for switch initialization" %
@@ -157,11 +137,29 @@ class Simulation (object):
 
     # Now unset pass-through mode
     if switch_init_sleep_seconds:
-      self.unset_pass_through()
+      simulation.unset_pass_through()
 
-  @property
-  def io_master(self):
-    return self._io_master
+    return simulation
+
+class Simulation(object):
+  '''
+  Encapsulates the running state of a single simulation:
+    - Topology (network state)
+    - Controller processes
+    - GodScheduler (OpenFlow messages)
+    - PatchPanel (Dataplane messages)
+    - RecordingSyncCallback (controller state changes)
+    - Dataplane Trace (pending dataplane messages)
+  '''
+  def __init__(self, topology, controller_manager, dataplane_trace,
+               god_scheduler, io_master, patch_panel, controller_sync_callback):
+    self.topology = topology
+    self.controller_manager = controller_manager
+    self.dataplane_trace = dataplane_trace
+    self.god_scheduler = god_scheduler
+    self._io_master = io_master
+    self.patch_panel = patch_panel
+    self.controller_sync_callback = controller_sync_callback
 
   def set_pass_through(self):
     ''' Set to pass-through during bootstrap, so that switch initialization
@@ -177,3 +175,27 @@ class Simulation (object):
     if hasattr(self.controller_sync_callback, "unset_pass_through"):
       observed_events += self.controller_sync_callback.unset_pass_through()
     return observed_events
+
+  def clean_up(self):
+    '''Ensure that state from previous runs (old controller processes,
+    sockets, IOLoop object) are cleaned before the next time we
+    bootstrap'''
+    # kill controllers
+    if self.controller_manager is not None:
+      self.controller_manager.kill_all()
+
+    # Garbage collect sockets
+    if self.topology is not None:
+      for switch in self.topology.switches:
+        for connection in switch.connections:
+          connection.close()
+
+    # Just to make sure there isn't any state lying around, throw out
+    # the old RecocoIOLoop
+    if self._io_master is not None:
+      self._io_master.close_all()
+    msg.unset_io_master()
+
+  @property
+  def io_master(self):
+    return self._io_master

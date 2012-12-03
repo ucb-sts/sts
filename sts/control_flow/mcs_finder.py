@@ -54,8 +54,8 @@ class MCSFinder(ControlFlow):
     if self._extra_log is not None:
       self._extra_log.write(msg + '\n')
 
-  def simulate(self, simulation, check_reproducability=True):
-    self.simulation = simulation
+  def simulate(self, simulation_cfg, check_reproducability=True):
+    self.simulation_cfg = simulation_cfg
 
     # inject domain knowledge into the dag
     self.dag.mark_invalid_input_sequences()
@@ -68,11 +68,9 @@ class MCSFinder(ControlFlow):
       # First, run through without pruning to verify that the violation exists
       if self._runtime_stats is not None:
         self._runtime_stats["replay_start_epoch"] = time.time()
-      self.replay(self.dag)
+      violations = self.replay(self.dag)
       if self._runtime_stats is not None:
         self._runtime_stats["replay_end_epoch"] = time.time()
-      # Check invariants
-      violations = self.invariant_check(self.simulation)
       if violations == []:
         self.log("Unable to reproduce correctness violation!")
         sys.exit(5)
@@ -167,8 +165,7 @@ class MCSFinder(ControlFlow):
   def _check_violation(self, new_dag, subset_index, iteration):
     ''' Check if there were violations '''
     self._track_iteration_size(iteration)
-    self.replay(new_dag)
-    violations = self.invariant_check(self.simulation)
+    violations = self.replay(new_dag)
     if violations == []:
       # No violation!
       # If singleton, this must be part of the MCS
@@ -183,14 +180,15 @@ class MCSFinder(ControlFlow):
     # Run the simulation forward
     replayer = Replayer(new_dag, **self.kwargs)
     self.sync_callback = ReplaySyncCallback(replayer.get_interpolated_time)
-    replayer.simulate(self.simulation)
+    replayer.simulate(self.simulation_cfg)
+    return self.invariant_check(replayer.simulation)
 
   def _dump_mcs_trace(self):
     # Dump the mcs trace
     input_logger = InputLogger(output_path=self.mcs_trace_path)
     for e in self.dag.events:
       input_logger.log_input_event(e)
-    input_logger.close(self.simulation, skip_mcs_cfg=True)
+    input_logger.close(self.simulation_cfg, skip_mcs_cfg=True)
 
   def _dump_runtime_stats(self):
     if self._runtime_stats is not None:

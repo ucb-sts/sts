@@ -65,11 +65,11 @@ class Fuzzer(ControlFlow):
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
 
-  def simulate(self, simulation):
+  def simulate(self, simulation_cfg):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
-    self.simulation = simulation
-    self.simulation.bootstrap(self._switch_init_sleep_seconds)
-    assert(isinstance(simulation.patch_panel, BufferedPatchPanel))
+    self.simulation_cfg = simulation_cfg
+    self.simulation = simulation_cfg.bootstrap(self._switch_init_sleep_seconds)
+    assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.loop()
 
   def loop(self):
@@ -90,7 +90,7 @@ class Fuzzer(ControlFlow):
         time.sleep(self.delay)
     finally:
       if self._input_logger is not None:
-        self._input_logger.close(self.simulation)
+        self._input_logger.close(self.simulation_cfg)
 
   def maybe_check_invariant(self):
     if (self.check_interval is not None and

@@ -75,15 +75,17 @@ class InputLogger(object):
     if dp_event is not None:
       self.dp_events.append(dp_event)
 
-  def close(self, simulation, skip_mcs_cfg=False):
+  def close(self, simulation_cfg, skip_mcs_cfg=False):
     # First, insert a WaitTime, in case there was a controller crash
     self.log_input_event(WaitTime(1.0))
     # Flush the json input log
     self.output.close()
 
     # Grab the dataplane trace path (might be pre-defined, or Fuzzed)
-    if simulation._dataplane_trace_path is not None:
-      self.dp_trace_path = "\"" + simulation._dataplane_trace_path + "\""
+    # TODO(cs): shouldn't be touching cfg's privates -- should be a method
+    # instead
+    if simulation_cfg._dataplane_trace_path is not None:
+      self.dp_trace_path = "\"" + simulation_cfg._dataplane_trace_path + "\""
     elif self.dp_events != []:
       # If the Fuzzer was injecting random traffic, write the dataplane trace
       tg.write_trace_log(self.dp_events, self.dp_trace_path)
@@ -98,10 +100,10 @@ class InputLogger(object):
 
     for path, template in path_templates:
       with open(path, 'w') as cfg_out:
-        config_string = template % (str(simulation.controller_configs),
-                                    simulation._topology_class.__name__,
-                                    simulation._topology_params,
-                                    simulation._patch_panel_class.__name__,
+        config_string = template % (str(simulation_cfg.controller_configs),
+                                    simulation_cfg._topology_class.__name__,
+                                    simulation_cfg._topology_params,
+                                    simulation_cfg._patch_panel_class.__name__,
                                     self.output_path,
                                     self.mcs_output_path,
                                     self.dp_trace_path)

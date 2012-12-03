@@ -68,14 +68,6 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     self.passed_through_events = []
     return passed_events
 
-  def flush(self):
-    ''' Remove any pending state changes '''
-    num_pending_state_changes = len(self._pending_state_changes)
-    if num_pending_state_changes > 0:
-      self.log.info("Flushing %d pending state changes" %
-                    num_pending_state_changes)
-    self._pending_state_changes = Counter()
-
   def state_change_pending(self, pending_state_change):
     ''' Return whether the PendingStateChange has been observed '''
     return self._pending_state_changes[pending_state_change] > 0
@@ -105,7 +97,6 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     else:
       raise ValueError("unsupported deterministic value: %s" % name)
     return value
-
 
 class RecordingSyncCallback(STSSyncCallback):
   def __init__(self, input_logger):

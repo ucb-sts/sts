@@ -79,13 +79,11 @@ class Replayer(ControlFlow):
   def increment_round(self):
     pass
 
-  def simulate(self, simulation, post_bootstrap_hook=None):
-    self.simulation = simulation
+  def simulate(self, simulation_cfg, post_bootstrap_hook=None):
+    self.simulation = simulation_cfg.bootstrap(self._switch_init_sleep_seconds)
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
 
   def run_simulation_forward(self, dag, post_bootstrap_hook=None):
-    # Note that bootstrap() flushes any state from previous runs
-    self.simulation.bootstrap(self._switch_init_sleep_seconds)
     event_scheduler = self.create_event_scheduler(self.simulation)
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()

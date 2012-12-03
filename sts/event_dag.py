@@ -321,6 +321,7 @@ def actual_peek(simulation, inferred_events, inject_input, wait_time,
   # event buffers in case there were unaccounted internal events
   # Note that there isn't a race condition between flush()'ing and
   # incoming internal events, since sts is single-threaded
+  # TODO(cs): flush() is not longer needed!
   simulation.god_scheduler.flush()
   simulation.controller_sync_callback.flush()
 

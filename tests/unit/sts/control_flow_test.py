@@ -12,7 +12,7 @@ import tempfile
 from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import Replayer, MCSFinder
 from sts.topology import FatTree, PatchPanel, MeshTopology
-from sts.simulation_state import Simulation
+from sts.simulation_state import Simulation, SimulationConfig
 from sts.replay_event import Event, InternalEvent, InputEvent
 from sts.event_dag import EventDag
 from sts.entities import Host, Controller
@@ -24,7 +24,7 @@ _running_simulation = None
 def handle_int(sigspec, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % sigspec
   if _running_simulation is not None:
-    _running_simulation.clean_up()
+    _running_simulation.current_simulation.clean_up()
   raise RuntimeError("terminating on signal %d" % sigspec)
 
 
@@ -65,7 +65,7 @@ class ReplayerTest(unittest.TestCase):
     topology_class = FatTree
     topology_params = ""
     patch_panel_class = PatchPanel
-    sim = Simulation(controllers, topology_class, topology_params, patch_panel_class)
+    sim = SimulationConfig(controllers, topology_class, topology_params, patch_panel_class)
     global _running_simulation
     _running_simulation = sim
     return sim
@@ -74,8 +74,8 @@ class ReplayerTest(unittest.TestCase):
     try:
       self.write_simple_superlog()
       replayer = Replayer(self.tmp_basic_superlog)
-      simulation = self.setup_simple_simulation()
-      replayer.simulate(simulation)
+      simulation_cfg = self.setup_simple_simulation()
+      replayer.simulate(simulation_cfg)
     finally:
       os.unlink(self.tmp_basic_superlog)
 
@@ -93,22 +93,24 @@ class ReplayerTest(unittest.TestCase):
     superlog.write(e2 + '\n')
     superlog.close()
 
-  def setup_controller_simulation(self, controller_sync_callback):
+  def setup_controller_simulation(self, sync_callback_factory):
     cmdline = "./pox.py --verbose --no-cli sts.syncproto.pox_syncer openflow.of_01 --address=__address__ --port=__port__"
     controllers = [ControllerConfig(cwd='pox', cmdline=cmdline, address="127.0.0.1", port=8899, sync="tcp:localhost:18899")]
     topology_class = MeshTopology
     topology_params = "num_switches=2"
     patch_panel_class = PatchPanel
-    return Simulation(controller_configs=controllers, topology_class=topology_class,
-        topology_params=topology_params, patch_panel_class=patch_panel_class,
-        controller_sync_callback=controller_sync_callback)
+    return SimulationConfig(controllers,
+                            topology_class,
+                            topology_params,
+                            patch_panel_class,
+                            controller_sync_callback_factory=sync_callback_factory)
 
   def test_controller_crash(self):
     try:
       self.write_controller_crash_superlog()
       replayer = Replayer(self.tmp_controller_superlog)
-      simulation = self.setup_controller_simulation(controller_sync_callback=replayer.get_sync_callback())
-      replayer.simulate(simulation)
+      simulation_cfg = self.setup_controller_simulation(replayer.get_sync_callback)
+      replayer.simulate(simulation_cfg)
     finally:
       Controller.kill_active_procs()
       os.unlink(self.tmp_controller_superlog)
@@ -133,15 +135,15 @@ class ReplayerTest(unittest.TestCase):
     topology_params = "num_switches=2"
     patch_panel_class = PatchPanel
     dataplane_trace_path = "./dataplane_traces/ping_pong_same_subnet.trace"
-    return Simulation(controllers, topology_class, topology_params,
-                      patch_panel_class, dataplane_trace_path=dataplane_trace_path)
+    return SimulationConfig(controllers, topology_class, topology_params,
+                            patch_panel_class, dataplane_trace_path=dataplane_trace_path)
 
   def test_dataplane_injection(self):
     try:
       self.write_dataplane_trace_superlog()
       replayer = Replayer(self.tmp_dataplane_superlog)
-      simulation = self.setup_dataplane_simulation()
-      replayer.simulate(simulation)
+      simulation_cfg = self.setup_dataplane_simulation()
+      replayer.simulate(simulation_cfg)
     finally:
       os.unlink(self.tmp_dataplane_superlog)
 
@@ -166,18 +168,18 @@ class ReplayerTest(unittest.TestCase):
     topology_class = FatTree
     topology_params = ""
     patch_panel_class = PatchPanel
-    return Simulation(controllers, topology_class, topology_params,
-                      patch_panel_class)
+    return SimulationConfig(controllers, topology_class, topology_params,
+                            patch_panel_class)
 
   def test_migration(self):
     try:
       self.write_migration_superlog()
       replayer = Replayer(self.tmp_migration_superlog)
-      simulation = self.setup_migration_simulation()
-      replayer.simulate(simulation)
-      latest_switch = simulation.topology.get_switch(7)
+      simulation_cfg = self.setup_migration_simulation()
+      replayer.simulate(simulation_cfg)
+      latest_switch = replayer.simulation.topology.get_switch(7)
       latest_port = latest_switch.ports[101]
-      (host, interface) = simulation.topology.get_connected_port(latest_switch,
+      (host, interface) = replayer.simulation.topology.get_connected_port(latest_switch,
                                                                  latest_port)
       self.assertTrue(type(host) == Host)
     finally:
@@ -204,6 +206,7 @@ class MockMCSFinder(MCSFinder):
 
   def replay(self, new_dag, hook=None):
     self.new_dag = new_dag
+    return self.invariant_check(new_dag)
 
 class MockInputEvent(InputEvent):
   def __init__(self, fingerprint=None, **kws):

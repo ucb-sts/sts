@@ -41,9 +41,9 @@ class Interactive(ControlFlow):
     if self._input_logger is not None:
       self._input_logger.log_input_event(event, **kws)
 
-  def simulate(self, simulation):
-    self.simulation = simulation
-    self.simulation.bootstrap()
+  def simulate(self, simulation_cfg):
+    self.simulation_cfg = simultion_cfg
+    self.simulation = simulation_cfg.bootstrap()
     self.loop()
 
   def loop(self):
@@ -62,7 +62,7 @@ class Interactive(ControlFlow):
           break
     finally:
       if self._input_logger is not None:
-        self._input_logger.close(self.simulation)
+        self._input_logger.close(self.simulation_cfg)
 
   def invariant_check_prompt(self):
     answer = msg.raw_input('Check Invariants? [Ny]')
