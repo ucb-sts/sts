@@ -15,7 +15,7 @@ from sts.event_scheduler import EventScheduler
 from sts.util.console import msg
 from sts.util.convenience import timestamp_string
 from sts.replay_event import *
-from sts.event_dag import EventDag, PeekingEventDag
+from sts.event_dag import EventDag, PeekingEventDag, split_list
 from sts.syncproto.sts_syncer import STSSyncCallback
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.syncproto.base import SyncTime
@@ -141,7 +141,10 @@ class MCSFinder(Replayer):
     self.simulation = simulation
     # Now start pruning
     self.dag.mark_invalid_input_sequences()
-    self.dag.filter_unsupported_input_types()
+    self.dag = self.dag.filter_unsupported_input_types()
+    if len(self.dag) == 0:
+      raise RuntimeError("No supported input types?")
+
     if check_reproducability:
       # First, run through without pruning to verify that the violation exists
       if self._runtime_stats is not None:
@@ -188,10 +191,10 @@ class MCSFinder(Replayer):
       precomputed_subsets = set()
 
     self.log("Checking %d subsets" % split_ways)
-    subsets = self.dag.split_inputs(split_ways)
+    subsets = split_list(self.dag.input_events, split_ways)
     self.log("Subsets: %s" % str(subsets))
     for i, subset in enumerate(subsets):
-      new_dag = self.dag.subset(subset, self.simulation)
+      new_dag = self.dag.input_subset(subset)
       input_sequence = tuple(new_dag.input_events)
       self.log("Current subset: %s" % str(input_sequence))
       if input_sequence in precomputed_subsets:
@@ -211,7 +214,7 @@ class MCSFinder(Replayer):
 
     self.log("No subsets with violations. Checking complements")
     for i, subset in enumerate(subsets):
-      new_dag = self.dag.complement(subset, self.simulation)
+      new_dag = self.dag.input_complement(subset)
       input_sequence = tuple(new_dag.input_events)
       self.log("Current complement: %s" % str(input_sequence))
       if input_sequence in precomputed_subsets:

@@ -8,6 +8,61 @@ from sys import maxint
 from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
 
+def split_list(l, split_ways):
+    ''' Split our inputs into split_ways separate lists '''
+    if split_ways < 1:
+      raise ValueError("Split ways must be greater than 0")
+
+    splits = []
+    split_interval = len(l) / split_ways # integer division = floor
+    remainder = len(l) % split_ways # remainder is guaranteed to be less than splitways
+
+    start_idx = 0
+    while len(splits) < split_ways:
+      split_idx = start_idx + split_interval
+      # the first 'remainder' chunks are made one element larger to chew
+      # up the remaining elements (remainder < splitways)
+      # note: len(l) = split_ways *  split_interval + remainder
+      if remainder > 0:
+        split_idx += 1
+        remainder -= 1
+
+      splits.append(l[start_idx:split_idx])
+      start_idx = split_idx
+    return splits
+
+class EventDagView(object):
+  def __init__(self, parent, events_list):
+    ''' subset is a list '''
+    self._parent = parent
+    self._events_list = list(events_list)
+    self._events_set = set(self._events_list)
+
+  @property
+  def events(self):
+    '''Return the events in the DAG'''
+    return self._events_list
+
+  @property
+  def input_events(self):
+    # TODO(cs): memoize?
+    return [ e for e in self._events_list if isinstance(e, InputEvent) ]
+
+  def input_subset(self, subset):
+    '''pre: subset must be a subset of only this view'''
+    return self._parent.input_subset(subset)
+
+  def input_complement(self, subset):
+    return self._parent.input_complement(subset, self._events_list)
+
+
+  def __len__(self):
+    return len(self._events_list)
+
+  # TODO(cs): refactor caller of prepare()
+  def prepare_for_replay(self, unused_simulation):
+    pass
+
 class EventDag(object):
   '''A collection of Event objects. EventDags are primarily used to present a
   view of the underlying events with some subset of the input events pruned
@@ -29,37 +84,18 @@ class EventDag(object):
   # TODO(cs): model these!
   _ignored_input_types = set([DataplaneDrop, WaitTime, DataplanePermit, HostMigration, CheckInvariants])
 
-  def __init__(self, events, prefix_trie=None,
-               label2event=None, switch_init_sleep_seconds=False):
+  def __init__(self, events, prefix_trie=None):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
     see how this is assembled.'''
-
     # TODO(cs): ugly that the superclass has to keep track of
     # PeekingEventDag's data
     self._prefix_trie = prefix_trie
-    self._switch_init_sleep_seconds = switch_init_sleep_seconds
     self._events_list = events
     self._events_set = set(self._events_list)
-    self._populate_indices(label2event)
-
-  def _populate_indices(self, label2event):
-    #self._event_to_index = {
-    #  e : i
-    #  for i, e in enumerate(self._events_list)
-    #}
-    # Optimization: only compute label2event once (at the first unpruned
-    # initialization)
-    if label2event is None:
-      self._label2event = {
-        event.label : event
-        for event in self._events_list
-      }
-    else:
-      self._label2event = label2event
-
-  def filter_unsupported_input_types(self):
-    self._events_list = [ e for e in self._events_list
-                          if type(e) not in self._ignored_input_types ]
+    self._label2event = {
+     event.label : event
+     for event in self._events_list
+    }
 
   @property
   def events(self):
@@ -71,88 +107,52 @@ class EventDag(object):
     # TODO(cs): memoize?
     return [ e for e in self._events_list if isinstance(e, InputEvent) ]
 
-  def _remove_event(self, event):
-    ''' Recursively remove the event and its dependents '''
-    if event in self._events_set:
-      # TODO(cs): This shifts other indices and screws up self._event_to_index!
-      #list_idx = self._event_to_index[event]
-      #del self._event_to_index[event]
-      #self._events_list.pop(list_idx)
-      self._events_list.remove(event)
-      self._events_set.remove(event)
+  def filter_unsupported_input_types(self):
+    return EventDagView(self, (e for e in self._events_list
+                              if type(e) not in self._ignored_input_types))
 
-    # Note that dependent_labels only contains dependencies between input
-    # events. We run peek() to infer dependencies with internal events
-    for label in event.dependent_labels:
-      if label in self._label2event:
-        dependent_event = self._label2event[label]
-        self._remove_event(dependent_event)
-
-  def remove_events(self, ignored_portion, simulation):
-    ''' Mutate the DAG: remove all input events in ignored_inputs,
+  def compute_remaining_input_events(self, ignored_portion, events_list=None):
+    ''' ignore all input events in ignored_inputs,
     as well all of their dependent input events'''
-    # Note that we treat failure/recovery as an atomic pair, so we don't prune
+    if events_list is None:
+      events_list = self.events
+    # Note that dependent_labels only contains dependencies between input
+    # events. Dependencies with internal events are inferred by EventScheduler.
+    # Also note that we treat failure/recovery as an atomic pair, so we don't prune
     # recovery events on their own
-    for event in [ e for e in ignored_portion
-                   if (isinstance(e, InputEvent) and
-                       type(e) not in self._recovery_types) ]:
-      self._remove_event(event)
+    ignored_portion = set(e for e in ignored_portion
+                          if (isinstance(e, InputEvent) and
+                              type(e) not in self._recovery_types))
+    remaining = []
+    for event in events_list:
+      if event not in ignored_portion:
+        remaining.append(event)
+      else:
+        # Add dependent to ignored_portion
+        for label in event.dependent_labels:
+          dependent_event = self._label2event[label]
+          ignored_portion.add(dependent_event)
+    return remaining
 
-  def prepare_for_replay(self, simulation):
-    '''Perform whatever computation we need to prepare our internal/external
-    events for replay '''
-    pass
-
-  def subset(self, subset, simulation):
+  def input_subset(self, subset):
     ''' Return a view of the dag with only the subset dependents
     removed'''
-    dag = self.__class__(list(self._events_list),
-                         prefix_trie=self._prefix_trie,
-                         label2event=self._label2event,
-                         switch_init_sleep_seconds=self._switch_init_sleep_seconds)
-    remaining_events = self._events_set - set(subset)
-    dag.remove_events(remaining_events, simulation)
-    return dag
+    ignored = self._events_set - set(subset)
+    remaining_events = self.compute_remaining_input_events(ignored)
+    return EventDagView(self, remaining_events)
 
-  def complement(self, subset, simulation):
+  def input_complement(self, subset, events_list=None):
     ''' Return a view of the dag with only the subset dependents
     removed'''
-    dag = self.__class__(list(self._events_list),
-                         prefix_trie=self._prefix_trie,
-                         label2event=self._label2event,
-                         switch_init_sleep_seconds=self._switch_init_sleep_seconds)
-    dag.remove_events(subset, simulation)
-    return dag
-
-  def split_inputs(self, split_ways):
-    ''' Split our inputs into split_ways separate lists '''
-    events = self.input_events
-    if split_ways < 1:
-      raise ValueError("Split ways must be greater than 0")
-
-    splits = []
-    split_interval = len(events) / split_ways # integer division = floor
-    remainder = len(events) % split_ways # remainder is guaranteed to be less than splitways
-
-    start_idx = 0
-    while len(splits) < split_ways:
-      split_idx = start_idx + split_interval
-      # the first 'remainder' chunks are made one element larger to chew
-      # up the remaining elements (remainder < splitways)
-      # note: len(events) = split_ways *  split_interval + remainder
-      if remainder > 0:
-        split_idx += 1
-        remainder -= 1
-
-      splits.append(events[start_idx:split_idx])
-      start_idx = split_idx
-
-    return splits
+    remaining_events = self.compute_remaining_input_events(subset, events_list)
+    return EventDagView(self, remaining_events)
 
   def mark_invalid_input_sequences(self):
     '''Fill in domain knowledge about valid input
     sequences (e.g. don't prune failure without pruning recovery.)
     Only do so if this isn't a view of a previously computed DAG'''
+
+    # TODO(cs): should this be factored out?
 
     # Note: we treat each failure/recovery pair atomically, since it doesn't
     # make much sense to prune recovery events. Also note that that we will
