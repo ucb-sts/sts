@@ -4,7 +4,7 @@ control flow for running the simulation forward.
     iteratively prunes until the MCS has been found
 '''
 
-from sts.event_scheduler import EventScheduler
+from sts.control_flow.event_scheduler import EventScheduler
 from sts.replay_event import *
 from sts.event_dag import EventDag
 import sts.log_processing.superlog_parser as superlog_parser
