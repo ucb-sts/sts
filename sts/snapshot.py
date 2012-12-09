@@ -53,7 +53,6 @@ class SyncProtoSnapshotService(SnapshotService):
 
     return self.snapshot
 
-
 class PoxSnapshotService(SnapshotService):
   def __init__(self):
     SnapshotService.__init__(self)
