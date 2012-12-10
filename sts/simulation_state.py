@@ -49,7 +49,7 @@ class SimulationConfig(object):
     # TODO(cs): is the snapshot service stateful?
     self.snapshot_service = snapshot_service
     self.current_simulation = None
-    self._switch_init_sleep_seconds = switch_init_sleep_seconds
+    self.switch_init_sleep_seconds = switch_init_sleep_seconds
 
   def bootstrap(self):
     '''Return a simulation object encapsulating the state of
