@@ -114,7 +114,6 @@ try:
   simulation_cfg = SimulationConfig(controller_configs, topology_class,
                                     topology_params, patch_panel_class,
                                     dataplane_trace_path=dataplane_trace_path,
-                                    controller_sync_callback_factory=simulator.get_sync_callback,
                                     switch_init_sleep_seconds=switch_init_sleep_seconds,
                                     snapshot_service=snapshot_service)
   simulator.simulate(simulation_cfg)

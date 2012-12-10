@@ -93,7 +93,7 @@ class ReplayerTest(unittest.TestCase):
     superlog.write(e2 + '\n')
     superlog.close()
 
-  def setup_controller_simulation(self, sync_callback_factory):
+  def setup_controller_simulation(self):
     cmdline = "./pox.py --verbose --no-cli sts.syncproto.pox_syncer openflow.of_01 --address=__address__ --port=__port__"
     controllers = [ControllerConfig(cwd='pox', cmdline=cmdline, address="127.0.0.1", port=8899, sync="tcp:localhost:18899")]
     topology_class = MeshTopology
@@ -102,14 +102,13 @@ class ReplayerTest(unittest.TestCase):
     return SimulationConfig(controllers,
                             topology_class,
                             topology_params,
-                            patch_panel_class,
-                            controller_sync_callback_factory=sync_callback_factory)
+                            patch_panel_class)
 
   def test_controller_crash(self):
     try:
       self.write_controller_crash_superlog()
       replayer = Replayer(self.tmp_controller_superlog)
-      simulation_cfg = self.setup_controller_simulation(replayer.get_sync_callback)
+      simulation_cfg = self.setup_controller_simulation()
       replayer.simulate(simulation_cfg)
     finally:
       Controller.kill_active_procs()

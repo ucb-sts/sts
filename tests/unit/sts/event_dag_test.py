@@ -70,49 +70,6 @@ class event_dag_test(unittest.TestCase):
     self.assertEqual(3, len(splits))
     self.assertEqual(3, len(splits[0]) + len(splits[1]) + len(splits[2]))
 
-  def test_match_fingerprints_simple(self):
-    expected = [ MockInternalEvent(fingerprint) for fingerprint in ["a","b","c"] ]
-    actual = [ MockInternalEvent(fingerprint) for fingerprint
-               in ["a","d","d","d","d","b","d","d","d"] ]
-
-    result = match_fingerprints(actual, expected)
-    result = [ r.fingerprint for r in result ]
-    self.assertEqual(["a","d","d","d","d","b"], result)
-
-  def test_match_fingerprints_duplicate_expected(self):
-    expected = [ MockInternalEvent(fingerprint) for fingerprint
-                 in ["a","b","c","b","c","f"] ]
-    actual = [ MockInternalEvent(fingerprint) for fingerprint
-               in ["a","d","d","d","d","c","b","d","d","d","c","d"] ]
-
-    result = match_fingerprints(actual, expected)
-    result = [ r.fingerprint for r in result ]
-    self.assertEqual(["a","d","d","d","d","c","b","d","d","d","c"], result)
-
-  def test_match_fingerprints_duplicate_inferred(self):
-    expected = [ MockInternalEvent(fingerprint) for fingerprint
-                 in ["a","b","c"] ]
-    actual = [ MockInternalEvent(fingerprint) for fingerprint
-               in ["a","d","d","d","d","c","b","d","d","d","c","d"] ]
-
-    result = match_fingerprints(actual, expected)
-    result = [ r.fingerprint for r in result ]
-    # TODO(cs): perhaps we should include "b"? [i.e., make the inferrence
-    # unordered or semi-ordered]
-    self.assertEqual(["a","d","d","d","d","c"], result)
-
-  def test_match_fingerprints_empty(self):
-    expected = [ MockInternalEvent(fingerprint) for fingerprint
-                 in ["a","b","c"] ]
-    actual = [ MockInternalEvent(fingerprint) for fingerprint
-               in ["d","e","f"] ]
-
-    result = match_fingerprints(actual, expected)
-    result = [ r.fingerprint for r in result ]
-    # TODO(cs): perhaps we should include "b"? [i.e., make the inferrence
-    # unordered or semi-ordered]
-    self.assertEqual([], result)
-
   def test_event_dag(self):
     event_dag = EventDag( [ MockInternalEvent("a"), MockInputEvent() ])
     self.assertEqual(2, len(event_dag))

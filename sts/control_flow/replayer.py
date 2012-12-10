@@ -27,14 +27,9 @@ class Replayer(ControlFlow):
   To set the wait_time, pass them as keyword args to the
   constructor of this class, which will pass them on to the EventDay object it creates.
   '''
-  def __init__(self, superlog_path_or_dag, create_event_scheduler=None,
-               switch_init_sleep_seconds=False,
-               sync_callback_factory=None, **kwargs):
+  def __init__(self, superlog_path_or_dag, create_event_scheduler=None, **kwargs):
     ControlFlow.__init__(self)
-    if sync_callback_factory is None:
-      self.sync_callback = ReplaySyncCallback(self.get_interpolated_time)
-    else:
-      self.sync_callback = sync_callback_factory()
+    self.sync_callback = ReplaySyncCallback(self.get_interpolated_time)
 
     if type(superlog_path_or_dag) == str:
       superlog_path = superlog_path_or_dag
@@ -43,7 +38,6 @@ class Replayer(ControlFlow):
       self.dag = EventDag(superlog_parser.parse_path(superlog_path))
     else:
       self.dag = superlog_path_or_dag
-    self._switch_init_sleep_seconds = switch_init_sleep_seconds
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
 
@@ -80,8 +74,9 @@ class Replayer(ControlFlow):
     pass
 
   def simulate(self, simulation_cfg, post_bootstrap_hook=None):
-    self.simulation = simulation_cfg.bootstrap(self._switch_init_sleep_seconds)
+    self.simulation = simulation_cfg.bootstrap(self.sync_callback)
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
+    return self.simulation
 
   def run_simulation_forward(self, dag, post_bootstrap_hook=None):
     event_scheduler = self.create_event_scheduler(self.simulation)

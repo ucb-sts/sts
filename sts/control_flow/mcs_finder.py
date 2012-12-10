@@ -22,6 +22,7 @@ import json
 class MCSFinder(ControlFlow):
   def __init__(self, superlog_path_or_dag,
                invariant_check=InvariantChecker.check_correspondence,
+               transform_dag=None,
                mcs_trace_path=None, extra_log=None, dump_runtime_stats=False,
                **kwargs):
     super(MCSFinder, self).__init__()
@@ -37,16 +38,13 @@ class MCSFinder(ControlFlow):
       self.dag = superlog_path_or_dag
 
     self.invariant_check = invariant_check
+    self.transform_dag = transform_dag
     self.mcs_trace_path = mcs_trace_path
     self._extra_log = extra_log
     self._runtime_stats = None
     self.kwargs = kwargs
     if dump_runtime_stats:
       self._runtime_stats = {}
-
-  def get_sync_callback(self):
-    ''' Override of ControlFlow's factory '''
-    return self.sync_callback
 
   def log(self, msg):
     ''' Output a message to both self._log and self._extra_log '''
@@ -178,8 +176,11 @@ class MCSFinder(ControlFlow):
 
   def replay(self, new_dag):
     # Run the simulation forward
+    if self.transform_dag:
+      new_dag = self.transform_dag(self.simulation_cfg, new_dag)
+
+    # TODO: MCSFinder needs configure Simulation to always let DataplaneEvents pass through
     replayer = Replayer(new_dag, **self.kwargs)
-    self.sync_callback = ReplaySyncCallback(replayer.get_interpolated_time)
     replayer.simulate(self.simulation_cfg)
     return self.invariant_check(replayer.simulation)
 

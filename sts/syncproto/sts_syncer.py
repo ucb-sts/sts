@@ -8,6 +8,9 @@ log = logging.getLogger("sts_sync_proto")
 
 class STSSyncProtocolSpeaker(SyncProtocolSpeaker):
   def __init__(self, controller, state_master, io_delegate):
+    if state_master is None:
+      raise ValueError("state_master is null")
+
     self.state_master = state_master
     self.controller = controller
 
@@ -30,6 +33,8 @@ class STSSyncConnection(object):
   def __init__(self, controller, state_master, sync_uri):
     self.controller = controller
     (self.mode, self.host, self.port) = parse_openflow_uri(sync_uri)
+    if state_master is None:
+      raise ValueError("state_master is null")
     self.state_master = state_master
     self._on_disconnect = []
     self.io_worker = None
@@ -68,6 +73,8 @@ class STSSyncConnectionManager(object):
   def __init__(self, io_master, state_master):
     self.io_master  = io_master
     self.sync_connections = []
+    if state_master is None:
+      raise ValueError("state_master is null")
     self.state_master = state_master
 
   def connect(self, controller, sync_uri):

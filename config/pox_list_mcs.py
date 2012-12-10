@@ -1,7 +1,7 @@
 
 from experiment_config_lib import ControllerConfig
 from sts.topology import *
-from sts.control_flow import Replayer, MCSFinder
+from sts.control_flow import Replayer, MCSFinder, Peeker
 from sts.invariant_checker import InvariantChecker
 from sts.event_scheduler import DumbEventScheduler
 
@@ -10,10 +10,13 @@ topology_class = MeshTopology
 topology_params = "num_switches=2"
 patch_panel_class = BufferedPatchPanel
 switch_init_sleep_seconds=2.0
+
+peeker = Peeker()
 control_flow = MCSFinder("input_traces/pox_list_violation.trace",
                          #create_event_scheduler = lambda simulation: DumbEventScheduler(simulation),
-                         delay_input_events=True,
+                         #delay_input_events=True,
                          wait_delta=0.5,
                          invariant_check=InvariantChecker.check_liveness,
-                         mcs_trace_path="input_traces/pox_list_mcs_final.trace")
+                         mcs_trace_path="input_traces/pox_list_mcs_final.trace",
+                         transform_dag=peeker.peek)
 dataplane_trace = "dataplane_traces/ping_pong_same_subnet.trace"

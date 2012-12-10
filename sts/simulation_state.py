@@ -35,7 +35,6 @@ class SimulationConfig(object):
   """
   def __init__(self, controller_configs, topology_class,
                topology_params, patch_panel_class, dataplane_trace_path=None,
-               controller_sync_callback_factory=lambda: None,
                snapshot_service=None,
                switch_init_sleep_seconds=False):
     self.controller_configs = controller_configs
@@ -45,13 +44,12 @@ class SimulationConfig(object):
     self._topology_params = topology_params
     self._patch_panel_class = patch_panel_class
     self._dataplane_trace_path = dataplane_trace_path
-    self._controller_sync_callback_factory = controller_sync_callback_factory
     # TODO(cs): is the snapshot service stateful?
     self.snapshot_service = snapshot_service
     self.current_simulation = None
     self.switch_init_sleep_seconds = switch_init_sleep_seconds
 
-  def bootstrap(self):
+  def bootstrap(self, sync_callback):
     '''Return a simulation object encapsulating the state of
        the system in its initial starting point:
        - boots controllers
@@ -96,7 +94,6 @@ class SimulationConfig(object):
 
     # Instantiate the pieces needed for Simulation's constructor
     io_master = initialize_io_loop()
-    sync_callback = self._controller_sync_callback_factory()
     sync_connection_manager = STSSyncConnectionManager(io_master,
                                                        sync_callback)
     controller_manager = boot_controllers(sync_connection_manager)

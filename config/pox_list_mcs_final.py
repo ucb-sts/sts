@@ -7,6 +7,8 @@ controllers = [ControllerConfig(cmdline='./pox.py --verbose --no-cli openflow.of
 topology_class = MeshTopology
 topology_params = "num_switches=2"
 patch_panel_class = BufferedPatchPanel
-control_flow = Replayer("input_traces/pox_list_mcs_final.trace")
+control_flow = Replayer("input_traces/pox_list_mcs_final.trace",
+                        wait_time=2.0,
+                        switch_init_sleep_seconds=0.0)
 # MCS trace path: input_traces/pox_list_mcs_final_mcs_final.trace
 dataplane_trace = "dataplane_traces/ping_pong_same_subnet.trace"
