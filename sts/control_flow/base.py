@@ -78,6 +78,14 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     if self._pending_state_changes[pending_state_change] <= 0:
       del self._pending_state_changes[pending_state_change]
 
+  def flush(self):
+    ''' Remove any pending state changes '''
+    num_pending_state_changes = len(self._pending_state_changes)
+    if num_pending_state_changes > 0:
+      self.log.info("Flushing %d pending state changes" %
+                    num_pending_state_changes)
+    self._pending_state_changes = Counter()
+
   def state_change(self, controller, time, fingerprint, name, value):
     # TODO(cs): unblock the controller after processing the state change?
     pending_state_change = PendingStateChange(controller.uuid, time,
@@ -97,6 +105,7 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     else:
       raise ValueError("unsupported deterministic value: %s" % name)
     return value
+
 
 class RecordingSyncCallback(STSSyncCallback):
   def __init__(self, input_logger):
