@@ -88,6 +88,14 @@ else:
   # We default to no dataplane trace
   dataplane_trace_path = None
 
+# Optionally wait N seconds after booting the switches, but before starting
+# the simulation.
+if hasattr(config, 'switch_init_sleep_seconds'):
+  switch_init_sleep_seconds = config.switch_init_sleep_seconds
+else:
+  # We default to no waiting
+  switch_init_sleep_seconds = False
+
 # Set an interrupt handler
 def handle_int(signal, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
@@ -107,6 +115,7 @@ try:
                                     topology_params, patch_panel_class,
                                     dataplane_trace_path=dataplane_trace_path,
                                     controller_sync_callback_factory=simulator.get_sync_callback,
+                                    switch_init_sleep_seconds=switch_init_sleep_seconds,
                                     snapshot_service=snapshot_service)
   simulator.simulate(simulation_cfg)
 finally:

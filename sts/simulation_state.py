@@ -35,7 +35,9 @@ class SimulationConfig(object):
   """
   def __init__(self, controller_configs, topology_class,
                topology_params, patch_panel_class, dataplane_trace_path=None,
-               controller_sync_callback_factory=lambda: None, snapshot_service=None):
+               controller_sync_callback_factory=lambda: None,
+               snapshot_service=None,
+               switch_init_sleep_seconds=False):
     self.controller_configs = controller_configs
     # keep around topology_class and topology_params so we can construct
     # clean topology objects for (multiple invocations of) bootstrapping later
@@ -47,8 +49,9 @@ class SimulationConfig(object):
     # TODO(cs): is the snapshot service stateful?
     self.snapshot_service = snapshot_service
     self.current_simulation = None
+    self._switch_init_sleep_seconds = switch_init_sleep_seconds
 
-  def bootstrap(self, switch_init_sleep_seconds=False):
+  def bootstrap(self):
     '''Return a simulation object encapsulating the state of
        the system in its initial starting point:
        - boots controllers
@@ -122,7 +125,7 @@ class SimulationConfig(object):
       io_worker = DeferredIOWorker(io_master.create_worker_for_socket(socket))
       return DeferredOFConnection(io_worker, switch.dpid, god_scheduler)
 
-    if switch_init_sleep_seconds:
+    if self.switch_init_sleep_seconds:
       simulation.set_pass_through()
 
     # TODO(cs): this should block until all switches have finished
@@ -130,13 +133,13 @@ class SimulationConfig(object):
     topology.connect_to_controllers(self.controller_configs,
                                     create_connection=create_connection)
 
-    if switch_init_sleep_seconds:
+    if self.switch_init_sleep_seconds:
       log.debug("Waiting %f seconds for switch initialization" %
-                switch_init_sleep_seconds)
-      time.sleep(switch_init_sleep_seconds)
+                self.switch_init_sleep_seconds)
+      time.sleep(self.switch_init_sleep_seconds)
 
     # Now unset pass-through mode
-    if switch_init_sleep_seconds:
+    if self.switch_init_sleep_seconds:
       simulation.unset_pass_through()
 
     return simulation

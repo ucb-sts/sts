@@ -25,7 +25,7 @@ patch_panel_class = BufferedPatchPanel
 from sts.util.convenience import timestamp_string
 
 # Use a Fuzzer (already the default)
-control_flow = Interactive(input_logger=InputLogger(output_path="input_traces/fl_"+timestamp_string()+".trace"), switch_init_sleep_seconds=0) #Fuzzer(input_logger=InputLogger(),
+control_flow = Interactive(input_logger=InputLogger(output_path="input_traces/fl_"+timestamp_string()+".trace")) #Fuzzer(input_logger=InputLogger(),
                            #check_interval=80,
                            #invariant_check=InvariantChecker.check_connectivity)
 

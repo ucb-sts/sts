@@ -16,9 +16,9 @@ controllers = %s
 topology_class = %s
 topology_params = "%s"
 patch_panel_class = %s
+switch_init_sleep_seconds = %s
 control_flow = Replayer("%s",
-                        wait_time=2.0,
-                        switch_init_sleep_seconds=0.0)
+                        wait_time=2.0)
 # MCS trace path: %s
 dataplane_trace = %s
 '''
@@ -33,9 +33,9 @@ controllers = %s
 topology_class = %s
 topology_params = "%s"
 patch_panel_class = %s
+switch_init_sleep_seconds = %s
 control_flow = MCSFinder("%s",
                          wait_time=2.0,
-                         switch_init_sleep_seconds=0.0,
                          invariant_check=InvariantChecker.check_liveness,
                          mcs_trace_path="%s")
 dataplane_trace = %s
@@ -104,6 +104,7 @@ class InputLogger(object):
                                     simulation_cfg._topology_class.__name__,
                                     simulation_cfg._topology_params,
                                     simulation_cfg._patch_panel_class.__name__,
+                                    simulation_cfg._switch_init_sleep_seconds,
                                     self.output_path,
                                     self.mcs_output_path,
                                     self.dp_trace_path)
