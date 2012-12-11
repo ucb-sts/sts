@@ -54,6 +54,10 @@ class MCSFinder(ControlFlow):
       self._extra_log.write(msg + '\n')
 
   def simulate(self, check_reproducability=True):
+    if self._runtime_stats is not None:
+      self._runtime_stats["total_inputs"] = len(self.dag.input_events)
+      self._runtime_stats["total_events"] = len(self.dag)
+
     # inject domain knowledge into the dag
     self.dag.mark_invalid_input_sequences()
     self.dag = self.dag.filter_unsupported_input_types()
@@ -211,6 +215,7 @@ class MCSFinder(ControlFlow):
       self._runtime_stats["total_replays"] = Replayer.total_replays
       self._runtime_stats["total_inputs_replayed"] =\
           Replayer.total_inputs_replayed
+      self._runtime_stats["config"] = str(self.simulation_cfg)
       self._runtime_stats["peeker"] = self.transform_dag is not None
       self._runtime_stats["split_ways"] = list(self._runtime_stats["split_ways"])
       # Now write contents to a file
