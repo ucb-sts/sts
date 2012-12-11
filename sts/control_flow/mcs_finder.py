@@ -198,9 +198,10 @@ class MCSFinder(ControlFlow):
         self._runtime_stats["replay_duration_seconds"] =\
           (self._runtime_stats["replay_end_epoch"] -
            self._runtime_stats["replay_start_epoch"])
-      self._runtime_stats["prune_duration_seconds"] =\
-        (self._runtime_stats["prune_end_epoch"] -
-         self._runtime_stats["prune_start_epoch"])
+      if "prune_end_epoch" in self._runtime_stats:
+        self._runtime_stats["prune_duration_seconds"] =\
+          (self._runtime_stats["prune_end_epoch"] -
+           self._runtime_stats["prune_start_epoch"])
       # Now write contents to a file
       now = timestamp_string()
       with file("runtime_stats/" + now + ".json", "w") as output:
