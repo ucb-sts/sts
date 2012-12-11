@@ -117,7 +117,7 @@ class Peeker(object):
 
     # Now turn off those pass-through and grab the inferred events
     newly_inferred_events = simulation.unset_pass_through()
-    simultation.clean_up()
+    simulation.clean_up()
     return newly_inferred_events
 
   def match_and_filter(self, newly_inferred_events, expected_internal_events):
