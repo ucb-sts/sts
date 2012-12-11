@@ -23,4 +23,5 @@ control_flow = MCSFinder(simulation_config, "input_traces/pox_list_violation.tra
                          wait_delta=0.5,
                          invariant_check=InvariantChecker.check_liveness,
                          mcs_trace_path="input_traces/pox_list_mcs_final.trace",
-                         transform_dag=peeker.peek)
+                         transform_dag=peeker.peek,
+                         extra_log=open("mcs_log.txt", "w", 0))
