@@ -117,6 +117,7 @@ class Peeker(object):
 
     # Now turn off those pass-through and grab the inferred events
     newly_inferred_events = simulation.unset_pass_through()
+    simultation.clean_up()
     return newly_inferred_events
 
   def match_and_filter(self, newly_inferred_events, expected_internal_events):
@@ -139,7 +140,6 @@ class Peeker(object):
     inferred_events += newly_inferred_events
     self._prefix_trie[current_input_prefix] = inferred_events
     return (current_input_prefix, inferred_events)
-
 
 def get_expected_internal_events(left_input, right_input, events_list):
   ''' Return previously observed internal events between the left_input and

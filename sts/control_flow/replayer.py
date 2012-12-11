@@ -38,6 +38,7 @@ class Replayer(ControlFlow):
       self.dag = EventDag(superlog_parser.parse_path(superlog_path))
     else:
       self.dag = superlog_path_or_dag
+
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
 
@@ -74,6 +75,7 @@ class Replayer(ControlFlow):
     pass
 
   def simulate(self, post_bootstrap_hook=None):
+    ''' Caller *must* call simulation.clean_up() '''
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
     return self.simulation

@@ -179,8 +179,10 @@ class MCSFinder(ControlFlow):
 
     # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
     replayer = Replayer(self.simulation_cfg, new_dag, **self.kwargs)
-    replayer.simulate()
-    return self.invariant_check(replayer.simulation)
+    simulation = replayer.simulate()
+    violations = self.invariant_check(simulation)
+    simulation.clean_up()
+    return violations
 
   def _dump_mcs_trace(self):
     # Dump the mcs trace

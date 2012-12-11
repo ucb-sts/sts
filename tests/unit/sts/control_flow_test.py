@@ -69,13 +69,16 @@ class ReplayerTest(unittest.TestCase):
     return sim
 
   def test_basic(self):
+    simulation = None
     try:
       self.write_simple_superlog()
       simulation_cfg = self.setup_simple_simulation()
       replayer = Replayer(simulation_cfg, self.tmp_basic_superlog)
-      replayer.simulate()
+      simulation = replayer.simulate()
     finally:
       os.unlink(self.tmp_basic_superlog)
+      if simulation is not None:
+        simulation.clean_up()
 
   # ------------------------------------------ #
   #        Controller Crash Test               #
@@ -103,14 +106,16 @@ class ReplayerTest(unittest.TestCase):
                             patch_panel_class)
 
   def test_controller_crash(self):
+    simulation = None
     try:
       self.write_controller_crash_superlog()
       simulation_cfg = self.setup_controller_simulation()
       replayer = Replayer(simulation_cfg, self.tmp_controller_superlog)
-      replayer.simulate()
+      simulation = replayer.simulate()
     finally:
-      Controller.kill_active_procs()
       os.unlink(self.tmp_controller_superlog)
+      if simulation is not None:
+        simulation.clean_up()
 
   # ------------------------------------------ #
   #        Dataplane Trace Test                #
@@ -136,13 +141,16 @@ class ReplayerTest(unittest.TestCase):
                             patch_panel_class, dataplane_trace=dataplane_trace_path)
 
   def test_dataplane_injection(self):
+    simulation = None
     try:
       self.write_dataplane_trace_superlog()
       simulation_cfg = self.setup_dataplane_simulation()
       replayer = Replayer(simulation_cfg, self.tmp_dataplane_superlog)
-      replayer.simulate()
+      simulation = replayer.simulate()
     finally:
       os.unlink(self.tmp_dataplane_superlog)
+      if simulation is not None:
+        simulation.clean_up()
 
   # ------------------------------------------ #
   #        Host Migration Test                 #
@@ -169,18 +177,21 @@ class ReplayerTest(unittest.TestCase):
                             patch_panel_class)
 
   def test_migration(self):
+    simulation = None
     try:
       self.write_migration_superlog()
       simulation_cfg = self.setup_migration_simulation()
       replayer = Replayer(simulation_cfg, self.tmp_migration_superlog)
-      replayer.simulate()
-      latest_switch = replayer.simulation.topology.get_switch(7)
+      simulation = replayer.simulate()
+      latest_switch = simulation.topology.get_switch(7)
       latest_port = latest_switch.ports[101]
-      (host, interface) = replayer.simulation.topology.get_connected_port(latest_switch,
+      (host, interface) = simulation.topology.get_connected_port(latest_switch,
                                                                  latest_port)
       self.assertTrue(type(host) == Host)
     finally:
       os.unlink(self.tmp_migration_superlog)
+      if simulation is not None:
+        simulation.clean_up()
 
 class MockMCSFinder(MCSFinder):
   ''' Overrides self.invariant_check and run_simulation_forward() '''
@@ -219,8 +230,7 @@ class MCSFinderTest(unittest.TestCase):
     dag = EventDag(trace)
     mcs = [trace[0]]
     mcs_finder = MockMCSFinder(dag, mcs)
-    # passing in None as simulation works b/c actual_peek() is never invoked
-    result = mcs_finder.simulate(None)
+    result = mcs_finder.simulate()
     self.assertEqual(mcs, result)
 
   def test_straddle(self):
@@ -228,8 +238,7 @@ class MCSFinderTest(unittest.TestCase):
     dag = EventDag(trace)
     mcs = [trace[0],trace[5]]
     mcs_finder = MockMCSFinder(dag, mcs)
-    # passing in None as simulation works b/c actual_peek() is never invoked
-    result = mcs_finder.simulate(None)
+    result = mcs_finder.simulate()
     self.assertEqual(mcs, result)
 
   def test_all(self):
@@ -237,8 +246,7 @@ class MCSFinderTest(unittest.TestCase):
     dag = EventDag(trace)
     mcs = trace
     mcs_finder = MockMCSFinder(dag, mcs)
-    # passing in None as simulation works b/c actual_peek() is never invoked
-    result = mcs_finder.simulate(None)
+    result = mcs_finder.simulate()
     self.assertEqual(mcs, result)
 
 if __name__ == '__main__':
