@@ -3,6 +3,9 @@ import time
 from sts.replay_event import *
 
 class DumbEventScheduler(object):
+
+  kwargs = set(['wait_delta'])
+
   def __init__(self, simulation, wait_delta=0.1):
     self.simulation = simulation
     self.wait_delta = wait_delta
