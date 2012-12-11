@@ -83,7 +83,8 @@ class Peeker(object):
       inject_input_idx += 1
 
     # Add a wait time at the end
-    inferred_events.append(WaitTime(0.5, time=inferred_events[-1].time))
+    # TODO(cs): should arguably move -- bad separation of concerns
+    inferred_events.append(WaitTime(self.default_wait_time, time=inferred_events[-1].time))
     return EventDag(inferred_events)
 
   def get_wait_time(self, first_event, second_event):
