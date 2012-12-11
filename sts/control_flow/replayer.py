@@ -4,7 +4,7 @@ control flow for running the simulation forward.
     iteratively prunes until the MCS has been found
 '''
 
-from sts.control_flow.event_scheduler import DumbEventScheduler
+from sts.control_flow.event_scheduler import DumbEventScheduler, EventScheduler
 from sts.replay_event import *
 from sts.event_dag import EventDag
 import sts.log_processing.superlog_parser as superlog_parser
@@ -46,7 +46,7 @@ class Replayer(ControlFlow):
       self.create_event_scheduler = create_event_scheduler
     else:
       self.create_event_scheduler = \
-        lambda simulation: DumbEventScheduler(simulation,
+        lambda simulation: EventScheduler(simulation,
             **{ k: v for k,v in kwargs.items()
                 if k in EventScheduler.kwargs })
 
