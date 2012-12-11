@@ -8,8 +8,19 @@ from sts.headerspace.config_parser.openflow_parser import get_uniq_port_id
 import logging
 import collections
 from sts.util.console import msg
+import json
 
 log = logging.getLogger("invariant_checker")
+
+class InvariantViolation(object):
+  ''' Class for logging violations as json dicts '''
+  def __init__(self, violations):
+    self.violations = violations
+
+  def to_json(self):
+    fields = dict(self.__dict__)
+    fields['class'] = self.__class__.__name__
+    return json.dumps(fields)
 
 class InvariantChecker(object):
   def __init__(self, snapshotService):

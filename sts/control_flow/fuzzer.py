@@ -10,6 +10,7 @@ from sts.topology import BufferedPatchPanel
 from sts.traffic_generator import TrafficGenerator
 from sts.util.console import msg
 from sts.replay_event import *
+from sts.invariant_checker import InvariantViolation
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -94,29 +95,20 @@ class Fuzzer(ControlFlow):
     if (self.check_interval is not None and
         (self.logical_time % self.check_interval) == 0):
       # Time to run correspondence!
-      # spawn a thread for running correspondence. Make sure the controller doesn't
-      # think we've gone idle though: send OFP_ECHO_REQUESTS every few seconds
-      # TODO(cs): this is a HACK
+      # TODO(cs): may need to revert to threaded version if runtime is too
+      # long
       def do_invariant_check():
         controllers_with_violations = self.invariant_check(self.simulation)
 
         if controllers_with_violations != []:
           msg.fail("The following controllers had correctness violations!: %s"
                    % str(controllers_with_violations))
+          self._log_input_event(InvariantViolation(controllers_with_violations))
           if self.halt_on_violation:
             return True
         else:
           msg.interactive("No correctness violations!")
-      # use a non-threaded version of correspondence for now. otherwise
-      # communication / snapshotting has to be done in the main thread.
       return do_invariant_check()
-      #thread = threading.Thread(target=do_correspondence)
-      #thread.start()
-      #while thread.isAlive():
-      #  for switch in self.simulation.topology.live_switches:
-      #    # connection -> deferred io worker -> io worker
-      #    switch.send(of.ofp_echo_request().pack())
-      #  thread.join(2.0)
 
   def maybe_inject_trace_event(self):
     if (self.simulation.dataplane_trace and
