@@ -18,7 +18,7 @@ simulation_config = SimulationConfig(controller_configs=%s,
                                      topology_params="%s",
                                      patch_panel_class=%s,
                                      switch_init_sleep_seconds=%s,
-                                     dataplane_trace=%s,
+                                     dataplane_trace=%s)
 control_flow = Replayer(simulation_config, "%s",
                         wait_time=2.0)
 # MCS trace path: %s
