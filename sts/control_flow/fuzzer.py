@@ -25,12 +25,12 @@ class Fuzzer(ControlFlow):
   Injects input events at random intervals, periodically checking
   for invariant violations. (Not the proper use of the term `Fuzzer`)
   '''
-  def __init__(self, fuzzer_params="config.fuzzer_params",
+  def __init__(self, simulation_cfg, fuzzer_params="config.fuzzer_params",
                check_interval=None, trace_interval=10, random_seed=None,
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
                halt_on_violation=False):
-    ControlFlow.__init__(self)
+    ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
 
     self.check_interval = check_interval
@@ -64,10 +64,9 @@ class Fuzzer(ControlFlow):
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
 
-  def simulate(self, simulation_cfg):
+  def simulate(self):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
-    self.simulation_cfg = simulation_cfg
-    self.simulation = simulation_cfg.bootstrap(self.sync_callback)
+    self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.loop()
 

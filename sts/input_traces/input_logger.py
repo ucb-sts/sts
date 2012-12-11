@@ -11,16 +11,17 @@ replay_config_template = '''
 from experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import Replayer
+from sts.simulation_state import SimulationConfig
 
-controllers = %s
-topology_class = %s
-topology_params = "%s"
-patch_panel_class = %s
-switch_init_sleep_seconds = %s
-control_flow = Replayer("%s",
+simulation_config = SimulationConfig(controller_configs=%s,
+                                     topology_class=%s,
+                                     topology_params="%s",
+                                     patch_panel_class=%s,
+                                     switch_init_sleep_seconds=%s,
+                                     dataplane_trace=%s,
+control_flow = Replayer(simulation_config, "%s",
                         wait_time=2.0)
 # MCS trace path: %s
-dataplane_trace = %s
 '''
 
 mcs_config_template = '''
@@ -28,17 +29,19 @@ from experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import MCSFinder
 from sts.invariant_checker import InvariantChecker
+from sts.simulation_state import SimulationConfig
 
-controllers = %s
-topology_class = %s
-topology_params = "%s"
-patch_panel_class = %s
-switch_init_sleep_seconds = %s
-control_flow = MCSFinder("%s",
+simulation_config = SimulationConfig(controller_configs=%s,
+                                     topology_class=%s,
+                                     topology_params="%s",
+                                     patch_panel_class=%s,
+                                     switch_init_sleep_seconds=%s,
+                                     dataplane_trace=%s)
+
+control_flow = MCSFinder(simulation_config, "%s",
                          wait_time=2.0,
                          invariant_check=InvariantChecker.check_liveness,
                          mcs_trace_path="%s")
-dataplane_trace = %s
 '''
 
 log = logging.getLogger("input_logger")
@@ -104,8 +107,8 @@ class InputLogger(object):
                                     simulation_cfg._topology_class.__name__,
                                     simulation_cfg._topology_params,
                                     simulation_cfg._patch_panel_class.__name__,
-                                    simulation_cfg._switch_init_sleep_seconds,
+                                    str(simulation_cfg._switch_init_sleep_seconds),
+                                    self.dp_trace_path,
                                     self.output_path,
-                                    self.mcs_output_path,
-                                    self.dp_trace_path)
+                                    self.mcs_output_path)
         cfg_out.write(config_string)

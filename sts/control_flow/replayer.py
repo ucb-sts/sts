@@ -27,8 +27,8 @@ class Replayer(ControlFlow):
   To set the wait_time, pass them as keyword args to the
   constructor of this class, which will pass them on to the EventDay object it creates.
   '''
-  def __init__(self, superlog_path_or_dag, create_event_scheduler=None, **kwargs):
-    ControlFlow.__init__(self)
+  def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None, **kwargs):
+    ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = ReplaySyncCallback(self.get_interpolated_time)
 
     if type(superlog_path_or_dag) == str:
@@ -73,8 +73,8 @@ class Replayer(ControlFlow):
   def increment_round(self):
     pass
 
-  def simulate(self, simulation_cfg, post_bootstrap_hook=None):
-    self.simulation = simulation_cfg.bootstrap(self.sync_callback)
+  def simulate(self, post_bootstrap_hook=None):
+    self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
     return self.simulation
 

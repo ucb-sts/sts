@@ -11,12 +11,12 @@ log = logging.getLogger("control_flow")
 
 class ControlFlow(object):
   ''' Superclass of ControlFlow types '''
-  def __init__(self):
+  def __init__(self, simulation_cfg):
+    self.simulation_cfg = simulation_cfg
     self.sync_callback = None
 
-  def simulate(self, simulation_cfg):
-    ''' Move the simulation forward! Take the state of the system as a
-    parameter'''
+  def simulate(self):
+    ''' Move the simulation forward!'''
     pass
 
   def get_sync_callback(self):

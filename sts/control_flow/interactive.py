@@ -20,8 +20,8 @@ class Interactive(ControlFlow):
   # TODO(cs): rather than just prompting "Continue to next round? [Yn]", allow
   #           the user to examine the state of the network interactively (i.e.,
   #           provide them with the normal POX cli + the simulated events
-  def __init__(self, input_logger=None):
-    ControlFlow.__init__(self)
+  def __init__(self, simulation_cfg, input_logger=None):
+    ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
     self.logical_time = 0
     self._input_logger = input_logger
@@ -41,9 +41,8 @@ class Interactive(ControlFlow):
     if self._input_logger is not None:
       self._input_logger.log_input_event(event, **kws)
 
-  def simulate(self, simulation_cfg):
-    self.simulation_cfg = simultion_cfg
-    self.simulation = simulation_cfg.bootstrap(self.sync_callback)
+  def simulate(self):
+    self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     self.loop()
 
   def loop(self):

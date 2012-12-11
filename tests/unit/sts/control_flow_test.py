@@ -27,10 +27,8 @@ def handle_int(sigspec, frame):
     _running_simulation.current_simulation.clean_up()
   raise RuntimeError("terminating on signal %d" % sigspec)
 
-
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
-
 
 class ReplayerTest(unittest.TestCase):
   tmp_basic_superlog = '/tmp/superlog_basic.tmp'
@@ -73,9 +71,9 @@ class ReplayerTest(unittest.TestCase):
   def test_basic(self):
     try:
       self.write_simple_superlog()
-      replayer = Replayer(self.tmp_basic_superlog)
       simulation_cfg = self.setup_simple_simulation()
-      replayer.simulate(simulation_cfg)
+      replayer = Replayer(simulation_cfg, self.tmp_basic_superlog)
+      replayer.simulate()
     finally:
       os.unlink(self.tmp_basic_superlog)
 
@@ -107,9 +105,9 @@ class ReplayerTest(unittest.TestCase):
   def test_controller_crash(self):
     try:
       self.write_controller_crash_superlog()
-      replayer = Replayer(self.tmp_controller_superlog)
       simulation_cfg = self.setup_controller_simulation()
-      replayer.simulate(simulation_cfg)
+      replayer = Replayer(simulation_cfg, self.tmp_controller_superlog)
+      replayer.simulate()
     finally:
       Controller.kill_active_procs()
       os.unlink(self.tmp_controller_superlog)
@@ -135,14 +133,14 @@ class ReplayerTest(unittest.TestCase):
     patch_panel_class = PatchPanel
     dataplane_trace_path = "./dataplane_traces/ping_pong_same_subnet.trace"
     return SimulationConfig(controllers, topology_class, topology_params,
-                            patch_panel_class, dataplane_trace_path=dataplane_trace_path)
+                            patch_panel_class, dataplane_trace=dataplane_trace_path)
 
   def test_dataplane_injection(self):
     try:
       self.write_dataplane_trace_superlog()
-      replayer = Replayer(self.tmp_dataplane_superlog)
       simulation_cfg = self.setup_dataplane_simulation()
-      replayer.simulate(simulation_cfg)
+      replayer = Replayer(simulation_cfg, self.tmp_dataplane_superlog)
+      replayer.simulate()
     finally:
       os.unlink(self.tmp_dataplane_superlog)
 
@@ -173,9 +171,9 @@ class ReplayerTest(unittest.TestCase):
   def test_migration(self):
     try:
       self.write_migration_superlog()
-      replayer = Replayer(self.tmp_migration_superlog)
       simulation_cfg = self.setup_migration_simulation()
-      replayer.simulate(simulation_cfg)
+      replayer = Replayer(simulation_cfg, self.tmp_migration_superlog)
+      replayer.simulate()
       latest_switch = replayer.simulation.topology.get_switch(7)
       latest_port = latest_switch.ports[101]
       (host, interface) = replayer.simulation.topology.get_connected_port(latest_switch,

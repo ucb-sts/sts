@@ -20,12 +20,12 @@ import logging
 import json
 
 class MCSFinder(ControlFlow):
-  def __init__(self, superlog_path_or_dag,
+  def __init__(self, simulation_cfg, superlog_path_or_dag,
                invariant_check=InvariantChecker.check_correspondence,
                transform_dag=None,
                mcs_trace_path=None, extra_log=None, dump_runtime_stats=False,
                **kwargs):
-    super(MCSFinder, self).__init__()
+    super(MCSFinder, self).__init__(simulation_cfg)
     self.sync_callback = None
     self._log = logging.getLogger("mcs_finder")
 
@@ -52,9 +52,7 @@ class MCSFinder(ControlFlow):
     if self._extra_log is not None:
       self._extra_log.write(msg + '\n')
 
-  def simulate(self, simulation_cfg, check_reproducability=True):
-    self.simulation_cfg = simulation_cfg
-
+  def simulate(self, check_reproducability=True):
     # inject domain knowledge into the dag
     self.dag.mark_invalid_input_sequences()
     self.dag = self.dag.filter_unsupported_input_types()
@@ -194,9 +192,10 @@ class MCSFinder(ControlFlow):
   def _dump_runtime_stats(self):
     if self._runtime_stats is not None:
       # First compute durations
-      self._runtime_stats["replay_duration_seconds"] =\
-        (self._runtime_stats["replay_end_epoch"] -
-         self._runtime_stats["replay_start_epoch"])
+      if "replay_end_epoch" in self._runtime_stats:
+        self._runtime_stats["replay_duration_seconds"] =\
+          (self._runtime_stats["replay_end_epoch"] -
+           self._runtime_stats["replay_start_epoch"])
       self._runtime_stats["prune_duration_seconds"] =\
         (self._runtime_stats["prune_end_epoch"] -
          self._runtime_stats["prune_start_epoch"])

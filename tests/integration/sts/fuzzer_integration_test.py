@@ -14,6 +14,7 @@ simple_cfg = '''
 from experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import Fuzzer
+from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller
 command_line = "./pox/pox.py --no-cli openflow.of_01 --address=__address__ --port=__port__"
@@ -21,9 +22,11 @@ controllers = [ControllerConfig(command_line)]
 
 topology_class = MeshTopology
 topology_params = "num_switches=4"
-patch_panel_class = BufferedPatchPanel
-control_flow = Fuzzer(steps=10, fuzzer_params='config.fuzzer_simple_test_params')
-dataplane_trace = None
+simulation_config = SimulationConfig(controller_configs=controllers,
+                                     topology_class=topology_class,
+                                     topology_params=topology_params)
+
+control_flow = Fuzzer(simulation_config, steps=10, fuzzer_params='config.fuzzer_simple_test_params')
 '''
 
 params = '''

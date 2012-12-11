@@ -12,10 +12,9 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 simple_cfg = '''
 from sts.control_flow import Replayer
+from sts.simulation_state import SimulationConfig
 
-# Don't use a controller
-controllers = []
-control_flow = Replayer("%s")
+control_flow = Replayer(SimulationConfig(), "%s")
 '''
 
 class ReplayerTest(unittest.TestCase):

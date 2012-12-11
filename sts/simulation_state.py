@@ -18,6 +18,7 @@ from sts.controller_manager import ControllerManager
 from sts.util.deferred_io import DeferredIOWorker
 from sts.god_scheduler import GodScheduler
 from sts.syncproto.sts_syncer import STSSyncConnectionManager
+import sts.snapshot as snapshot
 from pox.lib.util import connect_socket_with_backoff
 
 import logging
@@ -32,19 +33,42 @@ class SimulationConfig(object):
     - The topology
     - Patch panel (dataplane forwarding)
     - (Optionally) the dataplane trace
+    - Initialization parameters (switch_init_sleep_seconds)
   """
-  def __init__(self, controller_configs, topology_class,
-               topology_params, patch_panel_class, dataplane_trace_path=None,
+  def __init__(self, controller_configs=None,
+               topology_class=FatTree,
+               topology_params="",
+               patch_panel_class=BufferedPatchPanel,
+               dataplane_trace=None,
                snapshot_service=None,
                switch_init_sleep_seconds=False):
+    ''' Constructor parameters:
+         topology_class    => a sts.topology.Topology class (not object!)
+                              defining the switches and links
+         topology_params   => Comma-delimited list of arguments to pass into the FatTree
+                              constructor, specified just as you would type them within
+                              the parens.
+         patch_panel_class => a sts.topology.PatchPanel class (not object!)
+         dataplane_trace   => a path to a dataplane trace file
+                              (e.g. dataplane_traces/ping_pong_same_subnet.trace)
+         switch_init_sleep_seconds => number of seconds to wait for switches to
+                                      connect to controllers before starting the
+                                      simulation
+    '''
+    if controller_configs is None:
+      controller_configs = []
     self.controller_configs = controller_configs
     # keep around topology_class and topology_params so we can construct
     # clean topology objects for (multiple invocations of) bootstrapping later
     self._topology_class = topology_class
     self._topology_params = topology_params
     self._patch_panel_class = patch_panel_class
-    self._dataplane_trace_path = dataplane_trace_path
+    self._dataplane_trace_path = dataplane_trace
     # TODO(cs): is the snapshot service stateful?
+    if snapshot_service is None:
+      # For snapshotting the controller's view of the network configuration
+      snapshot_service = snapshot.get_snapshotservice(controller_configs)
+
     self.snapshot_service = snapshot_service
     self.current_simulation = None
     self.switch_init_sleep_seconds = switch_init_sleep_seconds
