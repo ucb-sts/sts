@@ -126,6 +126,8 @@ class Peeker(object):
     log.debug("Inferred: %s" % str(newly_inferred_events))
     newly_inferred_events = match_fingerprints(newly_inferred_events,
                                                expected_internal_events)
+    newly_inferred_events = correct_timestamps(newly_inferred_events,
+                                               expected_internal_events)
     log.debug("Matched events: %s" % str(newly_inferred_events))
     return newly_inferred_events
 
@@ -161,7 +163,6 @@ def get_expected_internal_events(left_input, right_input, events_list):
 
   return [ i for i in events_list[left_idx:right_idx]
              if isinstance(i, InternalEvent) ]
-
 
 # Truncate the newly inferred events based on the expected
 # predecessors of next_input+1
@@ -222,4 +223,15 @@ def match_fingerprints(newly_inferred_events, expected_internal_events):
   # Else, no expected internal event was observed.
   return []
 
+def correct_timestamps(new_events, old_events):
+  ''' Set new_events' timestamps to approximately the same timestamp as
+  old_events.
 
+  Precondition: old_events != []
+  '''
+  # Lazy strategy: assign all new timestamps to the last timestamp of
+  # old_events
+  latest_old_ts = old_events[-1].time
+  for e in new_events:
+    e.time = latest_old_ts
+  return new_events
