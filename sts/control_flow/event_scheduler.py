@@ -122,5 +122,6 @@ class EventScheduler(object):
 
     to_wait = rec_delta - real_delta
     if to_wait > 10000:
-      raise RuntimeError("to_wait %d ms is way too big" % to_wait)
+      raise RuntimeError("to_wait %d ms is way too big for event" %
+                         (to_wait, str(event)))
     return max(to_wait, 0)

@@ -349,6 +349,7 @@ class TrafficInjection(InputEvent):
 
 class WaitTime(InputEvent):
   def __init__(self, wait_time, label=None, time=None):
+    ''' wait_time is specified in seconds '''
     super(WaitTime, self).__init__(label=label, time=time)
     self.wait_time = wait_time
 

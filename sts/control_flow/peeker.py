@@ -3,7 +3,7 @@ import time
 
 from sts.event_dag import EventDag
 from sts.control_flow.replayer import Replayer
-from sts.replay_event import Event, InternalEvent, InputEvent
+from sts.replay_event import Event, InternalEvent, InputEvent, WaitTime
 
 log = logging.getLogger("sts")
 
@@ -82,6 +82,8 @@ class Peeker(object):
                                             inferred_events, newly_inferred_events)
       inject_input_idx += 1
 
+    # Add a wait time at the end
+    inferred_events.append(WaitTime(0.5, time=inferred_events[-1].time))
     return EventDag(inferred_events)
 
   def get_wait_time(self, first_event, second_event):
