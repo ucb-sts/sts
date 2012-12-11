@@ -201,6 +201,7 @@ class MockMCSFinder(MCSFinder):
     self.mcs = mcs
     self.mcs_trace_path = None
     self.transform_dag = None
+    self.simulation_cfg = None
     self._runtime_stats = {}
     self._log = logging.getLogger("mock_mcs_finder")
 
