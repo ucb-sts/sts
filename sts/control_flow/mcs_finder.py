@@ -175,11 +175,11 @@ class MCSFinder(ControlFlow):
   def replay(self, new_dag):
     # Run the simulation forward
     if self.transform_dag:
-      new_dag = self.transform_dag(self.simulation_cfg, new_dag)
+      new_dag = self.transform_dag(new_dag)
 
-    # TODO: MCSFinder needs configure Simulation to always let DataplaneEvents pass through
-    replayer = Replayer(new_dag, **self.kwargs)
-    replayer.simulate(self.simulation_cfg)
+    # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
+    replayer = Replayer(self.simulation_cfg, new_dag, **self.kwargs)
+    replayer.simulate()
     return self.invariant_check(replayer.simulation)
 
   def _dump_mcs_trace(self):

@@ -8,7 +8,7 @@ from sts.replay_event import Event, InternalEvent, InputEvent
 log = logging.getLogger("sts")
 
 class Peeker(object):
-  def __init__(self, default_wait_time=0.5, epsilon_time=0.2):
+  def __init__(self, simulation_cfg, default_wait_time=0.5, epsilon_time=0.2):
     try:
       import pytrie
     except ImportError:
@@ -16,11 +16,12 @@ class Peeker(object):
     # The prefix trie stores lists of input events as keys,
     # and lists of both input and internal events as values
     # Note that we pass the trie around between DAG views
+    self.simulation_cfg = simulation_cfg
     self._prefix_trie = pytrie.Trie()
     self.default_wait_time = default_wait_time
     self.epsilon_time = epsilon_time
 
-  def peek(self, simulation_config, dag):
+  def peek(self, dag):
     ''' Infer which internal events are/aren't going to occur, '''
     # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
     # FindMCS again?
@@ -73,7 +74,7 @@ class Peeker(object):
       else:
         wait_time = self.get_wait_time(inject_input, following_input)
         replay_dag = EventDag(inferred_events + [ inject_input ])
-        found_events = self.find_internal_events(simulation_config, replay_dag, wait_time)
+        found_events = self.find_internal_events(replay_dag, wait_time)
         newly_inferred_events = self.match_and_filter(found_events, expected_internal_events)
 
       (current_input_prefix,
@@ -90,12 +91,12 @@ class Peeker(object):
       return second_event.time.as_float() - first_event.time.as_float() + \
           self.epsilon_time
 
-  def find_internal_events(self, simulation_config, replay_dag, wait_time):
+  def find_internal_events(self, replay_dag, wait_time):
     ''' Replay the replay_dag, then wait for wait_time and collect internal
         events that occur. Return the list of internal events. '''
-    replayer = Replayer(replay_dag)
+    replayer = Replayer(self.simulation_cfg, replay_dag)
     log.debug("Replaying prefix")
-    simulation = replayer.simulate(simulation_config)
+    simulation = replayer.simulate()
 
     # Directly after the last input has been injected, flush the internal
     # event buffers in case there were unaccounted internal events
