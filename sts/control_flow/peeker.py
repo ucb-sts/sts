@@ -124,8 +124,10 @@ class Peeker(object):
     log.debug("Matching fingerprints")
     log.debug("Expected: %s" % str(expected_internal_events))
     log.debug("Inferred: %s" % str(newly_inferred_events))
-    newly_inferred_events = match_fingerprints(newly_inferred_events,
-                                               expected_internal_events)
+    # TODO(cs): currently not calling this, out of paranoia. May inadvertently
+    # prune expected internal events -- largely serves as an optimization
+    #newly_inferred_events = match_fingerprints(newly_inferred_events,
+    #                                           expected_internal_events)
     newly_inferred_events = correct_timestamps(newly_inferred_events,
                                                expected_internal_events)
     log.debug("Matched events: %s" % str(newly_inferred_events))
@@ -190,6 +192,9 @@ def match_fingerprints(newly_inferred_events, expected_internal_events):
       # We've found our truncation point
       # following_input goes after the expected internal event
       # (we ignore all internal events that come after it)
+      # TODO(cs): if the inferred events show up in a different order
+      # than the expected events did originally, this algorithm might
+      # inadvertently prune expected events (it assumes events are ordered)
 
       # If there are multiple matching fingerprints, find the instance of
       # the expected fingerprint (e.g., 2nd instance of the expected
