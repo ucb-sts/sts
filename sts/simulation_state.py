@@ -53,7 +53,7 @@ class SimulationConfig(object):
                               (e.g. dataplane_traces/ping_pong_same_subnet.trace)
          switch_init_sleep_seconds => number of seconds to wait for switches to
                                       connect to controllers before starting the
-                                      simulation
+                                      simulation. Defaults to False (no wait).
     '''
     if controller_configs is None:
       controller_configs = []

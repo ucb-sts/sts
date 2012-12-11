@@ -1,7 +1,7 @@
 We use python as our DSL for specifying experiment configuration
 
 The module must define one attribute:
-  control_flow => a sts.control_flow.ControlModule object.
+  control_flow => a sts.control_flow.*.ControlModule object.
 
 This class takes a SimulationConfig objects as its first parameter.
 
@@ -16,4 +16,4 @@ SimulationConfigs can optionally take the following contructor parameters:
                        (e.g. dataplane_traces/ping_pong_same_subnet.trace)
   switch_init_sleep_seconds => number of seconds to wait for switches to
                                connect to controllers before starting the
-                               simulation
+                               simulation. Defaults to False (no wait).
