@@ -137,10 +137,11 @@ class SimulationConfig(object):
     # Connect to controllers
     # TODO(cs): somewhat hacky that we do this after instantiating Simulation
     def create_connection(controller_info, switch):
-      ''' Connect switches to controllers '''
+      ''' Connect switches to controllers. May raise a TimeoutError '''
       # TODO(cs): move this into a ConnectionFactory class
       socket = connect_socket_with_backoff(controller_info.address,
-                                           controller_info.port)
+                                           controller_info.port,
+                                           max_backoff_seconds=16)
       # Set non-blocking
       socket.setblocking(0)
       io_worker = DeferredIOWorker(io_master.create_worker_for_socket(socket))

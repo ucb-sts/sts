@@ -21,6 +21,7 @@ import time
 import json
 from collections import namedtuple
 from sts.syncproto.base import SyncTime
+from pox.lib.util import TimeoutError
 log = logging.getLogger("events")
 
 class Event(object):
@@ -158,7 +159,11 @@ class SwitchRecovery(InputEvent):
 
   def proceed(self, simulation):
     software_switch = simulation.topology.get_switch(self.dpid)
-    simulation.topology.recover_switch(software_switch)
+    try:
+      simulation.topology.recover_switch(software_switch)
+    except TimeoutError:
+      # Controller is down... Hopefully control flow will notice soon enough
+      pass
     return True
 
   @staticmethod
