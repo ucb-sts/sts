@@ -83,7 +83,6 @@ class EventScheduler(object):
 
   def wait_for_internal(self, event):
     timeout = self.wait_time(event) + self.timeout
-    self.simulation.io_master.sleep(self.wait_time(event))
     start = time.time()
     end = start + timeout - 0.01
 
@@ -119,4 +118,6 @@ class EventScheduler(object):
     real_delta = time.time() - self.last_real_time
 
     to_wait = rec_delta - real_delta
+    if to_wait > 10000:
+      raise RuntimeError("to_wait %d ms is way too big" % to_wait)
     return max(to_wait, 0)
