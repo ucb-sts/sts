@@ -72,17 +72,8 @@ class EventScheduler(object):
 
         self.simulation.io_master.sleep(wait_time)
     log.debug("Injecting %r", event)
-    while True:
-      result = event.proceed(self.simulation)
-      if result:
-        break
-      self.simulation.io_master.select(0.2)
-
-    # TODO: DataplanePermit event can in fact return False, if the Data Plane Packet
-    # in question has not been buffered yet. Figure out how to deal with this.
-    if not result:
-      raise AssertionError("proceed for Input Events should always return True")
-    return True
+    end = event.time.as_float() + self.timeout
+    self._poll_event(event, self.timeout, end)
 
   def wait_for_internal(self, event):
     timeout = self.wait_time(event) + self.timeout
@@ -91,7 +82,9 @@ class EventScheduler(object):
 
     log.debug("Waiting for %r (maximum wait time: %.0f ms)" %
           ( event, timeout * 1000) )
+    self._poll_event(event, timeout, end)
 
+  def _poll_event(self, event, timeout, end):
     proceed = False
     while True:
       now = time.time()
