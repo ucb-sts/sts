@@ -175,7 +175,7 @@ class SimulationConfig(object):
             '''                 switch_init_sleep_seconds=%s ''' %
             (str(self.controller_configs),self._topology_class.__name__,
              self._topology_params, self._patch_panel_class.__name__,
-             self.dataplane_trace_path, str(self.switch_init_sleep_seconds)))
+             self._dataplane_trace_path, str(self.switch_init_sleep_seconds)))
 
 class Simulation(object):
   '''
