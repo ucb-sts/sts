@@ -39,12 +39,12 @@ class PeekerTest(unittest.TestCase):
   def setUp(self):
     self.input_trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
     self.dag = EventDag(self.input_trace)
-    self.peeker = Peeker()
+    self.peeker = Peeker(None)
 
   def test_basic_noop(self):
     """ test_basic_noop: running on a dag with no input events returns the same dag """
     events = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
-    new_dag = self.peeker.peek(None, EventDag(events))
+    new_dag = self.peeker.peek(EventDag(events))
     self.assertEquals(events, new_dag.events)
 
   def test_basic_no_prune(self):
@@ -54,7 +54,7 @@ class PeekerTest(unittest.TestCase):
     inp3 =  MockInputEvent(fingerprint="d")
     events = [ inp1, inp2, int1, inp3 ]
 
-    def fake_find_internal_events(simulation_config, replay_dag, wait_time):
+    def fake_find_internal_events(replay_dag, wait_time):
       if replay_dag.events == [ inp1 ]:
         return []
       elif replay_dag.events == [ inp1, inp2 ]:
@@ -65,7 +65,7 @@ class PeekerTest(unittest.TestCase):
         raise AssertionError("Unexpected event sequence queried: %s" % replay_dag.events)
 
     self.peeker.find_internal_events = fake_find_internal_events
-    new_dag = self.peeker.peek(None, EventDag(events))
+    new_dag = self.peeker.peek(EventDag(events))
     self.assertEquals(events, new_dag.events)
 
   def test_basic_prune(self):
@@ -77,7 +77,7 @@ class PeekerTest(unittest.TestCase):
     all_events = [ inp1, inp2, int1, inp3, int2 ]
     sub_events = [ inp2, int1, inp3, int2 ]
 
-    def fake_find_internal_events(simulation_config, replay_dag, wait_time):
+    def fake_find_internal_events(replay_dag, wait_time):
       if replay_dag.events == [ inp2 ]:
         return []
       elif replay_dag.events == [ inp2, inp3 ]:
@@ -86,7 +86,7 @@ class PeekerTest(unittest.TestCase):
         raise AssertionError("Unexpected event sequence queried: %s" % replay_dag.events)
 
     self.peeker.find_internal_events = fake_find_internal_events
-    new_dag = self.peeker.peek(None, EventDag(sub_events))
+    new_dag = self.peeker.peek(EventDag(sub_events))
     self.assertEquals( [inp2, inp3, int2 ], new_dag.events)
 
 
