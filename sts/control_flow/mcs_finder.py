@@ -95,7 +95,7 @@ class MCSFinder(ControlFlow):
     # TODO(cs): we could do much better if we leverage domain knowledge (e.g.,
     # start by pruning all LinkFailures)
     if split_ways > len(self.dag.input_events):
-      self._track_iteration_size(iteration + 1)
+      self._track_iteration_size(iteration + 1, split_ways)
       self.log("Done")
       return
 
@@ -118,7 +118,7 @@ class MCSFinder(ControlFlow):
         continue
 
       iteration += 1
-      violation = self._check_violation(new_dag, i, iteration)
+      violation = self._check_violation(new_dag, i, iteration, split_ways)
       if violation:
         self.dag = new_dag
         return self._ddmin(2, precomputed_subsets=precomputed_subsets,
@@ -138,7 +138,7 @@ class MCSFinder(ControlFlow):
         continue
 
       iteration += 1
-      violation = self._check_violation(new_dag, i, iteration)
+      violation = self._check_violation(new_dag, i, iteration, split_ways)
       if violation:
         self.dag = new_dag
         return self._ddmin(max(split_ways - 1, 2),
@@ -151,17 +151,20 @@ class MCSFinder(ControlFlow):
       return self._ddmin(min(len(self.dag.input_events), split_ways*2),
                          precomputed_subsets=precomputed_subsets,
                          iteration=iteration)
-    self._track_iteration_size(iteration + 1)
+    self._track_iteration_size(iteration + 1, split_ways)
 
-  def _track_iteration_size(self, iteration):
+  def _track_iteration_size(self, iteration, split_ways):
     if self._runtime_stats is not None:
       if "iteration_size" not in self._runtime_stats:
         self._runtime_stats["iteration_size"] = {}
       self._runtime_stats["iteration_size"][iteration] = len(self.dag.input_events)
+      if "split_ways" not in self._runtime_stats:
+        self._runtime_stats["split_ways"] = set()
+        self._runtime_stats["split_ways"].add(split_ways)
 
-  def _check_violation(self, new_dag, subset_index, iteration):
+  def _check_violation(self, new_dag, subset_index, iteration, split_ways):
     ''' Check if there were violations '''
-    self._track_iteration_size(iteration)
+    self._track_iteration_size(iteration, split_ways)
     violations = self.replay(new_dag)
     if violations == []:
       # No violation!
@@ -205,6 +208,11 @@ class MCSFinder(ControlFlow):
         self._runtime_stats["prune_duration_seconds"] =\
           (self._runtime_stats["prune_end_epoch"] -
            self._runtime_stats["prune_start_epoch"])
+      self._runtime_stats["total_replays"] = Replayer.total_replays
+      self._runtime_stats["total_inputs_replayed"] =\
+          Replayer.total_inputs_replayed
+      self._runtime_stats["peeker"] = self.transform_dag is not None
+      self._runtime_stats["split_ways"] = list(self._runtime_stats["split_ways"])
       # Now write contents to a file
       now = timestamp_string()
       with file("runtime_stats/" + now + ".json", "w") as output:

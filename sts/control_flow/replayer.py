@@ -19,6 +19,10 @@ import logging
 log = logging.getLogger("Replayer")
 
 class Replayer(ControlFlow):
+  # Runtime stats:
+  total_replays = 0
+  total_inputs_replayed = 0
+  # Interpolated time parameter:
   time_epsilon_microseconds = 500
 
   '''
@@ -76,6 +80,8 @@ class Replayer(ControlFlow):
 
   def simulate(self, post_bootstrap_hook=None):
     ''' Caller *must* call simulation.clean_up() '''
+    Replayer.total_replays += 1
+    Replayer.total_inputs_replayed += len(self.dag.input_events)
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
     return self.simulation
