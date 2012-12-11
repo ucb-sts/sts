@@ -107,7 +107,7 @@ class InputLogger(object):
                                     simulation_cfg._topology_class.__name__,
                                     simulation_cfg._topology_params,
                                     simulation_cfg._patch_panel_class.__name__,
-                                    str(simulation_cfg._switch_init_sleep_seconds),
+                                    str(simulation_cfg.switch_init_sleep_seconds),
                                     self.dp_trace_path,
                                     self.output_path,
                                     self.mcs_output_path)
