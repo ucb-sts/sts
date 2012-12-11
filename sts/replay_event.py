@@ -163,7 +163,7 @@ class SwitchRecovery(InputEvent):
       simulation.topology.recover_switch(software_switch)
     except TimeoutError:
       # Controller is down... Hopefully control flow will notice soon enough
-      pass
+      log.warn("Timed out on %s" % str(self.fingerprint))
     return True
 
   @staticmethod
