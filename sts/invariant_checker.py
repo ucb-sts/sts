@@ -35,6 +35,10 @@ class InvariantChecker(object):
 
   @staticmethod
   def check_loops(simulation):
+    # Always check liveness
+    down_controllers = InvariantChecker.check_liveness(simulation)
+    if down_controllers != []:
+      return down_controllers
     # Warning! depends on python Hassell -- may be really slow!
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
@@ -44,6 +48,11 @@ class InvariantChecker(object):
   @staticmethod
   def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
+    # Always check liveness
+    down_controllers = InvariantChecker.check_liveness(simulation)
+    if down_controllers != []:
+      return down_controllers
+
     # Effectively, run compute physical omega, ignore concrete values of headers, and
     # check that all pairs can reach eachother
     physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
