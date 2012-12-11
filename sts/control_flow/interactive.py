@@ -43,7 +43,7 @@ class Interactive(ControlFlow):
 
   def simulate(self, simulation_cfg):
     self.simulation_cfg = simultion_cfg
-    self.simulation = simulation_cfg.bootstrap()
+    self.simulation = simulation_cfg.bootstrap(self.sync_callback)
     self.loop()
 
   def loop(self):
