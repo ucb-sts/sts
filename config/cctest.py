@@ -1,4 +1,5 @@
 from experiment_config_lib import ControllerConfig
+from sts.control_flow import Fuzzer
 from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller

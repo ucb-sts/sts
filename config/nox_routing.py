@@ -2,6 +2,7 @@ from experiment_config_lib import ControllerConfig
 from sts.control_flow import Fuzzer
 from sts.input_traces.input_logger import InputLogger
 from sts.invariant_checker import InvariantChecker
+from sts.simulation_state import SimulationConfig
 
 # Use NOX as our controller
 command_line = "./nox_core -i ptcp:6633 routing"
