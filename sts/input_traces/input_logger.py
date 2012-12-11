@@ -13,12 +13,7 @@ from sts.topology import *
 from sts.control_flow import Replayer
 from sts.simulation_state import SimulationConfig
 
-simulation_config = SimulationConfig(controller_configs=%s,
-                                     topology_class=%s,
-                                     topology_params="%s",
-                                     patch_panel_class=%s,
-                                     switch_init_sleep_seconds=%s,
-                                     dataplane_trace=%s)
+simulation_config = %s
 control_flow = Replayer(simulation_config, "%s",
                         wait_time=2.0)
 # MCS trace path: %s
@@ -31,12 +26,7 @@ from sts.control_flow import MCSFinder
 from sts.invariant_checker import InvariantChecker
 from sts.simulation_state import SimulationConfig
 
-simulation_config = SimulationConfig(controller_configs=%s,
-                                     topology_class=%s,
-                                     topology_params="%s",
-                                     patch_panel_class=%s,
-                                     switch_init_sleep_seconds=%s,
-                                     dataplane_trace=%s)
+simulation_config = %s
 
 control_flow = MCSFinder(simulation_config, "%s",
                          wait_time=2.0,
@@ -85,16 +75,10 @@ class InputLogger(object):
     self.output.close()
 
     # Grab the dataplane trace path (might be pre-defined, or Fuzzed)
-    # TODO(cs): shouldn't be touching cfg's privates -- should be a method
-    # instead
-    if simulation_cfg._dataplane_trace_path is not None:
-      self.dp_trace_path = "\"" + simulation_cfg._dataplane_trace_path + "\""
-    elif self.dp_events != []:
+    if self.dp_events != []:
       # If the Fuzzer was injecting random traffic, write the dataplane trace
       tg.write_trace_log(self.dp_events, self.dp_trace_path)
-      self.dp_trace_path = "\"" + self.dp_trace_path + "\""
-    else:
-      self.dp_trace_path = None
+      simulation_cfg.dataplane_trace_path = self.dp_trace_path
 
     # Write the config files
     path_templates = [(self.replay_cfg_path, replay_config_template)]
@@ -103,12 +87,7 @@ class InputLogger(object):
 
     for path, template in path_templates:
       with open(path, 'w') as cfg_out:
-        config_string = template % (str(simulation_cfg.controller_configs),
-                                    simulation_cfg._topology_class.__name__,
-                                    simulation_cfg._topology_params,
-                                    simulation_cfg._patch_panel_class.__name__,
-                                    str(simulation_cfg.switch_init_sleep_seconds),
-                                    self.dp_trace_path,
+        config_string = template % (str(simulation_cfg),
                                     self.output_path,
                                     self.mcs_output_path)
         cfg_out.write(config_string)

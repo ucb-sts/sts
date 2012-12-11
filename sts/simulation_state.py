@@ -166,6 +166,17 @@ class SimulationConfig(object):
 
     return simulation
 
+  def __str__(self):
+    return ('''SimulationConfig(controller_configs=%s,'''
+            '''                 topology_class=%s,'''
+            '''                 topology_params="%s",'''
+            '''                 patch_panel_class=%s, '''
+            '''                 dataplane_trace="%s", '''
+            '''                 switch_init_sleep_seconds=%s ''' %
+            (str(self.controller_configs),self._topology_class.__name__,
+             self._topology_params, self._patch_panel_class.__name__,
+             self.dataplane_trace_path, str(self.switch_init_sleep_seconds)))
+
 class Simulation(object):
   '''
   Encapsulates the running state of a single simulation:
