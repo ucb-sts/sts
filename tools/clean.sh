@@ -6,9 +6,11 @@ if [ -f .project ]; then
 fi
 
 git clean -fX
-cd sts/headerspace/hassel-c
-make
 
 if [ -f .project ]; then
     cp /tmp/.project /tmp/.pydevproject .
 fi
+
+cd sts/headerspace/hassel-c
+make
+
