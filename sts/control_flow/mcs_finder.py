@@ -22,7 +22,7 @@ import json
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
                invariant_check=InvariantChecker.check_correspondence,
-               transform_dag=None,
+               transform_dag=None, end_wait_seconds=0.5,
                mcs_trace_path=None, extra_log=None, dump_runtime_stats=False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
@@ -43,6 +43,7 @@ class MCSFinder(ControlFlow):
     self._extra_log = extra_log
     self._runtime_stats = None
     self.kwargs = kwargs
+    self.end_wait_seconds = end_wait_seconds
     if dump_runtime_stats:
       self._runtime_stats = {}
 
@@ -180,6 +181,8 @@ class MCSFinder(ControlFlow):
     # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
     replayer = Replayer(self.simulation_cfg, new_dag, **self.kwargs)
     simulation = replayer.simulate()
+    # Wait a bit in case the bug takes awhile to happen
+    time.sleep(self.end_wait_seconds)
     violations = self.invariant_check(simulation)
     simulation.clean_up()
     return violations
