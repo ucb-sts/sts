@@ -8,7 +8,7 @@ from sts.replay_event import Event, InternalEvent, InputEvent, WaitTime
 log = logging.getLogger("sts")
 
 class Peeker(object):
-  def __init__(self, simulation_cfg, default_wait_time=0.5, epsilon_time=0.2):
+  def __init__(self, simulation_cfg, default_wait_time_seconds=0.5, epsilon_time=0.2):
     try:
       import pytrie
     except ImportError:
@@ -18,7 +18,7 @@ class Peeker(object):
     # Note that we pass the trie around between DAG views
     self.simulation_cfg = simulation_cfg
     self._prefix_trie = pytrie.Trie()
-    self.default_wait_time = default_wait_time
+    self.default_wait_time_seconds = default_wait_time_seconds
     self.epsilon_time = epsilon_time
 
   def peek(self, dag):
@@ -72,9 +72,9 @@ class Peeker(object):
         log.debug("Optimization: no expected internal events")
         newly_inferred_events = []
       else:
-        wait_time = self.get_wait_time(inject_input, following_input)
+        wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
         replay_dag = EventDag(inferred_events + [ inject_input ])
-        found_events = self.find_internal_events(replay_dag, wait_time)
+        found_events = self.find_internal_events(replay_dag, wait_time_seconds)
         newly_inferred_events = self.match_and_filter(found_events, expected_internal_events)
 
       (current_input_prefix,
@@ -84,15 +84,15 @@ class Peeker(object):
 
     return EventDag(inferred_events)
 
-  def get_wait_time(self, first_event, second_event):
+  def get_wait_time_seconds(self, first_event, second_event):
     if first_event is None or second_event is None:
-      return self.default_wait_time
+      return self.default_wait_time_seconds
     else:
       return second_event.time.as_float() - first_event.time.as_float() + \
           self.epsilon_time
 
-  def find_internal_events(self, replay_dag, wait_time):
-    ''' Replay the replay_dag, then wait for wait_time and collect internal
+  def find_internal_events(self, replay_dag, wait_time_seconds):
+    ''' Replay the replay_dag, then wait for wait_time_seconds and collect internal
         events that occur. Return the list of internal events. '''
     replayer = Replayer(self.simulation_cfg, replay_dag)
     log.debug("Replaying prefix")
@@ -112,8 +112,8 @@ class Peeker(object):
     simulation.set_pass_through()
 
     # Note that this is the monkey patched version of time.sleep
-    log.debug("peek()'ing for %f seconds" % wait_time)
-    time.sleep(wait_time)
+    log.debug("peek()'ing for %f seconds" % wait_time_seconds)
+    time.sleep(wait_time_seconds)
 
     # Now turn off those pass-through and grab the inferred events
     newly_inferred_events = simulation.unset_pass_through()
