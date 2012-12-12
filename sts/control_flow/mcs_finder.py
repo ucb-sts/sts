@@ -23,7 +23,7 @@ class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
                invariant_check=InvariantChecker.check_correspondence,
                transform_dag=None, end_wait_seconds=0.5,
-               mcs_trace_path=None, extra_log=None, dump_runtime_stats=False,
+               mcs_trace_path=None, extra_log=None, dump_runtime_stats=True,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.sync_callback = None
