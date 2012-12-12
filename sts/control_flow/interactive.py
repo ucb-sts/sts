@@ -69,19 +69,27 @@ class Interactive(ControlFlow):
       msg.interactive("Which one?")
       msg.interactive("  'o' - omega")
       msg.interactive("  'c' - connectivity")
-      msg.interactive("  'l' - loops")
+      msg.interactive("  'lo' - loops")
+      msg.interactive("  'li' - controller liveness")
       answer = msg.raw_input("> ")
       result = None
       message = ""
       if answer.lower() == 'o':
+        self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_correspondence))
         result = InvariantChecker.check_correspondence(self.simulation)
         message = "Controllers with miscorrepondence: "
       elif answer.lower() == 'c':
+        self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_connectivity))
         result = self.invariant_checker.check_connectivity(self.simulation)
         message = "Disconnected host pairs: "
-      elif answer.lower() == 'l':
+      elif answer.lower() == 'lo':
+        self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_loops))
         result = self.invariant_checker.check_loops(self.simulation)
         message = "Loops: "
+      elif answer.lower() == 'li':
+        self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_liveness))
+        result = self.invariant_checker.check_loops(self.simulation)
+        message = "Crashed controllers: "
       else:
         log.warn("Unknown input...")
 
