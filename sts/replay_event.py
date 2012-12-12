@@ -409,7 +409,7 @@ class CheckInvariants(InputEvent):
     invariant_check = InvariantChecker.check_correspondence
     if 'invariant_check' in json_hash:
       # Assumes that the closure is empty
-      code = marshal.loads(json['invariant_check'].decode('base64'))
+      code = marshal.loads(json_hash['invariant_check'].decode('base64'))
       invariant_check = types.FunctionType(code, globals())
     return CheckInvariants(label=label, time=time,
                            fail_on_error=fail_on_error,
