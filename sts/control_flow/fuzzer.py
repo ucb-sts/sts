@@ -10,6 +10,7 @@ from sts.topology import BufferedPatchPanel
 from sts.traffic_generator import TrafficGenerator
 from sts.util.console import msg
 from sts.replay_event import *
+from pox.lib.util import TimeoutError
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -192,7 +193,10 @@ class Fuzzer(ControlFlow):
             self._log_input_event(SwitchRecovery(software_switch.dpid))
 
     crashed_this_round = crash_switches()
-    restart_switches(crashed_this_round)
+    try:
+      restart_switches(crashed_this_round)
+    except TimeoutError:
+      log.warn("Unable to connect to controllers")
 
   def check_link_failures(self):
     def sever_links():
