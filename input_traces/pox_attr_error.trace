@@ -1,0 +1,7 @@
+{"dependent_labels": [], "class": "DataplanePermit", "time": [1355279838, 365938], "label": "e22", "fingerprint": ["DataplanePermit", {"class": "lldp"}]}
+{"end_port_no": 1, "start_port_no": 1, "end_dpid": 1, "dependent_labels": [], "start_dpid": 2, "time": [1355279838, 366517], "class": "LinkFailure", "label": "e23"}
+{"dependent_labels": [], "time": [1355279838, 467150], "fingerprint": ["ControlMessageReceive", {"in_port": 1, "data": [], "class": "ofp_packet_out", "actions": []}], "dpid": 2, "class": "ControlMessageReceive", "controller_id": ["127.0.0.1", 8888], "label": "i24"}
+{"end_port_no": 1, "start_port_no": 1, "end_dpid": 2, "dependent_labels": [], "start_dpid": 1, "time": [1355279838, 467859], "class": "LinkFailure", "label": "e25"}
+{"end_port_no": 1, "start_port_no": 1, "end_dpid": 2, "dependent_labels": [], "start_dpid": 1, "time": [1355279838, 568896], "class": "LinkRecovery", "label": "e26"}
+{"dependent_labels": [], "violations": ["(<sts.entities.Controller object at 0x1056cf0>, 'Controller pox: Alive, but controller process terminated with return code 1')"], "label": "e27", "class": "InvariantViolation", "time": [1355279838, 569363]}
+{"wait_time": 1.0, "dependent_labels": [], "label": "e28", "class": "WaitTime", "time": [1355279838, 569487]}
