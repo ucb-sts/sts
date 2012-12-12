@@ -27,7 +27,7 @@ class Fuzzer(ControlFlow):
   for invariant violations. (Not the proper use of the term `Fuzzer`)
   '''
   def __init__(self, simulation_cfg, fuzzer_params="config.fuzzer_params",
-               check_interval=None, trace_interval=10, random_seed=None,
+               check_interval=None, traffic_inject_interval=10, random_seed=None,
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
                halt_on_violation=False, log_invariant_checks=True):
@@ -37,7 +37,7 @@ class Fuzzer(ControlFlow):
     self.check_interval = check_interval
     self.invariant_check = invariant_check
     self.log_invariant_checks = log_invariant_checks
-    self.trace_interval = trace_interval
+    self.traffic_inject_interval = traffic_inject_interval
     # Make execution deterministic to allow the user to easily replay
     if random_seed is None:
       self.random = random.Random()
@@ -117,7 +117,7 @@ class Fuzzer(ControlFlow):
 
   def maybe_inject_trace_event(self):
     if (self.simulation.dataplane_trace and
-        (self.logical_time % self.trace_interval) == 0):
+        (self.logical_time % self.traffic_inject_interval) == 0):
       dp_event = self.simulation.dataplane_trace.inject_trace_event()
       self._log_input_event(TrafficInjection(), dp_event=dp_event)
 
