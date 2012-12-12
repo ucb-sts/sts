@@ -10,8 +10,8 @@ command_line = "./pox.py --verbose --no-cli openflow.of_01 --address=__address__
 controllers = [ControllerConfig(command_line, cwd="pox", sync="tcp:localhost:18899")]
 
 topology_class = MeshTopology
-topology_params = "num_switches=2"
-dataplane_trace = "dataplane_traces/ping_pong_same_subnet.trace"
+topology_params = "num_switches=4"
+dataplane_trace = "dataplane_traces/ping_pong_same_subnet_4_switches.trace"
 
 simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_class=topology_class,

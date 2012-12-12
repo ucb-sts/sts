@@ -48,11 +48,11 @@ def generate_example_trace():
 
   write_trace_log(trace, "dataplane_traces/ping_pong.trace")
 
-def generate_example_trace_same_subnet():
+def generate_example_trace_same_subnet(num_switches=2):
   # TODO(cs): highly redundant
   trace = []
 
-  mesh = topo.MeshTopology(num_switches=2)
+  mesh = topo.MeshTopology(num_switches=num_switches)
   hosts = mesh.hosts
   access_links = mesh.access_links
 
@@ -76,7 +76,8 @@ def generate_example_trace_same_subnet():
     trace.append(packet_events[0])
     trace.append(packet_events[1])
 
-  write_trace_log(trace, "dataplane_traces/ping_pong_same_subnet.trace")
+  write_trace_log(trace,
+                  "dataplane_traces/ping_pong_same_subnet_%d_switches.trace" % num_switches)
 
 def generate_example_trace_fat_tree(num_pods=4):
   # TODO(cs): highly redundant
