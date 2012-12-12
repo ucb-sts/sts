@@ -603,3 +603,20 @@ class DeterministicValue(InternalEvent):
 
 all_internal_events = [ControlMessageReceive,
                        ControllerStateChange, DeterministicValue]
+
+# Special event:
+
+class InvariantViolation(Event):
+  ''' Class for logging violations as json dicts '''
+  def __init__(self, violations):
+    Event.__init__(self)
+    self.violations = [ str(v) for v in violations ]
+
+  def proceed(self):
+    return True
+
+  def to_json(self):
+    fields = dict(self.__dict__)
+    fields['class'] = self.__class__.__name__
+    return json.dumps(fields)
+

@@ -12,16 +12,6 @@ import json
 
 log = logging.getLogger("invariant_checker")
 
-class InvariantViolation(object):
-  ''' Class for logging violations as json dicts '''
-  def __init__(self, violations):
-    self.violations = [ str(v) for v in violations ]
-
-  def to_json(self):
-    fields = dict(self.__dict__)
-    fields['class'] = self.__class__.__name__
-    return json.dumps(fields)
-
 class InvariantChecker(object):
   def __init__(self, snapshotService):
     self.snapshotService = snapshotService

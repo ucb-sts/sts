@@ -10,7 +10,6 @@ from sts.topology import BufferedPatchPanel
 from sts.traffic_generator import TrafficGenerator
 from sts.util.console import msg
 from sts.replay_event import *
-from sts.invariant_checker import InvariantViolation
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
