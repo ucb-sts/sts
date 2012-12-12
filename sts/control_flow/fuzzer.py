@@ -30,12 +30,13 @@ class Fuzzer(ControlFlow):
                check_interval=None, trace_interval=10, random_seed=None,
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
-               halt_on_violation=False):
+               halt_on_violation=False, log_invariant_checks=True):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
 
     self.check_interval = check_interval
     self.invariant_check = invariant_check
+    self.log_invariant_checks = log_invariant_checks
     self.trace_interval = trace_interval
     # Make execution deterministic to allow the user to easily replay
     if random_seed is None:
@@ -98,6 +99,10 @@ class Fuzzer(ControlFlow):
       # TODO(cs): may need to revert to threaded version if runtime is too
       # long
       def do_invariant_check():
+        if self.log_invariant_checks:
+          self.log_input_event(CheckInvariants(invariant_check=self.invariant_check,
+                                               fail_on_error=self.halt_on_violation))
+
         controllers_with_violations = self.invariant_check(self.simulation)
 
         if controllers_with_violations != []:
