@@ -167,11 +167,11 @@ class SimulationConfig(object):
     return simulation
 
   def __str__(self):
-    return ('''SimulationConfig(controller_configs=%s,'''
-            '''                 topology_class=%s,'''
-            '''                 topology_params="%s",'''
-            '''                 patch_panel_class=%s, '''
-            '''                 dataplane_trace="%s", '''
+    return ('''SimulationConfig(controller_configs=%s,\n'''
+            '''                 topology_class=%s,\n'''
+            '''                 topology_params="%s",\n'''
+            '''                 patch_panel_class=%s,\n'''
+            '''                 dataplane_trace="%s",\n'''
             '''                 switch_init_sleep_seconds=%s)''' %
             (str(self.controller_configs),self._topology_class.__name__,
              self._topology_params, self._patch_panel_class.__name__,
