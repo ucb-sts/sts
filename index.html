@@ -69,12 +69,17 @@ $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 <pre><code>$ ./simulator.py -c config.interactive
 </code></pre>
 
-<p>Finally, you can use sts to replay previous executions of your controller and automatically identify fault-inducing inputs:</p>
+<p>You can also use sts to replay previous executions:</p>
 
-<pre><code>$ ./simulator.py -c config.troubleshoot_pox_l2_learning
+<pre><code>$ ./simulator.py -c config/pox_list_violation.py
 </code></pre>
 
-<p>The config/ directory contains sample configurations. You can specify your own config file by specifying its path:</p>
+<p>Finally, sts is able to identify the minimal set of inputs that trigger a given bug:</p>
+
+<pre><code>$ ./simulator.py -c config/pox_list_mcs.py
+</code></pre>
+
+<p>The config/ directory contains sample configurations. You can specify your own config file by passing its path:</p>
 
 <pre><code>$ ./simulator.py -c config/my_config.py
 </code></pre>
@@ -85,7 +90,7 @@ $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 
 <p>sts requires python 2.7+</p>
 
-<p>To use the replay features of sts, you will need to install and make two dependencies:</p>
+<p>To use the execution pruning feature of sts, you will need to install and make two dependencies:</p>
 
 <pre><code>$ sudo pip install pytrie
 $ cd sts/headerspace/hassel-c &amp;&amp; make -j
