@@ -11,6 +11,7 @@ topology_params = "num_switches=2"
 simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_class=topology_class,
                                      topology_params=topology_params,
-                                     dataplane_trace=dataplane_trace)
+                                     dataplane_trace=dataplane_trace,
+                                     switch_init_sleep_seconds=2.0)
 
 control_flow = Replayer(simulation_config, "input_traces/pox_list_violation.trace")
