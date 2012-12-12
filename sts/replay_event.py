@@ -394,8 +394,9 @@ class CheckInvariants(InputEvent):
 
   def to_json(self):
     fields = dict(self.__dict__)
-    fields['invariant_check'] = marshal.dumps(self.invariant_check.func_code)
-    fields['invariant_name'] = self.function.__name__
+    fields['invariant_check'] = marshal.dumps(self.invariant_check.func_code)\
+                                       .encode('base64')
+    fields['invariant_name'] = self.invariant_check.__name__
     fields['class'] = self.__class__.__name__
     return json.dumps(fields)
 
@@ -408,7 +409,7 @@ class CheckInvariants(InputEvent):
     invariant_check = InvariantChecker.check_correspondence
     if 'invariant_check' in json_hash:
       # Assumes that the closure is empty
-      code = marshal.loads(json['invariant_check'])
+      code = marshal.loads(json['invariant_check'].decode('base64'))
       invariant_check = types.FunctionType(code, globals())
     return CheckInvariants(label=label, time=time,
                            fail_on_error=fail_on_error,

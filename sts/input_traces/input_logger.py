@@ -55,6 +55,7 @@ class InputLogger(object):
     self.dp_trace_path = "./dataplane_traces/" + basename
     self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
     self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
+    self.last_time = time.time()
 
   def log_input_event(self, event, dp_event=None):
     '''
