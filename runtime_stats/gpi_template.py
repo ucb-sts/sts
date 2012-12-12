@@ -36,6 +36,8 @@ set key top left
 set ylabel "Number of Remaining Inputs"
 set xlabel "Number of Replays Executed"
 
+set yrange [0:]
+
 # Note that we're leaving out output, title, and plot
 #set output "runtime_graph.pdf"
 #set title "runtime seconds=?, replay duration=?"
