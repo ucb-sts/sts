@@ -62,6 +62,7 @@ class InputLogger(object):
     separate pickle log, so we optionally allow a packet parameter to be
     logged separately.
     '''
+    self.last_time = event.time
     json_hash = event.to_json()
     log.debug("logging event %r" % event)
     self.output.write(json_hash + '\n')
@@ -70,7 +71,7 @@ class InputLogger(object):
 
   def close(self, simulation_cfg, skip_mcs_cfg=False):
     # First, insert a WaitTime, in case there was a controller crash
-    self.log_input_event(WaitTime(1.0))
+    self.log_input_event(WaitTime(1.0, time=self.last_time))
     # Flush the json input log
     self.output.close()
 
