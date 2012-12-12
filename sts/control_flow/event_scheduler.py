@@ -4,26 +4,28 @@ from sts.replay_event import *
 
 class DumbEventScheduler(object):
 
-  kwargs = set(['wait_delta'])
+  kwargs = set(['epsilon_ms', 'timeout_seconds', 'sleep_interval_seconds'])
 
-  def __init__(self, simulation, wait_delta=0.1):
+  def __init__(self, simulation, epsilon_seconds=0.0, timeout_seconds=1.0,
+               sleep_interval_seconds=0.2):
     self.simulation = simulation
-    self.wait_delta = wait_delta
+    self.epsilon_seconds = epsilon_seconds
+    self.timeout_seconds = timeout_seconds
+    self.sleep_interval_seconds = sleep_interval_seconds
     self.last_event = None
 
   def schedule(self, event):
     if self.last_event:
-      rec_delta = (event.time.as_float() - self.last_event.time.as_float()) + self.wait_delta
+      rec_delta = (event.time.as_float() - self.last_event.time.as_float()) + self.epsilon_seconds
       if rec_delta > 0:
         log.info("Sleeping for %.0f ms before next event" % (rec_delta * 1000))
         self.simulation.io_master.sleep(rec_delta)
 
-    timeout = 1.0
     start = time.time()
-    end = start + timeout - 0.01
+    end = start + self.timeout_seconds - 0.01
 
     log.debug("Waiting for %r (maximum wait time: %.0f ms)" %
-          ( event, timeout * 1000) )
+          ( event, self.timeout_seconds * 1000) )
 
     proceed = False
     while True:
@@ -33,7 +35,7 @@ class DumbEventScheduler(object):
         break
       elif now > end:
         break
-      self.simulation.io_master.select(0.2)
+      self.simulation.io_master.select(self.sleep_interval_seconds)
     if proceed:
       log.debug("Succcessfully executed %r" % event)
     else:
