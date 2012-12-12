@@ -28,8 +28,8 @@ class Replayer(ControlFlow):
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
 
-  To set the wait_time, pass them as keyword args to the
-  constructor of this class, which will pass them on to the EventDay object it creates.
+  To set the event scheduling paramters, pass them as keyword args to the
+  constructor of this class, which will pass them on to the EventScheduler object it creates.
   '''
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)

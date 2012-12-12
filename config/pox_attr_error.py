@@ -10,6 +10,5 @@ simulation_config = SimulationConfig(controller_configs=[ControllerConfig(cmdlin
                                      patch_panel_class=BufferedPatchPanel,
                                      dataplane_trace="dataplane_traces/ping_pong_same_subnet.trace",
                                      switch_init_sleep_seconds=2.0)
-control_flow = Replayer(simulation_config, "input_traces/pox_attr_error.trace",
-                        wait_time=2.0)
+control_flow = Replayer(simulation_config, "input_traces/pox_attr_error.trace")
 # MCS trace path: input_traces/2012_12_11_18_37_14_mcs_final.trace

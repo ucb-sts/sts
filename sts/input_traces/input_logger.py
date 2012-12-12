@@ -14,8 +14,7 @@ from sts.control_flow import Replayer
 from sts.simulation_state import SimulationConfig
 
 simulation_config = %s
-control_flow = Replayer(simulation_config, "%s",
-                        wait_time=2.0)
+control_flow = Replayer(simulation_config, "%s")
 # MCS trace path: %s
 '''
 
@@ -29,7 +28,6 @@ from sts.simulation_state import SimulationConfig
 simulation_config = %s
 
 control_flow = MCSFinder(simulation_config, "%s",
-                         wait_time=2.0,
                          invariant_check=InvariantChecker.check_liveness,
                          mcs_trace_path="%s")
 '''

@@ -13,6 +13,5 @@ simulation_config = SimulationConfig(controller_configs=[ControllerConfig(cmdlin
                                      switch_init_sleep_seconds=False)
 
 control_flow = MCSFinder(simulation_config, "input_traces/2012_12_11_20_01_02.trace",
-                         wait_time=2.0,
                          invariant_check=InvariantChecker.check_liveness,
                          mcs_trace_path="input_traces/2012_12_11_20_01_02_mcs_final.trace")
