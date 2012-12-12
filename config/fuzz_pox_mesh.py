@@ -16,7 +16,6 @@ dataplane_trace = "dataplane_traces/ping_pong_same_subnet.trace"
 simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_class=topology_class,
                                      topology_params=topology_params,
-                                     switch_init_sleep_seconds=2.0,
                                      dataplane_trace=dataplane_trace)
 
 control_flow = Fuzzer(simulation_config, check_interval=1, halt_on_violation=True,
