@@ -103,6 +103,48 @@ class event_dag_test(unittest.TestCase):
     sub_graph = event_dag.input_complement([mockInputEvent])
     self.assertEqual( [ e for (i, e) in enumerate(event_dag.events) if i==0 or i==2 ], sub_graph.events)
 
+  def test_migration_simple(self):
+    events = [ MockInternalEvent('a'), HostMigration(1,1,2,2),
+               MockInternalEvent('b'), HostMigration(2,2,3,3),
+               MockInputEvent() ]
+    # Don't prune anything
+    event_dag = EventDag(events)
+    new_dag = event_dag.input_subset(events)
+    self.assertEqual(events, new_dag.events)
+
+  def test_migration_prune_1(self):
+    events = [ MockInternalEvent('a'), HostMigration(1,1,2,2),
+               MockInternalEvent('b'), HostMigration(2,2,3,3),
+               MockInputEvent() ]
+    # Prune the first migration
+    subset = [events[1]]
+    event_dag = EventDag(events)
+    new_dag = event_dag.input_complement(subset)
+    fingerprint = ('HostMigration',1,1,3,3)
+    self.assertEqual(fingerprint, new_dag.events[2].fingerprint)
+
+  def test_migration_prune_2(self):
+    events = [ MockInternalEvent('a'), HostMigration(1,1,2,2),
+               MockInternalEvent('b'), HostMigration(2,2,3,3),
+               MockInputEvent(), HostMigration(3,3,4,4),
+               HostMigration(4,4,5,5) ]
+    # Prune the seconds and third migration
+    subset = [events[3], events[4], events[5]]
+    event_dag = EventDag(events)
+    new_dag = event_dag.input_complement(subset)
+    fingerprint = ('HostMigration',2,2,5,5)
+    self.assertEqual(fingerprint, new_dag.events[3].fingerprint)
+
+  def test_migration_prune_last(self):
+    events = [ MockInternalEvent('a'), HostMigration(1,1,2,2),
+               MockInternalEvent('b'), HostMigration(2,2,3,3),
+               MockInputEvent() ]
+    # Prune the last migration
+    subset = [events[3]]
+    event_dag = EventDag(events)
+    new_dag = event_dag.input_complement(subset)
+    fingerprint = ('HostMigration',1,1,2,2)
+    self.assertEqual(fingerprint, new_dag.events[1].fingerprint)
 
 
 if __name__ == '__main__':
