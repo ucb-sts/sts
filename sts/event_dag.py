@@ -82,7 +82,7 @@ class EventDag(object):
   # For now, we're ignoring these input types, since their dependencies with
   # other inputs are too complicated to model
   # TODO(cs): model these!
-  _ignored_input_types = set([DataplaneDrop, WaitTime, DataplanePermit, HostMigration])
+  _ignored_input_types = set([DataplaneDrop, WaitTime, DataplanePermit])
 
   def __init__(self, events, prefix_trie=None):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
@@ -132,7 +132,58 @@ class EventDag(object):
         for label in event.dependent_labels:
           dependent_event = self._label2event[label]
           ignored_portion.add(dependent_event)
+
+    # Update the migration locations in remaining
+    self.update_migrations(remaining, ignored_portion, events_list)
     return remaining
+
+  def update_migrations(self, remaining, ignored_portion, events_list):
+    ''' Walk through remaining input events, and update the source location of
+    the host migration. For example, if one host migrates twice:
+
+    location A -> location B -> location C
+
+    And the first migration is pruned, update the second HostMigration event
+    to look like:
+
+    location A -> location C
+
+    Note: mutates remaining
+    '''
+    # TODO(cs): this should be moved outside of EventDag
+
+    # keep track of the most recent location of the host that did not involve
+    # a pruned HostMigration event
+    # location is: (ingress dpid, ingress port no)
+    currentloc2unprunedloc = {}
+
+    for m in [e for e in events_list if type(e) == HostMigration]:
+      src = (m.old_ingress_dpid, m.old_ingress_port_no)
+      dst = (m.new_ingress_dpid, m.new_ingress_port_no)
+      if m in ignored_portion:
+        if src in currentloc2unprunedloc:
+          # There was a prior migration in ignored_portion
+          # Update the new dst to point back to the unpruned location
+          unprunedlocation = currentloc2unprunedloc[src]
+          del currentloc2unprunedloc[src]
+          currentloc2unprunedloc[dst] = unprunedlocation
+        else:
+          # We are the first migration for this host in ignored_portion
+          # Point to our tail
+          currentloc2unprunedloc[dst] = src
+      else: # m in remaining
+        if src in currentloc2unprunedloc:
+          # There was a prior migration in ignored_portion
+          # Replace this HostMigration with a new one, with source at the
+          # last unpruned location
+          (old_dpid, old_port) = currentloc2unprunedloc[src]
+          del currentloc2unprunedloc[src]
+          (new_dpid, new_port) = dst
+          # Don't mutate m -- instead, replace m
+          new_migration = HostMigration(old_dpid, old_port, new_dpid,
+                                        new_port, time=m.time, label=m.label)
+          index = remaining.index(m)
+          remaining[index] = new_migration
 
   def input_subset(self, subset):
     ''' Return a view of the dag with only the subset dependents
@@ -160,10 +211,10 @@ class EventDag(object):
     # interleaving recovery event
     fingerprint2previousfailure = {}
 
-    # NOTE: mutates self._events
+    # NOTE: mutates the elements of self._events_list
     for event in self._events_list:
-      # Skip over the class name
       if hasattr(event, 'fingerprint'):
+        # Skip over the class name
         fingerprint = event.fingerprint[1:]
         if type(event) in self._failure_types:
           # Insert it into the previous failure hash

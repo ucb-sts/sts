@@ -324,6 +324,12 @@ class HostMigration(InputEvent):
                          new_ingress_dpid, new_ingress_port_no,
                          label=label, time=time)
 
+  @property
+  def fingerprint(self):
+    return (self.__class__.__name__,self.old_ingress_dpid,
+            self.old_ingress_port_no, self.new_ingress_dpid,
+            self.new_ingress_port_no)
+
 class PolicyChange(InputEvent):
   def __init__(self, request_type, label=None, time=None):
     super(PolicyChange, self).__init__(label=label, time=time)
