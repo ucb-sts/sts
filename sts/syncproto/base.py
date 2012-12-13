@@ -1,3 +1,7 @@
+# Base class for all (python) controller-specific syncer modules.
+# This, along with the controller-specific syncer is symlinked before booting.
+# This code runs in the controller process.
+
 import collections
 import itertools
 import logging

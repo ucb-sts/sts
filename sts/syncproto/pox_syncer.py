@@ -1,3 +1,6 @@
+# This  module runs inside a POX process. It's loaded into pox/ext before
+# booting POX.
+
 import logging
 import time
 import os

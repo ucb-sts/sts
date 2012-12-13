@@ -1,3 +1,5 @@
+# This is STS's end of the sync protocol. Listens to all controller-specific
+# syncers and dispatches messages to STS handlers.
 
 from sts.syncproto.base import SyncProtocolSpeaker, SyncMessage, SyncTime, SyncIODelegate
 

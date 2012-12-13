@@ -26,7 +26,7 @@ class STSSyncProtocolSpeakerTest(unittest.TestCase):
     state_master = MockStateMaster()
     worker = MockIOWorker()
     controller = "c1"
-    speaker = STSSyncProtocolSpeaker(controller=controller, state_master = state_master, json_io_worker=worker)
+    speaker = STSSyncProtocolSpeaker(controller=controller, state_master=state_master, json_io_worker=worker)
 
     worker.receive(h)
     _eq(1, len(state_master.changes))

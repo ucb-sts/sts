@@ -350,7 +350,7 @@ class Controller(object):
     env = None
 
     if self.config.sync:
-      # if a sync connectioe has been configured in the controller conf
+      # if a sync connection has been configured in the controller conf
       # launch the controller with environment variable 'sts_sync' set
       # to the appropriate listening port. This is quite a hack.
       env = os.environ.copy()
