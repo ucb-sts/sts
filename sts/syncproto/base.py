@@ -1,12 +1,13 @@
-# Base class for all (python) controller-specific syncer modules.
-# This, along with the controller-specific syncer is symlinked before booting.
-# This code runs in the controller process.
+# Base class for all (python) controller-specific syncer modules, as well as
+# the STS syncer. (Runs in both the STS process and the controller
+# process(es))
 
 import collections
 import itertools
 import logging
 import time
 
+# TODO(cs): specific to POX!
 from pox.lib.ioworker.io_worker import JSONIOWorker
 
 log = logging.getLogger("sync_connection")
@@ -89,6 +90,7 @@ class SyncProtocolSpeaker(object):
       return message._replace(xid=self.xid_generator.next())
 
   def send(self, message):
+    ''' Send a message you don't expect a response from '''
     message = self.message_with_xid(message)
     if((message.type, message.xid) in self.sent_xids):
       raise RuntimeError("Error sending message %s: XID %d already sent" % (str(message), message.xid))
@@ -112,10 +114,13 @@ class SyncProtocolSpeaker(object):
     self.handlers[key](message)
 
   def sync_request(self, messageClass, name):
+    ''' Send a message you expect a response from.
+    Note: Blocks this thread until a response is recieved!'''
     message = self.message_with_xid(SyncMessage(type="REQUEST", messageClass=messageClass, name=name))
     self.waiting_xids.add(message.xid)
     self.send(message)
 
+    # Blocks this thread!
     while not message.xid in self.received_responses:
       self.io.wait_for_message()
 
