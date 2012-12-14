@@ -15,6 +15,8 @@ from sts.syncproto.base import SyncTime, SyncMessage, SyncProtocolSpeaker, SyncI
 from pox.lib.util import parse_openflow_uri
 from pox.lib.recoco import Task, Select
 
+from logging import Logger
+
 log = logging.getLogger("pox_syncer")
 
 # POX Module launch method
@@ -60,10 +62,19 @@ class POXSyncMaster(object):
     self.patch_functions()
 
   def patch_functions(self):
+    # Patch time.time()
     if hasattr(time, "_orig_time"):
       raise RuntimeError("Already patched")
     time._orig_time = time.time
     time.time = self.get_time
+
+    # Patch Logger.* for state changes
+    # All logging.Logger log methods go through a private method _log
+    Logger._orig_log = Logger._log
+    def new_log(log_self, level, msg, *args, **kwargs):
+      Logger._orig_log(log_self, level, msg, *args, **kwargs)
+      self.state_change(msg)
+    Logger._log = new_log
 
   def get_time(self):
     """ Hack alert: python logging use time.time(). That means that log statements in the determinism
@@ -80,6 +91,12 @@ class POXSyncMaster(object):
       return sync_time.as_float()
     finally:
       self._in_get_time = False
+
+  def state_change(self, msg):
+    ''' Notify sts that we're about to make a state change (log msg) '''
+    # TODO(cs): use request() instead? Since that will block POX until a
+    # response is received
+    self.connection.async_notification("StateChange", msg)
 
 class POXSyncConnection(object):
   def __init__(self, io_master, sync_uri):
@@ -106,6 +123,12 @@ class POXSyncConnection(object):
   def request(self, messageClass, name):
     if self.speaker:
       return self.speaker.sync_request(messageClass=messageClass, name=name)
+    else:
+      log.warn("POXSyncConnection: not connected. cannot handle requests")
+
+  def async_notification(self, messageClass, fingerPrint):
+    if self.speaker:
+      self.speaker.async_notification(messageClass, fingerPrint)
     else:
       log.warn("POXSyncConnection: not connected. cannot handle requests")
 

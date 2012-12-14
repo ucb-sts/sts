@@ -113,10 +113,10 @@ class RecordingSyncCallback(STSSyncCallback):
 
   def state_change(self, controller, time, fingerprint, name, value):
     if self.input_logger is not None:
-      self.input_logger.log_input_event(ControllerStateChange((controller.uuid,
-                                                               time,
-                                                               fingerprint,
-                                                               name, value)))
+      self.input_logger.log_input_event(ControllerStateChange(controller.uuid,
+                                                              fingerprint,
+                                                              name, value,
+                                                              time=time))
 
   def get_deterministic_value(self, controller, name):
     value = None

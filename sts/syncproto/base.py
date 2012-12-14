@@ -113,6 +113,13 @@ class SyncProtocolSpeaker(object):
     # dispatch message
     self.handlers[key](message)
 
+  def async_notification(self, messageClass, fingerPrint):
+    # Don't really need an xid..
+    message = self.message_with_xid(SyncMessage(type="ASYNC",
+                                    messageClass=messageClass,
+                                    fingerPrint=fingerPrint))
+    self.send(message)
+
   def sync_request(self, messageClass, name):
     ''' Send a message you expect a response from.
     Note: Blocks this thread until a response is recieved!'''
