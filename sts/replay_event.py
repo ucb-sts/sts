@@ -571,9 +571,30 @@ class ControlMessageReceive(InternalEvent):
     return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time)
 
 # TODO(cs): move me?
-PendingStateChange = namedtuple('PendingStateChange',
+class PendingStateChange(namedtuple('PendingStateChange',
                                 ['controller_id', 'time', 'fingerprint',
-                                 'name', 'value'])
+                                 'name', 'value'])):
+  def __new__(cls, controller_id, time, fingerprint, name, value):
+    if type(controller_id) == list:
+      controller_id = tuple(controller_id)
+    if type(time) == list:
+      time = tuple(time)
+    if type(fingerprint) == list:
+      fingerprint = tuple(fingerprint)
+    if type(value) == list:
+      value = tuple(value)
+    return super(cls, PendingStateChange).__new__(cls, controller_id, time,
+                                                  fingerprint, name, value)
+
+  def __hash__(self):
+    # TODO(cs): may need to add more context into the fingerprint to avoid
+    # ambiguity
+    return self.fingerprint.__hash__()
+
+  def __eq__(self, other):
+    if type(other) != type(self):
+      return False
+    return self.fingerprint == other.fingerprint
 
 class ControllerStateChange(InternalEvent):
   '''
@@ -587,6 +608,8 @@ class ControllerStateChange(InternalEvent):
       fingerprint = (fingerprint[0], OFFingerprint(fingerprint[1]))
     self.fingerprint = fingerprint
     self.name = name
+    if type(value) == list:
+      value = tuple(value)
     self.value = value
 
   def proceed(self, simulation):
