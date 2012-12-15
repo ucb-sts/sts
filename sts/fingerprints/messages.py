@@ -74,6 +74,10 @@ class OFFingerprint(Fingerprint):
   def __init__(self, field2value):
     if type(field2value) == OFFingerprint:
       field2value = field2value._field2value
+    # Convert matches to DPFingerprint objects
+    for field, value in field2value.iteritems():
+      if type(value) == dict:
+        field2value[field] = DPFingerprint(value)
     super(OFFingerprint, self).__init__(field2value)
 
   @staticmethod

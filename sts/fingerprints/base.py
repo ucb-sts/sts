@@ -10,8 +10,6 @@ class Fingerprint(object):
     for field, value in field2value.iteritems():
       if type(value) == list:
         field2value[field] = tuple(value)
-      if type(value) == dict:
-        field2value[field] = DPFingerprint(value)
     self._field2value = field2value
 
   def to_dict(self):
@@ -36,6 +34,4 @@ class Fingerprint(object):
 
   def __repr__(self):
     return self.__class__.__name__ + str(self._field2value)
-
-
 
