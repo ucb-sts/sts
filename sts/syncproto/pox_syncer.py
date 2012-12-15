@@ -96,6 +96,7 @@ class POXSyncMaster(object):
     ''' Notify sts that we're about to make a state change (log msg) '''
     # TODO(cs): use request() instead? Since that will block POX until a
     # response is received
+    args = [ str(s) for s in args ]
     self.connection.async_notification("StateChange", msg, args)
 
 class POXSyncConnection(object):
