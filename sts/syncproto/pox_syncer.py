@@ -73,7 +73,7 @@ class POXSyncMaster(object):
     Logger._orig_log = Logger._log
     def new_log(log_self, level, msg, *args, **kwargs):
       Logger._orig_log(log_self, level, msg, *args, **kwargs)
-      self.state_change(msg)
+      self.state_change(msg, *args)
     Logger._log = new_log
 
   def get_time(self):
@@ -92,11 +92,11 @@ class POXSyncMaster(object):
     finally:
       self._in_get_time = False
 
-  def state_change(self, msg):
+  def state_change(self, msg, *args):
     ''' Notify sts that we're about to make a state change (log msg) '''
     # TODO(cs): use request() instead? Since that will block POX until a
     # response is received
-    self.connection.async_notification("StateChange", msg)
+    self.connection.async_notification("StateChange", msg, args)
 
 class POXSyncConnection(object):
   def __init__(self, io_master, sync_uri):
@@ -126,9 +126,9 @@ class POXSyncConnection(object):
     else:
       log.warn("POXSyncConnection: not connected. cannot handle requests")
 
-  def async_notification(self, messageClass, fingerPrint):
+  def async_notification(self, messageClass, fingerPrint, value):
     if self.speaker:
-      self.speaker.async_notification(messageClass, fingerPrint)
+      self.speaker.async_notification(messageClass, fingerPrint, value)
     else:
       log.warn("POXSyncConnection: not connected. cannot handle requests")
 
