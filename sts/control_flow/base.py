@@ -91,7 +91,7 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     pending_state_change = PendingStateChange(controller.uuid, time,
                                               fingerprint, name, value)
     self._pending_state_changes[pending_state_change] += 1
-    self.raiseEventNoError(StateChange(pending_state_change))
+    self.raiseEvent(StateChange(pending_state_change))
 
   def pending_state_changes(self):
     ''' Return any pending state changes '''

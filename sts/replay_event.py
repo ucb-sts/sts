@@ -603,7 +603,7 @@ class ControllerStateChange(InternalEvent):
   @staticmethod
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
-    assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint',
+    assert_fields_exist(json_hash, 'controller_id', 'fingerprint',
                         'name', 'value')
     controller_id = tuple(json_hash['controller_id'])
     fingerprint = json_hash['fingerprint']
