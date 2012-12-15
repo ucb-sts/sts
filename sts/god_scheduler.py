@@ -1,5 +1,5 @@
 from collections import defaultdict, namedtuple
-from sts.input_traces.fingerprints import *
+from sts.fingerprints.messages import *
 import sts.replay_event
 from pox.lib.revent import Event, EventMixin
 import logging

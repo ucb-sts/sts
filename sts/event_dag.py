@@ -1,4 +1,4 @@
-from sts.input_traces.fingerprints import *
+from sts.fingerprints.messages import *
 from sts.replay_event import *
 from pox.openflow.software_switch import DpPacketOut
 import logging
