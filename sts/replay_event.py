@@ -387,15 +387,15 @@ class CheckInvariants(InputEvent):
     self.invariant_check = invariant_check
 
   def proceed(self, simulation):
-    log.info("CheckInvariants: checking correspondence")
     violations = self.invariant_check(simulation)
 
     if violations != []:
-      log.warning("Correctness violations!: %s" % str(violations))
+      msg.fail("The following controllers had correctness violations!: %s"
+               % str(violations))
       if self.fail_on_error:
         exit(5)
     else:
-      log.info("No correctness violations!")
+      msg.interactive("No correctness violations!")
     return True
 
   def to_json(self):

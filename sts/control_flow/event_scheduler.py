@@ -2,6 +2,9 @@ import time
 
 from sts.replay_event import *
 
+import logging
+log = logging.getLogger("event_scheduler")
+
 class DumbEventScheduler(object):
 
   kwargs = set(['epsilon_seconds', 'sleep_interval_seconds'])
