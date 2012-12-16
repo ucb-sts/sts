@@ -305,8 +305,15 @@ class LinkTracker(object):
     # For now, make the new port have the same ip address as the old port.
     # TODO(cs): this would break PORTLAND routing! Need to specify the
     #           new mac and IP addresses
-    new_ingress_port = ofp_phy_port(hw_addr=old_port.hw_addr,
-                                    port_no=new_ingress_portno)
+    new_ingress_port = ofp_phy_port(port_no=new_ingress_portno,
+                                    hw_addr=old_port.hw_addr,
+                                    name=old_port.name,
+                                    config=old_port.config,
+                                    state=old_port.state,
+                                    curr=old_port.curr,
+                                    advertised=old_port.advertised,
+                                    supported=old_port.supported,
+                                    peer=old_port.peer)
     new_ingress_switch.bring_port_up(new_ingress_port)
     new_access_link = AccessLink(host, interface, new_ingress_switch, new_ingress_port)
     self.port2access_link[new_ingress_port] = new_access_link
