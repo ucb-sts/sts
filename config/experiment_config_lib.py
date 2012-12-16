@@ -3,7 +3,7 @@ import string
 import sys
 
 class ControllerConfig(object):
-  _port_gen = itertools.count(8888)
+  _port_gen = itertools.count(6633)
 
   def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None, sync=None, controller_type=None):
     '''
