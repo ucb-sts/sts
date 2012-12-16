@@ -24,8 +24,8 @@ class DumbEventScheduler(object):
 
     start = time.time()
 
-    log.debug("Waiting for %r (maximum wait time: %.0f ms)" %
-          ( event, self.epsilon_seconds * 1000) )
+    log.debug("Waiting for %s (maximum wait time: %.0f ms)" %
+          ( str(event).replace("\n", ""), self.epsilon_seconds * 1000) )
 
     proceed = False
     while True:
@@ -72,8 +72,8 @@ class EventScheduler(object):
     if self.delay_input_events:
       wait_time_seconds = self.wait_time(event)
       if wait_time_seconds > 0.01:
-        log.debug("Delaying input_event %r for %.0f ms" %
-            ( event , (wait_time_seconds) * 1000 ))
+        log.debug("Delaying input_event %s for %.0f ms" %
+            ( str(event).replace("\n", "") , (wait_time_seconds) * 1000 ))
 
         self.simulation.io_master.sleep(wait_time_seconds)
     log.debug("Injecting %r", event)
@@ -88,8 +88,8 @@ class EventScheduler(object):
     # TODO(cs): why - 0.01?
     end = start + wait_time_seconds - 0.01 + self.epsilon_seconds
 
-    log.debug("Waiting for %r (maximum wait time: %.0f ms)" %
-          ( event, wait_time_seconds * 1000) )
+    log.debug("Waiting for %s (maximum wait time: %.0f ms)" %
+          ( str(event).replace("\n", ""), self.epsilon_seconds * 1000) )
     self._poll_event(event, end)
 
   def _poll_event(self, event, end_time):
@@ -106,7 +106,7 @@ class EventScheduler(object):
       log.debug("Succcessfully executed %r" % event)
       self.update_event_time(event)
     else:
-      log.warn("Timed out waiting for Event %r" % event)
+      log.warn("Timed out waiting for Event %s" % str(event).replace("\n",""))
 
   def update_event_time(self, event):
     """ update events """
