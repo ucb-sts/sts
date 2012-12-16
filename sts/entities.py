@@ -210,6 +210,11 @@ class HostInterface (object):
     self.ips = ip_or_ips
     self.name = name
 
+  @property
+  def port_no(self):
+    # Hack
+    return self.hw_addr.toStr()
+
   def __eq__(self, other):
     if type(other) != HostInterface:
       return False
@@ -277,6 +282,11 @@ class Host (EventMixin):
     Called by PatchPanel
     '''
     self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
+
+  @property
+  def dpid(self):
+    # Hack
+    return self.name
 
   def __str__(self):
     return self.name

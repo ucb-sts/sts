@@ -24,6 +24,7 @@ from pox.lib.revent import EventMixin
 from sts.util.console import msg
 import itertools
 import logging
+from collections import defaultdict
 
 log = logging.getLogger("sts.topology")
 
@@ -148,14 +149,14 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     self.get_connected_port = connected_port_mapping
     self.switches = sorted(switches, key=lambda(sw): sw.dpid)
     self.hosts = hosts
-    # dp out event
-    self.buffered_dp_out_events = []
-    self.dropped_dp_events = []
+    # Buffered dp out events
+    self.fingerprint2dp_outs = defaultdict(list)
     def handle_DpPacketOut(event):
+      fingerprint = (DPFingerprint.from_pkt(event.packet),
+                     event.node.dpid, event.port.port_no)
       # Monkey patch on a fingerprint for this event
-      # TODO(cs): should include port + node, not just packet
-      event.fingerprint = DPFingerprint.from_pkt(event.packet)
-      self.buffered_dp_out_events.append(event)
+      event.fingerprint = fingerprint
+      self.fingerprint2dp_outs[fingerprint].append(event)
       self.raiseEvent(event)
     for _, s in enumerate(self.switches):
       s.addListener(DpPacketOut, handle_DpPacketOut)
@@ -164,7 +165,8 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
 
   @property
   def queued_dataplane_events(self):
-    return self.buffered_dp_out_events
+    list_of_lists = self.fingerprint2dp_outs.values()
+    return list(itertools.chain(*list_of_lists))
 
   def permit_dp_event(self, dp_event):
     ''' Given a SwitchDpPacketOut event, permit it to be forwarded  '''
@@ -172,7 +174,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     msg.event("Forwarding dataplane event")
     # Invoke superclass DpPacketOut handler
     self.handle_DpPacketOut(dp_event)
-    self.buffered_dp_out_events.remove(dp_event)
+    self.fingerprint2dp_outs[dp_event.fingerprint].remove(dp_event)
 
   def drop_dp_event(self, dp_event):
     '''
@@ -180,8 +182,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     Return the dropped event.
     '''
     msg.event("Dropping dataplane event")
-    self.buffered_dp_out_events.remove(dp_event)
-    self.dropped_dp_events.append(dp_event)
+    self.fingerprint2dp_outs[dp_event.fingerprint].remove(dp_event)
     return dp_event
 
   def delay_dp_event(self, dp_event):
@@ -192,10 +193,8 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     dp_event.delayed_rounds += 1
 
   def get_buffered_dp_event(self, fingerprint):
-    # TODO this is currently not used by the replayer
-    for i in self.buffered_dp_out_events:
-      if i.fingerprint == fingerprint:
-        return i
+    if fingerprint in self.fingerprint2dp_outs:
+      return self.fingerprint2dp_outs[fingerprint][0]
     return None
 
 class LinkTracker(object):

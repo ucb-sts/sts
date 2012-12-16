@@ -481,14 +481,16 @@ class ControlChannelUnblock(InputEvent):
 class DataplaneDrop(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplaneDrop, self).__init__(label=label, time=time)
+    if fingerprint[0] != self.__class__.__name__:
+      fingerprint = list(fingerprint)
+      fingerprint.insert(0, self.__class__.__name__)
     if type(fingerprint) == list:
-      fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]))
-    if type(fingerprint) == dict or type(fingerprint) != tuple:
-      fingerprint = (self.__class__.__name__,DPFingerprint(fingerprint))
+      fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]),
+                     fingerprint[2], fingerprint[3])
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
-    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1])
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1:])
     if dp_event is not None:
       simulation.patch_panel.drop_dp_event(dp_event)
       return True
@@ -501,17 +503,26 @@ class DataplaneDrop(InputEvent):
     fingerprint = json_hash['fingerprint']
     return DataplaneDrop(fingerprint, label=label, time=time)
 
+  def to_json(self):
+    fields = dict(self.__dict__)
+    fields['class'] = self.__class__.__name__
+    fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
+                             self.fingerprint[2], self.fingerprint[3])
+    return json.dumps(fields)
+
 class DataplanePermit(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplanePermit, self).__init__(label=label, time=time)
+    if fingerprint[0] != self.__class__.__name__:
+      fingerprint = list(fingerprint)
+      fingerprint.insert(0, self.__class__.__name__)
     if type(fingerprint) == list:
-      fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]))
-    if type(fingerprint) == dict or type(fingerprint) != tuple:
-      fingerprint = (self.__class__.__name__, DPFingerprint(fingerprint))
+      fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]),
+                     fingerprint[2], fingerprint[3])
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
-    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1])
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1:])
     if dp_event is not None:
       simulation.patch_panel.permit_dp_event(dp_event)
       return True
@@ -524,7 +535,12 @@ class DataplanePermit(InputEvent):
     fingerprint = json_hash['fingerprint']
     return DataplanePermit(fingerprint, label=label, time=time)
 
-
+  def to_json(self):
+    fields = dict(self.__dict__)
+    fields['class'] = self.__class__.__name__
+    fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
+                             self.fingerprint[2], self.fingerprint[3])
+    return json.dumps(fields)
 
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
