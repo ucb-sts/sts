@@ -153,6 +153,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     self.dropped_dp_events = []
     def handle_DpPacketOut(event):
       # Monkey patch on a fingerprint for this event
+      # TODO(cs): should include port + node, not just packet
       event.fingerprint = DPFingerprint.from_pkt(event.packet)
       self.buffered_dp_out_events.append(event)
       self.raiseEvent(event)
