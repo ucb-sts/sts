@@ -12,6 +12,7 @@ from sts.input_traces.input_logger import InputLogger
 
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.control_flow.replayer import Replayer
+from sts.control_flow.peeker import Peeker
 
 import sys
 import time
@@ -215,6 +216,12 @@ class MCSFinder(ControlFlow):
       self._runtime_stats["total_replays"] = Replayer.total_replays
       self._runtime_stats["total_inputs_replayed"] =\
           Replayer.total_inputs_replayed
+      if self.transform_dag is not None:
+        # TODO(cs): assumes that Peeker is the dag transformer
+        self._runtime_stats["ambiguous_counts"] =\
+            dict(Peeker.ambiguous_counts)
+        self._runtime_stats["ambiguous_events"] =\
+            dict(Peeker.ambiguous_events)
       self._runtime_stats["config"] = str(self.simulation_cfg)
       self._runtime_stats["peeker"] = self.transform_dag is not None
       self._runtime_stats["split_ways"] = list(self._runtime_stats["split_ways"])

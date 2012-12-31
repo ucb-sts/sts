@@ -1,5 +1,6 @@
 import logging
 import time
+from collections import Counter
 
 from sts.event_dag import EventDag
 from sts.control_flow.replayer import Replayer
@@ -8,6 +9,12 @@ from sts.replay_event import Event, InternalEvent, InputEvent, WaitTime
 log = logging.getLogger("sts")
 
 class Peeker(object):
+  # { % of expected fingerprints that were ambiguous ->
+  #   # of replays where this % occurred }
+  ambiguous_counts = Counter()
+  # { class of event -> # occurences of ambiguity }
+  ambiguous_events = Counter()
+
   def __init__(self, simulation_cfg, default_wait_time_seconds=0.5, epsilon_time=0.2):
     try:
       import pytrie
@@ -71,6 +78,7 @@ class Peeker(object):
       if expected_internal_events == []:
         log.debug("Optimization: no expected internal events")
         newly_inferred_events = []
+        Peeker.ambiguous_counts[0.0] += 1
       else:
         wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
         replay_dag = EventDag(inferred_events + [ inject_input ])
@@ -128,6 +136,10 @@ class Peeker(object):
     # prune expected internal events -- largely serves as an optimization
     #newly_inferred_events = match_fingerprints(newly_inferred_events,
     #                                           expected_internal_events)
+    # TODO(cs): need to prune any successors of e_i, in case we waited too
+    # long
+    count_overlapping_fingerprints(newly_inferred_events,
+                                   expected_internal_events)
     newly_inferred_events = correct_timestamps(newly_inferred_events,
                                                expected_internal_events)
     log.debug("Matched events: %s" % str(newly_inferred_events))
@@ -164,7 +176,27 @@ def get_expected_internal_events(left_input, right_input, events_list):
     right_idx = events_list.index(right_input)
 
   return [ i for i in events_list[left_idx:right_idx]
-             if isinstance(i, InternalEvent) ]
+           if isinstance(i, InternalEvent) ]
+
+def count_overlapping_fingerprints(newly_inferred_events,
+                                   expected_internal_events):
+  ''' Track # of instances where an expected event matches 2 or more inferred
+  events. Mutates Peeker.ambiguous_counts and Peeker.ambiguous_events'''
+  expected_counts = Counter([e.fingerprint for e in expected_internal_events])
+  inferred_counts = Counter([e.fingerprint for e in newly_inferred_events])
+  total_redundant = 0
+  for fingerprint, count in expected_counts.iteritems():
+    if fingerprint in inferred_counts and inferred_counts[fingerprint] > count:
+      redundant = inferred_counts[fingerprint] - count
+      total_redundant += redundant
+      # fingerprints[0] is the class name
+      Peeker.ambiguous_events[fingerprint[0]] += redundant
+
+  if len(newly_inferred_events) > 0:
+    percent_redundant = total_redundant*1.0 / len(newly_inferred_events)
+  else:
+    percent_redundant = 0.0
+  Peeker.ambiguous_counts[percent_redundant] += 1
 
 # Truncate the newly inferred events based on the expected
 # predecessors of next_input+1
