@@ -58,6 +58,8 @@ class MCSFinder(ControlFlow):
     if self._runtime_stats is not None:
       self._runtime_stats["total_inputs"] = len(self.dag.input_events)
       self._runtime_stats["total_events"] = len(self.dag)
+      self._runtime_stats["original_duration_seconds"] =\
+        self.dag.events[-1].time.as_float() - self.dag.events[0].time.as_float()
 
     # inject domain knowledge into the dag
     self.dag.mark_invalid_input_sequences()
