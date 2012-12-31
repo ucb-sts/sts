@@ -393,6 +393,7 @@ class CheckInvariants(InputEvent):
       msg.fail("The following controllers had correctness violations!: %s"
                % str(violations))
       if self.fail_on_error:
+        msg.fail("Exiting: fail_on_error=True")
         exit(5)
     else:
       msg.interactive("No correctness violations!")
