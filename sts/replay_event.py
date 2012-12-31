@@ -63,9 +63,10 @@ class Event(object):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     if ('fingerprint' in fields and
-            isinstance(fields['fingerprint'][1], Fingerprint)):
-      fields['fingerprint'] = (fields['fingerprint'][0],
-                               fields['fingerprint'][1].to_dict())
+        isinstance(fields['fingerprint'][1], Fingerprint)):
+      fingerprint = list(fields['fingerprint'])
+      fingerprint[1] = fingerprint[1].to_dict()
+      fields['fingerprint'] = tuple(fingerprint)
     return json.dumps(fields)
 
   def __hash__(self):
@@ -559,13 +560,17 @@ class ControlMessageReceive(InternalEvent):
   openflow packet.
   '''
   def __init__(self, dpid, controller_id, fingerprint, label=None, time=None):
+    # If constructed directly (not from json), fingerprint is the
+    # OFFingerprint, not including dpid and controller_id
     super(ControlMessageReceive, self).__init__(label=label, time=time)
     self.dpid = dpid
     self.controller_id = controller_id
     if type(fingerprint) == list:
-      fingerprint = (fingerprint[0], OFFingerprint(fingerprint[1]))
+      fingerprint = (fingerprint[0], OFFingerprint(fingerprint[1]),
+                     fingerprint[2], tuple(fingerprint[3]))
     if type(fingerprint) == dict or type(fingerprint) != tuple:
-      fingerprint = (self.__class__.__name__, OFFingerprint(fingerprint))
+      fingerprint = (self.__class__.__name__, OFFingerprint(fingerprint),
+                     dpid, controller_id)
 
     self.fingerprint = fingerprint
 
@@ -621,8 +626,10 @@ class ControllerStateChange(InternalEvent):
   def __init__(self, controller_id, fingerprint, name, value, label=None, time=None):
     super(ControllerStateChange, self).__init__(label=label, time=time)
     self.controller_id = controller_id
+    if type(fingerprint) == str or type(fingerprint) == unicode:
+      fingerprint = (self.__class__.__name__, fingerprint)
     if type(fingerprint) == list:
-      fingerprint = (fingerprint[0], OFFingerprint(fingerprint[1]))
+      fingerprint = tuple(fingerprint)
     self.fingerprint = fingerprint
     self.name = name
     if type(value) == list:
@@ -649,7 +656,8 @@ class ControllerStateChange(InternalEvent):
     fingerprint = json_hash['fingerprint']
     name = json_hash['name']
     value = json_hash['value']
-    return ControllerStateChange(controller_id, fingerprint, name, value, label=label, time=time)
+    return ControllerStateChange(controller_id, fingerprint, name, value,
+                                 label=label, time=time)
 
 class DeterministicValue(InternalEvent):
   '''
