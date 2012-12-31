@@ -32,6 +32,11 @@ class InvariantChecker(object):
       log.info("Problems found while checking controller liveness:")
       for (c, msg) in dead_controllers:
         log.info(" Controller %s - %s" %  (str(c.config.name), str(msg)))
+
+    if len(simulation.controller_manager.live_controllers) == 0:
+      log.info("No live controllers left")
+      dead_controllers = list(simulation.controller_manager.down_controllers)
+
     return dead_controllers
 
   @staticmethod
