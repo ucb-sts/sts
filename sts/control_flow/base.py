@@ -49,10 +49,10 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     self.gc_pending_state_change(state_change)
     # Record
     replay_event = ControllerStateChange(state_change.controller_id,
-                                         state_change.time,
                                          state_change.fingerprint,
                                          state_change.name,
-                                         state_change.value)
+                                         state_change.value,
+                                         time=state_change.time)
     self.passed_through_events.append(replay_event)
 
   def set_pass_through(self):
