@@ -74,7 +74,7 @@ class MCSFinder(ControlFlow):
       if self._runtime_stats is not None:
         self._runtime_stats["replay_end_epoch"] = time.time()
       if violations == []:
-        self.log("Unable to reproduce correctness violation!")
+        msg.fail("Unable to reproduce correctness violation!")
         sys.exit(5)
 
       self.log("Violation reproduced successfully! Proceeding with pruning")
