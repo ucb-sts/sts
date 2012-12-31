@@ -9,7 +9,7 @@ from sts.replay_event import Event, InternalEvent, InputEvent, WaitTime
 log = logging.getLogger("sts")
 
 class Peeker(object):
-  # { % of expected fingerprints that were ambiguous ->
+  # { % of inferred fingerprints that were ambiguous ->
   #   # of replays where this % occurred }
   ambiguous_counts = Counter()
   # { class of event -> # occurences of ambiguity }
