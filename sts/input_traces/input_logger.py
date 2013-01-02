@@ -14,6 +14,7 @@ from sts.control_flow import Replayer
 from sts.simulation_state import SimulationConfig
 
 simulation_config = %s
+
 control_flow = Replayer(simulation_config, "%s")
 # MCS trace path: %s
 '''
