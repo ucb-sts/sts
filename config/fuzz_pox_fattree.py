@@ -5,8 +5,8 @@ from sts.simulation_state import SimulationConfig
 from sts.invariant_checker import InvariantChecker
 
 # Use POX as our controller
-command_line = "./pox.py --verbose --no-cli openflow.of_01 --address=__address__ --port=__port__ sts.syncproto.pox_syncer samples.topo forwarding.l2_multi messenger.messenger samples.nommessenger"
-controllers = [ControllerConfig(command_line, cwd="pox", sync="tcp:localhost:18899")]
+command_line = "./pox.py --verbose --no-cli openflow.of_01 sts.syncproto.pox_syncer samples.topo forwarding.l2_multi messenger.messenger samples.nommessenger"
+controllers = [ControllerConfig(command_line, address="sts_socket_pipe", cwd="pox", sync="tcp:localhost:18899")]
 
 dataplane_trace = "dataplane_traces/ping_pong_fat_tree.trace"
 

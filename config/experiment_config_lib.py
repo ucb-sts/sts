@@ -21,11 +21,16 @@ class ControllerConfig(object):
     if cmdline == "":
       raise RuntimeError("Must specify boot parameters.")
     self.cmdline = cmdline
-    self.address = address
-    if not port:
-      port = self._port_gen.next()
-
-    self.port = port
+    if address == "sts_socket_pipe":
+      self.address = address
+      self.port = port
+      self.server_info = address
+    else:
+      self.address = address
+      if not port:
+        port = self._port_gen.next()
+      self.port = port
+      self.server_info = (self.address, self.port)
 
     # TODO(sam): we should either call them all controller_type or all 'name'
     # we only accept strings
@@ -52,7 +57,7 @@ class ControllerConfig(object):
 
   @property
   def uuid(self):
-    return (self.address, self.port)
+    return self.server_info
 
   @property
   def expanded_cmdline(self):

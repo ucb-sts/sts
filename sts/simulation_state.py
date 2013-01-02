@@ -139,8 +139,7 @@ class SimulationConfig(object):
     def create_connection(controller_info, switch):
       ''' Connect switches to controllers. May raise a TimeoutError '''
       # TODO(cs): move this into a ConnectionFactory class
-      socket = connect_socket_with_backoff(controller_info.address,
-                                           controller_info.port,
+      socket = connect_socket_with_backoff(controller_info.server_info,
                                            max_backoff_seconds=8)
       # Set non-blocking
       socket.setblocking(0)
