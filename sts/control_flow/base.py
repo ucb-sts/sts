@@ -48,7 +48,7 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     # Pass through
     self.gc_pending_state_change(state_change)
     # Record
-    replay_event = ControllerStateChange(state_change.controller_id,
+    replay_event = ControllerStateChange(tuple(state_change.controller_id),
                                          state_change.fingerprint,
                                          state_change.name,
                                          state_change.value,
@@ -113,7 +113,7 @@ class RecordingSyncCallback(STSSyncCallback):
 
   def state_change(self, controller, time, fingerprint, name, value):
     if self.input_logger is not None:
-      self.input_logger.log_input_event(ControllerStateChange(controller.uuid,
+      self.input_logger.log_input_event(ControllerStateChange(tuple(controller.uuid),
                                                               fingerprint,
                                                               name, value,
                                                               time=time))

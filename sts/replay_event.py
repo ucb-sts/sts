@@ -597,8 +597,7 @@ class PendingStateChange(namedtuple('PendingStateChange',
                                 ['controller_id', 'time', 'fingerprint',
                                  'name', 'value'])):
   def __new__(cls, controller_id, time, fingerprint, name, value):
-    if type(controller_id) == list:
-      controller_id = tuple(controller_id)
+    controller_id = tuple(controller_id)
     if type(time) == list:
       time = tuple(time)
     if type(fingerprint) == list:
@@ -608,15 +607,22 @@ class PendingStateChange(namedtuple('PendingStateChange',
     return super(cls, PendingStateChange).__new__(cls, controller_id, time,
                                                   fingerprint, name, value)
 
+  def _get_regex(self):
+    # TODO(cs): if we add varargs to the signature, this needs to be changed
+    if type(self.fingerprint) == tuple:
+      # Skip over the class name
+      return self.fingerprint[1]
+    return self.fingerprint
+
   def __hash__(self):
     # TODO(cs): may need to add more context into the fingerprint to avoid
     # ambiguity
-    return self.fingerprint.__hash__()
+    return self._get_regex().__hash__()
 
   def __eq__(self, other):
     if type(other) != type(self):
       return False
-    return self.fingerprint == other.fingerprint
+    return self._get_regex() == other._get_regex()
 
 class ControllerStateChange(InternalEvent):
   '''
@@ -625,7 +631,7 @@ class ControllerStateChange(InternalEvent):
   '''
   def __init__(self, controller_id, fingerprint, name, value, label=None, time=None):
     super(ControllerStateChange, self).__init__(label=label, time=time)
-    self.controller_id = controller_id
+    self.controller_id = tuple(controller_id)
     if type(fingerprint) == str or type(fingerprint) == unicode:
       fingerprint = (self.__class__.__name__, fingerprint)
     if type(fingerprint) == list:
