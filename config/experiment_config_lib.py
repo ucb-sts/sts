@@ -1,6 +1,7 @@
 import itertools
 import string
 import sys
+import re
 
 class ControllerConfig(object):
   _port_gen = itertools.count(6633)
@@ -21,16 +22,19 @@ class ControllerConfig(object):
     if cmdline == "":
       raise RuntimeError("Must specify boot parameters.")
     self.cmdline = cmdline
-    if address == "sts_socket_pipe":
-      self.address = address
-      self.port = port
-      self.server_info = address
-    else:
-      self.address = address
+
+    self.address = address
+    if (re.match("[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}", address) or
+        address == "localhost"):
+      # Normal TCP socket
       if not port:
         port = self._port_gen.next()
       self.port = port
       self.server_info = (self.address, self.port)
+    else:
+      # Unix domain socket
+      self.port = port
+      self.server_info = address
 
     # TODO(sam): we should either call them all controller_type or all 'name'
     # we only accept strings
