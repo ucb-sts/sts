@@ -6,12 +6,12 @@ from sts.invariant_checker import InvariantChecker
 from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller
-command_line = "./pox.py --verbose --no-cli openflow.of_01 --address=__address__ --port=__port__ sts.syncproto.pox_syncer samples.topo forwarding.l2_multi messenger.messenger samples.nommessenger"
-controllers = [ControllerConfig(command_line, cwd="pox", sync="tcp:localhost:18899")]
+command_line = "./pox.py --verbose --no-cli openflow.of_01 --address=../sts_socket_pipe sts.syncproto.pox_syncer samples.topo forwarding.l2_multi messenger.messenger samples.nommessenger"
+controllers = [ControllerConfig(command_line, address="sts_socket_pipe", cwd="pox", sync="tcp:localhost:18899")]
 
 topology_class = MeshTopology
-topology_params = "num_switches=4"
-dataplane_trace = "dataplane_traces/ping_pong_same_subnet_4_switches.trace"
+topology_params = "num_switches=2"
+dataplane_trace = "dataplane_traces/ping_pong_same_subnet.trace"
 
 simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_class=topology_class,
