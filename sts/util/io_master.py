@@ -36,6 +36,7 @@ class STSIOWorker(IOWorker):
     # on_close is a function not a method
     self.on_close(self)
 
+# Note that IOMaster is used as the main select loop in POX (debugger branch)
 class IOMaster(object):
   """
   an IO handler that handles the select work for our IO worker
