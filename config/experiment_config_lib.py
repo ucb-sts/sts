@@ -33,7 +33,7 @@ class ControllerConfig(object):
       self.server_info = (self.address, self.port)
     else:
       # Unix domain socket
-      self.port = port
+      self.port = None
       self.server_info = address
 
     # TODO(sam): we should either call them all controller_type or all 'name'
