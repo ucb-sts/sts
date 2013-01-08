@@ -32,10 +32,10 @@ class MultiplexerTest(unittest.TestCase):
     socket = connect_socket_with_backoff(address=address)
     io_worker = io_master.create_worker_for_socket(socket)
     io_master.set_true_io_worker(io_worker)
-    demux = STSSocketDemultiplexer(io_worker)
+    demux = STSSocketDemultiplexer(io_worker, address)
     mock_socks = []
     for i in xrange(num_socks):
-      mock_socket = demux.new_socket()
+      mock_socket = STSMockSocket(None, None)
       mock_socket.connect(address)
       mock_socket.send(self.client_messages[i])
       mock_socks.append(mock_socket)
