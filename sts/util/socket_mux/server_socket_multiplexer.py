@@ -109,7 +109,9 @@ class ServerMultiplexedSelect(MultiplexedSelect):
       self.true_listen_sock.close()
       self.true_listen_sock = None
       self.set_true_io_worker(self.create_worker_for_socket(new_sock))
-      self.accept_callback(self.true_io_worker)
+      # The server proc should only ever have one true socket to STS
+      assert(len(self.true_io_workers) == 1)
+      self.accept_callback(self.true_io_workers[0])
 
     return super(ServerMultiplexedSelect, self)\
             .handle_socks_rwe(rl, wl, xl, mock_read_socks)

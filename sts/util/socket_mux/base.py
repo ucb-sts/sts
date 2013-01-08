@@ -72,17 +72,17 @@ class MockSocket(object):
 class MultiplexedSelect(IOMaster):
   # Note that there will be *two* IOMasters running in the process. This one
   # runs below the normal IOMaster. MultiplexedSelect subclasses IOMaster only to
-  # wrap the single true socket in an internal IOWorker. Also note that the normal
+  # wrap its true socket(s) in an internal IOWorker. Also note that the normal
   # IOMaster's pinger sockets will in fact be MockSockets. We have the only
   # real pinger socket (MultiplexedSelect must be instantiated before
   # socket.socket is overridden).
   def __init__(self, *args, **kwargs):
     super(MultiplexedSelect, self).__init__(*args, **kwargs)
-    self.true_io_worker = None
+    self.true_io_workers = []
     self.log = logging.getLogger("mux_select")
 
   def set_true_io_worker(self, true_io_worker):
-    self.true_io_worker = true_io_worker
+    self.true_io_workers.append(true_io_worker)
 
   def select(self, rl, wl, xl, timeout=0):
     ''' Note that this layer is *below* IOMaster's Select loop (and does not
@@ -92,8 +92,8 @@ class MultiplexedSelect(IOMaster):
     (rl, wl, xl) = [ [s for s in l if not isinstance(s, MockSocket)]
                      for l in [rl, wl, xl] ]
 
-    # Grab the sock lists for our internal socket. These lists will have at
-    # most one element (self.true_io_worker)
+    # Grab the sock lists for our internal socket. These lists will contain
+    # our true true_io_worker(s), along with our pinger.
     (our_rl, our_wl, our_xl) = self.grab_workers_rwe()
 
     # TODO(cs): non-monkey-patched version
@@ -106,36 +106,37 @@ class MultiplexedSelect(IOMaster):
       self.pinger.pongAll()
       rl.remove(self.pinger)
 
-    if self.true_io_worker in xl:
-      raise RuntimeError("Error in true socket")
+    for true_io_worker in self.true_io_workers:
+      if true_io_worker in xl:
+        raise RuntimeError("Error in true socket")
 
-    if self.true_io_worker in rl:
-      rl.remove(self.true_io_worker)
-      # Trigger self.true_io_worker.on_received
-      try:
-        data = self.true_io_worker.socket.recv(self._BUF_SIZE)
-        if data:
-          self.true_io_worker._push_receive_data(data)
-        else:
-          self.log.info("Closing true_io_worker after empty read")
-          self.true_io_worker.close()
-          self._workers.discard(self.true_io_worker)
-      except socket.error as (s_errno, strerror):
-        self.log.error("Socket error: " + strerror)
-        self.true_io_worker.close()
-        self._workers.discard(self.true_io_worker)
-
-    if self.true_io_worker in wl:
-      wl.remove(self.true_io_worker)
-      try:
-        l = self.true_io_worker.socket.send(self.true_io_worker.send_buf)
-        if l > 0:
-          self.true_io_worker._consume_send_buf(l)
-      except socket.error as (s_errno, strerror):
-        if s_errno != errno.EAGAIN:
+      if true_io_worker in rl:
+        rl.remove(true_io_worker)
+        # Trigger self.true_io_worker.on_received
+        try:
+          data = true_io_worker.socket.recv(self._BUF_SIZE)
+          if data:
+            true_io_worker._push_receive_data(data)
+          else:
+            self.log.info("Closing true_io_worker after empty read")
+            true_io_worker.close()
+            self._workers.discard(true_io_worker)
+        except socket.error as (s_errno, strerror):
           self.log.error("Socket error: " + strerror)
-          self.true_io_worker.close()
-          self._workers.discard(self.true_io_worker)
+          true_io_worker.close()
+          self._workers.discard(true_io_worker)
+
+      if true_io_worker in wl:
+        wl.remove(true_io_worker)
+        try:
+          l = true_io_worker.socket.send(true_io_worker.send_buf)
+          if l > 0:
+            true_io_worker._consume_send_buf(l)
+        except socket.error as (s_errno, strerror):
+          if s_errno != errno.EAGAIN:
+            self.log.error("Socket error: " + strerror)
+            true_io_worker.close()
+            self._workers.discard(true_io_worker)
 
     # Now add MockSockets that are ready to read
     rl += [ s for s in mock_read_socks if s.ready_to_read() ]
@@ -148,23 +149,21 @@ def monkeypatch_sts():
   #    sockets remain to be instantiated)
   #  - override select.select with MultiplexedSelect (this will create a true
   #    socket for the pinger)
-  #  - create a single real socket based on ControllerInfos
-  #  - connect it normally
-  #  - wrap it in MultiplexedSelect's io_worker
-  #  - create a SocketDemultiplexer
+  #  - create a single real socket for each ControllerInfo
+  #  - connect them normally
+  #  - wrap them in MultiplexedSelect's io_worker
+  #  - create a STSSocketDemultiplexer
   #  - override socket.socket
   #    - takes two params: protocol, socket type
   #    - if not SOCK_STREAM type, return a normal socket
-  #    - else, return SocketMultplexer.new_socket
-  # TODO(cs): is it possible to override classes? Do class contructors take
-  # precedence over functions in the same module with the same name?
+  #    - else, return STSSocketMultplexer.new_socket
   pass
 
 def monkeypatch_pox():
   # Server side:
-  #  - Instantiate MultipexedSelect (this will create a true
+  #  - Instantiate ServerMultipexedSelect (this will create a true
   #    socket for the pinger)
-  #  - override select.select with MultiplexedSelect
+  #  - override select.select with ServerMultiplexedSelect
   #  - override socket.socket
   #    - takes two params: protocol, socket type
   #    - if not SOCK_STREAM type, return a normal socket
