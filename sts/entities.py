@@ -40,14 +40,6 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
   A mock switch implementation for testing purposes. Can simulate dropping dead.
   """
-  class ConnectionFSM(object):
-    # TODO(cs): this FSM is specific to pox!
-    START = 1
-    OFP_HELLO = 2
-    FEATURES_REQUEST = 3
-    SET_CONFIG = 4
-    BOOTED = 5
-
   _eventMixin_events = set([DpPacketOut])
 
   def __init__ (self, dpid, name=None, ports=4, miss_send_len=128,
@@ -68,16 +60,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
 
     # controller (ip, port) -> connection
     self.uuid2connection = {}
-    # We keep a finite state machine for each connection to track whether the
-    # initialization handshake has completed
-    self.connection2fsm = {}
     self.error_handler = error_handler
     self.controller_info = []
-
-  @property
-  def booted(self):
-    return (self.connection2fsm != {} and
-            set(self.connection2fsm.values()) == set([self.ConnectionFSM.BOOTED]))
 
   def add_controller_info(self, info):
     self.controller_info.append(info)
