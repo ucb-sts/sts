@@ -10,22 +10,27 @@ import logging
 
 # The wire protocol is fairly simple:
 #  - all messages are wrapped in a json hash
-#  - each hash has two fields: `id', and `data'
+#  - each hash has two fields: `id', and `type'
 #  - `id' identifies a channel. The value of `id' is shared between the client
 #     socket and the corresponding socket in the server.
-#  - Whenever the server sees an id it has not observed before, it creates a
-#    MockSocket and stores it to be accept()'ed by the mock listener socket.
-#    TODO(cs): we should eventually implement a proper handshake protocol
+#  - Upon connect(), tell the server that we've connected. `type' is set to
+#    "SYN", and an additional `address' field tells the server the proper
+#    address to return from accept().
+#  - Upon seeing the SYN for an id it has not observed before, the server
+#    creates a MockSocket and stores it to be accept()'ed by the mock listener
+#    socket.
+#  - All data messages are of type `data', and include a `data' field
 
 class SocketDemultiplexer(object):
   def __init__(self, true_io_worker):
+    self.client_info = true_io_worker.socket.getsockname()
     self.json_worker = JSONIOWorker(true_io_worker,
                                     on_json_received=self._on_receive)
     self.id2socket = {}
     self.log = logging.getLogger("sockdemux")
 
   def _on_receive(self, _, json_hash):
-    if 'id' not in json_hash or 'data' not in json_hash:
+    if 'id' not in json_hash or 'type' not in json_hash:
       raise ValueError("Invalid json_hash %s" % str(json_hash))
 
 class MockSocket(object):
@@ -63,6 +68,9 @@ class MockSocket(object):
 
   def setblocking(self, _):
     # We never block anyway
+    pass
+
+  def getpeername(self):
     pass
 
   def close(self):

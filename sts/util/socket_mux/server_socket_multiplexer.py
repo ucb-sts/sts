@@ -11,28 +11,39 @@ class ServerSocketDemultiplexer(SocketDemultiplexer):
     self.mock_listen_sock = mock_listen_sock
 
   def _on_receive(self, worker, json_hash):
+    super(ServerSocketDemultiplexer, self)._on_receive(worker, json_hash)
     sock_id = json_hash['id']
-    if sock_id not in self.id2socket:
+    msg_type = json_hash['type']
+    if msg_type == "SYN":
       # we just saw an unknown channel.
-      # TODO(cs): implement a proper handshake protocol
-      self.log.debug("Incoming MockSocket connection")
-      new_sock = self.new_socket(sock_id=sock_id)
+      self.log.debug("Incoming MockSocket connection %s" %
+                     json_hash['address'])
+      new_sock = self.new_socket(sock_id=sock_id,
+                                 peer_address=json_hash['address'])
       self.mock_listen_sock.append_new_mock_socket(new_sock)
-      new_sock.append_read(json_hash['data'])
-
-  def new_socket(self, sock_id=-1):
+    elif msg_type == "data":
+      raw_data = json_hash['data'].decode('base64')
+      sock_id = json_hash['id']
+      if sock_id not in self.id2socket:
+        raise ValueError("Unknown socket id %d" % sock_id)
+      sock = self.id2socket[sock_id]
+      sock.append_read(raw_data)
+    else:
+      raise ValueError("Unknown msg_type %s" % msg_type)
     sock = ServerMockSocket(None, None, sock_id=sock_id,
-                            json_worker=self.json_worker)
+                            json_worker=self.json_worker,
+                            peer_address=peer_address)
     self.id2socket[sock_id] = sock
     return sock
 
 class ServerMockSocket(MockSocket):
   def __init__(self, protocol, sock_type, sock_id=-1, json_worker=None,
-               set_true_listen_socket=lambda: None):
+               set_true_listen_socket=lambda: None, peer_address=None):
     super(ServerMockSocket, self).__init__(protocol, sock_type,
                                            sock_id=sock_id,
                                            json_worker=json_worker)
     self.set_true_listen_socket = set_true_listen_socket
+    self.peer_address = peer_address
     self.new_sockets = []
 
   def ready_to_read(self):
@@ -67,9 +78,7 @@ class ServerMockSocket(MockSocket):
 
   def accept(self):
     sock = self.new_sockets.pop(0)
-    # TODO(cs): the second element of this tuple should be the address
-    # of the peer, not ourselves. For that, we need a handshake protocol
-    return (sock, get_address(self.server_info, sock.sock_id))
+    return (sock, self.peer_address)
 
   def append_new_mock_socket(self, mock_sock):
     self.new_sockets.append(mock_sock)
@@ -115,12 +124,3 @@ class ServerMultiplexedSelect(MultiplexedSelect):
 
     return super(ServerMultiplexedSelect, self)\
             .handle_socks_rwe(rl, wl, xl, mock_read_socks)
-
-def get_address(server_info, sock_id):
-  if type(server_info) == tuple:
-    # normal TCP socket
-    # (address, mock port no)
-    return (self.server_info[0], sock.sock_id)
-  else:
-    return server_info
-
