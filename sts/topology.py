@@ -352,7 +352,9 @@ class Topology(object):
 
   @property
   def switches(self):
-    return self.dpid2switch.values()
+    switches = self.dpid2switch.values()
+    switches.sort(key=lambda sw: sw.dpid)
+    return switches
 
   def get_switch(self, dpid):
     dpid = dpid
