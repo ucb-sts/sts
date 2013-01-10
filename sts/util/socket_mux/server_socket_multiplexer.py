@@ -40,8 +40,6 @@ class ServerSocketDemultiplexer(SocketDemultiplexer):
     return sock
 
 class ServerMockSocket(MockSocket):
-  bind_called = False
-
   def __init__(self, protocol, sock_type, sock_id=-1, json_worker=None,
                set_true_listen_socket=lambda: None, peer_address=None):
     super(ServerMockSocket, self).__init__(protocol, sock_type,
@@ -57,15 +55,15 @@ class ServerMockSocket(MockSocket):
     return self.pending_reads != [] or self.new_sockets != []
 
   def bind(self, server_info):
-    MultiplexedSelect.fileno2ready_to_read[self.fileno()] = self.ready_to_read
-    if ServerMockSocket.bind_called:
-      raise RuntimeError("bind() called twice")
-    ServerMockSocket.bind_called = True
     # Before bind() is called, we don't know the
     # address of the true connection. Here, we create a *real* socket.
     # bind it to server_info, and wait for the client SocketDemultiplexer to
     # connect. After this is done, we can instantiate our own
     # SocketDemultiplexer.
+    # Assumes that all invocations of bind() are intended for connection to
+    # STS. TODO(cs): STS should tell pox_monkeypatcher exactly what ports it
+    # intends to bind to. If bind() is called for some other port, delegate to
+    # a real socket.
     if hasattr(socket, "_old_socket"):
       true_socket = socket._old_socket(self.protocol, self.sock_type)
     else:
@@ -76,7 +74,7 @@ class ServerMockSocket(MockSocket):
     true_socket.listen(1)
     # We give this true socket to select.select and
     # wait for the client SocketDemultiplexer connection
-    self.set_true_listen_socket(true_socket,
+    self.set_true_listen_socket(true_socket, self,
                                 accept_callback=self._accept_callback)
     self.server_info = server_info
 
@@ -104,45 +102,56 @@ class ServerMockSocket(MockSocket):
     else:
       return "MockServerSocket"
 
+
 class ServerMultiplexedSelect(MultiplexedSelect):
   def __init__(self, *args, **kwargs):
     super(ServerMultiplexedSelect, self).__init__(*args, **kwargs)
-    self.true_listen_sock = None
-    self.pending_accept = False
+    self.true_listen_socks = []
+    self.mock_listen_socks = []
+    self.listen_sock_to_accept_callback = {}
+    self.pending_accepts = 0
 
-  def set_true_listen_socket(self, true_listen_socket, accept_callback):
+  def set_true_listen_socket(self, true_listen_socket, mock_listen_sock, accept_callback):
     # Keep around true_listen_socket until STS's SocketDemultiplexer connects
-    self.true_listen_sock = true_listen_socket
+    self.true_listen_socks.append(true_listen_socket)
+    self.mock_listen_socks.append(mock_listen_sock)
     # At this point, bind() has been called, and we need to wait for the
     # client SocketDemultiplexer to connect. After it connects, we invoke
     # accept_callback with the new io_worker as a parameter
-    self.pending_accept = True
-    self.accept_callback = accept_callback
+    self.pending_accepts += 1
+    self.listen_sock_to_accept_callback[true_listen_socket] = accept_callback
+
+  def ready_to_read(self, sock_or_io_worker):
+    if sock_or_io_worker in self.mock_listen_socks:
+      return sock_or_io_worker.ready_to_read()
+    else:
+      return super(ServerMultiplexedSelect, self)\
+                  .ready_to_read(sock_or_io_worker)
 
   def grab_workers_rwe(self):
     (rl, wl, xl) = super(ServerMultiplexedSelect, self).grab_workers_rwe()
-    if self.true_listen_sock is not None:
-      rl.append(self.true_listen_sock)
+    rl += self.true_listen_socks
     return (rl, wl, xl)
 
   def handle_socks_rwe(self, rl, wl, xl, mock_read_socks, mock_write_workers):
-    if self.true_listen_sock in xl:
-      raise RuntimeError("Error in listen socket")
+    for true_listen_sock in self.true_listen_socks:
+      if true_listen_sock in xl:
+        raise RuntimeError("Error in listen socket")
 
-    if self.pending_accept and self.true_listen_sock in rl:
-      rl.remove(self.true_listen_sock)
-      # Once the listen sock gets an accept(), throw out it out (no
-      # longer needed), replace it with the return of accept(),
-      # and invoke the accept_callback
-      self.log.debug("Incoming true socket connected")
-      self.pending_accept = False
-      new_sock = self.true_listen_sock.accept()[0]
-      self.true_listen_sock.close()
-      self.true_listen_sock = None
-      self.set_true_io_worker(self.create_worker_for_socket(new_sock))
-      # The server proc should only ever have one true socket to STS
-      assert(len(self.true_io_workers) == 1)
-      self.accept_callback(self.true_io_workers[0])
+      if self.pending_accepts > 0 and true_listen_sock in rl:
+        rl.remove(true_listen_sock)
+        # Once the listen sock gets an accept(), throw out it out (no
+        # longer needed), replace it with the return of accept(),
+        # and invoke the accept_callback
+        self.log.debug("Incoming true socket connected")
+        self.pending_accepts -= 1
+        new_sock = true_listen_sock.accept()[0]
+        true_listen_sock.close()
+        self.true_listen_socks.remove(true_listen_sock)
+        self.set_true_io_worker(self.create_worker_for_socket(new_sock))
+        self.listen_sock_to_accept_callback[true_listen_sock]\
+                                            (self.true_io_workers[-1])
+        del self.listen_sock_to_accept_callback[true_listen_sock]
 
     return super(ServerMultiplexedSelect, self)\
             .handle_socks_rwe(rl, wl, xl, mock_read_socks, mock_write_workers)

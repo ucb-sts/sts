@@ -10,8 +10,6 @@ log = logging.getLogger("sock_mux")
 # TODO(cs): what if the controller doesn't use a select loop? The demuxing can
 # still be achieved, it's just that all socket calls will be blocking. We
 # would also need to make sure that our code is thread-safe.
-# TODO(cs): what if the client chooses to bind() to more than one port? For
-# now, just ensure that this module is loaded last (but before of_01)
 
 # The wire protocol is fairly simple:
 #  - all messages are wrapped in a json hash
@@ -96,14 +94,6 @@ class MockSocket(object):
 def is_mocked(sock_or_io_worker):
   return sock_or_io_worker.fileno() < 0
 
-def ready_to_read(sock_or_io_worker):
-  fileno = sock_or_io_worker.fileno()
-  if fileno >= 0:
-    raise ValueError("Not a MockSocket!")
-  if fileno not in MultiplexedSelect.fileno2ready_to_read:
-    raise RuntimeError("Unknown mock fileno %d" % fileno)
-  return MultiplexedSelect.fileno2ready_to_read[fileno]()
-
 class MultiplexedSelect(IOMaster):
   # Note that there will be *two* IOMasters running in the process. This one
   # runs below the normal IOMaster. MultiplexedSelect subclasses IOMaster only to
@@ -125,6 +115,14 @@ class MultiplexedSelect(IOMaster):
 
   def set_true_io_worker(self, true_io_worker):
     self.true_io_workers.append(true_io_worker)
+
+  def ready_to_read(self, sock_or_io_worker):
+    fileno = sock_or_io_worker.fileno()
+    if fileno >= 0:
+      raise ValueError("Not a MockSocket!")
+    if fileno not in self.fileno2ready_to_read:
+      raise RuntimeError("Unknown mock fileno %d" % fileno)
+    return self.fileno2ready_to_read[fileno]()
 
   def select(self, rl, wl, xl, timeout=0):
     ''' Note that this layer is *below* IOMaster's Select loop '''
@@ -193,7 +191,7 @@ class MultiplexedSelect(IOMaster):
             self._workers.discard(true_io_worker)
 
     # Now add MockSockets that are ready to read
-    rl += [ s for s in mock_read_socks if ready_to_read(s) ]
+    rl += [ s for s in mock_read_socks if self.ready_to_read(s) ]
     # As well as MockSockets that are ready to write.
     # This will cause the IOMaster above to flush the
     # io_worker's buffers into our true_io_worker.
