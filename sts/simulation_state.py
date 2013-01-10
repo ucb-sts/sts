@@ -19,10 +19,14 @@ from sts.util.deferred_io import DeferredIOWorker
 from sts.god_scheduler import GodScheduler
 from sts.syncproto.sts_syncer import STSSyncConnectionManager
 import sts.snapshot as snapshot
+from sts.util.socket_mux.base import MultiplexedSelect
+from sts.util.socket_mux.sts_socket_multiplexer import STSSocketDemultiplexer, STSMockSocket
 from pox.lib.util import connect_socket_with_backoff
 
 import logging
 import time
+import select
+import socket
 
 log = logging.getLogger("simulation")
 
@@ -41,7 +45,8 @@ class SimulationConfig(object):
                patch_panel_class=BufferedPatchPanel,
                dataplane_trace=None,
                snapshot_service=None,
-               switch_init_sleep_seconds=False):
+               switch_init_sleep_seconds=False,
+               monkey_patch_select=False):
     ''' Constructor parameters:
          topology_class    => a sts.topology.Topology class (not object!)
                               defining the switches and links
@@ -54,6 +59,9 @@ class SimulationConfig(object):
          switch_init_sleep_seconds => number of seconds to wait for switches to
                                       connect to controllers before starting the
                                       simulation. Defaults to False (no wait).
+         monkey_patch_select => whether to use STS's custom deterministic
+                                select. Requires that the controller is
+                                monkey-patched too
     '''
     if controller_configs is None:
       controller_configs = []
@@ -72,6 +80,7 @@ class SimulationConfig(object):
     self.snapshot_service = snapshot_service
     self.current_simulation = None
     self.switch_init_sleep_seconds = switch_init_sleep_seconds
+    self.monkey_patch_select = monkey_patch_select
 
   def bootstrap(self, sync_callback):
     '''Return a simulation object encapsulating the state of
@@ -116,6 +125,41 @@ class SimulationConfig(object):
                        self._topology_params))
       return topology
 
+    def monkeypatch_select():
+      log.debug("Monkeypatching STS select")
+      mux_select = None
+      demuxers = []
+      if self.monkey_patch_select:
+        if hasattr(select, "_old_select"):
+          # Revert the previous monkeypatch to allow the new true_sockets to
+          # connect
+          select.select = select._old_select
+          socket.socket = socket._old_socket
+
+        # Monkey patch select to use our deterministic version
+        mux_select = MultiplexedSelect()
+        for c in self.controller_configs:
+          # Connect the true sockets
+          true_socket = connect_socket_with_backoff(address=c.address, port=c.port)
+          io_worker = mux_select.create_worker_for_socket(true_socket)
+          mux_select.set_true_io_worker(io_worker)
+          demux = STSSocketDemultiplexer(io_worker, c.server_info)
+          demuxers.append(demux)
+
+        # Monkey patch select.select
+        select._old_select = select.select
+        select.select = mux_select.select
+        # Monkey patch socket.socket
+        socket._old_socket = socket.socket
+        def socket_patch(protocol, sock_type):
+          if sock_type == socket.SOCK_STREAM:
+            return STSMockSocket(protocol, sock_type)
+          else:
+            socket._old_socket(protocol, sock_type)
+        socket.socket = socket_patch
+
+      return (mux_select, demuxers)
+
     # Instantiate the pieces needed for Simulation's constructor
     io_master = initialize_io_loop()
     sync_connection_manager = STSSyncConnectionManager(io_master,
@@ -129,9 +173,12 @@ class SimulationConfig(object):
     if self._dataplane_trace_path is not None:
       dataplane_trace = Trace(self._dataplane_trace_path, topology)
 
+    (mux_select, demuxers) = monkeypatch_select()
+
     simulation = Simulation(topology, controller_manager, dataplane_trace,
                             god_scheduler, io_master, patch_panel,
-                            sync_callback)
+                            sync_callback, mux_select=mux_select,
+                            demuxers=demuxers)
     self.current_simulation = simulation
 
     # Connect to controllers
@@ -172,10 +219,12 @@ class SimulationConfig(object):
             '''                 topology_params="%s",\n'''
             '''                 patch_panel_class=%s,\n'''
             '''                 dataplane_trace="%s",\n'''
-            '''                 switch_init_sleep_seconds=%s)''' %
+            '''                 switch_init_sleep_seconds=%s, '''
+            '''                 monkey_patch_select=%s)''' %
             (str(self.controller_configs),self._topology_class.__name__,
              self._topology_params, self._patch_panel_class.__name__,
-             self._dataplane_trace_path, str(self.switch_init_sleep_seconds)))
+             self._dataplane_trace_path, str(self.switch_init_sleep_seconds),
+             str(self.monkey_patch_select)))
 
 class Simulation(object):
   '''
@@ -188,7 +237,9 @@ class Simulation(object):
     - Dataplane Trace (pending dataplane messages)
   '''
   def __init__(self, topology, controller_manager, dataplane_trace,
-               god_scheduler, io_master, patch_panel, controller_sync_callback):
+               god_scheduler, io_master, patch_panel,
+               controller_sync_callback, mux_select=None,
+               demuxers=None):
     self.topology = topology
     self.controller_manager = controller_manager
     self.dataplane_trace = dataplane_trace
@@ -196,6 +247,9 @@ class Simulation(object):
     self._io_master = io_master
     self.patch_panel = patch_panel
     self.controller_sync_callback = controller_sync_callback
+    # Mainly just kept the next two here to prevent them from being GC'ed
+    self.mux_select = mux_select
+    self.demuxers = demuxers
 
   def set_pass_through(self):
     ''' Set to pass-through during bootstrap, so that switch initialization

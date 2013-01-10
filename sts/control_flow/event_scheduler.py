@@ -106,7 +106,7 @@ class EventScheduler(object):
       log.debug("Succcessfully executed %r" % event)
       self.update_event_time(event)
     else:
-      log.warn("Timed out waiting for Event %s" % str(event).replace("\n",""))
+      log.warn("Timed out waiting for Event %s" % repr(event).replace("\n",""))
 
   def update_event_time(self, event):
     """ update events """

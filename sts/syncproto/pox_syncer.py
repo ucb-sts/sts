@@ -82,7 +82,7 @@ class POXSyncMaster(object):
         are in the stacktrace """
 
     if self._in_get_time:
-      return self._orig_time()
+      return time._orig_time()
 
     try:
       self._in_get_time = True
