@@ -30,13 +30,18 @@ class ServerSocketDemultiplexer(SocketDemultiplexer):
       sock.append_read(raw_data)
     else:
       raise ValueError("Unknown msg_type %s" % msg_type)
+
+  def new_socket(self, sock_id=-1, peer_address=None):
     sock = ServerMockSocket(None, None, sock_id=sock_id,
                             json_worker=self.json_worker,
                             peer_address=peer_address)
+    MultiplexedSelect.fileno2ready_to_read[sock_id] = sock.ready_to_read
     self.id2socket[sock_id] = sock
     return sock
 
 class ServerMockSocket(MockSocket):
+  bind_called = False
+
   def __init__(self, protocol, sock_type, sock_id=-1, json_worker=None,
                set_true_listen_socket=lambda: None, peer_address=None):
     super(ServerMockSocket, self).__init__(protocol, sock_type,
@@ -45,18 +50,26 @@ class ServerMockSocket(MockSocket):
     self.set_true_listen_socket = set_true_listen_socket
     self.peer_address = peer_address
     self.new_sockets = []
+    self.log = logging.getLogger("mock_sock")
+    self.listener = False
 
   def ready_to_read(self):
     return self.pending_reads != [] or self.new_sockets != []
 
   def bind(self, server_info):
+    MultiplexedSelect.fileno2ready_to_read[self.fileno()] = self.ready_to_read
+    if ServerMockSocket.bind_called:
+      raise RuntimeError("bind() called twice")
+    ServerMockSocket.bind_called = True
     # Before bind() is called, we don't know the
     # address of the true connection. Here, we create a *real* socket.
     # bind it to server_info, and wait for the client SocketDemultiplexer to
     # connect. After this is done, we can instantiate our own
     # SocketDemultiplexer.
-    # TODO(cs): un-patched version of socket.socket..
-    true_socket = socket.socket(self.protocol, self.sock_type)
+    if hasattr(socket, "_old_socket"):
+      true_socket = socket._old_socket(self.protocol, self.sock_type)
+    else:
+      true_socket = socket.socket(self.protocol, self.sock_type)
     true_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     true_socket.bind(server_info)
     true_socket.setblocking(0)
@@ -69,12 +82,14 @@ class ServerMockSocket(MockSocket):
 
   def _accept_callback(self, io_worker):
     # Keep a reference so that it won't be gc'ed?
-    self.multiplexer = ServerSocketDemultiplexer(io_worker, mock_listen_sock=self)
-    # TODO(cs): revert the monkeypatch of socket.socket in case the server
+    self.demux = ServerSocketDemultiplexer(io_worker, mock_listen_sock=self)
+    # revert the monkeypatch of socket.socket in case the server
     # makes auxiliary TCP connections
+    if hasattr(socket, "_old_socket"):
+      socket.socket = socket._old_socket
 
   def listen(self, _):
-    pass
+    self.listener = True
 
   def accept(self):
     sock = self.new_sockets.pop(0)
@@ -83,10 +98,17 @@ class ServerMockSocket(MockSocket):
   def append_new_mock_socket(self, mock_sock):
     self.new_sockets.append(mock_sock)
 
+  def __repr__(self):
+    if self.listener:
+      return "MockListenerSocket"
+    else:
+      return "MockServerSocket"
+
 class ServerMultiplexedSelect(MultiplexedSelect):
   def __init__(self, *args, **kwargs):
     super(ServerMultiplexedSelect, self).__init__(*args, **kwargs)
     self.true_listen_sock = None
+    self.pending_accept = False
 
   def set_true_listen_socket(self, true_listen_socket, accept_callback):
     # Keep around true_listen_socket until STS's SocketDemultiplexer connects
@@ -103,7 +125,7 @@ class ServerMultiplexedSelect(MultiplexedSelect):
       rl.append(self.true_listen_sock)
     return (rl, wl, xl)
 
-  def handle_socks_rwe(self, rl, wl, xl, mock_read_socks):
+  def handle_socks_rwe(self, rl, wl, xl, mock_read_socks, mock_write_workers):
     if self.true_listen_sock in xl:
       raise RuntimeError("Error in listen socket")
 
@@ -123,4 +145,4 @@ class ServerMultiplexedSelect(MultiplexedSelect):
       self.accept_callback(self.true_io_workers[0])
 
     return super(ServerMultiplexedSelect, self)\
-            .handle_socks_rwe(rl, wl, xl, mock_read_socks)
+            .handle_socks_rwe(rl, wl, xl, mock_read_socks, mock_write_workers)

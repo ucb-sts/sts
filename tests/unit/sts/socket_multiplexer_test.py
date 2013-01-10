@@ -19,6 +19,7 @@ class MultiplexerTest(unittest.TestCase):
     import socket
     import os
     mux_select = ServerMultiplexedSelect()
+    ServerMockSocket.bind_called = False
     listener = ServerMockSocket(socket.AF_UNIX, socket.SOCK_STREAM,
                      set_true_listen_socket=mux_select.set_true_listen_socket)
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -39,7 +40,7 @@ class MultiplexerTest(unittest.TestCase):
       mock_socket.connect(address)
       mock_socket.send(self.client_messages[i])
       mock_socks.append(mock_socket)
-    io_master.select([], [], [])
+    io_master.select(mock_socks, mock_socks, [])
 
   def wait_for_next_accept(self, listener, mux_select):
     log.info("waiting for next accept")
@@ -55,6 +56,10 @@ class MultiplexerTest(unittest.TestCase):
       (mux_select, listener) = self.setup_server(address)
       self.wait_for_next_accept(listener, mux_select)
       mock_sock = listener.accept()[0]
+      (rl, _, _) = mux_select.select([mock_sock], [], [])
+      while mock_sock not in rl:
+        log.debug(".")
+        (rl, _, _) = mux_select.select(rl, [], [])
       d = mock_sock.recv(2048)
       self.assertEqual(self.client_messages[0], d)
     finally:
@@ -74,6 +79,10 @@ class MultiplexerTest(unittest.TestCase):
       for i in xrange(len(self.client_messages)):
         self.wait_for_next_accept(listener, mux_select)
         mock_sock = listener.accept()[0]
+        (rl, _, _) = mux_select.select([mock_sock], [], [])
+        while mock_sock not in rl:
+          log.debug(".")
+          (rl, _, _) = mux_select.select(rl, [], [])
         d = mock_sock.recv(2048)
         # order should be deterministic
         self.assertEqual(self.client_messages[i], d)

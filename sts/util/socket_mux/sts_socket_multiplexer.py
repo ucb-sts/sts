@@ -3,8 +3,13 @@ from base import *
 from itertools import count
 import logging
 
+log = logging.getLogger("sts_sock_mux")
+
 class STSSocketDemultiplexer(SocketDemultiplexer):
-  _id_gen = count(1)
+  # All mock sockets have negative fileno()s, to differentiate them from
+  # normal files
+  # -1 is reserved for the listen socket
+  _id_gen = count(start=-2, step=-1)
 
   def __init__(self, true_io_worker, server_info):
     super(STSSocketDemultiplexer, self).__init__(true_io_worker)
@@ -26,6 +31,7 @@ class STSSocketDemultiplexer(SocketDemultiplexer):
     sock_id = self._id_gen.next()
     new_socket.sock_id = sock_id
     new_socket.json_worker = self.json_worker
+    MultiplexedSelect.fileno2ready_to_read[sock_id] = new_socket.ready_to_read
     self.id2socket[sock_id] = new_socket
 
 class STSMockSocket(MockSocket):
@@ -62,3 +68,17 @@ class STSMockSocket(MockSocket):
   def getpeername(self):
     return self.peer_address
 
+# To monkey patch client side:
+#  - After booting the controller,
+#  - and after STSSyncProtocol's socket has been created (no more auxiliary
+#    sockets remain to be instantiated)
+#  - create a single real socket for each ControllerInfo
+#  - connect them normally
+#  - wrap them in MultiplexedSelect's io_worker
+#  - create a STSSocketDemultiplexer for them
+#  - override select.select with MultiplexedSelect (this will create a true
+#    socket for the pinger)
+#  - override socket.socket
+#    - takes two params: protocol, socket type
+#    - if not SOCK_STREAM type, return a normal socket
+#    - else, return STSMockSocket

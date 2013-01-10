@@ -1,12 +1,17 @@
 
 from sts.util.io_master import IOMaster
-from pox.lib.ioworker.io_worker import JSONIOWorker
+from pox.lib.ioworker.io_worker import JSONIOWorker, IOWorker
 import select
 import socket
 import logging
 
-# TODO(cs): what if the controller doesn't use a select loop?
-# TODO(cs): what if the client chooses to bind() to more than one port?
+log = logging.getLogger("sock_mux")
+
+# TODO(cs): what if the controller doesn't use a select loop? The demuxing can
+# still be achieved, it's just that all socket calls will be blocking. We
+# would also need to make sure that our code is thread-safe.
+# TODO(cs): what if the client chooses to bind() to more than one port? For
+# now, just ensure that this module is loaded last (but before of_01)
 
 # The wire protocol is fairly simple:
 #  - all messages are wrapped in a json hash
@@ -23,6 +28,7 @@ import logging
 
 class SocketDemultiplexer(object):
   def __init__(self, true_io_worker):
+    self.true_io_worker = true_io_worker
     self.client_info = true_io_worker.socket.getsockname()
     self.json_worker = JSONIOWorker(true_io_worker,
                                     on_json_received=self._on_receive)
@@ -45,11 +51,21 @@ class MockSocket(object):
     return self.pending_reads != []
 
   def send(self, data):
-    wrapped = {'id' : self.sock_id, 'data' : data}
+    json_safe_data = data.encode('base64')
+    wrapped = {'id' : self.sock_id, 'type' : 'data', 'data' : json_safe_data}
     self.json_worker.send(wrapped)
+    # that just put it on a buffer. Now, actually send...
+    # TODO(cs): this is hacky. Should really define our own IOWorker class
+    buf = self.json_worker.io_worker.send_buf
+    l = self.json_worker.io_worker.socket.send(buf)
+    if l != len(buf):
+      raise RuntimeError("FIXME: data didn't fit in one send()")
+    self.json_worker.io_worker._consume_send_buf(l)
+    return len(data)
 
   def recv(self, bufsize):
     if self.pending_reads == []:
+      log.warn("recv() called with an empty buffer")
       # Never block
       return None
     # TODO(cs): don't ignore bufsize
@@ -77,6 +93,17 @@ class MockSocket(object):
     # TODO(cs): implement me
     pass
 
+def is_mocked(sock_or_io_worker):
+  return sock_or_io_worker.fileno() < 0
+
+def ready_to_read(sock_or_io_worker):
+  fileno = sock_or_io_worker.fileno()
+  if fileno >= 0:
+    raise ValueError("Not a MockSocket!")
+  if fileno not in MultiplexedSelect.fileno2ready_to_read:
+    raise RuntimeError("Unknown mock fileno %d" % fileno)
+  return MultiplexedSelect.fileno2ready_to_read[fileno]()
+
 class MultiplexedSelect(IOMaster):
   # Note that there will be *two* IOMasters running in the process. This one
   # runs below the normal IOMaster. MultiplexedSelect subclasses IOMaster only to
@@ -84,6 +111,13 @@ class MultiplexedSelect(IOMaster):
   # IOMaster's pinger sockets will in fact be MockSockets. We have the only
   # real pinger socket (MultiplexedSelect must be instantiated before
   # socket.socket is overridden).
+
+  # The caller may pass in classes that wrap our MockSockets. select() can
+  # only rely on the fileno() to tell whether the socket is ready to read.
+  # Therefore we keep a map fileno() -> MockSocket.ready_to_read.
+  # TODO(cs): perhaps this shouldn't be a class variable
+  fileno2ready_to_read = {}
+
   def __init__(self, *args, **kwargs):
     super(MultiplexedSelect, self).__init__(*args, **kwargs)
     self.true_io_workers = []
@@ -93,23 +127,35 @@ class MultiplexedSelect(IOMaster):
     self.true_io_workers.append(true_io_worker)
 
   def select(self, rl, wl, xl, timeout=0):
-    ''' Note that this layer is *below* IOMaster's Select loop (and does not
-    include io_workers, consequently). '''
-    # Always remove MockSockets (don't mess with other non-socket fds)
-    mock_read_socks = [ s for s in rl if isinstance(s, MockSocket) ]
-    (rl, wl, xl) = [ [s for s in l if not isinstance(s, MockSocket)]
+    ''' Note that this layer is *below* IOMaster's Select loop '''
+    # Always remove MockSockets or wrappers of MockSockets
+    # (don't mess with other non-socket fds)
+    mock_read_socks = [ s for s in rl if is_mocked(s) ]
+    mock_write_workers = [ w for w in wl if is_mocked(w) ]
+
+    # If there are no MockSockets, return normal select
+    if mock_read_socks == [] and mock_write_workers == []:
+      if hasattr(select, "_old_select"):
+        return select._old_select(rl, wl, xl, timeout)
+      else:
+        return select.select(rl, wl, xl, timeout)
+
+    (rl, wl, xl) = [ [s for s in l if not is_mocked(s) ]
                      for l in [rl, wl, xl] ]
 
     # Grab the sock lists for our internal socket. These lists will contain
-    # our true true_io_worker(s), along with our pinger.
+    # our true_io_worker(s), along with our pinger.
     (our_rl, our_wl, our_xl) = self.grab_workers_rwe()
 
-    # TODO(cs): non-monkey-patched version
-    (rl, wl, xl) = select.select(rl+our_rl, wl+our_wl, xl+our_xl, timeout)
-    (rl, wl, xl) = self.handle_socks_rwe(rl, wl, xl, mock_read_socks)
+    if hasattr(select, "_old_select"):
+      (rl, wl, xl) = select._old_select(rl+our_rl, wl+our_wl, xl+our_xl, timeout)
+    else:
+      (rl, wl, xl) = select.select(rl+our_rl, wl+our_wl, xl+our_xl, timeout)
+    (rl, wl, xl) = self.handle_socks_rwe(rl, wl, xl, mock_read_socks,
+                                         mock_write_workers)
     return (rl, wl, xl)
 
-  def handle_socks_rwe(self, rl, wl, xl, mock_read_socks):
+  def handle_socks_rwe(self, rl, wl, xl, mock_read_socks, mock_write_workers):
     if self.pinger in rl:
       self.pinger.pongAll()
       rl.remove(self.pinger)
@@ -147,36 +193,10 @@ class MultiplexedSelect(IOMaster):
             self._workers.discard(true_io_worker)
 
     # Now add MockSockets that are ready to read
-    rl += [ s for s in mock_read_socks if s.ready_to_read() ]
+    rl += [ s for s in mock_read_socks if ready_to_read(s) ]
+    # As well as MockSockets that are ready to write.
+    # This will cause the IOMaster above to flush the
+    # io_worker's buffers into our true_io_worker.
+    wl += mock_write_workers
     return (rl, wl, xl)
-
-def monkeypatch_sts():
-  # Client side:
-  #  - After booting the controller,
-  #  - and after STSSyncProtocol's socket has been created (no more auxiliary
-  #    sockets remain to be instantiated)
-  #  - override select.select with MultiplexedSelect (this will create a true
-  #    socket for the pinger)
-  #  - create a single real socket for each ControllerInfo
-  #  - connect them normally
-  #  - wrap them in MultiplexedSelect's io_worker
-  #  - create a STSSocketDemultiplexer
-  #  - override socket.socket
-  #    - takes two params: protocol, socket type
-  #    - if not SOCK_STREAM type, return a normal socket
-  #    - else, return STSSocketMultplexer.new_socket
-  pass
-
-def monkeypatch_pox():
-  # Server side:
-  #  - Instantiate ServerMultipexedSelect (this will create a true
-  #    socket for the pinger)
-  #  - override select.select with ServerMultiplexedSelect
-  #  - override socket.socket
-  #    - takes two params: protocol, socket type
-  #    - if not SOCK_STREAM type, return a normal socket
-  #  - we don't know bind address until bind() is called
-  #  - after bind(), create true socket, create SocketDemultiplexer
-  # All subsequent sockets will be instantiated through accept()
-  pass
 
