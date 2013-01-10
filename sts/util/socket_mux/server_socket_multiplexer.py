@@ -56,7 +56,12 @@ class ServerMockSocket(MockSocket):
 
   def bind(self, server_info):
     # Before bind() is called, we don't know the
-    # address of the true connection. Here, we create a *real* socket.
+    # address of the true connection.
+    self.server_info = server_info
+
+  def listen(self, _):
+    self.listener = True
+    # Here, we create a *real* socket.
     # bind it to server_info, and wait for the client SocketDemultiplexer to
     # connect. After this is done, we can instantiate our own
     # SocketDemultiplexer.
@@ -69,14 +74,13 @@ class ServerMockSocket(MockSocket):
     else:
       true_socket = socket.socket(self.protocol, self.sock_type)
     true_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    true_socket.bind(server_info)
+    true_socket.bind(self.server_info)
     true_socket.setblocking(0)
     true_socket.listen(1)
     # We give this true socket to select.select and
     # wait for the client SocketDemultiplexer connection
     self.set_true_listen_socket(true_socket, self,
                                 accept_callback=self._accept_callback)
-    self.server_info = server_info
 
   def _accept_callback(self, io_worker):
     # Keep a reference so that it won't be gc'ed?
@@ -85,9 +89,6 @@ class ServerMockSocket(MockSocket):
     # makes auxiliary TCP connections
     if hasattr(socket, "_old_socket"):
       socket.socket = socket._old_socket
-
-  def listen(self, _):
-    self.listener = True
 
   def accept(self):
     sock = self.new_sockets.pop(0)
