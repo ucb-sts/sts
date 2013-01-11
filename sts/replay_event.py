@@ -652,6 +652,12 @@ class ControllerStateChange(InternalEvent):
       simulation.controller_sync_callback\
                 .ack_pending_state_change(pending_state_change)
       return True
+    # TODO(cs): possibly need to flush all pending state changes our change
+    # hasn't been observed yet, since:
+    #  - pending state changes block the controller
+    #  - after pruning, different code paths may be taken, and the
+    #    controller may just blocked on a pending state change prior to this
+    #    one. Seems like scenario this would cause excessive timeouts.
     return False
 
   @property
