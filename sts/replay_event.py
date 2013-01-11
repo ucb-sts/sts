@@ -617,12 +617,13 @@ class PendingStateChange(namedtuple('PendingStateChange',
   def __hash__(self):
     # TODO(cs): may need to add more context into the fingerprint to avoid
     # ambiguity
-    return self._get_regex().__hash__()
+    return self._get_regex().__hash__() + self.controller_id.__hash__()
 
   def __eq__(self, other):
     if type(other) != type(self):
       return False
-    return self._get_regex() == other._get_regex()
+    return (self._get_regex() == other._get_regex() and
+            self.controller_id == other.controller_id)
 
 class ControllerStateChange(InternalEvent):
   '''
