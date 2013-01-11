@@ -637,7 +637,7 @@ class ControllerStateChange(InternalEvent):
       fingerprint = (self.__class__.__name__, fingerprint)
     if type(fingerprint) == list:
       fingerprint = tuple(fingerprint)
-    self.fingerprint = fingerprint
+    self._fingerprint = fingerprint
     self.name = name
     if type(value) == list:
       value = tuple(value)
@@ -653,6 +653,13 @@ class ControllerStateChange(InternalEvent):
                 .gc_pending_state_change(pending_state_change)
       return True
     return False
+
+  @property
+  def fingerprint(self):
+    # Somewhat confusing: the StateChange's fingerprint is self._fingerprint,
+    # but the overall fingerprint of this event needs to include the controller
+    # id
+    return (self.controller_id, self._fingerprint)
 
   @staticmethod
   def from_json(json_hash):
