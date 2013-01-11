@@ -89,11 +89,6 @@ class SimulationConfig(object):
        - connects switches to controllers
 
        May be invoked multiple times!
-
-       Optional parameter:
-       - switch_init_sleep_seconds: an integer, sleep time in seconds, to wait
-             for switches to initialize their TCP connections with the
-             controller(s). Defaults to False
     '''
     def initialize_io_loop():
       ''' boot the IOLoop (needed for the controllers) '''
