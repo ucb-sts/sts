@@ -46,7 +46,7 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
   def _pass_through_handler(self, state_change_event):
     state_change = state_change_event.pending_state_change
     # Pass through
-    self.gc_pending_state_change(state_change)
+    self.ack_pending_state_change(state_change)
     # Record
     replay_event = ControllerStateChange(tuple(state_change.controller_id),
                                          state_change.fingerprint,
@@ -72,8 +72,8 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     ''' Return whether the PendingStateChange has been observed '''
     return self._pending_state_changes[pending_state_change] > 0
 
-  def gc_pending_state_change(self, pending_state_change):
-    ''' Garbage collect the PendingStateChange from our buffer'''
+  def ack_pending_state_change(self, pending_state_change):
+    ''' ACK the pending state change, and collect the PendingStateChange from our buffer'''
     self._pending_state_changes[pending_state_change] -= 1
     if self._pending_state_changes[pending_state_change] <= 0:
       del self._pending_state_changes[pending_state_change]

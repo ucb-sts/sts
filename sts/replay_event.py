@@ -650,7 +650,7 @@ class ControllerStateChange(InternalEvent):
                              .state_change_pending(pending_state_change)
     if observed_yet:
       simulation.controller_sync_callback\
-                .gc_pending_state_change(pending_state_change)
+                .ack_pending_state_change(pending_state_change)
       return True
     return False
 
