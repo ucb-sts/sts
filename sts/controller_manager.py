@@ -10,7 +10,9 @@ class ControllerManager(object):
 
   @property
   def controllers(self):
-    return self.uuid2controller.values()
+     cs = self.uuid2controller.values()
+     cs.sort(key=lambda c: c.uuid)
+     return cs
 
   @property
   def live_controllers(self):
@@ -44,7 +46,9 @@ class ControllerManager(object):
 
   def check_controller_processes_alive(self):
     controllers_with_problems = []
-    for c in self.live_controllers:
+    live = list(self.live_controllers)
+    live.sort(key=lambda c: c.uuid)
+    for c in live:
       (rc, msg) = c.check_process_status()
       if not rc:
         c.alive = False
