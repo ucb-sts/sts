@@ -30,7 +30,8 @@ class Fuzzer(ControlFlow):
                check_interval=None, traffic_inject_interval=10, random_seed=None,
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
-               halt_on_violation=False, log_invariant_checks=True):
+               halt_on_violation=False, log_invariant_checks=True,
+               startup_delay_seconds=5.0):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
 
@@ -51,6 +52,7 @@ class Fuzzer(ControlFlow):
     self._load_fuzzer_params(fuzzer_params)
     self._input_logger = input_logger
     self.halt_on_violation = halt_on_violation
+    self.startup_delay_seconds = startup_delay_seconds
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
@@ -70,6 +72,7 @@ class Fuzzer(ControlFlow):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
+    time.sleep(self.startup_delay_seconds)
     self.loop()
 
   def loop(self):
