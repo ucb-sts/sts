@@ -94,6 +94,11 @@ class MockSocket(object):
 def is_mocked(sock_or_io_worker):
   return sock_or_io_worker.fileno() < 0
 
+def sort_sockets(rl, wl, xl):
+  for l in [rl, wl, xl]:
+    l.sort(key=lambda s: s.fileno())
+  return (rl, wl, xl)
+
 class MultiplexedSelect(IOMaster):
   # Note that there will be *two* IOMasters running in the process. This one
   # runs below the normal IOMaster. MultiplexedSelect subclasses IOMaster only to
@@ -134,9 +139,11 @@ class MultiplexedSelect(IOMaster):
     # If there are no MockSockets, return normal select
     if mock_read_socks == [] and mock_write_workers == []:
       if hasattr(select, "_old_select"):
-        return select._old_select(rl, wl, xl, timeout)
+        (rl, wl, xl) = select._old_select(rl, wl, xl, timeout)
       else:
-        return select.select(rl, wl, xl, timeout)
+        (rl, wl, xl) = select.select(rl, wl, xl, timeout)
+      # Sort them just for kicks
+      return sort_sockets(rl, wl, xl)
 
     (rl, wl, xl) = [ [s for s in l if not is_mocked(s) ]
                      for l in [rl, wl, xl] ]
@@ -197,7 +204,5 @@ class MultiplexedSelect(IOMaster):
     # io_worker's buffers into our true_io_worker.
     wl += mock_write_workers
     # Sort all sockets to ensure determinism
-    for l in [rl, wl, xl]:
-      l.sort(key=lambda s: s.fileno())
-    return (rl, wl, xl)
+    return sort_sockets(rl, wl, xl)
 
