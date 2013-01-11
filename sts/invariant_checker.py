@@ -23,6 +23,10 @@ class InvariantChecker(object):
   # All invariant check methods must return a list, which is empty
   # for no violations, and non-empty for violations
 
+  # TODO(cs): when we start logging invariant exceptions rather than halting,
+  # we need to make sure that the return value of these checks are
+  # determinstic (viz., always sort sets, hashes)
+
   @staticmethod
   def check_liveness(simulation):
     ''' Very simple: have the controllers crashed? '''
