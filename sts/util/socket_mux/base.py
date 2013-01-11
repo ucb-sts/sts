@@ -196,5 +196,8 @@ class MultiplexedSelect(IOMaster):
     # This will cause the IOMaster above to flush the
     # io_worker's buffers into our true_io_worker.
     wl += mock_write_workers
+    # Sort all sockets to ensure determinism
+    for l in [rl, wl, xl]:
+      l.sort(key=lambda s: s.fileno())
     return (rl, wl, xl)
 
