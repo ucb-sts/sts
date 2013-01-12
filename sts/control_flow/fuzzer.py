@@ -31,7 +31,7 @@ class Fuzzer(ControlFlow):
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
                halt_on_violation=False, log_invariant_checks=True,
-               startup_delay_seconds=5.0):
+               startup_delay_seconds=3.0):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
 
