@@ -645,7 +645,8 @@ class ControllerStateChange(InternalEvent):
 
   def proceed(self, simulation):
     pending_state_change = PendingStateChange(self.controller_id, self.time,
-                                              self.fingerprint, self.name, self.value)
+                                              self._get_message_fingerprint(),
+                                              self.name, self.value)
     observed_yet = simulation.controller_sync_callback\
                              .state_change_pending(pending_state_change)
     if observed_yet:
@@ -660,20 +661,23 @@ class ControllerStateChange(InternalEvent):
     #    one. Seems like scenario this would cause excessive timeouts.
     return False
 
+  def _get_message_fingerprint(self):
+    return self._fingerprint[1]
+
   @property
   def fingerprint(self):
     # Somewhat confusing: the StateChange's fingerprint is self._fingerprint,
     # but the overall fingerprint of this event needs to include the controller
     # id
-    return (self.controller_id, self._fingerprint)
+    return (self._fingerprint, self.controller_id)
 
   @staticmethod
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
-    assert_fields_exist(json_hash, 'controller_id', 'fingerprint',
+    assert_fields_exist(json_hash, 'controller_id', '_fingerprint',
                         'name', 'value')
     controller_id = tuple(json_hash['controller_id'])
-    fingerprint = json_hash['fingerprint']
+    fingerprint = json_hash['_fingerprint']
     name = json_hash['name']
     value = json_hash['value']
     return ControllerStateChange(controller_id, fingerprint, name, value,
