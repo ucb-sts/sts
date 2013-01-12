@@ -192,7 +192,7 @@ class MultiplexedSelect(IOMaster):
           if l > 0:
             true_io_worker._consume_send_buf(l)
         except socket.error as (s_errno, strerror):
-          if s_errno != errno.EAGAIN:
+          if s_errno != errno.EAGAIN and s_errno != errno.EWOULDBLOCK:
             self.log.error("Socket error: " + strerror)
             true_io_worker.close()
             self._workers.discard(true_io_worker)
