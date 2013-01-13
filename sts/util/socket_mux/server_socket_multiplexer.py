@@ -17,8 +17,8 @@ class ServerSocketDemultiplexer(SocketDemultiplexer):
     msg_type = json_hash['type']
     if msg_type == "SYN":
       # we just saw an unknown channel.
-      self.log.debug("Incoming MockSocket connection %s" %
-                     json_hash['address'])
+      print("Incoming MockSocket connection %s" %
+            json_hash['address'])
       new_sock = self.new_socket(sock_id=sock_id,
                                  peer_address=json_hash['address'])
       self.mock_listen_sock.append_new_mock_socket(new_sock)
