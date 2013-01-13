@@ -2,6 +2,7 @@
 from base import *
 import socket
 import logging
+import base64
 
 class ServerSocketDemultiplexer(SocketDemultiplexer):
   def __init__(self, true_io_worker, mock_listen_sock):
@@ -22,7 +23,7 @@ class ServerSocketDemultiplexer(SocketDemultiplexer):
                                  peer_address=json_hash['address'])
       self.mock_listen_sock.append_new_mock_socket(new_sock)
     elif msg_type == "data":
-      raw_data = json_hash['data'].decode('base64')
+      raw_data = base64.b64decode(json_hash['data'])
       sock_id = json_hash['id']
       if sock_id not in self.id2socket:
         raise ValueError("Unknown socket id %d" % sock_id)

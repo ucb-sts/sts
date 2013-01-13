@@ -4,6 +4,7 @@ from pox.lib.ioworker.io_worker import JSONIOWorker, IOWorker
 import select
 import socket
 import logging
+import base64
 
 log = logging.getLogger("sock_mux")
 
@@ -49,7 +50,8 @@ class MockSocket(object):
     return self.pending_reads != []
 
   def send(self, data):
-    json_safe_data = data.encode('base64')
+    # base 64 occasionally adds extraneous newlines: bit.ly/aRTmNu
+    json_safe_data = base64.b64encode(data).replace("\n", "")
     wrapped = {'id' : self.sock_id, 'type' : 'data', 'data' : json_safe_data}
     self.json_worker.send(wrapped)
     # that just put it on a buffer. Now, actually send...
