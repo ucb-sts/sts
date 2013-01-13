@@ -76,11 +76,18 @@ class IOMaster(object):
     class InputThread(threading.Thread):
       def __init__(self):
         threading.Thread.__init__(self, name="InputThread")
+        self.eof_error = None
         self.result = None
+        self.done = False
 
       def run(self):
-        self.result = raw_input(prompt)
-        _io_master._ping()
+        try:
+          self.result = raw_input(prompt)
+        except EOFError as e:
+          self.eof_error = e
+        finally:
+          self.done = True
+          _io_master._ping()
 
     # some time to do io so we don't get too many competing messages
     self.sleep(0.05)
@@ -88,10 +95,13 @@ class IOMaster(object):
     input_thread.daemon = True
     input_thread.start()
 
-    while(input_thread.result is None):
+    while(not input_thread.done):
       self.select(None)
 
-    return input_thread.result
+    if input_thread.eof_error:
+      raise input_thread.eof_error
+    else:
+      return input_thread.result
 
   def _ping(self):
     self.pinger.ping()
