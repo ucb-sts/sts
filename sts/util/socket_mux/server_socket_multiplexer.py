@@ -145,7 +145,7 @@ class ServerMultiplexedSelect(MultiplexedSelect):
         # Once the listen sock gets an accept(), throw out it out (no
         # longer needed), replace it with the return of accept(),
         # and invoke the accept_callback
-        self.log.debug("Incoming true socket connected")
+        print "Incoming true socket connected"
         self.pending_accepts -= 1
         new_sock = true_listen_sock.accept()[0]
         true_listen_sock.close()

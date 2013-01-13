@@ -171,7 +171,7 @@ class MultiplexedSelect(IOMaster):
           if data:
             true_io_worker._push_receive_data(data)
           else:
-            self.log.info("Closing true_io_worker after empty read")
+            print "Closing true_io_worker after empty read"
             true_io_worker.close()
             self._workers.discard(true_io_worker)
         except socket.error as (s_errno, strerror):
@@ -188,7 +188,7 @@ class MultiplexedSelect(IOMaster):
             true_io_worker._consume_send_buf(l)
         except socket.error as (s_errno, strerror):
           if s_errno != errno.EAGAIN and s_errno != errno.EWOULDBLOCK:
-            self.log.error("Socket error: " + strerror)
+            print "Socket error: " + strerror
             true_io_worker.close()
             self._workers.discard(true_io_worker)
 
