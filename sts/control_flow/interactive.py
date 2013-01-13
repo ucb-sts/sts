@@ -5,7 +5,7 @@ control flow type for running the simulation forward.
 '''
 
 from sts.topology import BufferedPatchPanel
-from sts.util.console import msg
+from sts.util.console import msg, color
 from sts.replay_event import *
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
@@ -84,9 +84,18 @@ class STSConsole(object):
     self.call_env = {}
     self.help_items = []
     self.commands = {}
-    self.default_command = default_command
+    self._default_command = default_command
 
     self.cmd(self.show_help, "help", alias='h', help_msg="This help screen")
+
+  @property
+  def default_command(self):
+    if not self._default_command:
+      return None
+    elif isinstance(self._default_command, str):
+      return self._default_command
+    else:
+      return self._default_command()
 
   def show_help(self, command=None):
     if command:
@@ -168,9 +177,13 @@ class STSConsole(object):
         return "'%s'" % s.replace("'", "\\'")
 
     def input(prompt):
+      if self.default_command:
+        prompt = prompt + color.GRAY + "["+ self.default_command + "]" + color.WHITE + " >"
+      else:
+        prompt = prompt + " >"
       x = msg.raw_input(prompt)
       if x == "" and self.default_command:
-        return self.default_command
+        x = self.default_command
 
       parts = x.split(" ")
       cmd_name = parts[0]
@@ -178,8 +191,8 @@ class STSConsole(object):
         x = parts[0]+"(" + ", ".join(map(lambda s: quote_parameter(s), parts[1:])) + ")"
       return x
 
-    sys.ps1 = "STS> "
-    code.interact("STS Interactive console...\n", input, local=local)
+    sys.ps1 = color.GREEN + "STS " + color.WHITE
+    code.interact(color.GREEN + "STS Interactive console."+color.WHITE+"\nPython expressions and sts commands supported.\nType 'help' for an overview of available commands.\n", input, local=local)
 
 class Interactive(ControlFlow):
   '''
@@ -212,8 +225,9 @@ class Interactive(ControlFlow):
 
   def simulate(self):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
+    self._forwarded_this_step = 0
     try:
-      c = STSConsole(default_command="next()")
+      c = STSConsole(default_command=self.default_command)
       c.cmd_group("Simulation state")
       c.cmd(self.next_step, "next", alias="n", help_msg="Proceed to next simulation step")
       c.cmd(self.quit, "quit", alias="q", help_msg="Quit the simulation")
@@ -240,6 +254,12 @@ class Interactive(ControlFlow):
       if self._input_logger is not None:
         self._input_logger.close(self.simulation_cfg)
 
+  def default_command(self):
+    queued = self.simulation.patch_panel.queued_dataplane_events
+    if len(queued) == 1 and self._forwarded_this_step == 0 and self.simulation.topology.ok_to_send(queued[0]):
+      return "dpf"
+    else:
+      return "next"
 
   def quit(self):
     print "End console with CTRL-D"
@@ -248,6 +268,7 @@ class Interactive(ControlFlow):
         self.check_message_receipts()
         time.sleep(0.05)
         self.logical_time += 1
+        self._forwarded_this_step = 0
         print "-------------------"
         print "Advanced to step %d" % self.logical_time
         self.show_queued_events()
@@ -333,6 +354,7 @@ class Interactive(ControlFlow):
     if self.simulation.topology.ok_to_send(dp_event):
       self.simulation.patch_panel.permit_dp_event(dp_event)
       self._log_input_event(DataplanePermit(dp_event.fingerprint))
+      self._forwarded_this_step += 1
     else:
       print "Not ready to send event %s" % event
 
