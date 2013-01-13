@@ -138,15 +138,6 @@ class MultiplexedSelect(IOMaster):
     mock_read_socks = [ s for s in rl if is_mocked(s) ]
     mock_write_workers = [ w for w in wl if is_mocked(w) ]
 
-    # If there are no MockSockets, return normal select
-    if mock_read_socks == [] and mock_write_workers == []:
-      if hasattr(select, "_old_select"):
-        (rl, wl, xl) = select._old_select(rl, wl, xl, timeout)
-      else:
-        (rl, wl, xl) = select.select(rl, wl, xl, timeout)
-      # Sort them just for kicks
-      return sort_sockets(rl, wl, xl)
-
     (rl, wl, xl) = [ [s for s in l if not is_mocked(s) ]
                      for l in [rl, wl, xl] ]
 

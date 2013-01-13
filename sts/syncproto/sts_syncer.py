@@ -17,13 +17,19 @@ class STSSyncProtocolSpeaker(SyncProtocolSpeaker):
     self.controller = controller
 
     handlers = {
-        ("ASYNC", "StateChange"): self._log_state_change,
+        ("ASYNC", "StateChange"): self._log_async_state_change,
+        ("SYNC", "StateChange"): self._log_sync_state_change,
         ("REQUEST", "DeterministicValue"): self._get_deterministic_value
     }
     SyncProtocolSpeaker.__init__(self, handlers, io_delegate)
 
-  def _log_state_change(self, message):
-    self.state_master.state_change(self.controller, message.time, message.fingerPrint, message.name, message.value)
+  def _log_async_state_change(self, message):
+    self.state_master.state_change("ASYNC", message.xid, self.controller, message.time, message.fingerPrint, message.name, message.value)
+
+  def _log_sync_state_change(self, message):
+    # Note: control_flow needs to register a handler on state_master to ACK the
+    # controller
+    self.state_master.state_change("SYNC", message.xid, self.controller, message.time, message.fingerPrint, message.name, message.value)
 
   def _get_deterministic_value(self, message):
     value = self.state_master.get_deterministic_value(self.controller, message.name)
@@ -69,6 +75,12 @@ class STSSyncConnection(object):
     else:
       log.warn("STSSyncConnection: not connected. cannot handle requests")
 
+  def ack_sync_notification(self, messageClass, xid):
+    if self.speaker:
+      return self.speaker.ack_sync_notification(messageClass, xid)
+    else:
+      log.warn("STSSyncConnection: not connected. cannot ACK")
+
 class STSSyncConnectionManager(object):
   """the connection manager for the STS sync protocols.
      TODO: finish"""
@@ -94,8 +106,9 @@ class STSSyncConnectionManager(object):
 
 class STSSyncCallback(object):
   """ override with your favorite functionality """
-  def state_change(self, controller, time, fingerprint, name, value):
-    log.info("controller: {} time: {} fingerprint: {} name: {} value: {}".format(controller, time, fingerprint, name, value))
+  def state_change(self, type, controller, time, fingerprint, name, value):
+    log.info("{}: controller: {} time: {} fingerprint: {} name: {} value: {}"\
+             .format(type, controller, time, fingerprint, name, value))
   def get_deterministic_value(self, controller, name):
     if name == "gettimeofday":
       return SyncTime.now()

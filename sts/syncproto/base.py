@@ -34,11 +34,11 @@ class SyncTime(collections.namedtuple('SyncTime', ('seconds', 'microSeconds'))):
 class SyncMessage(collections.namedtuple('SyncMessage', ('type', 'messageClass', 'time', 'xid', 'name', 'value', 'fingerPrint'))):
   """ value object that models a message in the STS sync protocol """
   def __new__(cls, type, messageClass, time=None, xid=None, name=None, value=None, fingerPrint=None):
-    if type not in ("ASYNC", "REQUEST", "RESPONSE"):
-      raise ValueError("SyncMessage: type must one of (ASYNC, REQUEST, RESPONSE)")
+    if type not in ("ASYNC", "SYNC", "ACK", "REQUEST", "RESPONSE"):
+      raise ValueError("SyncMessage: type must one of (ASYNC, SYNC, ACK, REQUEST, RESPONSE)")
 
-    if type == "RESPONSE" and xid is None:
-      raise ValueError("SyncMessage: xid must be given for messages of type RESPONSE")
+    if (type == "RESPONSE" or type == "ACK") and xid is None:
+      raise ValueError("SyncMessage: xid must be given for messages of type %s" % type)
 
     if time is None:
       time = SyncTime.now()
@@ -79,7 +79,7 @@ class SyncProtocolSpeaker(object):
     self.handlers = handlers
     self.io = io_delegate
     self.io.on_message_received = self.on_message_received
-    self.waiting_xids = set()
+    self.waiting_xids = {}
     self.received_responses = {}
     self.sent_xids = set()
 
@@ -103,8 +103,8 @@ class SyncProtocolSpeaker(object):
     message = SyncMessage(**msg_hash)
     key = (message.type, message.messageClass)
 
-    if message.type == "RESPONSE" and message.xid in self.waiting_xids:
-      self.waiting_xids.discard(message.xid)
+    if (message.type == "RESPONSE" or message.type == "ACK") and message.xid in self.waiting_xids:
+      del self.waiting_xids[message.xid]
       self.received_responses[message.xid] = message
       return
 
@@ -121,16 +121,33 @@ class SyncProtocolSpeaker(object):
                                     value=value))
     self.send(message)
 
+  def _wait_for_xaction(self, message):
+    xid = message.xid
+    self.waiting_xids[xid] = message
+
+    # Blocks this thread!
+    while not xid in self.received_responses:
+      self.io.wait_for_message()
+
+    response = self.received_responses.pop(xid)
+    return response.value
+
+  def sync_notification(self, messageClass, fingerPrint, value):
+    message = self.message_with_xid(SyncMessage(type="SYNC",
+                                    messageClass=messageClass,
+                                    fingerPrint=fingerPrint,
+                                    value=value))
+    self.send(message)
+    return self._wait_for_xaction(message)
+
+  def ack_sync_notification(self, messageClass, xid):
+    message = SyncMessage(type="ACK", messageClass=messageClass, xid=xid)
+    self.send(message)
+
   def sync_request(self, messageClass, name):
     ''' Send a message you expect a response from.
     Note: Blocks this thread until a response is recieved!'''
     message = self.message_with_xid(SyncMessage(type="REQUEST", messageClass=messageClass, name=name))
-    self.waiting_xids.add(message.xid)
     self.send(message)
+    return self._wait_for_xaction(message)
 
-    # Blocks this thread!
-    while not message.xid in self.received_responses:
-      self.io.wait_for_message()
-
-    response = self.received_responses.pop(message.xid)
-    return response.value

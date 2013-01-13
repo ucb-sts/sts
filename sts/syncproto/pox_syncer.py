@@ -6,7 +6,7 @@ import time
 import os
 import socket
 
-from pox.core import core
+from pox.core import core, UpEvent
 from pox.lib.graph.nom import Switch, Host, Link
 from pox.lib.graph.util import NOMEncoder
 
@@ -20,16 +20,16 @@ from logging import Logger
 log = logging.getLogger("pox_syncer")
 
 # POX Module launch method
-def launch():
+def launch(blocking=True):
+  blocking = str(blocking).lower() == "true"
   if "sts_sync" in os.environ:
-
     sts_sync = os.environ["sts_sync"]
     log.info("starting sts sync for spec: %s" % sts_sync)
 
     io_master = POXIOMaster()
     io_master.start(core.scheduler)
 
-    sync_master = POXSyncMaster(io_master)
+    sync_master = POXSyncMaster(io_master, blocking=blocking)
     sync_master.start(sts_sync)
   else:
     log.info("no sts_sync variable found in environment. Not starting pox_syncer")
@@ -51,9 +51,15 @@ class POXIOMaster(IOMaster, Task):
       self.handle_workers_rwe(rlist, wlist, elist)
 
 class POXSyncMaster(object):
-  def __init__(self, io_master):
+  def __init__(self, io_master, blocking=True):
     self.io_master = io_master
     self._in_get_time = False
+    self.blocking = blocking
+    self.core_up = False
+    core.addListener(UpEvent, self.handle_UpEvent)
+
+  def handle_UpEvent(self, _):
+    self.core_up = True
 
   def start(self, sync_uri):
     self.connection = POXSyncConnection(self.io_master, sync_uri)
@@ -73,6 +79,8 @@ class POXSyncMaster(object):
     Logger._orig_log = Logger._log
     def new_log(log_self, level, msg, *args, **kwargs):
       Logger._orig_log(log_self, level, msg, *args, **kwargs)
+      if self.blocking and self.core_up:
+        print "Waiting on ACK.."
       self.state_change(msg, *args)
     Logger._log = new_log
 
@@ -80,7 +88,6 @@ class POXSyncMaster(object):
     """ Hack alert: python logging use time.time(). That means that log statements in the determinism
         protocols are going to invoke get_time again. Solve by returning the real time if we (get_time)
         are in the stacktrace """
-
     if self._in_get_time:
       return time._orig_time()
 
@@ -94,10 +101,12 @@ class POXSyncMaster(object):
 
   def state_change(self, msg, *args):
     ''' Notify sts that we're about to make a state change (log msg) '''
-    # TODO(cs): use request() instead? Since that will block POX until a
-    # response is received
     args = [ str(s) for s in args ]
-    self.connection.async_notification("StateChange", msg, args)
+    if self.blocking and self.core_up:
+      self.connection.sync_notification("StateChange", msg, args)
+      print "ACK received.."
+    else:
+      self.connection.async_notification("StateChange", msg, args)
 
 class POXSyncConnection(object):
   def __init__(self, io_master, sync_uri):
@@ -119,6 +128,7 @@ class POXSyncConnection(object):
   def wait_for_connect(self):
     log.info("waiting for sts_sync connection on %s:%d" % (self.host, self.port))
     (socket, _) = self.listen_socket.accept()
+    log.info("sts_sync connected")
     self.speaker = POXSyncProtocolSpeaker(SyncIODelegate(self.io_master, socket))
 
   def request(self, messageClass, name):
@@ -130,6 +140,12 @@ class POXSyncConnection(object):
   def async_notification(self, messageClass, fingerPrint, value):
     if self.speaker:
       self.speaker.async_notification(messageClass, fingerPrint, value)
+    else:
+      log.warn("POXSyncConnection: not connected. cannot handle requests")
+
+  def sync_notification(self, messageClass, fingerPrint, value):
+    if self.speaker:
+      self.speaker.sync_notification(messageClass, fingerPrint, value)
     else:
       log.warn("POXSyncConnection: not connected. cannot handle requests")
 

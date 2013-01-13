@@ -4,6 +4,7 @@ from pox.lib.revent import EventMixin
 from sts.replay_event import ControllerStateChange, PendingStateChange
 from sts.syncproto.base import SyncTime
 from sts.syncproto.sts_syncer import STSSyncCallback
+from functools import partial
 
 from collections import Counter
 
@@ -41,6 +42,10 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     # separate class?
     # Python's Counter object is effectively a multiset
     self._pending_state_changes = Counter()
+    # Each controller can have at most one outstanding state change (since
+    # it's blocked)
+    # { controller id -> function to send ACK message }
+    self.uuid2ack = {}
     self.log = logging.getLogger("synccallback")
 
   def _pass_through_handler(self, state_change_event):
@@ -77,21 +82,34 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     self._pending_state_changes[pending_state_change] -= 1
     if self._pending_state_changes[pending_state_change] <= 0:
       del self._pending_state_changes[pending_state_change]
+    if pending_state_change.controller_id in self.uuid2ack:
+      # Send an ACK to the controller to let it proceed
+      self.uuid2ack[pending_state_change.controller_id]()
+      del self.uuid2ack[pending_state_change.controller_id]
 
   def flush(self):
-    ''' Remove any pending state changes '''
+    ''' ACK any pending state changes '''
     num_pending_state_changes = len(self._pending_state_changes)
     if num_pending_state_changes > 0:
       self.log.info("Flushing %d pending state changes" %
                     num_pending_state_changes)
     self._pending_state_changes = Counter()
+    for uuid, ack in self.uuid2ack.iteritems():
+      ack()
+    self.uuid2ack = {}
 
-  def state_change(self, controller, time, fingerprint, name, value):
-    # TODO(cs): unblock the controller after processing the state change?
+  def state_change(self, sync_type, xid, controller, time, fingerprint, name, value):
     pending_state_change = PendingStateChange(controller.uuid, time,
                                               fingerprint, name, value)
     self._pending_state_changes[pending_state_change] += 1
     self.raiseEvent(StateChange(pending_state_change))
+    if sync_type == "SYNC":
+      if controller.uuid in self.uuid2ack:
+        raise RuntimeError("More than one outstanding ACKs for %s" %
+                           str(controller.uuid))
+      self.uuid2ack[controller.uuid] =\
+            partial(controller.sync_connection.ack_sync_notification,
+                    "StateChange", xid)
 
   def pending_state_changes(self):
     ''' Return any pending state changes '''
@@ -106,17 +124,18 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
       raise ValueError("unsupported deterministic value: %s" % name)
     return value
 
-
 class RecordingSyncCallback(STSSyncCallback):
   def __init__(self, input_logger):
     self.input_logger = input_logger
 
-  def state_change(self, controller, time, fingerprint, name, value):
+  def state_change(self, sync_type, xid, controller, time, fingerprint, name, value):
     if self.input_logger is not None:
       self.input_logger.log_input_event(ControllerStateChange(tuple(controller.uuid),
                                                               fingerprint,
                                                               name, value,
                                                               time=time))
+    if sync_type == "SYNC":
+      controller.sync_connection.ack_sync_notification("StateChange", xid)
 
   def get_deterministic_value(self, controller, name):
     value = None
