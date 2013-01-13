@@ -31,7 +31,7 @@ class Fuzzer(ControlFlow):
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
                halt_on_violation=False, log_invariant_checks=True,
-               startup_delay_seconds=3.0):
+               delay_startup=True):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
 
@@ -52,7 +52,7 @@ class Fuzzer(ControlFlow):
     self._load_fuzzer_params(fuzzer_params)
     self._input_logger = input_logger
     self.halt_on_violation = halt_on_violation
-    self.startup_delay_seconds = startup_delay_seconds
+    self.delay_startup = delay_startup
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
@@ -72,7 +72,6 @@ class Fuzzer(ControlFlow):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
-    time.sleep(self.startup_delay_seconds)
     self.loop()
 
   def loop(self):
@@ -82,6 +81,12 @@ class Fuzzer(ControlFlow):
       end_time = sys.maxint
 
     try:
+      if self.delay_startup:
+        # Wait until the first OpenFlow message is received
+        log.info("Waiting until first OpenfFlow message received..")
+        while self.simulation.god_scheduler.pending_receives() == []:
+          time.sleep(self.delay)
+
       while self.logical_time < end_time:
         self.logical_time += 1
         self.trigger_events()
