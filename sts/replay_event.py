@@ -168,7 +168,11 @@ class SwitchRecovery(InputEvent):
   def proceed(self, simulation):
     software_switch = simulation.topology.get_switch(self.dpid)
     try:
-      simulation.topology.recover_switch(software_switch)
+      down_controller_ids = map(lambda c: c.uuid,
+                                simulation.controller_manager.down_controllers)
+
+      simulation.topology.recover_switch(software_switch,
+                                         down_controller_ids=down_controller_ids)
     except TimeoutError:
       # Controller is down... Hopefully control flow will notice soon enough
       log.warn("Timed out on %s" % str(self.fingerprint))
