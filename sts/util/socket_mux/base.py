@@ -134,6 +134,13 @@ class MultiplexedSelect(IOMaster):
 
   def select(self, rl, wl, xl, timeout=0):
     ''' Note that this layer is *below* IOMaster's Select loop '''
+    # If this isn't the main thread, use normal select
+    if threading.current_thread().name != "MainThread":
+      if hasattr(select, "_old_select"):
+        return select._old_select(rl, wl, xl, timeout)
+      else:
+        return select.select(rl, wl, xl, timeout)
+
     # Always remove MockSockets or wrappers of MockSockets
     # (don't mess with other non-socket fds)
     mock_read_socks = [ s for s in rl if is_mocked(s) ]
