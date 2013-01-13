@@ -55,6 +55,13 @@ class InputLogger(object):
     self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
     self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
     self.last_time = time.time()
+    self._disallow_timeouts = False
+
+  def disallow_timeouts(self):
+    self._disallow_timeouts = True
+
+  def allow_timeouts(self):
+    self._disallow_timeouts = False
 
   def log_input_event(self, event, dp_event=None):
     '''
@@ -62,6 +69,8 @@ class InputLogger(object):
     separate pickle log, so we optionally allow a packet parameter to be
     logged separately.
     '''
+    if self._disallow_timeouts and hasattr(event, "disallow_timeouts"):
+      event.timeout_disallowed = True
     self.last_time = event.time
     json_hash = event.to_json()
     log.debug("logging event %r" % event)

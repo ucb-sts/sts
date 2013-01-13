@@ -96,13 +96,17 @@ class InternalEvent(Event):
   '''An InternalEvent is one that happens within the controller(s) under
   simulation. Derivatives of this class verify that the internal event has
   occured in its proceed method before it returns.'''
-  def __init__(self, label=None, time=None):
+  def __init__(self, label=None, time=None, timeout_disallowed=False):
     super(InternalEvent, self).__init__(prefix='i', label=label, time=time)
+    self.timeout_disallowed = timeout_disallowed
 
   def proceed(self, simulation):
     # There might be nothing happening for certain internal events, so default
     # to just doing nothing for proceed (i.e. proceeding automatically).
     pass
+
+  def disallow_timeouts(self):
+    self.timeout_disallowed = True
 
 class InputEvent(Event):
   '''An event that the simulator injects into the simulation. These events are
@@ -554,15 +558,22 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
 #  Concrete classes of InternalEvents #
 # ----------------------------------- #
 
+def extract_base_fields(json_hash):
+  (label, time) = extract_label_time(json_hash)
+  timeout_disallowed = False
+  if 'timeout_disallowed' in json_hash:
+    timeout_disallowed = json_hash['timeout_disallowed']
+  return (label, time, timeout_disallowed)
+
 class ControlMessageReceive(InternalEvent):
   '''
   Logged whenever the GodScheduler decides to allow a switch to see an
   openflow packet.
   '''
-  def __init__(self, dpid, controller_id, fingerprint, label=None, time=None):
+  def __init__(self, dpid, controller_id, fingerprint, label=None, time=None, timeout_disallowed=False):
     # If constructed directly (not from json), fingerprint is the
     # OFFingerprint, not including dpid and controller_id
-    super(ControlMessageReceive, self).__init__(label=label, time=time)
+    super(ControlMessageReceive, self).__init__(label=label, time=time, timeout_disallowed=timeout_disallowed)
     self.dpid = dpid
     self.controller_id = controller_id
     if type(fingerprint) == list:
@@ -585,12 +596,12 @@ class ControlMessageReceive(InternalEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
     dpid = json_hash['dpid']
     controller_id = tuple(json_hash['controller_id'])
     fingerprint = json_hash['fingerprint']
-    return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time)
+    return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time, timeout_disallowed=timeout_disallowed)
 
 # TODO(cs): move me?
 class PendingStateChange(namedtuple('PendingStateChange',
@@ -630,8 +641,8 @@ class ControllerStateChange(InternalEvent):
   Logged for any relevent kind of state change in the controller (e.g.
   mastership change)
   '''
-  def __init__(self, controller_id, fingerprint, name, value, label=None, time=None):
-    super(ControllerStateChange, self).__init__(label=label, time=time)
+  def __init__(self, controller_id, fingerprint, name, value, label=None, time=None, timeout_disallowed=False):
+    super(ControllerStateChange, self).__init__(label=label, time=time, timeout_disallowed=timeout_disallowed)
     self.controller_id = tuple(controller_id)
     if type(fingerprint) == str or type(fingerprint) == unicode:
       fingerprint = (self.__class__.__name__, fingerprint)
@@ -673,7 +684,7 @@ class ControllerStateChange(InternalEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'controller_id', '_fingerprint',
                         'name', 'value')
     controller_id = tuple(json_hash['controller_id'])
@@ -681,7 +692,7 @@ class ControllerStateChange(InternalEvent):
     name = json_hash['name']
     value = json_hash['value']
     return ControllerStateChange(controller_id, fingerprint, name, value,
-                                 label=label, time=time)
+                                 label=label, time=time, timeout_disallowed=timeout_disallowed)
 
 class DeterministicValue(InternalEvent):
   '''

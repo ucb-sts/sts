@@ -84,8 +84,10 @@ class Fuzzer(ControlFlow):
       if self.delay_startup:
         # Wait until the first OpenFlow message is received
         log.info("Waiting until first OpenfFlow message received..")
+        self._input_logger.disallow_timeouts()
         while self.simulation.god_scheduler.pending_receives() == []:
           time.sleep(self.delay)
+        self._input_logger.allow_timeouts()
 
       while self.logical_time < end_time:
         self.logical_time += 1

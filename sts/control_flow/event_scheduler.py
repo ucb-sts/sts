@@ -87,9 +87,14 @@ class EventScheduler(object):
     start = time.time()
     # TODO(cs): why - 0.01?
     end = start + wait_time_seconds - 0.01 + self.epsilon_seconds
-
-    log.debug("Waiting for %s (maximum wait time: %.0f ms)" %
-          ( str(event).replace("\n", ""), self.epsilon_seconds * 1000) )
+    if event.timeout_disallowed:
+      # Reaallllly far in the future
+      end = 30000000000 # Fri, 30 Aug 2920 05:20:00 GMT
+      log.debug("Waiting for %s forever" %
+                ( str(event).replace("\n", ""))
+    else:
+      log.debug("Waiting for %s (maximum wait time: %.0f ms)" %
+            ( str(event).replace("\n", ""), self.epsilon_seconds * 1000) )
     self._poll_event(event, end)
 
   def _poll_event(self, event, end_time):
