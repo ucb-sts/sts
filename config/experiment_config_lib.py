@@ -5,8 +5,9 @@ import re
 
 class ControllerConfig(object):
   _port_gen = itertools.count(6633)
+  _controller_count_gen = itertools.count(1)
 
-  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None, sync=None, controller_type=None):
+  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None, sync=None, controller_type=None, label=None):
     '''
     Store metadata for the controller.
       - cmdline is an array of command line tokens.
@@ -58,6 +59,11 @@ class ControllerConfig(object):
         \n""" % (self.cmdline) )
 
     self.sync = sync
+    if label:
+      self.label = label
+    else:
+      self.label = "c"+str(self._controller_count_gen.next())
+
 
   @property
   def uuid(self):

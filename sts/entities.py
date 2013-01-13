@@ -321,6 +321,11 @@ class Controller(object):
     return self.process.pid if self.process else None
 
   @property
+  def label(self):
+    '''Return the label of this controller. See ControllerConfig for more details.'''
+    return self.config.label
+
+  @property
   def uuid(self):
     '''Return the uuid of this controller. See ControllerConfig for more details.'''
     return self.config.uuid
@@ -384,7 +389,7 @@ class Controller(object):
         else:
           self.log.warn("Could not find pox ext dir in %s. Cannot check/link in sync module" % pox_ext_dir)
 
-    self.process = popen_filtered("c%s" % str(self.uuid), self.config.expanded_cmdline, self.config.cwd, env=env)
+    self.process = popen_filtered("[%s]"%self.label, self.config.expanded_cmdline, self.config.cwd, env=env)
     self._register_proc(self.process)
 
     if self.config.sync:

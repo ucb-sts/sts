@@ -24,6 +24,12 @@ class ControllerManager(object):
     down = [controller for controller in self.controllers if not controller.alive]
     return set(down)
 
+  def get_controller_by_label(self, label):
+    for c in self.uuid2controller.values():
+      if c.label == label:
+        return c
+    return None
+
   def get_controller(self, uuid):
     if uuid not in self.uuid2controller:
       raise ValueError("unknown uuid %s" % str(uuid))

@@ -2,6 +2,7 @@ from experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology
 from sts.control_flow import Interactive
 from sts.invariant_checker import InvariantChecker
+from sts.input_traces.input_logger import InputLogger
 from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller
