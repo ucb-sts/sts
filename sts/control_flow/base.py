@@ -99,15 +99,16 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     self.uuid2ack = {}
 
   def state_change(self, sync_type, xid, controller, time, fingerprint, name, value):
-    pending_state_change = PendingStateChange(controller.uuid, time,
+    pending_state_change = PendingStateChange(tuple(controller.uuid), time,
                                               fingerprint, name, value)
     self._pending_state_changes[pending_state_change] += 1
     self.raiseEvent(StateChange(pending_state_change))
     if sync_type == "SYNC":
-      if controller.uuid in self.uuid2ack:
+      uuid = tuple(controller.uuid)
+      if uuid in self.uuid2ack:
         raise RuntimeError("More than one outstanding ACKs for %s" %
-                           str(controller.uuid))
-      self.uuid2ack[controller.uuid] =\
+                           str(uuid))
+      self.uuid2ack[uuid] =\
             partial(controller.sync_connection.ack_sync_notification,
                     "StateChange", xid)
 
