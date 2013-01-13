@@ -23,7 +23,7 @@ class STSIOWorker(IOWorker):
     return self.socket.fileno()
 
   def send(self, data):
-    if threading.current_thread().name != "MainThread":
+    if threading.current_thread().name != "MainThread" and threading.current_thread().name != "BackgroundIOThread":
       raise RuntimeError("Wrong thread: %s" % threading.current_thread())
 
     """ send data from the client side. fire and forget. """
@@ -71,37 +71,36 @@ class IOMaster(object):
     time.sleep = self.sleep
 
   def raw_input(self, prompt):
+    """ raw_input replacement that enables background IO to take place.
+        NOTE: this migrates the IO to a specifically created BackgroundIOThread
+        while readline's raw_input is running. raw_input must run in the main
+        thread so the terminal is properly restored on CTRL-C.
+        The Background IO thread is notified and terminates before the return of this
+        function, so no concurrent IO takes place.
+    """
+
     _io_master = self
 
-    class InputThread(threading.Thread):
+    class BackgroundIOThread(threading.Thread):
       def __init__(self):
-        threading.Thread.__init__(self, name="InputThread")
-        self.eof_error = None
-        self.result = None
+        threading.Thread.__init__(self, name="BackgroundIOThread")
         self.done = False
 
       def run(self):
-        try:
-          self.result = raw_input(prompt)
-        except EOFError as e:
-          self.eof_error = e
-        finally:
-          self.done = True
-          _io_master._ping()
+        while not self.done:
+          _io_master.select(None)
 
-    # some time to do io so we don't get too many competing messages
     self.sleep(0.05)
-    input_thread = InputThread()
-    input_thread.daemon = True
-    input_thread.start()
-
-    while(not input_thread.done):
-      self.select(None)
-
-    if input_thread.eof_error:
-      raise input_thread.eof_error
-    else:
-      return input_thread.result
+    io_thread = BackgroundIOThread()
+    io_thread.daemon = False
+    io_thread.start()
+    try:
+      return raw_input(prompt)
+    finally:
+      """ make sure background IO is terminated gracefully before returning """
+      io_thread.done = True
+      self._ping()
+      io_thread.join()
 
   def _ping(self):
     self.pinger.ping()
