@@ -214,7 +214,7 @@ class SimulationConfig(object):
             '''                 topology_params="%s",\n'''
             '''                 patch_panel_class=%s,\n'''
             '''                 dataplane_trace="%s",\n'''
-            '''                 switch_init_sleep_seconds=%s, '''
+            '''                 switch_init_sleep_seconds=%s,\n'''
             '''                 monkey_patch_select=%s)''' %
             (str(self.controller_configs),self._topology_class.__name__,
              self._topology_params, self._patch_panel_class.__name__,
