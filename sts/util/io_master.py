@@ -27,7 +27,7 @@ class STSIOWorker(IOWorker):
       raise RuntimeError("Wrong thread: %s" % threading.current_thread())
 
     """ send data from the client side. fire and forget. """
-    IOWorker.send(self, data)
+    return IOWorker.send(self, data)
 
   def close(self):
     """ Register this socket to be closed. fire and forget """
@@ -146,6 +146,7 @@ class IOMaster(object):
         if data:
           worker._push_receive_data(data)
         else:
+          log.warn("Closing socket due to empty read")
           worker.close()
           self._workers.discard(worker)
       except socket.error as (s_errno, strerror):
