@@ -4,6 +4,7 @@ from pox.lib.ioworker.io_worker import JSONIOWorker, IOWorker
 import select
 import socket
 import logging
+import errno
 import base64
 
 log = logging.getLogger("sock_mux")
