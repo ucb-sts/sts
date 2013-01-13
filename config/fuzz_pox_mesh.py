@@ -13,8 +13,8 @@ command_line = ('''./pox.py --verbose --no-cli sts.syncproto.pox_syncer '''
 controllers = [ControllerConfig(command_line, address="sts_socket_pipe", cwd="pox", sync="tcp:localhost:18899")]
 
 topology_class = MeshTopology
-topology_params = "num_switches=2"
-dataplane_trace = "dataplane_traces/ping_pong_same_subnet.trace"
+topology_params = "num_switches=4"
+dataplane_trace = "dataplane_traces/ping_pong_same_subnet_4_switches.trace"
 
 simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_class=topology_class,
