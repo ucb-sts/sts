@@ -6,6 +6,7 @@ import socket
 import logging
 import errno
 import base64
+import threading
 
 log = logging.getLogger("sock_mux")
 
