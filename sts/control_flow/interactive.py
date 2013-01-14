@@ -242,11 +242,14 @@ class Interactive(ControlFlow):
       c.cmd(self.dataplane_delay,      "dp_delay",   alias="dpe", help_msg="Delay a pending dataplane event")
 
       c.cmd_group("Controlling entitities")
-      c.cmd(self.show_controllers, "show_controllers", alias="sc", help_msg="Show controllers")
-      c.cmd(self.kill_controller,  "kill_controllers",  alias="kc", help_msg="Kill a controller").arg("label", values=lambda: map(lambda c: c.label, self.simulation.controller_manager.controllers))
-      c.cmd(self.show_switches, "show_switches", alias="ss", help_msg="Show switches")
+      c.cmd(self.list_controllers, "list_controllers", alias="lsc", help_msg="List controllers")
+      c.cmd(self.kill_controller,  "kill_controller",  alias="kc", help_msg="Kill a controller").arg("label", values=lambda: map(lambda c: c.label, self.simulation.controller_manager.live_controllers))
+      c.cmd(self.start_controller,  "start_controller",  alias="sc", help_msg="Restart a controller").arg("label", values=lambda: map(lambda c: c.label, self.simulation.controller_manager.down_controllers))
+      c.cmd(self.list_switches, "list_switches", alias="lss", help_msg="List switches")
       c.cmd(self.kill_switch,  "kill_switch", alias="ks", help_msg="Kill a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.start_switch,  "start_switch", alias="ss", help_msg="Restart a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
 
+      c.cmd_group("Python objects")
       c.register_obj(self.simulation, "simulation", help_msg="access the simulation object")
       c.register_obj(self.simulation.topology, "topology", alias="topo", help_msg="access the topology object")
       c.run()
@@ -280,7 +283,7 @@ class Interactive(ControlFlow):
       for (i, e) in enumerate(queued):
         print "%d: %s on %s:%s" % (i, e, e.node, e.port)
 
-  def show_controllers(self):
+  def list_controllers(self):
     cm = self.simulation.controller_manager
     live = cm.live_controllers
     print "Controllers:"
@@ -297,7 +300,17 @@ class Interactive(ControlFlow):
     else:
       print "Controller with label %s not found" %label
 
-  def show_switches(self):
+  def start_controller(self, label):
+    cm = self.simulation.controller_manager
+    c = cm.get_controller_by_label(label)
+    if c:
+      print "Killing controller: %s %s" % (label, repr(c))
+      cm.reboot_controller(c)
+      self._log_input_event(ControllerRecovery(c.uuid))
+    else:
+      print "Controller with label %s not found" %label
+
+  def list_switches(self):
     topology = self.simulation.topology
     live = topology.live_switches
     print "Switches:"
@@ -309,6 +322,12 @@ class Interactive(ControlFlow):
     switch = topology.get_switch(dpid)
     topology.crash_switch(switch)
     self._log_input_event(SwitchFailure(switch.dpid))
+
+  def start_switch(self, dpid):
+    topology = self.simulation.topology
+    switch = topology.get_switch(dpid)
+    topology.recover_switch(switch, down_controller_ids=map(lambda c: c.uuid, self.simulation.controller_manager.down_controllers))
+    self._log_input_event(SwitchRecovery(switch.dpid))
 
   def invariant_check(self, kind):
     if kind == "omega":
