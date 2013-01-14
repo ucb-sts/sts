@@ -71,7 +71,7 @@ class STSSyncConnection(object):
 
   def get_nom_snapshot(self):
     if self.speaker:
-      return self.speaker.sync_request("NOMSnapshot", "")
+      return self.speaker.sync_request("NOMSnapshot", "", timeout=10)
     else:
       log.warn("STSSyncConnection: not connected. cannot handle requests")
 

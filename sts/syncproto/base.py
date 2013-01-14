@@ -6,11 +6,17 @@ import collections
 import itertools
 import logging
 import time
+import socket
 
 # TODO(cs): specific to POX!
 from pox.lib.ioworker.io_worker import JSONIOWorker
 
 log = logging.getLogger("sync_connection")
+def unpatched_time():
+  if hasattr(time, "_orig_time"):
+    return time._orig_time()
+  else:
+    return time.time()
 
 
 class SyncTime(collections.namedtuple('SyncTime', ('seconds', 'microSeconds'))):
@@ -58,8 +64,8 @@ class SyncIODelegate(object):
     self.io_master = io_master
     self.io_worker = JSONIOWorker(self.io_master.create_worker_for_socket(socket))
 
-  def wait_for_message(self):
-    self.io_master.select(None)
+  def wait_for_message(self, timeout=None):
+    self.io_master.select(timeout)
 
   def send(self, msg):
     self.io_worker.send(msg)
@@ -117,12 +123,12 @@ class SyncProtocolSpeaker(object):
     message = SyncMessage(type="ACK", messageClass=messageClass, xid=xid)
     self.send(message)
 
-  def sync_request(self, messageClass, name):
+  def sync_request(self, messageClass, name, timeout=None):
     ''' Send a message you expect a response from.
     Note: Blocks this thread until a response is recieved!'''
     message = self.message_with_xid(SyncMessage(type="REQUEST", messageClass=messageClass, name=name))
     self.send(message)
-    return self.listener.wait_for_xaction(message)
+    return self.listener.wait_for_xaction(message, timeout)
 
 class SyncProtocolListener(object):
   ''' Speaker delegates to this class to wait on messages '''
@@ -150,16 +156,23 @@ class SyncProtocolListener(object):
     # dispatch message
     self.handlers[key](message)
 
-  def wait_for_xaction(self, message):
+  def wait_for_xaction(self, message, timeout=None):
     xid = message.xid
     self.waiting_xids[xid] = message
 
-    if self.collect_stats:
-      start = time._orig_time()
+    start = unpatched_time()
 
     # Blocks this thread!
     while not xid in self.received_responses:
-      self.io.wait_for_message()
+      if timeout:
+        now = unpatched_time()
+        if now - start > timeout:
+          raise socket.timeout()
+        to_wait = timeout - (now-start)
+      else:
+        to_wait = None
+
+      self.io.wait_for_message(to_wait)
 
     if self.collect_stats:
       end = time._orig_time()
