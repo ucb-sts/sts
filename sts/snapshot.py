@@ -2,8 +2,13 @@
 import urllib2
 import logging
 import json
+import string
 import time
 from pox.lib.graph.util import NOMDecoder
+from pox.openflow.topology import OpenFlowSwitch
+from pox.openflow.flow_table import FlowTable, TableEntry
+from pox.openflow.libopenflow_01 import ofp_match, ofp_action_output
+
 
 log = logging.getLogger("Snapshot")
 
@@ -37,10 +42,49 @@ class SnapshotService(object):
   def fetchSnapshot(self, controller):
     pass
 
+class FlexibleNOMDecoder:
+  def __init__(self):
+    self.pox_nom_decoder = NOMDecoder()
+
+  def decode(self, json):
+    if isinstance(json, (str, unicode)) and string.find(json, "__module__")>=0:
+      return self.pox_nom_decoder.decode(json)
+    else:
+      return self.decode_switch(json)
+
+  def decode_switch(self, json):
+    flow_table = self.decode_flow_table(json["flow_table"] if "flow_table" in json else json["flowTable"])
+    switch = OpenFlowSwitch(json["dpid"], flow_table=flow_table)
+    return switch
+
+  def decode_flow_table(self, json):
+    ft = FlowTable()
+    for e in json["entries"]:
+      ft.add_entry(self.decode_entry(e))
+    return ft
+
+  def decode_entry(self, json):
+    e = TableEntry()
+    for (k, v) in json.iteritems():
+      if k == "match":
+        e.match = self.decode_match(v)
+      elif k == "actions":
+        e.actions = [ self.decode_action(a) for a in v ]
+      else:
+        setattr(e, k, v)
+    return e
+
+  def decode_match(self, json):
+    return ofp_match(**json)
+
+  def decode_action(self, json):
+    a = ofp_action_output(port = json['port'])
+    return a
+
 class SyncProtoSnapshotService(SnapshotService):
   def __init__(self):
     SnapshotService.__init__(self)
-    self.myNOMDecoder = NOMDecoder()
+    self.myNOMDecoder = FlexibleNOMDecoder()
 
   def fetchSnapshot(self, controller):
     jsonNOM = controller.sync_connection.get_nom_snapshot()
