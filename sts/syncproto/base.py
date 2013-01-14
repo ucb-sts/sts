@@ -175,10 +175,14 @@ class SyncProtocolListener(object):
       self.io.wait_for_message(to_wait)
 
     if self.collect_stats:
-      end = time._orig_time()
+      end = unpatched_time()
       ms_elapsed = (end - start) * 1000
       if ms_elapsed > self.delay_threshold_ms:
-        log._orig_log(logging.DEBUG, "Spent %.02f milliseconds waiting on %s" %
+        if hasattr(log, "_orig_log"):
+          log._orig_log(logging.DEBUG, "Spent %.02f milliseconds waiting on %s" %
+                      (ms_elapsed, str(message)), [])
+        else:
+          log.log(logging.DEBUG, "Spent %.02f milliseconds waiting on %s" %
                       (ms_elapsed, str(message)), [])
 
     response = self.received_responses.pop(xid)
