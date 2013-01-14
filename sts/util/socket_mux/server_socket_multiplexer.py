@@ -68,7 +68,7 @@ class ServerMockSocket(MockSocket):
     # SocketDemultiplexer.
     # Assumes that all invocations of bind() are intended for connection to
     # STS. TODO(cs): STS should tell pox_monkeypatcher exactly what ports it
-    # intends to bind to. If bind() is called for some other port, delegate to
+    # intends to connect to. If bind() is called for some other port, delegate to
     # a real socket.
     if hasattr(socket, "_old_socket"):
       true_socket = socket._old_socket(self.protocol, self.sock_type)
