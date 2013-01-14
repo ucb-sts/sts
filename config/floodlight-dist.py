@@ -9,8 +9,8 @@ from sts.simulation_state import SimulationConfig
 command_line_server = "./fl-server.sh"
 command_line_client = "./fl-client.sh"
 controllers = [
-    ControllerConfig(command_line_server, cwd="../floodlight-w3", address="127.0.0.1", port=6633),
-    ControllerConfig(command_line_client, cwd="../floodlight-w3", address="127.0.0.1", port=6634)
+    ControllerConfig(command_line_server, cwd="../floodlight-w3", address="127.0.0.1", port=6633, sync="tcp:127.0.0.1:19999"),
+    ControllerConfig(command_line_client, cwd="../floodlight-w3", address="127.0.0.1", port=6634, sync="tcp:127.0.0.1:20000")
 ]
 
 topology_class = MeshTopology
