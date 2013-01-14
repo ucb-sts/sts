@@ -265,13 +265,13 @@ class Interactive(ControlFlow):
     print "End console with CTRL-D"
 
   def next_step(self):
-        self.check_message_receipts()
-        time.sleep(0.05)
-        self.logical_time += 1
-        self._forwarded_this_step = 0
-        print "-------------------"
-        print "Advanced to step %d" % self.logical_time
-        self.show_queued_events()
+    self.check_message_receipts()
+    time.sleep(0.05)
+    self.logical_time += 1
+    self._forwarded_this_step = 0
+    print "-------------------"
+    print "Advanced to step %d" % self.logical_time
+    self.show_queued_events()
 
   def show_queued_events(self):
     queued = self.simulation.patch_panel.queued_dataplane_events
