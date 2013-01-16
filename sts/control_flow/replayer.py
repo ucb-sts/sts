@@ -31,7 +31,8 @@ class Replayer(ControlFlow):
   To set the event scheduling paramters, pass them as keyword args to the
   constructor of this class, which will pass them on to the EventScheduler object it creates.
   '''
-  def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None, **kwargs):
+  def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
+               print_buffers=True, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = ReplaySyncCallback(self.get_interpolated_time)
 
@@ -42,6 +43,8 @@ class Replayer(ControlFlow):
       self.dag = EventDag(superlog_parser.parse_path(superlog_path))
     else:
       self.dag = superlog_path_or_dag
+
+    self.print_buffers = print_buffers
 
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
@@ -84,7 +87,17 @@ class Replayer(ControlFlow):
     Replayer.total_inputs_replayed += len(self.dag.input_events)
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
+    if self.print_buffers:
+      self._print_buffers()
     return self.simulation
+
+  def _print_buffers(self):
+    log.debug("Pending Message Receives:")
+    for p in self.simulation.god_scheduler.pending_receives():
+      log.debug("- %s", p)
+    log.debug("Pending State Changes:")
+    for p in self.sync_callback.pending_state_changes():
+      log.debug("- %s", p)
 
   def run_simulation_forward(self, dag, post_bootstrap_hook=None):
     event_scheduler = self.create_event_scheduler(self.simulation)

@@ -31,7 +31,7 @@ class Fuzzer(ControlFlow):
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
                halt_on_violation=False, log_invariant_checks=True,
-               delay_startup=True):
+               delay_startup=True, print_buffers=True):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
 
@@ -53,6 +53,7 @@ class Fuzzer(ControlFlow):
     self._input_logger = input_logger
     self.halt_on_violation = halt_on_violation
     self.delay_startup = delay_startup
+    self.print_buffers = print_buffers
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
@@ -73,6 +74,10 @@ class Fuzzer(ControlFlow):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.loop()
+    if self.print_buffers:
+      log.debug("Pending Message Receives:")
+      for p in self.simulation.god_scheduler.pending_receives():
+        log.debug("- %s", p)
 
   def loop(self):
     if self.steps:
@@ -293,5 +298,4 @@ class Fuzzer(ControlFlow):
                                               old_ingress_port_no,
                                               new_switch_dpid,
                                               new_port_no))
-
 
