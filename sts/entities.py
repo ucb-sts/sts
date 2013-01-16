@@ -364,7 +364,11 @@ class Controller(object):
         pox_ext_dir = os.path.join(self.config.cwd, "ext")
         if os.path.exists(pox_ext_dir):
           for f in ("sts/util/io_master.py", "sts/syncproto/base.py",
-                    "sts/syncproto/pox_syncer.py", "sts/__init__.py"):
+                    "sts/syncproto/pox_syncer.py", "sts/__init__.py",
+                    "sts/util/socket_mux/__init__.py",
+                    "sts/util/socket_mux/pox_monkeypatcher.py",
+                    "sts/util/socket_mux/base.py",
+                    "sts/util/socket_mux/server_socket_multiplexer.py"):
             src_path = os.path.join(src_dir, f)
             if not os.path.exists(src_path):
               raise ValueError("Integrity violation: sts sync source path %s (abs: %s) does not exist" %
