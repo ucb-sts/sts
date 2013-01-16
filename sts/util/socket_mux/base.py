@@ -150,7 +150,7 @@ class MultiplexedSelect(IOMaster):
     # If any of our mock sockets are ready to read, return immediately
     ready_to_read_mock = [ s for s in mock_read_socks if self.ready_to_read(s) ]
     if ready_to_read_mock != [] or mock_write_workers != []:
-      return (ready_to_read_mock, mock_write_workers, [])
+      return sort_sockets(ready_to_read_mock, mock_write_workers, [])
 
     (rl, wl, xl) = [ [s for s in l if not is_mocked(s) ]
                      for l in [rl, wl, xl] ]
