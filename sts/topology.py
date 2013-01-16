@@ -174,7 +174,7 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     msg.event("Forwarding dataplane event")
     # Invoke superclass DpPacketOut handler
     self.handle_DpPacketOut(dp_event)
-    self.fingerprint2dp_outs[dp_event.fingerprint].remove(dp_event)
+    self._remove_dp_event(dp_event)
 
   def drop_dp_event(self, dp_event):
     '''
@@ -182,8 +182,14 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     Return the dropped event.
     '''
     msg.event("Dropping dataplane event")
-    self.fingerprint2dp_outs[dp_event.fingerprint].remove(dp_event)
+    self._remove_dp_event(dp_event)
     return dp_event
+
+  def _remove_dp_event(self, dp_event):
+    # Pre: dp_event.fingerprint in self.fingerprint2dp_outs
+    self.fingerprint2dp_outs[dp_event.fingerprint].remove(dp_event)
+    if self.fingerprint2dp_outs[dp_event.fingerprint] == []:
+      del self.fingerprint2dp_outs[dp_event.fingerprint]
 
   def delay_dp_event(self, dp_event):
     msg.event("Delaying dataplane event")
