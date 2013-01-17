@@ -41,7 +41,6 @@ class STSCommandArg(object):
       return self._values()
 
 
-
 class STSCommand(object):
   def __init__(self, func, name, alias, help_msg):
     self.func = func
@@ -141,7 +140,7 @@ class STSConsole(object):
     if index == 0:
       return [ s for s in self.call_env.keys() if s.startswith(text) ]
     else:
-      """ 
+      """
       if parts[0] in self.commands:
         command = self.commands[parts[0]]
         argno = len(parts) - 2
@@ -390,6 +389,7 @@ class Interactive(ControlFlow):
       return
     self.simulation.patch_panel.delay_dp_event(dp_event)
 
+  # TODO(cs): remove this code -- no longer used
   def loop(self):
     try:
       while True:
