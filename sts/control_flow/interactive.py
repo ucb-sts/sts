@@ -224,6 +224,10 @@ class Interactive(ControlFlow):
 
   def simulate(self):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
+    # Always connect to controllers explicitly
+    self.simulation.connect_to_controllers()
+    self._log_input_event(ConnectToControllers())
+
     self._forwarded_this_step = 0
     try:
       c = STSConsole(default_command=self.default_command)

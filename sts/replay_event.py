@@ -705,7 +705,20 @@ class DeterministicValue(InternalEvent):
   '''
   pass
 
-all_internal_events = [ControlMessageReceive,
+# TODO(cs): this should really be an input event. But need to make sure that
+# it can be pruned safely
+class ConnectToControllers(InternalEvent):
+  def proceed(self, simulation):
+    simulation.connect_to_controllers()
+    return True
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
+    return ConnectToControllers(label=label, time=time, timeout_disallowed=timeout_disallowed)
+
+
+all_internal_events = [ControlMessageReceive, ConnectToControllers,
                        ControllerStateChange, DeterministicValue]
 
 # Special event:
@@ -716,5 +729,5 @@ class InvariantViolation(Event):
     Event.__init__(self)
     self.violations = [ str(v) for v in violations ]
 
-  def proceed(self):
+  def proceed(self, simulation):
     return True

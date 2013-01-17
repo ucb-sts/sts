@@ -20,7 +20,7 @@ simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_class=topology_class,
                                      topology_params=topology_params,
                                      dataplane_trace=dataplane_trace,
-                                     monkey_patch_select=True)
+                                     multiplex_sockets=True)
 
 control_flow = Fuzzer(simulation_config, check_interval=1, halt_on_violation=True,
                       input_logger=InputLogger(),

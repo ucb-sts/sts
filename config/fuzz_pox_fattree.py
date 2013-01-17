@@ -16,7 +16,7 @@ dataplane_trace = "dataplane_traces/ping_pong_fat_tree.trace"
 
 simulation_config = SimulationConfig(controller_configs=controllers,
                                      dataplane_trace=dataplane_trace,
-                                     monkey_patch_select=True)
+                                     multiplex_sockets=True)
 
 # Use a Fuzzer (already the default)
 control_flow = Fuzzer(simulation_config, check_interval=1, halt_on_violation=True,

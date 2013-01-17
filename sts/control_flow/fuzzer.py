@@ -86,6 +86,10 @@ class Fuzzer(ControlFlow):
       end_time = sys.maxint
 
     try:
+      # Always connect to controllers explicitly
+      self.simulation.connect_to_controllers()
+      self._log_input_event(ConnectToControllers())
+
       if self.delay_startup:
         # Wait until the first OpenFlow message is received
         log.info("Waiting until first OpenfFlow message received..")
