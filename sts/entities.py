@@ -328,7 +328,7 @@ class Controller(object):
   @property
   def uuid(self):
     '''Return the uuid of this controller. See ControllerConfig for more details.'''
-    return self.config.uuid
+    return tuple(self.config.uuid)
 
   def kill(self):
     '''Kill the process the controller is running in.'''

@@ -9,6 +9,10 @@ class ControllerManager(object):
     }
 
   @property
+  def controller_configs(self):
+    return [ c.config for c in self.controllers ]
+
+  @property
   def controllers(self):
      cs = self.uuid2controller.values()
      cs.sort(key=lambda c: c.uuid)
