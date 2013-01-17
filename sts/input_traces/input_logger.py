@@ -69,14 +69,15 @@ class InputLogger(object):
     separate pickle log, so we optionally allow a packet parameter to be
     logged separately.
     '''
-    if self._disallow_timeouts and hasattr(event, "disallow_timeouts"):
-      event.timeout_disallowed = True
-    self.last_time = event.time
-    json_hash = event.to_json()
-    log.debug("logging event %r" % event)
-    self.output.write(json_hash + '\n')
-    if dp_event is not None:
-      self.dp_events.append(dp_event)
+    if not self.output.closed:
+      if self._disallow_timeouts and hasattr(event, "disallow_timeouts"):
+        event.timeout_disallowed = True
+      self.last_time = event.time
+      json_hash = event.to_json()
+      log.debug("logging event %r" % event)
+      self.output.write(json_hash + '\n')
+      if dp_event is not None:
+        self.dp_events.append(dp_event)
 
   def close(self, simulation_cfg, skip_mcs_cfg=False):
     # First, insert a WaitTime, in case there was a controller crash
