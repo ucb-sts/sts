@@ -104,18 +104,19 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     self.uuid2ack = {}
 
   def state_change(self, sync_type, xid, controller, time, fingerprint, name, value):
-    pending_state_change = PendingStateChange(tuple(controller.uuid), time,
+    # TODO(cs): xid arguably shouldn't be known to STS
+    pending_state_change = PendingStateChange(controller.uuid, time,
                                               fingerprint, name, value)
     self._pending_state_changes[pending_state_change] += 1
-    self.raiseEvent(StateChange(pending_state_change))
     if sync_type == "SYNC":
-      uuid = tuple(controller.uuid)
+      uuid = controller.uuid
       if uuid in self.uuid2ack:
         raise RuntimeError("More than one outstanding ACKs for %s" %
                            str(uuid))
       self.uuid2ack[uuid] =\
             partial(controller.sync_connection.ack_sync_notification,
                     "StateChange", xid)
+    self.raiseEvent(StateChange(pending_state_change))
 
   def pending_state_changes(self):
     ''' Return any pending state changes '''
@@ -150,7 +151,7 @@ class RecordingSyncCallback(STSSyncCallback):
   def state_change(self, sync_type, xid, controller, time, fingerprint, name, value):
     # TODO(cs): xid arguably shouldn't be known to STS
     if self.input_logger is not None:
-      self.input_logger.log_input_event(ControllerStateChange(tuple(controller.uuid),
+      self.input_logger.log_input_event(ControllerStateChange(controller.uuid,
                                                               fingerprint,
                                                               name, value,
                                                               time=time))
