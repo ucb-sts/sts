@@ -99,8 +99,8 @@ class InputLogger(object):
       path_templates.append((self.mcs_cfg_path, mcs_config_template))
 
     wait_on_deterministic_values = False
-    if hasattr(control_flow, "record_deterministic_values"):
-      wait_on_deterministic_values = control_flow.record_deterministic_values
+    if hasattr(control_flow.sync_callback, "record_deterministic_values"):
+      wait_on_deterministic_values = control_flow.sync_callback.record_deterministic_values
 
     for path, template in path_templates:
       with open(path, 'w') as cfg_out:
