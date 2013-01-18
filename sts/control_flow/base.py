@@ -1,7 +1,7 @@
 import logging
 import pox.lib.revent
 from pox.lib.revent import EventMixin
-from sts.replay_event import ControllerStateChange, PendingStateChange
+from sts.replay_event import ControllerStateChange, PendingStateChange, DeterministicValue
 from sts.syncproto.base import SyncTime
 from sts.syncproto.sts_syncer import STSSyncCallback
 from functools import partial
@@ -36,7 +36,10 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
 
   _eventMixin_events = set([StateChange])
 
-  def __init__(self, get_interpolated_time):
+  def __init__(self, get_interpolated_time=None):
+    ''' If get_interpolated_time is None, will always wait on deterministic
+    values. If not None, will always invoke get_interpolated_time and respond
+    immediately'''
     self.get_interpolated_time = get_interpolated_time
     # TODO(cs): move buffering functionality into the GodScheduler? Or a
     # separate class?
@@ -46,6 +49,8 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     # it's blocked)
     # { controller id -> function to send ACK message }
     self.uuid2ack = {}
+    # { controller id -> function to send deterministic value responses }
+    self.uuid2deterministic_value = {}
     self.log = logging.getLogger("synccallback")
 
   def _pass_through_handler(self, state_change_event):
@@ -116,20 +121,34 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     ''' Return any pending state changes '''
     return self._pending_state_changes.keys()
 
-  def get_deterministic_value(self, controller, name):
-    if name == "gettimeofday":
-      # Note: not a method, but a bound function
-      value = self.get_interpolated_time()
-      # TODO(cs): implement Andi's improved gettime heuristic
-    else:
+  def get_deterministic_value(self, controller, name, xid):
+    # TODO(cs): xid arguably shouldn't be known to STS
+    if name != "gettimeofday":
       raise ValueError("unsupported deterministic value: %s" % name)
-    return value
+
+    # TODO(cs): need to dynamically set get_interpolated_time to not None for
+    # peek()
+    if self.get_interpolated_time is not None:
+      value = self.get_interpolated_time()
+      controller.sync_connection.send_deterministic_value(xid, value)
+    else:
+      self.uuid2deterministic_value[controller.uuid] =\
+          partial(controller.sync_connection.send_deterministic_value, xid)
+
+  def pending_deterministic_value_request(self, controller_id):
+    return controller_id in self.uuid2deterministic_value
+
+  def send_deterministic_value(self, controller_id, value):
+    self.uuid2deterministic_value[controller_id](value)
+    del self.uuid2deterministic_value[controller_id]
 
 class RecordingSyncCallback(STSSyncCallback):
-  def __init__(self, input_logger):
+  def __init__(self, input_logger, record_deterministic_values=False):
     self.input_logger = input_logger
+    self.record_deterministic_values = record_deterministic_values
 
   def state_change(self, sync_type, xid, controller, time, fingerprint, name, value):
+    # TODO(cs): xid arguably shouldn't be known to STS
     if self.input_logger is not None:
       self.input_logger.log_input_event(ControllerStateChange(tuple(controller.uuid),
                                                               fingerprint,
@@ -138,17 +157,17 @@ class RecordingSyncCallback(STSSyncCallback):
     if sync_type == "SYNC":
       controller.sync_connection.ack_sync_notification("StateChange", xid)
 
-  def get_deterministic_value(self, controller, name):
+  def get_deterministic_value(self, controller, name, xid):
+    # TODO(cs): xid arguably shouldn't be known to STS
     value = None
     if name == "gettimeofday":
       value = SyncTime.now()
     else:
       raise ValueError("unsupported deterministic value: %s" % name)
 
-    # TODO(cs): implement Andi's improved gettime heuristic, and uncomment
-    #           the following statement
-    #self.input_logger.log_input_event(klass="DeterministicValue",
-    #                                  controller_id=controller.uuid,
-    #                                  time=time, fingerprint="null",
-    #                                  name=name, value=value)
-    return value
+    # TODO(cs): implement Andi's improved gettime heuristic
+    if self.record_deterministic_values:
+      self.input_logger.log_input_event(DeterministicValue(controller.uuid,
+                                                           name, value,
+                                                           time=value))
+    controller.sync_connection.send_deterministic_value(xid, value)

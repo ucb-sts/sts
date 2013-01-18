@@ -32,9 +32,8 @@ class STSSyncProtocolSpeaker(SyncProtocolSpeaker):
     self.state_master.state_change("SYNC", message.xid, self.controller, message.time, message.fingerPrint, message.name, message.value)
 
   def _get_deterministic_value(self, message):
-    value = self.state_master.get_deterministic_value(self.controller, message.name)
-    response = SyncMessage(type="RESPONSE", messageClass="DeterministicValue", time=SyncTime.now(), xid = message.xid, value=value)
-    self.send(response)
+    self.state_master.get_deterministic_value(self.controller, message.name,
+                                              message.xid)
 
 class STSSyncConnection(object):
   """ A connection to a controller with the sts sync protocol """
@@ -78,6 +77,14 @@ class STSSyncConnection(object):
   def ack_sync_notification(self, messageClass, xid):
     if self.speaker:
       return self.speaker.ack_sync_notification(messageClass, xid)
+    else:
+      log.warn("STSSyncConnection: not connected. cannot ACK")
+
+  def send_deterministic_value(self, xid, value):
+    if self.speaker:
+      msg = SyncMessage(type="RESPONSE", messageClass="DeterministicValue",
+                        time=value, xid=xid, value=value)
+      return self.speaker.send(msg)
     else:
       log.warn("STSSyncConnection: not connected. cannot ACK")
 

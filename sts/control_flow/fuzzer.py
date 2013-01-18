@@ -31,9 +31,11 @@ class Fuzzer(ControlFlow):
                delay=0.1, steps=None, input_logger=None,
                invariant_check=InvariantChecker.check_correspondence,
                halt_on_violation=False, log_invariant_checks=True,
-               delay_startup=True, print_buffers=True):
+               delay_startup=True, print_buffers=True,
+               record_deterministic_values=False):
     ControlFlow.__init__(self, simulation_cfg)
-    self.sync_callback = RecordingSyncCallback(input_logger)
+    self.sync_callback = RecordingSyncCallback(input_logger,
+                           record_deterministic_values=record_deterministic_values)
 
     self.check_interval = check_interval
     self.invariant_check = invariant_check
@@ -107,7 +109,7 @@ class Fuzzer(ControlFlow):
         time.sleep(self.delay)
     finally:
       if self._input_logger is not None:
-        self._input_logger.close(self.simulation_cfg)
+        self._input_logger.close(self, self.simulation_cfg)
 
   def maybe_check_invariant(self):
     if (self.check_interval is not None and

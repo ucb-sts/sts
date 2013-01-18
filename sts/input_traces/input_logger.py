@@ -15,8 +15,9 @@ from sts.simulation_state import SimulationConfig
 
 simulation_config = %s
 
-control_flow = Replayer(simulation_config, "%s")
-# MCS trace path: %s
+control_flow = Replayer(simulation_config, "%s",
+                        # MCS trace path: %s
+                        wait_on_deterministic_values=%s)
 '''
 
 mcs_config_template = '''
@@ -30,7 +31,8 @@ simulation_config = %s
 
 control_flow = MCSFinder(simulation_config, "%s",
                          invariant_check=InvariantChecker.check_liveness,
-                         mcs_trace_path="%s")
+                         mcs_trace_path="%s",
+                         wait_on_deterministic_values=%s)
 '''
 
 log = logging.getLogger("input_logger")
@@ -79,7 +81,7 @@ class InputLogger(object):
       if dp_event is not None:
         self.dp_events.append(dp_event)
 
-  def close(self, simulation_cfg, skip_mcs_cfg=False):
+  def close(self, control_flow, simulation_cfg, skip_mcs_cfg=False):
     # First, insert a WaitTime, in case there was a controller crash
     self.log_input_event(WaitTime(1.0, time=self.last_time))
     # Flush the json input log
@@ -96,9 +98,14 @@ class InputLogger(object):
     if not skip_mcs_cfg:
       path_templates.append((self.mcs_cfg_path, mcs_config_template))
 
+    wait_on_deterministic_values = False
+    if hasattr(control_flow, "record_deterministic_values"):
+      wait_on_deterministic_values = control_flow.record_deterministic_values
+
     for path, template in path_templates:
       with open(path, 'w') as cfg_out:
         config_string = template % (str(simulation_cfg),
                                     self.output_path,
-                                    self.mcs_output_path)
+                                    self.mcs_output_path,
+                                    str(wait_on_deterministic_values))
         cfg_out.write(config_string)

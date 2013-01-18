@@ -25,6 +25,7 @@ class MCSFinder(ControlFlow):
                invariant_check=InvariantChecker.check_correspondence,
                transform_dag=None, end_wait_seconds=0.5,
                mcs_trace_path=None, extra_log=None, dump_runtime_stats=True,
+               wait_on_deterministic_values=False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.sync_callback = None
@@ -45,6 +46,7 @@ class MCSFinder(ControlFlow):
     self._runtime_stats = None
     self.kwargs = kwargs
     self.end_wait_seconds = end_wait_seconds
+    self.wait_on_deterministic_values = wait_on_deterministic_values
     if dump_runtime_stats:
       self._runtime_stats = {}
 
@@ -189,7 +191,9 @@ class MCSFinder(ControlFlow):
       new_dag = self.transform_dag(new_dag)
 
     # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
-    replayer = Replayer(self.simulation_cfg, new_dag, **self.kwargs)
+    replayer = Replayer(self.simulation_cfg, new_dag,
+                        wait_on_deterministic_values=self.wait_on_deterministic_values,
+                        **self.kwargs)
     simulation = replayer.simulate()
     # Wait a bit in case the bug takes awhile to happen
     time.sleep(self.end_wait_seconds)

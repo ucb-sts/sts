@@ -703,7 +703,35 @@ class DeterministicValue(InternalEvent):
   Logged whenever the controller asks for a deterministic value (e.g.
   gettimeofday()
   '''
-  pass
+  def __init__(self, controller_id, name, value, label=None, time=None, timeout_disallowed=False):
+    super(DeterministicValue, self).__init__(label=label, time=time, timeout_disallowed=timeout_disallowed)
+    self.controller_id = tuple(controller_id)
+    self.name = name
+    if name == "gettimeofday":
+      value = SyncTime(seconds=value[0], microSeconds=value[1])
+    elif type(value) == list:
+      value = tuple(value)
+    self.value = value
+
+  def proceed(self, simulation):
+    if simulation.controller_sync_callback\
+                 .pending_deterministic_value_request(self.controller_id):
+      simulation.controller_sync_callback.send_deterministic_value(self.controller_id,
+                                                                   self.value)
+      return True
+    return False
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
+    assert_fields_exist(json_hash, 'controller_id',
+                        'name', 'value')
+    controller_id = tuple(json_hash['controller_id'])
+    name = json_hash['name']
+    value = json_hash['value']
+    return DeterministicValue(controller_id, name, value,
+                              label=label, time=time, timeout_disallowed=timeout_disallowed)
+
 
 # TODO(cs): this should really be an input event. But need to make sure that
 # it can be pruned safely

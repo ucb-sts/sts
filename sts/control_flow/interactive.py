@@ -258,7 +258,7 @@ class Interactive(ControlFlow):
       c.run()
     finally:
       if self._input_logger is not None:
-        self._input_logger.close(self.simulation_cfg)
+        self._input_logger.close(self, self.simulation_cfg)
 
   def default_command(self):
     queued = self.simulation.patch_panel.queued_dataplane_events

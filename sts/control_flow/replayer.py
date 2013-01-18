@@ -32,9 +32,12 @@ class Replayer(ControlFlow):
   constructor of this class, which will pass them on to the EventScheduler object it creates.
   '''
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
-               print_buffers=True, **kwargs):
+               print_buffers=True, wait_on_deterministic_values=False, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
-    self.sync_callback = ReplaySyncCallback(self.get_interpolated_time)
+    if wait_on_deterministic_values:
+      self.sync_callback = ReplaySyncCallback()
+    else:
+      self.sync_callback = ReplaySyncCallback(self.get_interpolated_time)
 
     if type(superlog_path_or_dag) == str:
       superlog_path = superlog_path_or_dag
