@@ -7,6 +7,7 @@ Created on Mar 15, 2012
 from pox.lib.packet.ethernet import *
 from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
+from pox.lib.packet.arp import *
 import sts.topology as topo
 from collections import defaultdict
 import pickle
@@ -28,6 +29,7 @@ def generate_example_trace():
 
   packet_events = []
   ping_or_pong = "ping"
+
   for access_link in access_links:
     other_host = (set(hosts) - set([access_link.host])).pop()
     eth = ethernet(src=access_link.host.interfaces[0].hw_addr,dst=access_link.switch_port.hw_addr,type=ethernet.IP_TYPE)
@@ -56,25 +58,67 @@ def generate_example_trace_same_subnet(num_switches=2):
   hosts = mesh.hosts
   access_links = mesh.access_links
 
-  packet_events = []
+  arp_events = []
+  ping_events = []
   ping_or_pong = "ping"
-  for access_link in access_links:
-    other_host = (set(hosts) - set([access_link.host])).pop()
-    eth = ethernet(src=access_link.host.interfaces[0].hw_addr,dst=other_host.interfaces[0].hw_addr,type=ethernet.IP_TYPE)
-    dst_ip_addr = other_host.interfaces[0].ips[0]
-    ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
-    if ping_or_pong == "ping":
-      ping = icmp(type=TYPE_ECHO_REQUEST, payload=ping_or_pong)
-    else:
-      ping = icmp(type=TYPE_ECHO_REPLY, payload=ping_or_pong)
-    ipp.payload = ping
-    eth.payload = ipp
-    packet_events.append(DataplaneEvent(access_link.interface, eth))
 
-  # ping ping (no responses) between fake hosts
+  for access_link in access_links:
+    def make_ping(other_host):
+      eth = ethernet(src=access_link.host.interfaces[0].hw_addr,dst=other_host.interfaces[0].hw_addr,type=ethernet.IP_TYPE)
+      dst_ip_addr = other_host.interfaces[0].ips[0]
+      ipp = ipv4(protocol=ipv4.ICMP_PROTOCOL, srcip=access_link.host.interfaces[0].ips[0], dstip=dst_ip_addr)
+      if ping_or_pong == "ping":
+        ping = icmp(type=TYPE_ECHO_REQUEST, payload=ping_or_pong)
+      else:
+        ping = icmp(type=TYPE_ECHO_REPLY, payload=ping_or_pong)
+      ipp.payload = ping
+      eth.payload = ipp
+      return eth
+
+    def make_arp_request(other_host):
+      src_addr = access_link.host.interfaces[0].hw_addr
+      eth = ethernet(src=src_addr,
+                     dst=EthAddr('ff:ff:ff:ff:ff:ff'),type=ethernet.ARP_TYPE)
+      a = arp(opcode=arp.REQUEST,hwsrc=src_addr,
+                hwdst=EthAddr('00:00:00:00:00:00'),
+                protosrc=access_link.host.interfaces[0].ips[0],
+                protodst=other_host.interfaces[0].ips[0])
+      eth.payload = a
+      return eth
+
+    def make_arp_reply(other_host):
+      dst_addr = access_link.host.interfaces[0].hw_addr
+      src_addr = other_host.interfaces[0].hw_addr
+      eth = ethernet(src=src_addr,
+                     dst=dst_addr,type=ethernet.ARP_TYPE)
+      a = arp(opcode=arp.REPLY,hwsrc=src_addr,
+                hwdst=dst_addr,
+                protosrc=other_host.interfaces[0].ips[0],
+                protodst=access_link.host.interfaces[0].ips[0])
+      eth.payload = a
+      return eth
+
+    other_host = (set(hosts) - set([access_link.host])).pop()
+    eth = make_ping(other_host)
+    ping_events.append(DataplaneEvent(access_link.interface, eth))
+    arp_request = make_arp_request(other_host)
+    arp_reply = make_arp_reply(other_host)
+    arp_events.append(DataplaneEvent(access_link.interface, arp_request))
+    arp_events.append(DataplaneEvent(other_host.interfaces[0], arp_reply))
+    if ping_or_pong == "ping":
+      ping_or_pong = "pong"
+    else:
+      ping_or_pong = "ping"
+
+
+  # First, arp:
+  for e in arp_events[0:2]:
+    trace.append(e)
+
+  # ping pong between fake hosts
   for _ in range(40):
-    trace.append(packet_events[0])
-    trace.append(packet_events[1])
+    trace.append(ping_events[0])
+    trace.append(ping_events[1])
 
   write_trace_log(trace,
                   "dataplane_traces/ping_pong_same_subnet_%d_switches.trace" % num_switches)
