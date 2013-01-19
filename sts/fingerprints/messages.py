@@ -3,6 +3,7 @@ from sts.fingerprints.base import Fingerprint
 from pox.openflow.libopenflow_01 import *
 from pox.lib.packet.ethernet import *
 from pox.lib.packet.lldp import *
+from pox.lib.packet.arp import *
 from pox.lib.packet.ipv4 import *
 import sts.headerspace.config_parser.openflow_parser as hsa
 
@@ -138,6 +139,9 @@ class DPFingerprint(Fingerprint):
       field2value = {'dl_src': eth.src.toStr(), 'dl_dst': eth.dst.toStr(),
                      'nw_src': ip.srcip.toStr(), 'nw_dst': ip.dstip.toStr()}
       return DPFingerprint(field2value)
+    elif type(ip) == arp:
+      # TODO(cs): should include more context
+      return DPFingerprint({'class': 'arp'})
     else:
       raise ValueError("Unknown dataplane packet type %s" % str(type(ip)))
 
