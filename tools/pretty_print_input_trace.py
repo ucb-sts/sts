@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import json
+import time
 import argparse
 
 parser = argparse.ArgumentParser()
@@ -36,6 +37,20 @@ def fingerprint_printer(json_hash):
     fingerprint = json_hash['fingerprint'][1:]
   print "Fingerprint: ", fingerprint
 
+def _timestamp_to_string(timestamp):
+  sec = timestamp[0]
+  micro_sec = timestamp[1]
+  epoch = float(sec) + float(micro_sec) / 1e6
+  struct_time = time.localtime(epoch)
+  # Hour:Minute:Second
+  no_micro = time.strftime("%X", struct_time)
+  # Hour:Minute:Second:Microsecond
+  with_micro = no_micro + ":%d" % micro_sec
+  return with_micro
+
+def abs_time_printer(json_hash):
+ print _timestamp_to_string(json_hash['time'])
+
 def event_delim_printer(_):
   print "--------------------------------------------------------------------"
 
@@ -44,8 +59,8 @@ field_formatters = {
   'class' : class_printer,
   'fingerprint' : fingerprint_printer,
   'event_delimiter' : event_delim_printer,
-  # TODO(cs): allow user to choose relative time, absolute time between successive events.
-  # Always turn epoch into human readable string.
+  'abs_time' : abs_time_printer,
+  # TODO(cs): allow user to display relative time between events
 }
 
 def main(args):
