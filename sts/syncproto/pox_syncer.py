@@ -20,7 +20,7 @@ from logging import Logger
 log = logging.getLogger("pox_syncer")
 
 # POX Module launch method
-def launch(blocking=True):
+def launch(blocking=False):
   blocking = str(blocking).lower() == "true"
   if "sts_sync" in os.environ:
     sts_sync = os.environ["sts_sync"]
