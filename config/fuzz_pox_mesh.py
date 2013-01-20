@@ -7,7 +7,7 @@ from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller
 command_line = ('''./pox.py --verbose sts.syncproto.pox_syncer '''
-                '''openflow.discovery forwarding.l2_multi '''
+                '''openflow.mock_discovery forwarding.l2_multi '''
                 '''sts.util.socket_mux.pox_monkeypatcher '''
                 '''openflow.of_01 --address=__address__ --port=__port__''')
 controllers = [ControllerConfig(command_line, cwd="pox", sync="tcp:localhost:18899")]
@@ -24,5 +24,6 @@ simulation_config = SimulationConfig(controller_configs=controllers,
 control_flow = Fuzzer(simulation_config, check_interval=80,
                       halt_on_violation=False,
                       input_logger=InputLogger(),
-                      invariant_check=InvariantChecker.check_loops)
+                      invariant_check=InvariantChecker.check_loops,
+                      mock_link_discovery=True)
 #control_flow = Interactive(simulation_config, input_logger=InputLogger())
