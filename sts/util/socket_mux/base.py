@@ -136,7 +136,8 @@ class MultiplexedSelect(IOMaster):
   def select(self, rl, wl, xl, timeout=0):
     ''' Note that this layer is *below* IOMaster's Select loop '''
     # If this isn't the main thread, use normal select
-    if threading.current_thread().name != "MainThread":
+    if (threading.current_thread().name != "MainThread" and
+        threading.current_thread().name != "BackgroundIOThread"):
       if hasattr(select, "_old_select"):
         return select._old_select(rl, wl, xl, timeout)
       else:
