@@ -74,6 +74,16 @@ class STSSyncConnection(object):
     else:
       log.warn("STSSyncConnection: not connected. cannot handle requests")
 
+  def send_link_notification(self, link_attrs):
+    # Link attrs must be a list of the form:
+    # [dpid1, port1, dpid2, port2]
+    if self.speaker:
+      msg = SyncMessage(type="ASYNC", messageClass="LinkDiscovery",
+                        value=link_attrs)
+      return self.speaker.send(msg)
+    else:
+      log.warn("STSSyncConnection: not connected. cannot send link")
+
   def ack_sync_notification(self, messageClass, xid):
     if self.speaker:
       return self.speaker.ack_sync_notification(messageClass, xid)

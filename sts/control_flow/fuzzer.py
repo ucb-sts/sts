@@ -35,7 +35,8 @@ class Fuzzer(ControlFlow):
                invariant_check=InvariantChecker.check_correspondence,
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
-               record_deterministic_values=False):
+               record_deterministic_values=False,
+               mock_link_discovery=False):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger,
                            record_deterministic_values=record_deterministic_values)
@@ -60,6 +61,7 @@ class Fuzzer(ControlFlow):
     self.halt_on_violation = halt_on_violation
     self.delay_startup = delay_startup
     self.print_buffers = print_buffers
+    self.mock_link_discovery = mock_link_discovery
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
@@ -71,6 +73,8 @@ class Fuzzer(ControlFlow):
   def _load_fuzzer_params(self, fuzzer_params_path):
     try:
       self.params = __import__(fuzzer_params_path, globals(), locals(), ["*"])
+      # TODO(cs): temporary hack until we get determinism figured out
+      self.params.link_discovery_rate = 0.1
     except:
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
@@ -198,6 +202,18 @@ class Fuzzer(ControlFlow):
       else:
         self.simulation.patch_panel.permit_dp_event(dp_event)
         self._log_input_event(DataplanePermit(dp_event.fingerprint))
+
+    # TODO(cs): temporary hack until we have determinism figured out
+    if self.mock_link_discovery and self.random.random() < self.params.link_discovery_rate:
+      # Pick a random link to be discovered
+      link = self.random.choice(self.simulation.topology.network_links)
+      attrs = [link.start_software_switch.dpid, link.start_port.port_no,
+               link.end_software_switch.dpid, link.end_port.port_no]
+      # Send it to a random controller
+      if self.simulation.controller_manager.live_controllers != []:
+        c = self.random.choice(list(self.simulation.controller_manager.live_controllers))
+        c.sync_connection.send_link_notification(attrs)
+        self._log_input_event(LinkDiscovery(c.uuid, attrs))
 
   def check_tcp_connections(self):
     ''' Decide whether to block or unblock control channels '''

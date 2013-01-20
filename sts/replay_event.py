@@ -559,11 +559,33 @@ class DataplanePermit(InputEvent):
                              self.fingerprint[2], self.fingerprint[3])
     return json.dumps(fields)
 
+# TODO(cs): Temporary hack until we figure out determinism
+class LinkDiscovery(InputEvent):
+  def __init__(self, controller_id, link_attrs, label=None, time=None):
+    super(LinkDiscovery, self).__init__(label=label, time=time)
+    self.fingerprint = (self.__class__.__name__,
+                        controller_id, tuple(link_attrs))
+    self.controller_id = tuple(controller_id)
+    self.link_attrs = link_attrs
+
+  def proceed(self, simulation):
+    controller = simulation.controller_manager.get_controller(self.controller_id)
+    controller.sync_connection.send_link_notification(self.link_attrs)
+    return True
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'controller_id', 'link_attrs')
+    controller_id = json_hash['controller_id']
+    link_attrs = json_hash['link_attrs']
+    return LinkDiscovery(controller_id, link_attrs, label=label, time=time)
+
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
                     ControlChannelBlock, ControlChannelUnblock,
-                    DataplaneDrop, DataplanePermit]
+                    DataplaneDrop, DataplanePermit, LinkDiscovery]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #

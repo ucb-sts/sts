@@ -154,7 +154,8 @@ class POXSyncProtocolSpeaker(SyncProtocolSpeaker):
     self.snapshotter = POXNomSnapshotter()
 
     handlers = {
-      ("REQUEST", "NOMSnapshot"): self._get_nom_snapshot
+      ("REQUEST", "NOMSnapshot"): self._get_nom_snapshot,
+      ("ASYNC", "LinkDiscovery"): self._link_discovery
     }
     SyncProtocolSpeaker.__init__(self, handlers, io_delegate)
 
@@ -163,6 +164,9 @@ class POXSyncProtocolSpeaker(SyncProtocolSpeaker):
     response = SyncMessage(type="RESPONSE", messageClass="NOMSnapshot", time=SyncTime.now(), xid = message.xid, value=snapshot)
     self.send(response)
 
+  def _link_discovery(self, message):
+    link = message.value
+    core.openflow_discovery.install_link(link[0], link[1], link[2], link[3])
 
 class POXNomSnapshotter(object):
   def __init__(self):
