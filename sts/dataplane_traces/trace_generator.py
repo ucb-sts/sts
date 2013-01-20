@@ -110,13 +110,10 @@ def generate_example_trace_same_subnet(num_switches=2):
     else:
       ping_or_pong = "ping"
 
-
-  # First, arp:
-  for e in arp_events[0:2]:
-    trace.append(e)
-
   # ping pong between fake hosts
   for _ in range(40):
+    trace.append(arp_events[0])
+    trace.append(arp_events[1])
     trace.append(ping_events[0])
     trace.append(ping_events[1])
 
