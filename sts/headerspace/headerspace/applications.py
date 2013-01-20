@@ -83,7 +83,7 @@ def get_all_x(NTF):
   test_pkt.add_hs(all_x)
   return test_pkt
 
-def detect_loop(NTF, TTF, ports, reverse_map, test_packet = None):
+def detect_loop(NTF, TTF, ports, test_packet = None):
     if type(ports[0]) != int:
         ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), ports)
 
