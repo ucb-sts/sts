@@ -425,9 +425,6 @@ class CheckInvariants(InputEvent):
     invariant_check = InvariantChecker.check_correspondence
     if 'invariant_check' in json_hash:
       # Assumes that the closure is empty
-      from sts.headerspace.config_parser.openflow_parser import get_uniq_port_id
-      from sts.invariant_checker import *
-      from sts.util.console import msg
       code = marshal.loads(json_hash['invariant_check'].decode('base64'))
       invariant_check = types.FunctionType(code, globals())
     return CheckInvariants(label=label, time=time,

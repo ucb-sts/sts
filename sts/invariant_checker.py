@@ -46,6 +46,9 @@ class InvariantChecker(object):
   @staticmethod
   def check_loops(simulation):
     # Always check liveness if there is a single controllers
+    # Dynamic imports to allow this method to be serialized
+    import sts.headerspace.topology_loader.topology_loader as hsa_topo
+    import sts.headerspace.headerspace.applications as hsa
     if len(simulation.controller_manager.controllers) == 1:
       down_controllers = InvariantChecker.check_liveness(simulation)
       if down_controllers != []:
@@ -59,6 +62,9 @@ class InvariantChecker(object):
   @staticmethod
   def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
+    # Dynamic imports to allow this method to be serialized
+    from sts.headerspace.config_parser.openflow_parser import get_uniq_port_id
+    from sts.util.console import msg
     # Always check liveness if there is a single controllers
     if len(simulation.controller_manager.controllers) == 1:
       down_controllers = InvariantChecker.check_liveness(simulation)
