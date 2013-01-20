@@ -6,6 +6,7 @@ Three control flow types for running the simulation forward.
     checking for invariants at the users' discretion
 '''
 
+from sts.control_flow.interactive import Interactive
 from sts.topology import BufferedPatchPanel
 from sts.traffic_generator import TrafficGenerator
 from sts.util.console import msg
@@ -14,6 +15,8 @@ from pox.lib.util import TimeoutError
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
+import select
+import signal
 import sys
 import time
 import random
@@ -43,9 +46,10 @@ class Fuzzer(ControlFlow):
     self.traffic_inject_interval = traffic_inject_interval
     # Make execution deterministic to allow the user to easily replay
     if random_seed is None:
-      self.random = random.Random()
-    else:
-      self.random = random.Random(random_seed)
+      random_seed = random.randint(0, sys.maxint)
+
+    self.random_seed = random_seed
+    self.random = random.Random(random_seed)
     self.traffic_generator = TrafficGenerator(self.random)
 
     self.delay = delay
@@ -75,17 +79,26 @@ class Fuzzer(ControlFlow):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
-    self.loop()
-    if self.print_buffers:
-      log.debug("Pending Message Receives:")
-      for p in self.simulation.god_scheduler.pending_receives():
-        log.debug("- %s", p)
+    return self.loop()
 
   def loop(self):
     if self.steps:
       end_time = self.logical_time + self.steps
     else:
       end_time = sys.maxint
+
+    exit_code = 0
+    self.interrupted = False
+    old_interrupt = None
+
+    def interrupt(sgn, frame):
+        print "Interrupting fuzzer, dropping to console (press ^C again to terminate)"
+        signal.signal(signal.SIGINT, self.old_interrupt)
+        self.old_interrupt = None
+        self.interrupted = True
+        raise KeyboardInterrupt()
+
+    self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
 
     try:
       # Always connect to controllers explicitly
@@ -100,16 +113,35 @@ class Fuzzer(ControlFlow):
 
       while self.logical_time < end_time:
         self.logical_time += 1
-        self.trigger_events()
-        msg.event("Round %d completed." % self.logical_time)
-        halt = self.maybe_check_invariant()
-        if halt:
-          break
-        self.maybe_inject_trace_event()
-        time.sleep(self.delay)
+        try:
+          self.trigger_events()
+          msg.event("Round %d completed." % self.logical_time)
+          halt = self.maybe_check_invariant()
+          if halt:
+            exit_code = 5
+            break
+          self.maybe_inject_trace_event()
+          time.sleep(self.delay)
+        except KeyboardInterrupt as e:
+          if self.interrupted:
+            interactive = Interactive(self.simulation_cfg, self._input_logger)
+            interactive.simulate(self.simulation, bound_objects=( ('fuzzer', self), ))
+            self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
+          else:
+            raise e
+
+      if self.print_buffers:
+        log.debug("Pending Message Receives:")
+        for p in self.simulation.god_scheduler.pending_receives():
+          log.debug("- %s", p)
+
     finally:
+      if self.old_interrupt:
+        signal.signal(signal.SIGINT, self.old_interrupt)
       if self._input_logger is not None:
         self._input_logger.close(self, self.simulation_cfg)
+
+    return exit_code
 
   def maybe_check_invariant(self):
     if (self.check_interval is not None and

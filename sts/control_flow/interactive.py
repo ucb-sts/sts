@@ -4,9 +4,12 @@ control flow type for running the simulation forward.
     checking for invariants at the users' discretion
 '''
 
+from sts.util.tabular import Tabular
 from sts.topology import BufferedPatchPanel
 from sts.util.console import msg, color
 from sts.replay_event import *
+
+import pox.openflow.libopenflow_01 as of
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -222,11 +225,14 @@ class Interactive(ControlFlow):
     if self._input_logger is not None:
       self._input_logger.log_input_event(event, **kws)
 
-  def simulate(self):
-    self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
-    # Always connect to controllers explicitly
-    self.simulation.connect_to_controllers()
-    self._log_input_event(ConnectToControllers())
+  def simulate(self, simulation=None, bound_objects=()):
+    if simulation is None:
+      self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
+      # Always connect to controllers explicitly
+      self.simulation.connect_to_controllers()
+      self._log_input_event(ConnectToControllers())
+    else:
+      self.simulation = simulation
 
     self._forwarded_this_step = 0
     try:
@@ -251,10 +257,14 @@ class Interactive(ControlFlow):
       c.cmd(self.list_switches, "list_switches", alias="lss", help_msg="List switches")
       c.cmd(self.kill_switch,  "kill_switch", alias="ks", help_msg="Kill a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
       c.cmd(self.start_switch,  "start_switch", alias="ss", help_msg="Restart a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.show_flow_table,  "show_flows", alias="sf", help_msg="Show flowtable of a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
 
       c.cmd_group("Python objects")
       c.register_obj(self.simulation, "simulation", help_msg="access the simulation object")
       c.register_obj(self.simulation.topology, "topology", alias="topo", help_msg="access the topology object")
+      for (name, obj) in bound_objects:
+        c.register_obj(obj, name, help_msg="access the %s object" % name)
+
       c.run()
     finally:
       if self._input_logger is not None:
@@ -332,6 +342,59 @@ class Interactive(ControlFlow):
     topology.recover_switch(switch, down_controller_ids=map(lambda c: c.uuid, self.simulation.controller_manager.down_controllers))
     self._log_input_event(SwitchRecovery(switch.dpid))
 
+
+  def show_flow_table(self, dpid):
+    topology = self.simulation.topology
+    switch = topology.get_switch(dpid)
+
+    dl_types = { 0x0800: "IP",
+                 0x0806: "ARP",
+                 0x8100: "VLAN",
+                 0x88cc: "LLDP",
+                 0x888e: "PAE"
+                 }
+    nw_protos = { 1 : "ICMP", 6 : "TCP", 17 : "UDP" }
+
+    ports = { v: k.replace("OFPP_","") for (k,v) in of.ofp_port_rev_map.iteritems() }
+
+    def dl_type(e):
+      d = e.match.dl_type
+      if d is None:
+        return d
+      else:
+        return dl_types[d] if d in dl_types else "%x" %d
+
+    def nw_proto(e):
+      p = e.match.nw_proto
+      return nw_protos[p] if p in nw_protos else p
+
+    def action(a):
+      if isinstance(a, ofp_action_output):
+        return ports[a.port] if a.port in ports else "output(%d)" % a.port
+      else:
+        return str(a)
+    def actions(e):
+      if len(e.actions) == 0:
+        return "(drop)"
+      else:
+        return ", ".join(action(a) for a in e.actions)
+
+
+    t = Tabular( ("Prio", lambda e: e.priority),
+                ("in_port", lambda e: e.match.in_port),
+                ("dl_type", dl_type),
+                ("dl_src", lambda e: e.match.dl_src),
+                ("dl_dst", lambda e: e.match.dl_dst),
+                ("nw_proto", nw_proto),
+                ("nw_src", lambda e: e.match.nw_src),
+                ("nw_dst", lambda e: e.match.nw_dst),
+                ("tp_src", lambda e: e.match.tp_src),
+                ("tp_dst", lambda e: e.match.tp_dst),
+                ("actions", actions),
+                )
+    t.show(switch.table.entries)
+
+
   def invariant_check(self, kind):
     if kind == "omega":
       self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_correspondence))
@@ -339,15 +402,15 @@ class Interactive(ControlFlow):
       message = "Controllers with miscorrepondence: "
     elif kind == "connectivity":
       self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_connectivity))
-      result = self.invariant_checker.check_connectivity(self.simulation)
+      result = InvariantChecker.check_connectivity(self.simulation)
       message = "Disconnected host pairs: "
     elif kind == "loops":
       self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_loops))
-      result = self.invariant_checker.check_loops(self.simulation)
+      result = InvariantChecker.check_loops(self.simulation)
       message = "Loops: "
     elif kind == "liveness":
       self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_liveness))
-      result = self.invariant_checker.check_loops(self.simulation)
+      result = InvariantChecker.check_loops(self.simulation)
       message = "Crashed controllers: "
     else:
       log.warn("Unknown invariant kind...")

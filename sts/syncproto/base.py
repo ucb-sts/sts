@@ -182,7 +182,7 @@ class SyncProtocolListener(object):
           log._orig_log(logging.DEBUG, "Spent %.02f milliseconds waiting on %s" %
                       (ms_elapsed, str(message)), [])
         else:
-          log.log(logging.DEBUG, "Spent %.02f milliseconds waiting on %s" %
+          log._log(logging.DEBUG, "Spent %.02f milliseconds waiting on %s" %
                       (ms_elapsed, str(message)), [])
 
     response = self.received_responses.pop(xid)
