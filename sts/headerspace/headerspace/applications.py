@@ -84,8 +84,14 @@ def get_all_x(NTF):
   return test_pkt
 
 def detect_loop(NTF, TTF, ports, test_packet = None):
+    ports = list(ports)
     if type(ports[0]) != int:
-        ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), ports)
+      # They are switch objects
+      port_nos = []
+      for sw in ports:
+        for port_no in sw.ports.keys():
+          port_nos.append(get_uniq_port_id(sw, port_no))
+      ports = port_nos
 
     loops = []
     for port in ports:
@@ -129,11 +135,8 @@ def detect_loop(NTF, TTF, ports, test_packet = None):
                                     loops.append(new_p_node)
                                     log.warn("loop detected")
                                 elif linked_p in new_p_node["visits"]:
-#                                    if (linked_p not in ports):
-#                                        print "WARNING: detected a loop whose port is not in checked ports - branch aborted:"
-#                                        print_loops([new_p_node],reverse_map)
-#                                        print "END OF WARNING"
-                                    pass
+                                    if (linked_p not in ports):
+                                        print "WARNING: detected a loop whose port is not in checked ports - branch aborted:"
                                 else:
                                     tmp_propag.append(new_p_node)
             propagation = tmp_propag
