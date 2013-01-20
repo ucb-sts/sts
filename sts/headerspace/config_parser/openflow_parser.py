@@ -355,7 +355,11 @@ def generate_transfer_function(tf, software_switch):
       output_port_nos = output_port_nos.union(ofp_actions_to_output_ports(ofp_actions, software_switch, all_port_ids, input_port_id))
 
     # No self-loops. TODO: this is the wrong place to handle this
-    input_port_ids -= output_port_nos
+    no_self_loops = (input_port_ids - output_port_nos)
+    if input_port_ids != no_self_loops:
+      self_loops = input_port_ids - no_self_loops
+      log.info("Removing self loops %s from in ports")
+      input_port_ids -= self_loops
 
     if len(output_port_nos) == 0:
       # No output ports means a dropped packet in OpenFlow
