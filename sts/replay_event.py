@@ -396,7 +396,13 @@ class CheckInvariants(InputEvent):
     self.invariant_check = invariant_check
 
   def proceed(self, simulation):
-    violations = self.invariant_check(simulation)
+    try:
+      violations = self.invariant_check(simulation)
+    except NameError as e:
+      raise ValueError('''Closures are unsupported for invariant check '''
+                       '''functions.\n Use dynamic imports inside of your '''
+                       '''invariant check code and define all globals '''
+                       '''locally.\n NameError: %s''' % str(e))
 
     if violations != []:
       msg.fail("The following controllers had correctness violations!: %s"
@@ -427,6 +433,7 @@ class CheckInvariants(InputEvent):
       # Assumes that the closure is empty
       code = marshal.loads(json_hash['invariant_check'].decode('base64'))
       invariant_check = types.FunctionType(code, globals())
+
     return CheckInvariants(label=label, time=time,
                            fail_on_error=fail_on_error,
                            invariant_check=invariant_check)
