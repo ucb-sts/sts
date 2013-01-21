@@ -8,8 +8,8 @@ import signal
 import sys
 import argparse
 import logging
-logging.basicConfig(level=logging.DEBUG)
-log = logging.getLogger("sts")
+import logging.config
+
 
 description = """
 Run a simulation.
@@ -26,7 +26,22 @@ parser.add_argument('-c', '--config',
                     help='''experiment config module in the config/ '''
                          '''subdirectory, e.g. config.fat_tree''')
 
+parser.add_argument('-v', '--verbose',
+                    help='''increase verbosity''')
+
+parser.add_argument('-L', '--log-config',
+                    metavar="FILE", dest="log_config",
+                    help='''choose a python log configuration file''')
+
 args = parser.parse_args()
+
+if args.log_config:
+  logging.config.fileConfig(args.log_config)
+else:
+  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+
+log = logging.getLogger("sts")
+
 # Allow configs to be specified as paths as well as module names
 if args.config.endswith('.py'):
   args.config = args.config[:-3].replace("/", ".")
@@ -49,14 +64,16 @@ def handle_int(signal, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
   if (simulator.simulation_cfg.current_simulation is not None):
     simulator.simulation_cfg.current_simulation.clean_up()
-  sys.exit(0)
+  sys.exit(13)
 
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
 
 # Start the simulation
 try:
-  simulator.simulate()
+  res = simulator.simulate()
 finally:
   if (simulator.simulation_cfg.current_simulation is not None):
     simulator.simulation_cfg.current_simulation.clean_up()
+
+sys.exit(res)
