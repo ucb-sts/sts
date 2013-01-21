@@ -160,6 +160,11 @@ class Link (object):
             self.end_software_switch == other.end_software_switch and
             self.end_port == other.end_port)
 
+  def __ne__(self, other):
+    # NOTE: __ne__ in python does *NOT* by default delegate to eq
+    return not self.__eq__(other)
+
+
   def __hash__(self):
     return (self.start_software_switch.__hash__() +  self.start_port.__hash__() +
            self.end_software_switch.__hash__() +  self.end_port.__hash__())

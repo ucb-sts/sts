@@ -113,7 +113,8 @@ class OFFingerprint(Fingerprint):
       return False
     klass = self._field2value["class"]
     for field in self.pkt_type_to_fields[klass]:
-      if self._field2value[field] != other._field2value[field]:
+      ###### NOTE: do /not/ use the '!=' operator here, this doesn't invoke an override __eq__ method
+      if not (self._field2value[field] == other._field2value[field]):
         return False
     return True
 

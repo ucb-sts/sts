@@ -669,6 +669,11 @@ class PendingStateChange(namedtuple('PendingStateChange',
     return (self._get_regex() == other._get_regex() and
             self.controller_id == other.controller_id)
 
+  def __ne__(self, other):
+    # NOTE: __ne__ in python does *NOT* by default delegate to eq
+    return not self.__eq__(other)
+
+
 class ControllerStateChange(InternalEvent):
   '''
   Logged for any relevent kind of state change in the controller (e.g.

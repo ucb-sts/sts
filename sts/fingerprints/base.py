@@ -29,6 +29,10 @@ class Fingerprint(object):
   def __eq__(self, other):
     pass
 
+  def __ne__(self, other):
+    # NOTE: __ne__ in python does *NOT* by default delegate to eq
+    return not self.__eq__(other)
+
   def __str__(self):
     return str(self._field2value)
 
