@@ -25,6 +25,15 @@ class msg():
     print msg.BEGIN + msg.CYAN + message + msg.END
 
   @staticmethod
+  def event_success(message):
+    print msg.BEGIN + msg.GREEN + msg.BEGIN + msg.B_BLUE + message + msg.END
+
+  @staticmethod
+  def event_timeout(message):
+    print msg.BEGIN + msg.RED + msg.BEGIN + msg.B_BLUE + message + msg.END
+
+
+  @staticmethod
   def raw_input(message):
     prompt = msg.BEGIN + msg.WHITE + message + msg.END
     if msg.global_io_master:
