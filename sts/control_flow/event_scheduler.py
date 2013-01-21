@@ -5,6 +5,35 @@ from sts.replay_event import *
 import logging
 log = logging.getLogger("event_scheduler")
 
+def format_time(time):
+  mins = int(time/60)
+  secs = int(time % 60)
+  ms = int( (time * 1000) % 1000)
+  return "%02d:%02d.%03d" % (mins, secs, ms)
+
+
+class EventSchedulerStats(object):
+  def __init__(self):
+    self.matched = 0
+    self.timed_out = 0
+    self.replay_start = None
+
+  def start_replay(self, event):
+    self.replay_start = time.time()
+    self.record_start = event.time.as_float()
+
+  def time(self, event):
+    return format_time(time.time() - self.replay_start) + " " + \
+           format_time(event.time.as_float() - self.record_start)
+
+  def event_matched(self, event):
+    msg.event_success(self.time(event) + " Sucessfully matched event "+str(event))
+    self.matched += 1
+
+  def event_timed_out(self, event):
+    msg.event_timeout(self.time(event) + " Event timed out "+str(event))
+    self.matched += 1
+
 class DumbEventScheduler(object):
 
   kwargs = set(['epsilon_seconds', 'sleep_interval_seconds'])
@@ -14,6 +43,7 @@ class DumbEventScheduler(object):
     self.epsilon_seconds = epsilon_seconds
     self.sleep_interval_seconds = sleep_interval_seconds
     self.last_event = None
+    self.stats = EventSchedulerStats()
 
   def schedule(self, event):
     if self.last_event:
@@ -21,8 +51,8 @@ class DumbEventScheduler(object):
       if rec_delta > 0:
         log.info("Sleeping for %.0f ms before next event" % (rec_delta * 1000))
         self.simulation.io_master.sleep(rec_delta)
-
-    start = time.time()
+    else:
+      self.stats.start_replay(event)
 
     log.debug("Waiting for %s (maximum wait time: %.0f ms)" %
           ( str(event).replace("\n", ""), self.epsilon_seconds * 1000) )
@@ -37,9 +67,9 @@ class DumbEventScheduler(object):
         break
       self.simulation.io_master.select(self.sleep_interval_seconds)
     if proceed:
-      log.debug("Succcessfully executed %r" % event)
+      self.stats.event_matches(event)
     else:
-      log.warn("Timed out waiting for Event %r" % event)
+      self.stats.event_timed_out(event)
     self.last_event = event
 
 class EventScheduler(object):
@@ -60,8 +90,14 @@ class EventScheduler(object):
     self.initial_wait = initial_wait
     self.epsilon_seconds = epsilon_seconds
     self.sleep_interval_seconds = sleep_interval_seconds
+    self.started = False
+    self.stats = EventSchedulerStats()
 
   def schedule(self, event):
+    if not self.started:
+      self.stats.start_replay(event)
+      self.started = True
+
     if isinstance(event, InputEvent):
       self.inject_input(event)
     else:
@@ -108,10 +144,10 @@ class EventScheduler(object):
         break
       self.simulation.io_master.select(self.sleep_interval_seconds)
     if proceed:
-      log.debug("Succcessfully executed %r" % event)
+      self.stats.event_matched(event)
       self.update_event_time(event)
     else:
-      log.warn("Timed out waiting for Event %s" % repr(event).replace("\n",""))
+      self.stats.event_timed_out(event)
 
   def update_event_time(self, event):
     """ update events """
