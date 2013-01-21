@@ -8,6 +8,7 @@ from sts.control_flow.event_scheduler import DumbEventScheduler, EventScheduler
 from sts.replay_event import *
 from sts.event_dag import EventDag
 import sts.log_processing.superlog_parser as superlog_parser
+from sts.util.console import color
 
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 
@@ -82,6 +83,7 @@ class Replayer(ControlFlow):
     self.interpolated_time = SyncTime(next_time.seconds, just_before_micro)
 
   def increment_round(self):
+    msg.event(color.CYAN + ( "Round %d" % self.logical_time) + color.WHITE)
     pass
 
   def simulate(self, post_bootstrap_hook=None):
@@ -89,6 +91,7 @@ class Replayer(ControlFlow):
     Replayer.total_replays += 1
     Replayer.total_inputs_replayed += len(self.dag.input_events)
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
+    self.logical_time = 0
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
     if self.print_buffers:
       self._print_buffers()
@@ -107,6 +110,7 @@ class Replayer(ControlFlow):
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()
     for event in dag.events:
+      self.logical_time += 1
       self.compute_interpolated_time(event)
       event_scheduler.schedule(event)
       self.increment_round()
