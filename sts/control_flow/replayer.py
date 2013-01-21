@@ -114,3 +114,4 @@ class Replayer(ControlFlow):
       self.compute_interpolated_time(event)
       event_scheduler.schedule(event)
       self.increment_round()
+    msg.event(color.B_BLUE+"Event Stats: %s"+str(event_scheduler.stats))

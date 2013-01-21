@@ -32,7 +32,10 @@ class EventSchedulerStats(object):
 
   def event_timed_out(self, event):
     msg.event_timeout(self.time(event) + " Event timed out "+str(event))
-    self.matched += 1
+    self.timed_out += 1
+
+  def __str__(self):
+    return "Events matched: %d, timed out: %d" % (self.matched, self.timed_out)
 
 class DumbEventScheduler(object):
 
