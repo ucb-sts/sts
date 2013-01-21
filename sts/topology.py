@@ -24,6 +24,7 @@ from pox.lib.revent import EventMixin
 from sts.util.console import msg
 import itertools
 import logging
+import time
 from collections import defaultdict
 
 log = logging.getLogger("sts.topology")
@@ -467,6 +468,8 @@ class Topology(object):
               ''' conns per switch)...''' %
               (len(self.switches), len(controller_info_list), connections_per_switch))
 
+    time.sleep(0.25)
+
     for (idx, software_switch) in enumerate(self.switches):
       if len(self.switches) < 20 or not idx % 250:
         log.debug("Connecting switch %d / %d" % (idx, len(self.switches)))
@@ -476,6 +479,7 @@ class Topology(object):
         controller_info = controller_info_cycler.next()
         software_switch.add_controller_info(controller_info)
 
+      time.sleep(0.25)
       software_switch.connect(create_connection)
 
     log.debug("Controller connections done")
