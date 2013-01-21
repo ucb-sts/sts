@@ -97,6 +97,11 @@ class OFFingerprint(Fingerprint):
       field2value[field] = value
     return OFFingerprint(field2value)
 
+  def human_str(self):
+    return "%s: " % self._field2value["class"] + \
+        ", ".join("%s=%s" % (k, v) for (k,v) in self._field2value.iteritems() if k != "class" )
+
+
   def __hash__(self):
     hash = 0
     class_name = self._field2value["class"]

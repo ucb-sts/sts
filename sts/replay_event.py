@@ -627,6 +627,9 @@ class ControlMessageReceive(InternalEvent):
       return True
     return False
 
+  def __str__(self):
+    return "ControlMessageReceive c %s -> s %s [%s]" % (self.controller_id, self.dpid, self.fingerprint[1].human_str())
+
   @staticmethod
   def from_json(json_hash):
     (label, time, timeout_disallowed) = extract_base_fields(json_hash)
