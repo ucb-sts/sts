@@ -15,7 +15,7 @@ def process_data(msg):
     return DPFingerprint.from_pkt(dp_packet)
 
 def process_actions(msg):
-  return tuple(map(str, map(type, msg.actions)))
+  return tuple("output(%d)" % a.port if isinstance(a, ofp_action_output) else str(type(action)) for a in msg.actions)
 
 class OFFingerprint(Fingerprint):
   ''' Fingerprints for openflow messages '''
