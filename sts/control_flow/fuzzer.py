@@ -96,11 +96,11 @@ class Fuzzer(ControlFlow):
     old_interrupt = None
 
     def interrupt(sgn, frame):
-        print "Interrupting fuzzer, dropping to console (press ^C again to terminate)"
-        signal.signal(signal.SIGINT, self.old_interrupt)
-        self.old_interrupt = None
-        self.interrupted = True
-        raise KeyboardInterrupt()
+      msg.interactive("Interrupting fuzzer, dropping to console (press ^C again to terminate)")
+      signal.signal(signal.SIGINT, self.old_interrupt)
+      self.old_interrupt = None
+      self.interrupted = True
+      raise KeyboardInterrupt()
 
     self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
 
