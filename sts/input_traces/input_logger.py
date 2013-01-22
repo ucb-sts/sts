@@ -2,6 +2,7 @@ import os
 import time
 import logging
 from sts.replay_event import WaitTime
+from sts.syncproto.base import SyncTime
 from sts.util.convenience import timestamp_string
 import sts.dataplane_traces.trace_generator as tg
 
@@ -56,7 +57,7 @@ class InputLogger(object):
     self.dp_trace_path = "./dataplane_traces/" + basename
     self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
     self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
-    self.last_time = time.time()
+    self.last_time = SyncTime.now()
     self._disallow_timeouts = False
 
   def disallow_timeouts(self):
