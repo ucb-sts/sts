@@ -18,6 +18,7 @@ args = parser.parse_args()
 #   ...
 #
 # See pretty_print_config.py for an example.
+# TODO(cs): allow user to filter out events types
 # ------------------------------------------------------------------------------------------
 
 default_fields = ['class_with_label', 'fingerprint', 'event_delimiter']
