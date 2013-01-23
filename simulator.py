@@ -26,7 +26,7 @@ parser.add_argument('-c', '--config',
                     help='''experiment config module in the config/ '''
                          '''subdirectory, e.g. config.fat_tree''')
 
-parser.add_argument('-v', '--verbose',
+parser.add_argument('-v', '--verbose', action="count", default=0,
                     help='''increase verbosity''')
 
 parser.add_argument('-L', '--log-config',
