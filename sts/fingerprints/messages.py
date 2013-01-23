@@ -25,7 +25,7 @@ class OFFingerprint(Fingerprint):
   pkt_type_to_fields = {
     "ofp_features_reply" : ["datapath_id"],
     "ofp_switch_config" : ["flags"],
-    "ofp_flow_mod" : ["match", "idle_timeout", "hard_timeout", "priority",
+    "ofp_flow_mod" : ["command", "match", "idle_timeout", "hard_timeout", "priority",
                      "out_port", "flags", "actions"],
     "ofp_port_mod" : ["port_no", "hw_addr", "config", "mask", "advertise"],
     "ofp_queue_get_config_request" : [],
@@ -58,6 +58,8 @@ class OFFingerprint(Fingerprint):
     "ofp_get_config_reply" : [],
     "ofp_set_config" : []
   }
+
+  flow_mod_commands = { v: k.replace("OFPFC_","").lower() for (k,v) in ofp_flow_mod_command_rev_map.iteritems() }
   special_fields = {
     # data needs a nested fingerprint
     'data' : process_data,
@@ -69,7 +71,8 @@ class OFFingerprint(Fingerprint):
     # match has a bunch of crazy fields
     # Trick: convert it to an hsa match, and extract the human readable string
     # for the hsa match
-    'match' : lambda pkt: hsa.hs_format["display"](hsa.ofp_match_to_hsa_match(pkt.match))
+    'match' : lambda pkt: hsa.hs_format["display"](hsa.ofp_match_to_hsa_match(pkt.match)),
+    'command': lambda ofp: OFFingerprint.flow_mod_commands[ofp.command]
   }
 
   def __init__(self, field2value):
