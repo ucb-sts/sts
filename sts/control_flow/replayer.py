@@ -4,6 +4,7 @@ control flow for running the simulation forward.
     iteratively prunes until the MCS has been found
 '''
 
+from sts.control_flow.interactive import Interactive
 from sts.control_flow.event_scheduler import DumbEventScheduler, EventScheduler
 from sts.replay_event import *
 from sts.event_dag import EventDag
@@ -12,6 +13,7 @@ from sts.util.console import color
 
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 
+import signal
 import sys
 import time
 import random
@@ -33,7 +35,7 @@ class Replayer(ControlFlow):
   constructor of this class, which will pass them on to the EventScheduler object it creates.
   '''
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
-               print_buffers=True, wait_on_deterministic_values=False, **kwargs):
+               print_buffers=True, wait_on_deterministic_values=False, auto_permit_dp_events=False, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -52,6 +54,7 @@ class Replayer(ControlFlow):
 
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
+    self.auto_permit_dp_events = auto_permit_dp_events
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -109,9 +112,39 @@ class Replayer(ControlFlow):
     event_scheduler = self.create_event_scheduler(self.simulation)
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()
-    for event in dag.events:
-      self.logical_time += 1
-      self.compute_interpolated_time(event)
-      event_scheduler.schedule(event)
-      self.increment_round()
-    msg.event(color.B_BLUE+"Event Stats: %s"+str(event_scheduler.stats))
+
+    exit_code = 0
+    self.interrupted = False
+    old_interrupt = None
+
+    def interrupt(sgn, frame):
+      msg.interactive("Interrupting fuzzer, dropping to console (press ^C again to terminate)")
+      signal.signal(signal.SIGINT, self.old_interrupt)
+      self.old_interrupt = None
+      self.interrupted = True
+      raise KeyboardInterrupt()
+    self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
+
+    try:
+      for event in dag.events:
+        try:
+          self.logical_time += 1
+          self.compute_interpolated_time(event)
+          event_scheduler.schedule(event)
+          if self.auto_permit_dp_events:
+            patch_panel = self.simulation.patch_panel
+            for e in patch_panel.queued_dataplane_events:
+              log.debug("Permitting dataplane event: %s" % str(e))
+              patch_panel.permit_dp_event(e)
+          self.increment_round()
+        except KeyboardInterrupt as e:
+          if self.interrupted:
+            interactive = Interactive(self.simulation_cfg)
+            interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
+            self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
+          else:
+            raise e
+    finally:
+      if self.old_interrupt:
+        signal.signal(signal.SIGINT, self.old_interrupt)
+      msg.event(color.B_BLUE+"Event Stats: %s" % str(event_scheduler.stats))
