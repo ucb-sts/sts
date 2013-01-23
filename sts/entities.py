@@ -50,6 +50,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
 
     # Whether this is a core or edge switch
     self.can_connect_to_endhosts = can_connect_to_endhosts
+    self.create_connection = None
 
     self.failed = False
     self.log = logging.getLogger("FuzzSoftwareSwitch(%d)" % dpid)
@@ -113,6 +114,10 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     if not self.failed:
       self.log.warn("Switch already up")
       return
+    if self.create_connection is None:
+      self.log.warn("Never connected in the first place")
+      return False
+
     connected_to_at_least_one = self.connect(self.create_connection,
                                              down_controller_ids=down_controller_ids)
     if connected_to_at_least_one:

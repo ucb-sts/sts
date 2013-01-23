@@ -2,6 +2,18 @@ import itertools
 import string
 import sys
 import re
+import socket
+
+def socket_used(address='127.0.0.1', port=6633):
+  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  try:
+    s.bind((address, port))
+    s.listen(1)
+    s.close()
+    return False
+  except Exception, e:
+    # TODO(cs): catch specific errors
+    return True
 
 class ControllerConfig(object):
   _port_gen = itertools.count(6633)
@@ -30,6 +42,9 @@ class ControllerConfig(object):
       # Normal TCP socket
       if not port:
         port = self._port_gen.next()
+      while socket_used(port=port):
+        print "Socket %d in use... trying next" % port
+        port += 1
       self.port = port
       self.server_info = uuid if uuid else (self.address, self.port)
     else:
