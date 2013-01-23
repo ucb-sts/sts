@@ -256,7 +256,10 @@ class Simulation(object):
       # Set non-blocking
       socket.setblocking(0)
       io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(socket))
-      return DeferredOFConnection(io_worker, switch.dpid, self.god_scheduler)
+      connection = DeferredOFConnection(io_worker, switch.dpid, self.god_scheduler)
+      # TODO HACK ALERT - this is really ugly
+      connection.controller_id = controller_info.uuid
+      return connection
 
     (self.mux_select, self.demuxers) = monkeypatch_select()
 

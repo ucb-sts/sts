@@ -7,7 +7,7 @@ class ControllerConfig(object):
   _port_gen = itertools.count(6633)
   _controller_count_gen = itertools.count(1)
 
-  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None, sync=None, controller_type=None, label=None):
+  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None, sync=None, controller_type=None, label=None, uuid=None):
     '''
     Store metadata for the controller.
       - cmdline is an array of command line tokens.
@@ -31,11 +31,11 @@ class ControllerConfig(object):
       if not port:
         port = self._port_gen.next()
       self.port = port
-      self.server_info = (self.address, self.port)
+      self.server_info = uuid if uuid else (self.address, self.port)
     else:
       # Unix domain socket
       self.port = None
-      self.server_info = address
+      self.server_info = uuid if uuid else address
 
     # TODO(sam): we should either call them all controller_type or all 'name'
     # we only accept strings
