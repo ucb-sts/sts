@@ -3,8 +3,9 @@ An orchestrating control flow that invokes replayer several times to
 find the minimal causal set (MCS) of a failure.
 '''
 
-from sts.util.console import msg
+from sts.util.console import msg, color
 from sts.util.convenience import timestamp_string
+from sts.util.precompute_cache import PrecomputeCache, PrecomputePowerSetCache
 from sts.replay_event import *
 from sts.event_dag import EventDag, split_list
 import sts.log_processing.superlog_parser as superlog_parser
@@ -14,6 +15,7 @@ from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.peeker import Peeker
 
+import itertools
 import sys
 import time
 import random
@@ -26,6 +28,8 @@ class MCSFinder(ControlFlow):
                transform_dag=None, end_wait_seconds=0.5,
                mcs_trace_path=None, extra_log=None, dump_runtime_stats=True,
                wait_on_deterministic_values=False,
+               no_violation_verification_runs=1,
+               ignore_powersets = False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.sync_callback = None
@@ -47,14 +51,31 @@ class MCSFinder(ControlFlow):
     self.kwargs = kwargs
     self.end_wait_seconds = end_wait_seconds
     self.wait_on_deterministic_values = wait_on_deterministic_values
+    self.no_violation_verification_runs = no_violation_verification_runs
+    self.ignore_powersets = ignore_powersets
     if dump_runtime_stats:
       self._runtime_stats = {}
 
-  def log(self, msg):
+  def log(self, s):
     ''' Output a message to both self._log and self._extra_log '''
-    self._log.info(msg)
+    msg.mcs_event(s)
     if self._extra_log is not None:
-      self._extra_log.write(msg + '\n')
+      self._extra_log.write(s + '\n')
+      self._extra_log.flush()
+
+  def log_violation(self, s):
+    ''' Output a message to both self._log and self._extra_log '''
+    msg.mcs_event(color.RED + s)
+    if self._extra_log is not None:
+      self._extra_log.write(s + '\n')
+      self._extra_log.flush()
+
+  def log_no_violation(self, s):
+    ''' Output a message to both self._log and self._extra_log '''
+    msg.mcs_event(color.GREEN + s)
+    if self._extra_log is not None:
+      self._extra_log.write(s + '\n')
+      self._extra_log.flush()
 
   def simulate(self, check_reproducability=True):
     if self._runtime_stats is not None:
@@ -85,7 +106,11 @@ class MCSFinder(ControlFlow):
 
     if self._runtime_stats is not None:
       self._runtime_stats["prune_start_epoch"] = time.time()
-    self._ddmin(2)
+    if self.ignore_powersets:
+      self.precompute_cache = PrecomputePowerSetCache()
+    else:
+      self.precompute_cache = PrecomputeCache()
+    self._ddmin(2, self.precompute_cache)
     if self._runtime_stats is not None:
       self._runtime_stats["prune_end_epoch"] = time.time()
       self._dump_runtime_stats()
@@ -95,7 +120,7 @@ class MCSFinder(ControlFlow):
       self._dump_mcs_trace()
     return self.dag.events
 
-  def _ddmin(self, split_ways, precomputed_subsets=None, iteration=0):
+  def _ddmin(self, split_ways, precompute_cache, iteration=0, label_prefix=()):
     ''' - iteration is the # of times we've replayed (not the number of times
     we've invoked _ddmin)'''
     # This is the delta-debugging algorithm from:
@@ -108,20 +133,20 @@ class MCSFinder(ControlFlow):
       self.log("Done")
       return
 
-    if precomputed_subsets is None:
-      precomputed_subsets = set()
+    local_label = lambda i, inv=False: "%s%d/%d" % ("~" if inv else "", i, split_ways)
+    subset_label = lambda label: ".".join(map(str, label_prefix + ( label, )))
+    print_subset = lambda label, s: subset_label(label) + ": "+" ".join(map(lambda e: e.label, s))
 
-    self.log("Checking %d subsets" % split_ways)
     subsets = split_list(self.dag.input_events, split_ways)
-    self.log("Subsets: %s" % str(subsets))
+    self.log("Subsets:\n"+"\n".join(print_subset(local_label(i), s) for i, s in enumerate(subsets)))
     for i, subset in enumerate(subsets):
+      label = local_label(i)
       new_dag = self.dag.input_subset(subset)
       input_sequence = tuple(new_dag.input_events)
-      self.log("Current subset: %s" % str(input_sequence))
-      if input_sequence in precomputed_subsets:
+      self.log("Current subset: %s" % print_subset(label, input_sequence))
+      if precompute_cache.already_done(input_sequence):
         self.log("Already computed. Skipping")
         continue
-      precomputed_subsets.add(input_sequence)
       if input_sequence == ():
         self.log("Subset after pruning dependencies was empty. Skipping")
         continue
@@ -129,37 +154,47 @@ class MCSFinder(ControlFlow):
       iteration += 1
       violation = self._check_violation(new_dag, i, iteration, split_ways)
       if violation:
+        self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
         self.dag = new_dag
-        return self._ddmin(2, precomputed_subsets=precomputed_subsets,
-                           iteration=iteration)
+        return self._ddmin(2, precompute_cache=precompute_cache,
+                           iteration=iteration, label_prefix = label_prefix + (label, ))
+      else:
+        # only put elements in the precompute cache that haven't triggered violations
+        precompute_cache.update(input_sequence)
 
-    self.log("No subsets with violations. Checking complements")
+
+    self.log_no_violation("No subsets with violations. Checking complements")
     for i, subset in enumerate(subsets):
+      label = local_label(i, True)
+      prefix = label_prefix + (label, )
       new_dag = self.dag.input_complement(subset)
       input_sequence = tuple(new_dag.input_events)
-      self.log("Current complement: %s" % str(input_sequence))
-      if input_sequence in precomputed_subsets:
+      self.log("Current complement: %s" % print_subset(label, input_sequence))
+      if precompute_cache.already_done(input_sequence):
         self.log("Already computed. Skipping")
         continue
-      precomputed_subsets.add(input_sequence)
       if input_sequence == ():
-        self.log("Subset after pruning dependencies was empty. Skipping")
+        self.log("Subset %s after pruning dependencies was empty. Skipping", subset_label(label))
         continue
 
       iteration += 1
       violation = self._check_violation(new_dag, i, iteration, split_ways)
       if violation:
+        self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
         self.dag = new_dag
         return self._ddmin(max(split_ways - 1, 2),
-                           precomputed_subsets=precomputed_subsets,
-                           iteration=iteration)
+                           precompute_cache=precompute_cache,
+                           iteration=iteration, label_prefix=prefix)
+      else:
+        # only put elements in the precompute cache that haven't triggered violations
+        precompute_cache.update(input_sequence)
 
-    self.log("No complements with violations.")
+    self.log_no_violation("No complements with violations.")
     if split_ways < len(self.dag.input_events):
       self.log("Increasing granularity.")
       return self._ddmin(min(len(self.dag.input_events), split_ways*2),
-                         precomputed_subsets=precomputed_subsets,
-                         iteration=iteration)
+                         precompute_cache=precompute_cache,
+                         iteration=iteration, label_prefix=label_prefix)
     self._track_iteration_size(iteration + 1, split_ways)
 
   def _track_iteration_size(self, iteration, split_ways):
@@ -174,16 +209,18 @@ class MCSFinder(ControlFlow):
   def _check_violation(self, new_dag, subset_index, iteration, split_ways):
     ''' Check if there were violations '''
     self._track_iteration_size(iteration, split_ways)
-    violations = self.replay(new_dag)
-    if violations == []:
-      # No violation!
-      # If singleton, this must be part of the MCS
-      self.log("No violation in %d'th..." % subset_index)
-      return False
-    else:
-      # Violation in the subset
-      self.log("Violation! Considering %d'th" % subset_index)
-      return True
+
+    for i in range(0, self.no_violation_verification_runs):
+      violations = self.replay(new_dag)
+
+      if not (violations == []):
+        # Violation in the subset
+        self.log_violation("Violation! Considering %d'th" % subset_index)
+        return True
+
+    # No violation!
+    self.log_no_violation("No violation in %d'th..." % subset_index)
+    return False
 
   def replay(self, new_dag):
     # Run the simulation forward
@@ -193,6 +230,7 @@ class MCSFinder(ControlFlow):
     # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
     replayer = Replayer(self.simulation_cfg, new_dag,
                         wait_on_deterministic_values=self.wait_on_deterministic_values,
+                        #auto_permit_dp_events=True,
                         **self.kwargs)
     simulation = replayer.simulate()
     # Wait a bit in case the bug takes awhile to happen
@@ -206,7 +244,7 @@ class MCSFinder(ControlFlow):
     input_logger = InputLogger(output_path=self.mcs_trace_path)
     for e in self.dag.events:
       input_logger.log_input_event(e)
-    input_logger.close(self.simulation_cfg, skip_mcs_cfg=True)
+    input_logger.close(self, self.simulation_cfg, skip_mcs_cfg=True)
 
   def _dump_runtime_stats(self):
     if self._runtime_stats is not None:
