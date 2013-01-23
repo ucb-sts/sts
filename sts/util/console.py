@@ -13,7 +13,7 @@ class msg():
   END = '\033[1;m'
 
   GRAY, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, CRIMSON = map(lambda num: str(num) + "m", range(30, 39))
-  B_GRAY, B_RED, B_GREEN, B_YELLOW, B_BLUE, B_MAGENTA, B_CYAN, B_WHITE, B_CRIMSON =  map(lambda num: str(num) + "m", range(40, 49))
+  B_BLACK, B_RED, B_GREEN, B_YELLOW, B_BLUE, B_MAGENTA, B_CYAN, B_GRAY, B_CRIMSON =  map(lambda num: str(num) + "m", range(40, 49))
 
   @staticmethod
   def interactive(message):
@@ -32,6 +32,9 @@ class msg():
   def event_timeout(message):
     print msg.BEGIN + msg.RED + msg.BEGIN + msg.B_BLUE + message + msg.END
 
+  @staticmethod
+  def mcs_event(message):
+    print msg.BEGIN + msg.B_MAGENTA + message + msg.END
 
   @staticmethod
   def raw_input(message):
