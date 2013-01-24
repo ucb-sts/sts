@@ -81,6 +81,9 @@ def main(args):
   else:
     fields = default_fields
 
+  # TODO(cs) load Event objects from json_hash, since some of them have
+  # @propertys
+
   # All events are printed with a fixed number of lines, and (optionally)
   # separated by delimiter lines of the form:
   # ----------------------------------
