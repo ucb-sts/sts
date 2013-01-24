@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
+# Note: must be invoked from the top-level sts directory
+
 import json
 import time
 import argparse
+import sts.replay_event as replay_events
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-i', '--input', required=True,
@@ -23,19 +26,19 @@ args = parser.parse_args()
 
 default_fields = ['class_with_label', 'fingerprint', 'event_delimiter']
 
-def class_printer(json_hash):
-  print json_hash['class']
+def class_printer(event):
+  print event.__class__.__name__
 
-def class_with_label_printer(json_hash):
-  print json_hash['label'] + ' ' + json_hash['class']
+def class_with_label_printer(event):
+  print event.label + ' ' + event.__class__.__name__
 
-def fingerprint_printer(json_hash):
+def fingerprint_printer(event):
   fingerprint = None
-  if 'fingerprint' in json_hash:
+  if hasattr(event, 'fingerprint'):
     # The first element of the fingerprint tuple is always the class name, so
     # we skip it over
     # TODO(cs): make sure that dict fields are always in the same order
-    fingerprint = json_hash['fingerprint'][1:]
+    fingerprint = event.fingerprint[1:]
   print "Fingerprint: ", fingerprint
 
 def _timestamp_to_string(timestamp):
@@ -49,8 +52,8 @@ def _timestamp_to_string(timestamp):
   with_micro = no_micro + ":%d" % micro_sec
   return with_micro
 
-def abs_time_printer(json_hash):
- print _timestamp_to_string(json_hash['time'])
+def abs_time_printer(event):
+ print _timestamp_to_string(event.time)
 
 def event_delim_printer(_):
   print "--------------------------------------------------------------------"
@@ -81,8 +84,10 @@ def main(args):
   else:
     fields = default_fields
 
-  # TODO(cs) load Event objects from json_hash, since some of them have
-  # @propertys
+  name_to_class = {
+    klass.__name__ : klass
+    for klass in replay_events.all_events
+  }
 
   # All events are printed with a fixed number of lines, and (optionally)
   # separated by delimiter lines of the form:
@@ -90,10 +95,11 @@ def main(args):
   with open(args.input) as input_file:
     for line in input_file:
       json_hash = json.loads(line.rstrip())
+      event = name_to_class[json_hash['class']].from_json(json_hash)
       for field in fields:
         if field not in field_formatters:
           raise ValueError("Unknown field %s" % field)
-        field_formatters[field](json_hash)
+        field_formatters[field](event)
 
 if __name__ == '__main__':
   main(args)
