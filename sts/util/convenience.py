@@ -1,5 +1,11 @@
 import time
 
+def is_sorted(l):
+  return all(l[i] <= l[i+1] for i in xrange(len(l)-1))
+
+def is_strictly_sorted(l):
+  return all(l[i] < l[i+1] for i in xrange(len(l)-1))
+
 def timestamp_string():
   return time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
 
