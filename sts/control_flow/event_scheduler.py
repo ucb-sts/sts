@@ -11,7 +11,6 @@ def format_time(time):
   ms = int( (time * 1000) % 1000)
   return "%02d:%02d.%03d" % (mins, secs, ms)
 
-
 class EventSchedulerStats(object):
   def __init__(self):
     self.matched = 0
