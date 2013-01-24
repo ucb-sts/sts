@@ -724,7 +724,7 @@ class ControllerStateChange(InternalEvent):
     # Somewhat confusing: the StateChange's fingerprint is self._fingerprint,
     # but the overall fingerprint of this event needs to include the controller
     # id
-    return (self._fingerprint, self.controller_id)
+    return tuple(list(self._fingerprint) + [self.controller_id])
 
   @staticmethod
   def from_json(json_hash):
