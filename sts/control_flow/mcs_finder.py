@@ -191,7 +191,7 @@ class MCSFinder(ControlFlow):
     self.log_no_violation("No complements with violations.")
     if split_ways < len(dag.input_events):
       self.log("Increasing granularity.")
-      return self._ddmin(dag, min(len(self.dag.input_events), split_ways*2),
+      return self._ddmin(dag, min(len(dag.input_events), split_ways*2),
                          precompute_cache=precompute_cache,
                          iteration=iteration, label_prefix=label_prefix)
     self._track_iteration_size(dag, iteration + 1, split_ways)
