@@ -272,3 +272,64 @@ class MCSFinder(ControlFlow):
       with file("runtime_stats/" + now + ".json", "w") as output:
         json_string = json.dumps(self._runtime_stats)
         output.write(json_string)
+
+class EfficientMCSFinder(MCSFinder):
+  ''' Exactly the same functionality as MCSFinder, but assumes that
+  indeterminate results cannot occur. Worst-case runtime of O(n) as opposed to
+  O(n^2) replays. Taken from the predecessor paper:
+     http://www.st.cs.uni-saarland.de/publications/files/zeller-esec-1999.pdf
+  Section 4
+  '''
+  def _ddmin(self, dag, carryover_inputs, precompute_cache=None, recursion_level=0):
+    ''' carryover_inputs is the variable "r" from the paper. '''
+    # Hack: superclass calls _ddmin with an integer, which doesn't match our
+    # API. Translate that to an empty sequence.
+    if type(carryover_inputs) == int:
+      carryover_inputs = []
+
+    # TODO(cs): figure out how to make the (recursive) log output sensible
+
+    # Base case
+    if len(dag.input_events) == 1:
+      self.log("Base case %s" % str(dag.input_events))
+      return dag
+
+    (left, right) = split_list(dag.input_events, 2)
+    self.log("Left: %s" % str(left))
+    self.log("Right: %s" % str(right))
+    # This is: [dag.input_subset(left), dag.input_subset(right)]
+    left_right_dag = []
+
+    for i, subsequence in enumerate([left, right]):
+      new_dag = dag.input_subset(subsequence)
+      left_right_dag.append(new_dag)
+      self._track_iteration_size(new_dag, recursion_level)
+      # We test on subsequence U carryover_inputs
+      test_dag = new_dag.insert_inputs(carryover_inputs)
+      violation = self._check_violation(test_dag, i)
+      if violation:
+        self.log("Violation found in %dth half. Recursing" % i)
+        return self._ddmin(new_dag, carryover_inputs,
+                           recursion_level=recursion_level+1)
+
+    self.log("Interference")
+    (left_dag, right_dag) = left_right_dag
+    self.log("Recursing on left half")
+    left_result = self._ddmin(left_dag,
+                              right_dag.insert_inputs(carryover_inputs).input_events,
+                              recursion_level=recursion_level+1)
+    self.log("Recursing on right half")
+    right_result = self._ddmin(right_dag,
+                               left_dag.insert_inputs(carryover_inputs).input_events,
+                               recursion_level=recursion_level+1)
+
+    self._track_iteration_size(dag, recursion_level + 1)
+    return left_result.insert_inputs(right_result.input_events)
+
+  def _track_iteration_size(self, dag, recusion_level):
+    if self._runtime_stats is not None:
+      pass
+
+  def _dump_runtime_stats(self):
+    if self._runtime_stats is not None:
+      pass

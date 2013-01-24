@@ -55,13 +55,14 @@ class EventDagView(object):
   def input_complement(self, subset):
     return self._parent.input_complement(subset, self._events_list)
 
+  def insert_inputs(self, inputs):
+    return self._parent.insert_inputs(inputs, events_list=self._events_list)
+
+  def add_inputs(self, inputs):
+    return self._parent.add_inputs(inputs, self._events_list)
 
   def __len__(self):
     return len(self._events_list)
-
-  # TODO(cs): refactor caller of prepare()
-  def prepare_for_replay(self, unused_simulation):
-    pass
 
 class EventDag(object):
   '''A collection of Event objects. EventDags are primarily used to present a
@@ -93,8 +94,12 @@ class EventDag(object):
     self._events_list = events
     self._events_set = set(self._events_list)
     self._label2event = {
-     event.label : event
-     for event in self._events_list
+      event.label : event
+      for event in self._events_list
+    }
+    self._event2idx = {
+      event : i
+      for i, event in enumerate(self._events_list)
     }
 
   @property
@@ -199,6 +204,33 @@ class EventDag(object):
     removed'''
     remaining_events = self.compute_remaining_input_events(subset, events_list)
     return EventDagView(self, remaining_events)
+
+  def insert_inputs(self, inputs, events_list=None):
+    '''Insert inputs into events_list in the same relative order as the
+    original events list. This method is needed because set union as used in
+    delta debugging does not make sense for event sequences (events are ordered)'''
+    inputs = list(inputs)
+    # Note: events_list should never be None (I think), since it does not make
+    # sense to insert inputs into the original sequence that are already present
+    if events_list is None:
+      raise ValueError("Shouldn't be adding inputs to the original trace")
+    if not all(e in self._event2idx for e in inputs):
+      raise ValueError("Not all inputs present in original events list")
+
+    result = []
+    for i, successor in enumerate(events_list):
+      orig_successor_idx = self._event2idx[successor]
+      while len(inputs) > 0 and orig_successor_idx > self._event2idx[inputs[0]]:
+        # If the current successor did in fact come after the next input in the
+        # original trace, insert next input here
+        input = inputs.pop(0)
+        result.append(input)
+      result.append(successor)
+
+    # Any remaining inputs should be appended at the end -- they had no
+    # successors
+    result += inputs
+    return EventDagView(self, result)
 
   def mark_invalid_input_sequences(self):
     '''Fill in domain knowledge about valid input
