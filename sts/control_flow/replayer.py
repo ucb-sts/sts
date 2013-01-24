@@ -25,7 +25,7 @@ class Replayer(ControlFlow):
   # Runtime stats:
   total_replays = 0
   total_inputs_replayed = 0
-  # Interpolated time parameter:
+  # Interpolated time parameter. *not* the event scheduling epsilon:
   time_epsilon_microseconds = 500
 
   '''
