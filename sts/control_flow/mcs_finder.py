@@ -29,7 +29,6 @@ class MCSFinder(ControlFlow):
                mcs_trace_path=None, extra_log=None, dump_runtime_stats=True,
                wait_on_deterministic_values=False,
                no_violation_verification_runs=1,
-               ignore_powersets = False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.sync_callback = None
@@ -51,8 +50,8 @@ class MCSFinder(ControlFlow):
     self.kwargs = kwargs
     self.end_wait_seconds = end_wait_seconds
     self.wait_on_deterministic_values = wait_on_deterministic_values
+    # `no' means "number"
     self.no_violation_verification_runs = no_violation_verification_runs
-    self.ignore_powersets = ignore_powersets
     if dump_runtime_stats:
       self._runtime_stats = {}
 
@@ -106,11 +105,8 @@ class MCSFinder(ControlFlow):
 
     if self._runtime_stats is not None:
       self._runtime_stats["prune_start_epoch"] = time.time()
-    if self.ignore_powersets:
-      self.precompute_cache = PrecomputePowerSetCache()
-    else:
-      self.precompute_cache = PrecomputeCache()
-    self.dag = self._ddmin(self.dag, 2, precompute_cache=self.precompute_cache)
+    precompute_cache = PrecomputeCache()
+    self.dag = self._ddmin(self.dag, 2, precompute_cache=precompute_cache)
     if self._runtime_stats is not None:
       self._runtime_stats["prune_end_epoch"] = time.time()
       self._dump_runtime_stats()
@@ -147,6 +143,7 @@ class MCSFinder(ControlFlow):
       if precompute_cache.already_done(input_sequence):
         self.log("Already computed. Skipping")
         continue
+      precompute_cache.update(input_sequence)
       if input_sequence == ():
         self.log("Subset after pruning dependencies was empty. Skipping")
         continue
@@ -158,9 +155,6 @@ class MCSFinder(ControlFlow):
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
         return self._ddmin(new_dag, 2, precompute_cache=precompute_cache,
                            iteration=iteration, label_prefix = label_prefix + (label, ))
-      else:
-        # only put elements in the precompute cache that haven't triggered violations
-        precompute_cache.update(input_sequence)
 
     self.log_no_violation("No subsets with violations. Checking complements")
     for i, subset in enumerate(subsets):
@@ -172,6 +166,8 @@ class MCSFinder(ControlFlow):
       if precompute_cache.already_done(input_sequence):
         self.log("Already computed. Skipping")
         continue
+      precompute_cache.update(input_sequence)
+
       if input_sequence == ():
         self.log("Subset %s after pruning dependencies was empty. Skipping", subset_label(label))
         continue
@@ -184,9 +180,6 @@ class MCSFinder(ControlFlow):
         return self._ddmin(new_dag, max(split_ways - 1, 2),
                            precompute_cache=precompute_cache,
                            iteration=iteration, label_prefix=prefix)
-      else:
-        # only put elements in the precompute cache that haven't triggered violations
-        precompute_cache.update(input_sequence)
 
     self.log_no_violation("No complements with violations.")
     if split_ways < len(dag.input_events):
@@ -208,10 +201,11 @@ class MCSFinder(ControlFlow):
 
   def _check_violation(self, new_dag, subset_index):
     ''' Check if there were violations '''
+    # Try no_violation_verification_runs times to see if the bug shows up
     for i in range(0, self.no_violation_verification_runs):
       violations = self.replay(new_dag)
 
-      if not (violations == []):
+      if violations != []:
         # Violation in the subset
         self.log_violation("Violation! Considering %d'th" % subset_index)
         return True
