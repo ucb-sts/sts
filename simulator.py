@@ -10,7 +10,6 @@ import argparse
 import logging
 import logging.config
 
-
 description = """
 Run a simulation.
 Example usage:
