@@ -12,7 +12,7 @@ import tempfile
 from sts.control_flow.peeker import *
 # TODO: move Mock internal events to lib
 from tests.unit.sts.event_dag_test import MockInternalEvent
-from tests.unit.sts.control_flow_test import MockInputEvent
+from tests.unit.sts.mcs_finder_test import MockInputEvent
 from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import Replayer, MCSFinder
 from sts.topology import FatTree, PatchPanel, MeshTopology
