@@ -110,7 +110,7 @@ class MCSFinder(ControlFlow):
       self.precompute_cache = PrecomputePowerSetCache()
     else:
       self.precompute_cache = PrecomputeCache()
-    self._ddmin(2, self.precompute_cache)
+    self.dag = self._ddmin(self.dag, 2, precompute_cache=self.precompute_cache)
     if self._runtime_stats is not None:
       self._runtime_stats["prune_end_epoch"] = time.time()
       self._dump_runtime_stats()
@@ -120,7 +120,7 @@ class MCSFinder(ControlFlow):
       self._dump_mcs_trace()
     return self.dag.events
 
-  def _ddmin(self, split_ways, precompute_cache, iteration=0, label_prefix=()):
+  def _ddmin(self, dag, split_ways, precompute_cache=None, iteration=0, label_prefix=()):
     ''' - iteration is the # of times we've replayed (not the number of times
     we've invoked _ddmin)'''
     # This is the delta-debugging algorithm from:
@@ -128,20 +128,20 @@ class MCSFinder(ControlFlow):
     # Section 3.2
     # TODO(cs): we could do much better if we leverage domain knowledge (e.g.,
     # start by pruning all LinkFailures)
-    if split_ways > len(self.dag.input_events):
-      self._track_iteration_size(iteration + 1, split_ways)
+    if split_ways > len(dag.input_events):
+      self._track_iteration_size(dag, iteration + 1, split_ways)
       self.log("Done")
-      return
+      return dag
 
     local_label = lambda i, inv=False: "%s%d/%d" % ("~" if inv else "", i, split_ways)
     subset_label = lambda label: ".".join(map(str, label_prefix + ( label, )))
     print_subset = lambda label, s: subset_label(label) + ": "+" ".join(map(lambda e: e.label, s))
 
-    subsets = split_list(self.dag.input_events, split_ways)
+    subsets = split_list(dag.input_events, split_ways)
     self.log("Subsets:\n"+"\n".join(print_subset(local_label(i), s) for i, s in enumerate(subsets)))
     for i, subset in enumerate(subsets):
       label = local_label(i)
-      new_dag = self.dag.input_subset(subset)
+      new_dag = dag.input_subset(subset)
       input_sequence = tuple(new_dag.input_events)
       self.log("Current subset: %s" % print_subset(label, input_sequence))
       if precompute_cache.already_done(input_sequence):
@@ -152,22 +152,21 @@ class MCSFinder(ControlFlow):
         continue
 
       iteration += 1
-      violation = self._check_violation(new_dag, i, iteration, split_ways)
+      self._track_iteration_size(new_dag, iteration, split_ways)
+      violation = self._check_violation(new_dag, i)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
-        self.dag = new_dag
-        return self._ddmin(2, precompute_cache=precompute_cache,
+        return self._ddmin(new_dag, 2, precompute_cache=precompute_cache,
                            iteration=iteration, label_prefix = label_prefix + (label, ))
       else:
         # only put elements in the precompute cache that haven't triggered violations
         precompute_cache.update(input_sequence)
 
-
     self.log_no_violation("No subsets with violations. Checking complements")
     for i, subset in enumerate(subsets):
       label = local_label(i, True)
       prefix = label_prefix + (label, )
-      new_dag = self.dag.input_complement(subset)
+      new_dag = dag.input_complement(subset)
       input_sequence = tuple(new_dag.input_events)
       self.log("Current complement: %s" % print_subset(label, input_sequence))
       if precompute_cache.already_done(input_sequence):
@@ -178,11 +177,11 @@ class MCSFinder(ControlFlow):
         continue
 
       iteration += 1
-      violation = self._check_violation(new_dag, i, iteration, split_ways)
+      self._track_iteration_size(new_dag, iteration, split_ways)
+      violation = self._check_violation(new_dag, i)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
-        self.dag = new_dag
-        return self._ddmin(max(split_ways - 1, 2),
+        return self._ddmin(new_dag, max(split_ways - 1, 2),
                            precompute_cache=precompute_cache,
                            iteration=iteration, label_prefix=prefix)
       else:
@@ -190,26 +189,25 @@ class MCSFinder(ControlFlow):
         precompute_cache.update(input_sequence)
 
     self.log_no_violation("No complements with violations.")
-    if split_ways < len(self.dag.input_events):
+    if split_ways < len(dag.input_events):
       self.log("Increasing granularity.")
-      return self._ddmin(min(len(self.dag.input_events), split_ways*2),
+      return self._ddmin(dag, min(len(self.dag.input_events), split_ways*2),
                          precompute_cache=precompute_cache,
                          iteration=iteration, label_prefix=label_prefix)
-    self._track_iteration_size(iteration + 1, split_ways)
+    self._track_iteration_size(dag, iteration + 1, split_ways)
+    return dag
 
-  def _track_iteration_size(self, iteration, split_ways):
+  def _track_iteration_size(self, dag, iteration, split_ways):
     if self._runtime_stats is not None:
       if "iteration_size" not in self._runtime_stats:
         self._runtime_stats["iteration_size"] = {}
-      self._runtime_stats["iteration_size"][iteration] = len(self.dag.input_events)
+      self._runtime_stats["iteration_size"][iteration] = len(dag.input_events)
       if "split_ways" not in self._runtime_stats:
         self._runtime_stats["split_ways"] = set()
         self._runtime_stats["split_ways"].add(split_ways)
 
-  def _check_violation(self, new_dag, subset_index, iteration, split_ways):
+  def _check_violation(self, new_dag, subset_index):
     ''' Check if there were violations '''
-    self._track_iteration_size(iteration, split_ways)
-
     for i in range(0, self.no_violation_verification_runs):
       violations = self.replay(new_dag)
 
