@@ -75,7 +75,7 @@ class Event(object):
 
   def __eq__(self, other):
     ''' Assumption: labels are unique '''
-    if type(other) != Event:
+    if type(self) != type(other):
       return False
     return self.label == other.label
 
