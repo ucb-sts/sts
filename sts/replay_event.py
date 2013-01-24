@@ -789,13 +789,23 @@ class ConnectToControllers(InternalEvent):
 all_internal_events = [ControlMessageReceive, ConnectToControllers,
                        ControllerStateChange, DeterministicValue]
 
+
 # Special event:
 
 class InvariantViolation(Event):
   ''' Class for logging violations as json dicts '''
-  def __init__(self, violations):
-    Event.__init__(self)
+  def __init__(self, violations, label=None, time=None):
+    Event.__init__(self, label=label, time=time)
     self.violations = [ str(v) for v in violations ]
 
   def proceed(self, simulation):
     return True
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'violations')
+    violations = json_hash['violations']
+    return InvariantViolation(violations, label=label, time=time)
+
+all_events = all_input_events + all_internal_events + [InvariantViolation]
