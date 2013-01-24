@@ -17,7 +17,7 @@ args = parser.parse_args()
 #   fields  => an array of field names to print. Uses default_fields if undefined.
 #   ...
 #
-# See pretty_print_config.py for an example.
+# See example_pretty_print_config.py for an example.
 # TODO(cs): allow user to filter out events types
 # ------------------------------------------------------------------------------------------
 
