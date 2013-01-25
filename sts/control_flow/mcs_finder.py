@@ -226,6 +226,7 @@ class MCSFinder(ControlFlow):
                         **self.kwargs)
     simulation = replayer.simulate()
     # Wait a bit in case the bug takes awhile to happen
+    self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
     time.sleep(self.end_wait_seconds)
     violations = self.invariant_check(simulation)
     simulation.clean_up()
