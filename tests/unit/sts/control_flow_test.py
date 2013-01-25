@@ -160,11 +160,11 @@ class ReplayerTest(unittest.TestCase):
     superlog = open(self.tmp_migration_superlog, 'w')
     e1 = str('''{"dependent_labels": ["e2"], "old_ingress_dpid": 7, "class": "HostMigration",'''
              ''' "old_ingress_port_no": 1, "new_ingress_dpid": 8, '''
-             ''' "new_ingress_port_no": 99, "label": "e1", "time": [0,0]}''')
+             ''' "new_ingress_port_no": 99, "host_id": "host1","label": "e1", "time": [0,0]}''')
     superlog.write(e1 + '\n')
     e2 = str('''{"dependent_labels": [], "old_ingress_dpid": 8, "class": "HostMigration",'''
              ''' "old_ingress_port_no": 99, "new_ingress_dpid": 7, '''
-             ''' "new_ingress_port_no": 101, "label": "e2", "time": [0,0]}''')
+             ''' "new_ingress_port_no": 101, "host_id": "host1","label": "e2", "time": [0,0]}''')
     superlog.write(e2 + '\n')
     superlog.close()
 

@@ -274,53 +274,66 @@ class EfficientMCSFinder(MCSFinder):
      http://www.st.cs.uni-saarland.de/publications/files/zeller-esec-1999.pdf
   Section 4
   '''
-  def _ddmin(self, dag, carryover_inputs, precompute_cache=None, recursion_level=0):
+  def _ddmin(self, dag, carryover_inputs, precompute_cache=None,
+             recursion_level=0, label_prefix=()):
     ''' carryover_inputs is the variable "r" from the paper. '''
     # Hack: superclass calls _ddmin with an integer, which doesn't match our
-    # API. Translate that to an empty sequence.
+    # API. Translate that to an empty sequence. (we also don't use precompute_cache)
     if type(carryover_inputs) == int:
       carryover_inputs = []
 
-    # TODO(cs): figure out how to make the (recursive) log output sensible
+    local_label = lambda i: "%s/%d" % ("l" if i == 0 else "r", recursion_level)
+    subset_label = lambda label: ".".join(map(str, label_prefix + ( label, )))
+    print_subset = lambda label, s: subset_label(label) + ": "+" ".join(map(lambda e: e.label, s))
 
-    # Base case
-    if len(dag.input_events) == 1:
+    # Base case. Note that atomic_inputs are grouped-together failure/recovery
+    # pairs, or normal inputs otherwise.
+    if len(dag.atomic_input_events) == 1:
       self.log("Base case %s" % str(dag.input_events))
       return dag
 
-    (left, right) = split_list(dag.input_events, 2)
-    self.log("Left: %s" % str(left))
-    self.log("Right: %s" % str(right))
+    (left, right) = split_list(dag.atomic_input_events, 2)
+    self.log("Subsets:\n"+"\n".join(print_subset(local_label(i), s)
+                                    for i, s in enumerate([left,right])))
     # This is: [dag.input_subset(left), dag.input_subset(right)]
     left_right_dag = []
 
     for i, subsequence in enumerate([left, right]):
-      new_dag = dag.input_subset(subsequence)
+      label = local_label(i)
+      prefix = label_prefix + (label, )
+      new_dag = dag.atomic_input_subset(subsequence)
+      self.log("Current subset: %s" % print_subset(label,
+                                                   new_dag.atomic_input_events))
       left_right_dag.append(new_dag)
       self._track_iteration_size(new_dag, recursion_level)
       # We test on subsequence U carryover_inputs
-      test_dag = new_dag.insert_inputs(carryover_inputs)
+      test_dag = new_dag.insert_atomic_inputs(carryover_inputs)
       violation = self._check_violation(test_dag, i)
       if violation:
         self.log("Violation found in %dth half. Recursing" % i)
         return self._ddmin(new_dag, carryover_inputs,
-                           recursion_level=recursion_level+1)
+                           recursion_level=recursion_level+1,
+                           label_prefix=prefix)
 
     self.log("Interference")
     (left_dag, right_dag) = left_right_dag
     self.log("Recursing on left half")
+    prefix = label_prefix + ("il/%d" % recursion_level,)
     left_result = self._ddmin(left_dag,
-                              right_dag.insert_inputs(carryover_inputs).input_events,
-                              recursion_level=recursion_level+1)
+                              right_dag.insert_atomic_inputs(carryover_inputs).atomic_input_events,
+                              recursion_level=recursion_level+1,
+                              label_prefix=prefix)
     self.log("Recursing on right half")
+    prefix = label_prefix + ("ir/%d" % recursion_level,)
     right_result = self._ddmin(right_dag,
-                               left_dag.insert_inputs(carryover_inputs).input_events,
-                               recursion_level=recursion_level+1)
+                               left_dag.insert_atomic_inputs(carryover_inputs).atomic_input_events,
+                               recursion_level=recursion_level+1,
+                               label_prefix=prefix)
 
     self._track_iteration_size(dag, recursion_level + 1)
-    return left_result.insert_inputs(right_result.input_events)
+    return left_result.insert_atomic_inputs(right_result.atomic_input_events)
 
-  def _track_iteration_size(self, dag, recusion_level):
+  def _track_iteration_size(self, dag, recursion_level):
     if self._runtime_stats is not None:
       pass
 

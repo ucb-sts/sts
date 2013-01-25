@@ -309,12 +309,13 @@ class ControllerRecovery(InputEvent):
 
 class HostMigration(InputEvent):
   def __init__(self, old_ingress_dpid, old_ingress_port_no,
-               new_ingress_dpid, new_ingress_port_no, label=None, time=None):
+               new_ingress_dpid, new_ingress_port_no, host_id, label=None, time=None):
     super(HostMigration, self).__init__(label=label, time=time)
     self.old_ingress_dpid = old_ingress_dpid
     self.old_ingress_port_no = old_ingress_port_no
     self.new_ingress_dpid = new_ingress_dpid
     self.new_ingress_port_no =  new_ingress_port_no
+    self.host_id = host_id
 
   def proceed(self, simulation):
     simulation.topology.migrate_host(self.old_ingress_dpid,
@@ -327,20 +328,29 @@ class HostMigration(InputEvent):
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'old_ingress_dpid', 'old_ingress_port_no',
-                        'new_ingress_dpid', 'new_ingress_port_no')
+                        'new_ingress_dpid', 'new_ingress_port_no', 'host_id')
     old_ingress_dpid = int(json_hash['old_ingress_dpid'])
     old_ingress_port_no = int(json_hash['old_ingress_port_no'])
     new_ingress_dpid = int(json_hash['new_ingress_dpid'])
     new_ingress_port_no = int(json_hash['new_ingress_port_no'])
+    host_id = json_hash['host_id']
     return HostMigration(old_ingress_dpid, old_ingress_port_no,
                          new_ingress_dpid, new_ingress_port_no,
-                         label=label, time=time)
+                         host_id, label=label, time=time)
+
+  @property
+  def old_location(self):
+    return (self.old_ingress_dpid, self.old_ingress_port_no)
+
+  @property
+  def new_location(self):
+    return (self.new_ingress_dpid, self.new_ingress_port_no)
 
   @property
   def fingerprint(self):
     return (self.__class__.__name__,self.old_ingress_dpid,
             self.old_ingress_port_no, self.new_ingress_dpid,
-            self.new_ingress_port_no)
+            self.new_ingress_port_no, self.host_id)
 
 class PolicyChange(InputEvent):
   def __init__(self, request_type, label=None, time=None):

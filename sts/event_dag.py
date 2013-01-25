@@ -5,6 +5,7 @@ import logging
 import time
 import math
 from sys import maxint
+from collections import defaultdict
 from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
 
@@ -31,6 +32,18 @@ def split_list(l, split_ways):
       start_idx = split_idx
     return splits
 
+class AtomicInput(object):
+  def __init__(self, failure, recovery):
+    self.failure = failure
+    self.recovery = recovery
+
+  @property
+  def label(self):
+    return "a(%s,%s)" % (self.failure.label, self.recovery.label,)
+
+  def __repr__(self):
+    return "AtomicInput:%r%r" % (self.failure, self.recovery)
+
 class EventDagView(object):
   def __init__(self, parent, events_list):
     ''' subset is a list '''
@@ -48,21 +61,49 @@ class EventDagView(object):
     # TODO(cs): memoize?
     return [ e for e in self._events_list if isinstance(e, InputEvent) ]
 
+  @property
+  def atomic_input_events(self):
+    return self._parent._atomic_input_events(self.input_events)
+
   def input_subset(self, subset):
     '''pre: subset must be a subset of only this view'''
     return self._parent.input_subset(subset)
 
+  def atomic_input_subset(self, subset):
+    '''pre: subset must be a subset of only this view'''
+    return self._parent.atomic_input_subset(subset)
+
   def input_complement(self, subset):
     return self._parent.input_complement(subset, self._events_list)
 
-  def insert_inputs(self, inputs):
-    return self._parent.insert_inputs(inputs, events_list=self._events_list)
+  def insert_atomic_inputs(self, inputs):
+    return self._parent.insert_atomic_inputs(inputs, events_list=self._events_list)
 
   def add_inputs(self, inputs):
     return self._parent.add_inputs(inputs, self._events_list)
 
   def __len__(self):
     return len(self._events_list)
+
+# TODO(cs): move these somewhere else
+def migrations_per_host(events):
+  host2migrations = defaultdict(list)
+  for e in events:
+    if type(e) == HostMigration:
+      host2migrations[e.host_id].append(e)
+  return host2migrations
+
+def replace_migration(replacee, old_location, new_location, event_list):
+  # `replacee' is the migration to be replaced
+  # Don't mutate replacee -- instead, replace it
+  new_migration = HostMigration(old_location[0], old_location[1],
+                                new_location[0], new_location[1],
+                                host_id=replacee.host_id,
+                                time=replacee.time, label=replacee.label)
+  # TODO(cs): O(n^2)
+  index = event_list.index(replacee)
+  event_list[index] = new_migration
+  return new_migration
 
 class EventDag(object):
   '''A collection of Event objects. EventDags are primarily used to present a
@@ -101,6 +142,11 @@ class EventDag(object):
       event : i
       for i, event in enumerate(self._events_list)
     }
+    # TODO(cs): this should be moved to a dag transformer class
+    self._host2initial_location = {
+      host : migrations[0].old_location
+      for host, migrations in migrations_per_host(self._events_list).iteritems()
+    }
 
   @property
   def events(self):
@@ -112,24 +158,51 @@ class EventDag(object):
     # TODO(cs): memoize?
     return [ e for e in self._events_list if isinstance(e, InputEvent) ]
 
+  @property
+  def atomic_input_events(self):
+    return self._atomic_input_events(self.input_events)
+
+  def _atomic_input_events(self, inputs):
+    # TODO(cs): memoize?
+    skipped_recoveries = set()
+    atomic_inputs = []
+    for e in inputs:
+      if e in skipped_recoveries:
+        continue
+
+      if type(e) in self._failure_types and e.dependent_labels != []:
+        if len(e.dependent_labels) != 1:
+          raise RuntimeError("Not expected to have more than one dependent label")
+        recovery = self._label2event[e.dependent_labels[0]]
+        skipped_recoveries.add(recovery)
+        atomic_inputs.append(AtomicInput(e, recovery))
+      else:
+        atomic_inputs.append(e)
+    return atomic_inputs
+
+  def _expand_atomics(self, atomic_inputs):
+    inputs = []
+    for e in atomic_inputs:
+      if type(e) == AtomicInput:
+        inputs.append(e.failure)
+        inputs.append(e.recovery)
+      else:
+         inputs.append(e)
+    inputs.sort(key=lambda e: self._event2idx[e])
+    return inputs
+
   def filter_unsupported_input_types(self):
     for e in [e for e in self._events_list if type(e) == CheckInvariants]:
       e.fail_on_error = False
     return EventDagView(self, (e for e in self._events_list
                               if type(e) not in self._ignored_input_types))
 
+
   def compute_remaining_input_events(self, ignored_portion, events_list=None):
     ''' ignore all input events in ignored_inputs,
     as well all of their dependent input events'''
     if events_list is None:
       events_list = self.events
-    # Note that dependent_labels only contains dependencies between input
-    # events. Dependencies with internal events are inferred by EventScheduler.
-    # Also note that we treat failure/recovery as an atomic pair, so we don't prune
-    # recovery events on their own
-    ignored_portion = set(e for e in ignored_portion
-                          if (isinstance(e, InputEvent) and
-                              type(e) not in self._recovery_types))
     remaining = []
     for event in events_list:
       if event not in ignored_portion:
@@ -137,6 +210,7 @@ class EventDag(object):
       else:
         # Add dependent to ignored_portion
         for label in event.dependent_labels:
+          # Note that recoveries will be a dependent of preceding failures
           dependent_event = self._label2event[label]
           ignored_portion.add(dependent_event)
 
@@ -158,6 +232,8 @@ class EventDag(object):
     Note: mutates remaining
     '''
     # TODO(cs): this should be moved outside of EventDag
+    # TODO(cs): this algorithm could be simplified substantially by invoking
+    # migrations_per_host()
 
     # keep track of the most recent location of the host that did not involve
     # a pruned HostMigration event
@@ -165,8 +241,8 @@ class EventDag(object):
     currentloc2unprunedloc = {}
 
     for m in [e for e in events_list if type(e) == HostMigration]:
-      src = (m.old_ingress_dpid, m.old_ingress_port_no)
-      dst = (m.new_ingress_dpid, m.new_ingress_port_no)
+      src = m.old_location
+      dst = m.new_location
       if m in ignored_portion:
         if src in currentloc2unprunedloc:
           # There was a prior migration in ignored_portion
@@ -183,18 +259,34 @@ class EventDag(object):
           # There was a prior migration in ignored_portion
           # Replace this HostMigration with a new one, with source at the
           # last unpruned location
-          (old_dpid, old_port) = currentloc2unprunedloc[src]
+          unpruned_loc = currentloc2unprunedloc[src]
           del currentloc2unprunedloc[src]
-          (new_dpid, new_port) = dst
-          # Don't mutate m -- instead, replace m
-          new_migration = HostMigration(old_dpid, old_port, new_dpid,
-                                        new_port, time=m.time, label=m.label)
-          index = remaining.index(m)
-          remaining[index] = new_migration
+          new_loc = dst
+          replace_migration(m, unpruned_loc, new_loc, remaining)
+
+  def _ignored_except_recoveries(self, ignored_portion):
+    # Note that dependent_labels only contains dependencies between input
+    # events. Dependencies with internal events are inferred by EventScheduler.
+    # Also note that we treat failure/recovery as an atomic pair, so we don't prune
+    # recovery events on their own.
+    return set(e for e in ignored_portion
+               if (isinstance(e, InputEvent) and
+                   type(e) not in self._recovery_types))
 
   def input_subset(self, subset):
     ''' Return a view of the dag with only the subset dependents
     removed'''
+    ignored = self._events_set - set(subset)
+    ignored = self._ignored_except_recoveries(ignored)
+    remaining_events = self.compute_remaining_input_events(ignored)
+    return EventDagView(self, remaining_events)
+
+  def atomic_input_subset(self, subset):
+    ''' Return a view of the dag with only the subset dependents
+    removed'''
+    # Relatively simple: expand atomic pairs into individual inputs, take
+    # all input events in result, and compute_remaining_input_events as normal
+    subset = self._expand_atomics(subset)
     ignored = self._events_set - set(subset)
     remaining_events = self.compute_remaining_input_events(ignored)
     return EventDagView(self, remaining_events)
@@ -202,20 +294,48 @@ class EventDag(object):
   def input_complement(self, subset, events_list=None):
     ''' Return a view of the dag with only the subset dependents
     removed'''
+    subset = self._ignored_except_recoveries(subset)
     remaining_events = self.compute_remaining_input_events(subset, events_list)
     return EventDagView(self, remaining_events)
 
-  def insert_inputs(self, inputs, events_list=None):
+  def _straighten_inserted_migrations(self, remaining_events):
+    ''' This is a bit hairy: when migrations are added back in, there may be
+    gaps in host locations. We need to straighten out those gaps -- i.e. make
+    the series of host migrations for any given host a line.
+
+    Pre: remaining_events is sorted in the same relative order as the original
+    trace
+    '''
+    host2migrations = migrations_per_host(remaining_events)
+    for host, migrations in host2migrations.iteritems():
+      # Prime the loop with the initial location
+      previous_location = self._host2initial_location[host]
+      for m in migrations:
+        if m.old_location != previous_location:
+          replacement = replace_migration(m, previous_location,
+                                          m.new_location, remaining_events)
+        else:
+          replacement = m
+        previous_location = replacement.new_location
+    return remaining_events
+
+  def insert_atomic_inputs(self, atomic_inputs, events_list=None):
     '''Insert inputs into events_list in the same relative order as the
     original events list. This method is needed because set union as used in
     delta debugging does not make sense for event sequences (events are ordered)'''
-    inputs = list(inputs)
     # Note: events_list should never be None (I think), since it does not make
     # sense to insert inputs into the original sequence that are already present
     if events_list is None:
       raise ValueError("Shouldn't be adding inputs to the original trace")
+
+    inputs = self._expand_atomics(atomic_inputs)
+
     if not all(e in self._event2idx for e in inputs):
-      raise ValueError("Not all inputs present in original events list")
+      raise ValueError("Not all inputs present in original events list %s" %
+                       [e for e in input if e not in self._event2idx])
+    if not all(e in self._event2idx for e in events_list):
+      raise ValueError("Not all events in original events list %s" %
+                       [e for e in events_list if e not in self._event2idx])
 
     result = []
     for i, successor in enumerate(events_list):
@@ -230,6 +350,8 @@ class EventDag(object):
     # Any remaining inputs should be appended at the end -- they had no
     # successors
     result += inputs
+    # Deal with newly added host migrations
+    result = self._straighten_inserted_migrations(result)
     return EventDagView(self, result)
 
   def mark_invalid_input_sequences(self):
