@@ -18,13 +18,14 @@ args = parser.parse_args()
 # ------------------------------- Config file format: --------------------------------------
 # Config files are python modules that may define the following variables:
 #   fields  => an array of field names to print. Uses default_fields if undefined.
+#   filtered_classes => a set of classes to ignore, from sts.replay_event
 #   ...
 #
 # See example_pretty_print_config.py for an example.
-# TODO(cs): allow user to filter out events types
 # ------------------------------------------------------------------------------------------
 
 default_fields = ['class_with_label', 'fingerprint', 'event_delimiter']
+default_filtered_classes = set()
 
 def class_printer(event):
   print event.__class__.__name__
@@ -84,6 +85,11 @@ def main(args):
   else:
     fields = default_fields
 
+  if hasattr(format_def, "filtered_classes"):
+    filtered_classes = format_def.filtered_classes
+  else:
+    filtered_classes = default_filtered_classes
+
   name_to_class = {
     klass.__name__ : klass
     for klass in replay_events.all_events
@@ -96,10 +102,11 @@ def main(args):
     for line in input_file:
       json_hash = json.loads(line.rstrip())
       event = name_to_class[json_hash['class']].from_json(json_hash)
-      for field in fields:
-        if field not in field_formatters:
-          raise ValueError("Unknown field %s" % field)
-        field_formatters[field](event)
+      if type(event) not in filtered_classes:
+        for field in fields:
+          if field not in field_formatters:
+            raise ValueError("Unknown field %s" % field)
+          field_formatters[field](event)
 
 if __name__ == '__main__':
   main(args)
