@@ -264,7 +264,7 @@ class EventDag(object):
           new_loc = dst
           replace_migration(m, unpruned_loc, new_loc, remaining)
 
-  def _ignored_except_recoveries(self, ignored_portion):
+  def _ignored_except_internals_and_recoveries(self, ignored_portion):
     # Note that dependent_labels only contains dependencies between input
     # events. Dependencies with internal events are inferred by EventScheduler.
     # Also note that we treat failure/recovery as an atomic pair, so we don't prune
@@ -273,13 +273,17 @@ class EventDag(object):
                if (isinstance(e, InputEvent) and
                    type(e) not in self._recovery_types))
 
+  def _ignored_except_internals(self, ignored_portion):
+    return set(e for e in ignored_portion if isinstance(e, InputEvent))
+
   def input_subset(self, subset):
     ''' Return a view of the dag with only the subset dependents
     removed'''
     ignored = self._events_set - set(subset)
-    ignored = self._ignored_except_recoveries(ignored)
+    ignored = self._ignored_except_internals_and_recoveries(ignored)
     remaining_events = self.compute_remaining_input_events(ignored)
     return EventDagView(self, remaining_events)
+
 
   def atomic_input_subset(self, subset):
     ''' Return a view of the dag with only the subset dependents
@@ -288,13 +292,14 @@ class EventDag(object):
     # all input events in result, and compute_remaining_input_events as normal
     subset = self._expand_atomics(subset)
     ignored = self._events_set - set(subset)
+    ignored = self._ignored_except_internals(ignored)
     remaining_events = self.compute_remaining_input_events(ignored)
     return EventDagView(self, remaining_events)
 
   def input_complement(self, subset, events_list=None):
     ''' Return a view of the dag with only the subset dependents
     removed'''
-    subset = self._ignored_except_recoveries(subset)
+    subset = self._ignored_except_internals_and_recoveries(subset)
     remaining_events = self.compute_remaining_input_events(subset, events_list)
     return EventDagView(self, remaining_events)
 
