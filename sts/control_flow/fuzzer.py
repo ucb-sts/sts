@@ -351,5 +351,6 @@ class Fuzzer(ControlFlow):
           self._log_input_event(HostMigration(old_ingress_dpid,
                                               old_ingress_port_no,
                                               new_switch_dpid,
-                                              new_port_no))
+                                              new_port_no,
+                                              access_link.host.name))
 
