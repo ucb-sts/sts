@@ -20,6 +20,7 @@ import time
 import random
 import logging
 import json
+import os
 
 def write_runtime_stats(runtime_stats):
   # Now write contents to a file
@@ -247,6 +248,9 @@ class MCSFinder(ControlFlow):
     # We always check against internal events that were buffered at the end of
     # the original run (don't want to overcount)
     path = self.superlog_path + ".buffered"
+    if not os.path.exists(path):
+      log.warn("Original buffered internals events file does not exists")
+      return
     prev_buffered_receives = [ e.pending_receive for e in
                                EventDag(superlog_parser.parse_path(path)).events ]
 
