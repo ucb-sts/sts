@@ -10,7 +10,6 @@ from sts.replay_event import *
 from sts.event_dag import EventDag
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.util.console import color
-
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 
 import signal
@@ -22,18 +21,19 @@ import logging
 log = logging.getLogger("Replayer")
 
 class Replayer(ControlFlow):
-  # Runtime stats:
-  total_replays = 0
-  total_inputs_replayed = 0
-  # Interpolated time parameter. *not* the event scheduling epsilon:
-  time_epsilon_microseconds = 500
-
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
 
   To set the event scheduling paramters, pass them as keyword args to the
   constructor of this class, which will pass them on to the EventScheduler object it creates.
   '''
+
+  # Runtime stats:
+  total_replays = 0
+  total_inputs_replayed = 0
+  # Interpolated time parameter. *not* the event scheduling epsilon:
+  time_epsilon_microseconds = 500
+
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
                print_buffers=True, wait_on_deterministic_values=False, auto_permit_dp_events=False, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
