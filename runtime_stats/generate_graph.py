@@ -37,7 +37,7 @@ with open(gpi_filename, "w") as gpi:
   gpi.write('''set output "%s"\n''' % output_filename)
   gpi.write('''set title "total runtime=%.1fs, original runtime=%.1fs"\n''' %
             (stats["prune_duration_seconds"], stats["replay_duration_seconds"]))
-  gpi.write('''plot "%s" index 0:1 title "" w lp ls 1\n''' %
+  gpi.write('''plot "%s" index 0:1 title "" w p pt 2\n''' %
             (dat_filename,))
 
 # invoke gnuplot
