@@ -109,6 +109,9 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
                                               fingerprint, name, value)
     self._pending_state_changes[pending_state_change] += 1
     if sync_type == "SYNC":
+      # TODO(cs): if this message is not expected by replayer, we need to ack
+      # it anyway -- not doing so will clog up the entire rest of the
+      # execution
       uuid = controller.uuid
       if uuid in self.uuid2ack:
         raise RuntimeError("More than one outstanding ACKs for %s" %
