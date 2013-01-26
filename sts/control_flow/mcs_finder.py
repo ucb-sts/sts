@@ -52,12 +52,12 @@ class MCSFinder(ControlFlow):
     self.transform_dag = transform_dag
     self.mcs_trace_path = mcs_trace_path
     self._extra_log = extra_log
-    self._runtime_stats = None
     self.kwargs = kwargs
     self.end_wait_seconds = end_wait_seconds
     self.wait_on_deterministic_values = wait_on_deterministic_values
     # `no' means "number"
     self.no_violation_verification_runs = no_violation_verification_runs
+    self._runtime_stats = None
     if dump_runtime_stats:
       self._runtime_stats = {}
 
