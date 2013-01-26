@@ -113,7 +113,6 @@ class Replayer(ControlFlow):
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()
 
-    exit_code = 0
     self.interrupted = False
     old_interrupt = None
 

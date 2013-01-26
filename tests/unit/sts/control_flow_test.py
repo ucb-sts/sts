@@ -23,7 +23,8 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 _running_simulation = None
 def handle_int(sigspec, frame):
   print >> sys.stderr, "Caught signal %d, stopping sdndebug" % sigspec
-  if _running_simulation is not None:
+  if (_running_simulation is not None and
+      _running_simulation.current_simulation is not None):
     _running_simulation.current_simulation.clean_up()
   raise RuntimeError("terminating on signal %d" % sigspec)
 

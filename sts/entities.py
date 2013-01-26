@@ -115,7 +115,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       self.log.warn("Switch already up")
       return
     if self.create_connection is None:
-      raise RuntimeError("Never connected in the first place")
+      self.log.warn("Never connected in the first place")
 
     connected_to_at_least_one = self.connect(self.create_connection,
                                              down_controller_ids=down_controller_ids)

@@ -71,6 +71,10 @@ signal.signal(signal.SIGTERM, handle_int)
 # Start the simulation
 try:
   res = simulator.simulate()
+  # TODO(cs); temporary hack: replayer returns self.simulation no a return
+  # code
+  if type(res) != int:
+    res = 0
 finally:
   if (simulator.simulation_cfg.current_simulation is not None):
     simulator.simulation_cfg.current_simulation.clean_up()
