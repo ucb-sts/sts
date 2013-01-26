@@ -632,13 +632,15 @@ class ControlMessageReceive(InternalEvent):
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
-    pending_receive = PendingReceive(self.dpid, self.controller_id,
-                                     self.fingerprint[1])
-    message_waiting = simulation.god_scheduler.message_waiting(pending_receive)
+    message_waiting = simulation.god_scheduler.message_waiting(self.pending_receive)
     if message_waiting:
-      simulation.god_scheduler.schedule(pending_receive)
+      simulation.god_scheduler.schedule(self.pending_receive)
       return True
     return False
+
+  @property
+  def pending_receive(self):
+    return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
 
   def __str__(self):
     return "ControlMessageReceive c %s -> s %s [%s]" % (self.controller_id, self.dpid, self.fingerprint[1].human_str())
