@@ -5,14 +5,22 @@
 import json
 import time
 import argparse
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 import sts.replay_event as replay_events
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-i', '--input', required=True,
+parser.add_argument('input', metavar="INPUT",
                     help='The input json file to be printed')
 parser.add_argument('-f', '--format-file',
                     help='The output format configuration file',
                     default=None)
+parser.add_argument('-N', '--no-stats', action="store_false", dest="stats",
+                    help='The output format configuration file',
+                    default=True)
 args = parser.parse_args()
 
 # ------------------------------- Config file format: --------------------------------------
@@ -68,6 +76,24 @@ field_formatters = {
   # TODO(cs): allow user to display relative time between events
 }
 
+class Stats:
+  def __init__(self):
+    self.input_events = 0
+    self.internal_events = 0
+
+  def update(self, event):
+    if isinstance(event, replay_events.InputEvent):
+      self.input_events += 1
+    else:
+      self.internal_events += 1
+
+  @property
+  def total_events(self):
+    return self.input_events + self.internal_events
+
+  def __str__(self):
+    return "Events: %d total (%d input, %d internal)." % (self.total_events, self.input_events, self.internal_events)
+
 def main(args):
   def load_format_file(format_file):
     if format_file.endswith('.py'):
@@ -94,6 +120,7 @@ def main(args):
     klass.__name__ : klass
     for klass in replay_events.all_events
   }
+  stats = Stats()
 
   # All events are printed with a fixed number of lines, and (optionally)
   # separated by delimiter lines of the form:
@@ -107,6 +134,10 @@ def main(args):
           if field not in field_formatters:
             raise ValueError("Unknown field %s" % field)
           field_formatters[field](event)
+      stats.update(event)
+
+  if args.stats:
+    print "Stats: %s" % stats
 
 if __name__ == '__main__':
   main(args)
