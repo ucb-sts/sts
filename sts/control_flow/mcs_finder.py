@@ -272,6 +272,7 @@ class MCSFinder(ControlFlow):
                            self.simulation_cfg)
       write_runtime_stats(self._runtime_stats)
 
+# TODO(cs): Hack alert. Shouldn't be a subclass
 class EfficientMCSFinder(MCSFinder):
   ''' Exactly the same functionality as MCSFinder, but assumes that
   indeterminate results cannot occur. Worst-case runtime of O(n) as opposed to
