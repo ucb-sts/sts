@@ -25,7 +25,8 @@ def write_runtime_stats(runtime_stats):
   # Now write contents to a file
   now = timestamp_string()
   with file("runtime_stats/" + now + ".json", "w") as output:
-    json_string = json.dumps(runtime_stats)
+    json_string = json.dumps(runtime_stats, sort_keys=True, indent=2,
+                             separators=(',', ': '))
     output.write(json_string)
 
 class MCSFinder(ControlFlow):
