@@ -21,25 +21,6 @@ import random
 import logging
 import json
 
-def finish_runtime_stats(runtime_stats, transform_dag, simulation_cfg):
-  # First compute durations
-  if "replay_end_epoch" in runtime_stats:
-    runtime_stats["replay_duration_seconds"] =\
-      (runtime_stats["replay_end_epoch"] -
-       runtime_stats["replay_start_epoch"])
-  if "prune_end_epoch" in runtime_stats:
-    runtime_stats["prune_duration_seconds"] =\
-      (runtime_stats["prune_end_epoch"] -
-       runtime_stats["prune_start_epoch"])
-  runtime_stats["total_replays"] = Replayer.total_replays
-  runtime_stats["total_inputs_replayed"] = Replayer.total_inputs_replayed
-  if transform_dag is not None:
-    # TODO(cs): assumes that Peeker is the dag transformer
-    runtime_stats["ambiguous_counts"] = dict(Peeker.ambiguous_counts)
-    runtime_stats["ambiguous_events"] = dict(Peeker.ambiguous_events)
-  runtime_stats["peeker"] = transform_dag is not None
-  runtime_stats["config"] = str(simulation_cfg)
-
 def write_runtime_stats(runtime_stats):
   # Now write contents to a file
   now = timestamp_string()
@@ -268,8 +249,24 @@ class MCSFinder(ControlFlow):
 
   def _dump_runtime_stats(self):
     if self._runtime_stats is not None:
-      finish_runtime_stats(self._runtime_stats, self.transform_dag,
-                           self.simulation_cfg)
+      # First compute durations
+      if "replay_end_epoch" in self._runtime_stats:
+        self._runtime_stats["replay_duration_seconds"] =\
+          (self._runtime_stats["replay_end_epoch"] -
+           self._runtime_stats["replay_start_epoch"])
+      if "prune_end_epoch" in self._runtime_stats:
+        self._runtime_stats["prune_duration_seconds"] =\
+          (self._runtime_stats["prune_end_epoch"] -
+           self._runtime_stats["prune_start_epoch"])
+      self._runtime_stats["total_replays"] = Replayer.total_replays
+      self._runtime_stats["total_inputs_replayed"] = Replayer.total_inputs_replayed
+      if self.transform_dag is not None:
+        # TODO(cs): assumes that Peeker is the dag transformer
+        self._runtime_stats["ambiguous_counts"] = dict(Peeker.ambiguous_counts)
+        self._runtime_stats["ambiguous_events"] = dict(Peeker.ambiguous_events)
+      self._runtime_stats["peeker"] = self.transform_dag is not None
+      self._runtime_stats["config"] = str(self.simulation_cfg)
+
       write_runtime_stats(self._runtime_stats)
 
 # TODO(cs): Hack alert. Shouldn't be a subclass
