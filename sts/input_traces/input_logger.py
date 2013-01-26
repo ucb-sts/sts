@@ -24,16 +24,16 @@ control_flow = Replayer(simulation_config, "%s",
 mcs_config_template = '''
 from experiment_config_lib import ControllerConfig
 from sts.topology import *
-from sts.control_flow import MCSFinder
+from sts.control_flow import EfficientMCSFinder
 from sts.invariant_checker import InvariantChecker
 from sts.simulation_state import SimulationConfig
 
 simulation_config = %s
 
-control_flow = MCSFinder(simulation_config, "%s",
-                         invariant_check=InvariantChecker.check_liveness,
-                         mcs_trace_path="%s",
-                         wait_on_deterministic_values=%s)
+control_flow = EfficientMCSFinder(simulation_config, "%s",
+                                  invariant_check=InvariantChecker.check_liveness,
+                                  mcs_trace_path="%s",
+                                  wait_on_deterministic_values=%s)
 '''
 
 log = logging.getLogger("input_logger")
