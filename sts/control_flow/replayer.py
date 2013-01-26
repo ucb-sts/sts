@@ -118,7 +118,7 @@ class Replayer(ControlFlow):
     old_interrupt = None
 
     def interrupt(sgn, frame):
-      msg.interactive("Interrupting fuzzer, dropping to console (press ^C again to terminate)")
+      msg.interactive("Interrupting replayer, dropping to console (press ^C again to terminate)")
       signal.signal(signal.SIGINT, self.old_interrupt)
       self.old_interrupt = None
       self.interrupted = True
