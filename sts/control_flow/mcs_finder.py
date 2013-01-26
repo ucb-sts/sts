@@ -10,7 +10,6 @@ from sts.replay_event import *
 from sts.event_dag import EventDag, split_list
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.input_traces.input_logger import InputLogger
-
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.peeker import Peeker
@@ -21,6 +20,32 @@ import time
 import random
 import logging
 import json
+
+def finish_runtime_stats(runtime_stats, transform_dag, simulation_cfg):
+  # First compute durations
+  if "replay_end_epoch" in runtime_stats:
+    runtime_stats["replay_duration_seconds"] =\
+      (runtime_stats["replay_end_epoch"] -
+       runtime_stats["replay_start_epoch"])
+  if "prune_end_epoch" in runtime_stats:
+    runtime_stats["prune_duration_seconds"] =\
+      (runtime_stats["prune_end_epoch"] -
+       runtime_stats["prune_start_epoch"])
+  runtime_stats["total_replays"] = Replayer.total_replays
+  runtime_stats["total_inputs_replayed"] = Replayer.total_inputs_replayed
+  if transform_dag is not None:
+    # TODO(cs): assumes that Peeker is the dag transformer
+    runtime_stats["ambiguous_counts"] = dict(Peeker.ambiguous_counts)
+    runtime_stats["ambiguous_events"] = dict(Peeker.ambiguous_events)
+  runtime_stats["peeker"] = transform_dag is not None
+  runtime_stats["config"] = str(simulation_cfg)
+
+def write_runtime_stats(runtime_stats):
+  # Now write contents to a file
+  now = timestamp_string()
+  with file("runtime_stats/" + now + ".json", "w") as output:
+    json_string = json.dumps(runtime_stats)
+    output.write(json_string)
 
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
@@ -100,13 +125,17 @@ class MCSFinder(ControlFlow):
       if violations == []:
         msg.fail("Unable to reproduce correctness violation!")
         sys.exit(5)
-
       self.log("Violation reproduced successfully! Proceeding with pruning")
+      Replayer.total_replays = 0
+      Replayer.total_inputs_replayed = 0
 
     if self._runtime_stats is not None:
       self._runtime_stats["prune_start_epoch"] = time.time()
     precompute_cache = PrecomputeCache()
-    self.dag = self._ddmin(self.dag, 2, precompute_cache=precompute_cache)
+    (dag, total_inputs_pruned) = self._ddmin(self.dag, 2, precompute_cache=precompute_cache)
+    # Make sure to track the final iteration size
+    self._track_iteration_size(total_inputs_pruned)
+    self.dag = dag
     if self._runtime_stats is not None:
       self._runtime_stats["prune_end_epoch"] = time.time()
       self._dump_runtime_stats()
@@ -116,18 +145,16 @@ class MCSFinder(ControlFlow):
       self._dump_mcs_trace()
     return self.dag.events
 
-  def _ddmin(self, dag, split_ways, precompute_cache=None, iteration=0, label_prefix=()):
-    ''' - iteration is the # of times we've replayed (not the number of times
-    we've invoked _ddmin)'''
+  def _ddmin(self, dag, split_ways, precompute_cache=None, label_prefix=(),
+             total_inputs_pruned=0):
     # This is the delta-debugging algorithm from:
     #   http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf,
     # Section 3.2
     # TODO(cs): we could do much better if we leverage domain knowledge (e.g.,
     # start by pruning all LinkFailures)
     if split_ways > len(dag.input_events):
-      self._track_iteration_size(dag, iteration + 1, split_ways)
       self.log("Done")
-      return dag
+      return (dag, total_inputs_pruned)
 
     local_label = lambda i, inv=False: "%s%d/%d" % ("~" if inv else "", i, split_ways)
     subset_label = lambda label: ".".join(map(str, label_prefix + ( label, )))
@@ -148,13 +175,14 @@ class MCSFinder(ControlFlow):
         self.log("Subset after pruning dependencies was empty. Skipping")
         continue
 
-      iteration += 1
-      self._track_iteration_size(new_dag, iteration, split_ways)
+      self._track_iteration_size(total_inputs_pruned)
       violation = self._check_violation(new_dag, i)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
+        total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         return self._ddmin(new_dag, 2, precompute_cache=precompute_cache,
-                           iteration=iteration, label_prefix = label_prefix + (label, ))
+                           label_prefix = label_prefix + (label, ),
+                           total_inputs_pruned=total_inputs_pruned)
 
     self.log_no_violation("No subsets with violations. Checking complements")
     for i, subset in enumerate(subsets):
@@ -172,32 +200,31 @@ class MCSFinder(ControlFlow):
         self.log("Subset %s after pruning dependencies was empty. Skipping", subset_label(label))
         continue
 
-      iteration += 1
-      self._track_iteration_size(new_dag, iteration, split_ways)
+      self._track_iteration_size(total_inputs_pruned)
       violation = self._check_violation(new_dag, i)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
+        total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         return self._ddmin(new_dag, max(split_ways - 1, 2),
                            precompute_cache=precompute_cache,
-                           iteration=iteration, label_prefix=prefix)
+                           label_prefix=prefix,
+                           total_inputs_pruned=total_inputs_pruned)
 
     self.log_no_violation("No complements with violations.")
     if split_ways < len(dag.input_events):
       self.log("Increasing granularity.")
       return self._ddmin(dag, min(len(dag.input_events), split_ways*2),
                          precompute_cache=precompute_cache,
-                         iteration=iteration, label_prefix=label_prefix)
-    self._track_iteration_size(dag, iteration + 1, split_ways)
-    return dag
+                         label_prefix=label_prefix,
+                         total_inputs_pruned=total_inputs_pruned)
+    return (dag, total_inputs_pruned)
 
-  def _track_iteration_size(self, dag, iteration, split_ways):
+  def _track_iteration_size(self, total_inputs_pruned):
     if self._runtime_stats is not None:
       if "iteration_size" not in self._runtime_stats:
         self._runtime_stats["iteration_size"] = {}
-      self._runtime_stats["iteration_size"][iteration] = len(dag.input_events)
-      if "split_ways" not in self._runtime_stats:
-        self._runtime_stats["split_ways"] = set()
-        self._runtime_stats["split_ways"].add(split_ways)
+      self._runtime_stats["iteration_size"][Replayer.total_replays] =\
+              len(self.dag.input_events) - total_inputs_pruned
 
   def _check_violation(self, new_dag, subset_index):
     ''' Check if there were violations '''
@@ -241,32 +268,9 @@ class MCSFinder(ControlFlow):
 
   def _dump_runtime_stats(self):
     if self._runtime_stats is not None:
-      # First compute durations
-      if "replay_end_epoch" in self._runtime_stats:
-        self._runtime_stats["replay_duration_seconds"] =\
-          (self._runtime_stats["replay_end_epoch"] -
-           self._runtime_stats["replay_start_epoch"])
-      if "prune_end_epoch" in self._runtime_stats:
-        self._runtime_stats["prune_duration_seconds"] =\
-          (self._runtime_stats["prune_end_epoch"] -
-           self._runtime_stats["prune_start_epoch"])
-      self._runtime_stats["total_replays"] = Replayer.total_replays
-      self._runtime_stats["total_inputs_replayed"] =\
-          Replayer.total_inputs_replayed
-      if self.transform_dag is not None:
-        # TODO(cs): assumes that Peeker is the dag transformer
-        self._runtime_stats["ambiguous_counts"] =\
-            dict(Peeker.ambiguous_counts)
-        self._runtime_stats["ambiguous_events"] =\
-            dict(Peeker.ambiguous_events)
-      self._runtime_stats["config"] = str(self.simulation_cfg)
-      self._runtime_stats["peeker"] = self.transform_dag is not None
-      self._runtime_stats["split_ways"] = list(self._runtime_stats["split_ways"])
-      # Now write contents to a file
-      now = timestamp_string()
-      with file("runtime_stats/" + now + ".json", "w") as output:
-        json_string = json.dumps(self._runtime_stats)
-        output.write(json_string)
+      finish_runtime_stats(self._runtime_stats, self.transform_dag,
+                           self.simulation_cfg)
+      write_runtime_stats(self._runtime_stats)
 
 class EfficientMCSFinder(MCSFinder):
   ''' Exactly the same functionality as MCSFinder, but assumes that
@@ -276,7 +280,7 @@ class EfficientMCSFinder(MCSFinder):
   Section 4
   '''
   def _ddmin(self, dag, carryover_inputs, precompute_cache=None,
-             recursion_level=0, label_prefix=()):
+             recursion_level=0, label_prefix=(), total_inputs_pruned=0):
     ''' carryover_inputs is the variable "r" from the paper. '''
     # Hack: superclass calls _ddmin with an integer, which doesn't match our
     # API. Translate that to an empty sequence. (we also don't use precompute_cache)
@@ -291,7 +295,7 @@ class EfficientMCSFinder(MCSFinder):
     # pairs, or normal inputs otherwise.
     if len(dag.atomic_input_events) == 1:
       self.log("Base case %s" % str(dag.input_events))
-      return dag
+      return (dag, total_inputs_pruned)
 
     (left, right) = split_list(dag.atomic_input_events, 2)
     self.log("Subsets:\n"+"\n".join(print_subset(local_label(i), s)
@@ -306,38 +310,37 @@ class EfficientMCSFinder(MCSFinder):
       self.log("Current subset: %s" % print_subset(label,
                                                    new_dag.atomic_input_events))
       left_right_dag.append(new_dag)
-      self._track_iteration_size(new_dag, recursion_level)
       # We test on subsequence U carryover_inputs
       test_dag = new_dag.insert_atomic_inputs(carryover_inputs)
+      self._track_iteration_size(total_inputs_pruned)
       violation = self._check_violation(test_dag, i)
       if violation:
         self.log("Violation found in %dth half. Recursing" % i)
+        total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         return self._ddmin(new_dag, carryover_inputs,
                            recursion_level=recursion_level+1,
-                           label_prefix=prefix)
+                           label_prefix=prefix,
+                           total_inputs_pruned=total_inputs_pruned)
 
     self.log("Interference")
     (left_dag, right_dag) = left_right_dag
     self.log("Recursing on left half")
     prefix = label_prefix + ("il/%d" % recursion_level,)
-    left_result = self._ddmin(left_dag,
-                              right_dag.insert_atomic_inputs(carryover_inputs).atomic_input_events,
-                              recursion_level=recursion_level+1,
-                              label_prefix=prefix)
+    (left_result,
+     total_inputs_pruned) = self._ddmin(left_dag,
+                                        right_dag.insert_atomic_inputs(carryover_inputs).atomic_input_events,
+                                        recursion_level=recursion_level+1,
+                                        label_prefix=prefix,
+                                        total_inputs_pruned=total_inputs_pruned)
     self.log("Recursing on right half")
     prefix = label_prefix + ("ir/%d" % recursion_level,)
-    right_result = self._ddmin(right_dag,
-                               left_dag.insert_atomic_inputs(carryover_inputs).atomic_input_events,
-                               recursion_level=recursion_level+1,
-                               label_prefix=prefix)
+    (right_result,
+     total_inputs_pruned) = self._ddmin(right_dag,
+                                        left_dag.insert_atomic_inputs(carryover_inputs).atomic_input_events,
+                                        recursion_level=recursion_level+1,
+                                        label_prefix=prefix,
+                                        total_inputs_pruned=total_inputs_pruned)
 
-    self._track_iteration_size(dag, recursion_level + 1)
-    return left_result.insert_atomic_inputs(right_result.atomic_input_events)
+    return (left_result.insert_atomic_inputs(right_result.atomic_input_events),
+            total_inputs_pruned)
 
-  def _track_iteration_size(self, dag, recursion_level):
-    if self._runtime_stats is not None:
-      pass
-
-  def _dump_runtime_stats(self):
-    if self._runtime_stats is not None:
-      pass
