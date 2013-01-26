@@ -135,9 +135,7 @@ class Fuzzer(ControlFlow):
             raise e
 
       if self.print_buffers:
-        log.debug("Pending Message Receives:")
-        for p in self.simulation.god_scheduler.pending_receives():
-          log.debug("- %s", p)
+        self._print_buffers()
 
     finally:
       if self.old_interrupt:
@@ -146,6 +144,19 @@ class Fuzzer(ControlFlow):
         self._input_logger.close(self, self.simulation_cfg)
 
     return exit_code
+
+  def _print_buffers(self):
+    buffered_events = []
+    log.debug("Pending Message Receives:")
+    for p in self.simulation.god_scheduler.pending_receives():
+      log.debug("- %s", p)
+      event = ControlMessageReceive(p.dpid, p.controller_id, p.fingerprint)
+      buffered_events.append(event)
+
+    # Note that there shouldn't be any pending state changes in record mode
+
+    if self._input_logger is not None:
+      self._input_logger.dump_buffered_events(buffered_events)
 
   def maybe_check_invariant(self):
     if (self.check_interval is not None and

@@ -59,12 +59,21 @@ class InputLogger(object):
     self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
     self.last_time = SyncTime.now()
     self._disallow_timeouts = False
+    self._events_after_close = []
 
   def disallow_timeouts(self):
     self._disallow_timeouts = True
 
   def allow_timeouts(self):
     self._disallow_timeouts = False
+
+  def _serialize_event(self, event, output):
+    if self._disallow_timeouts and hasattr(event, "disallow_timeouts"):
+      event.timeout_disallowed = True
+    self.last_time = event.time
+    json_hash = event.to_json()
+    log.debug("logging event %r" % event)
+    output.write(json_hash + '\n')
 
   def log_input_event(self, event, dp_event=None):
     '''
@@ -73,14 +82,18 @@ class InputLogger(object):
     logged separately.
     '''
     if not self.output.closed:
-      if self._disallow_timeouts and hasattr(event, "disallow_timeouts"):
-        event.timeout_disallowed = True
-      self.last_time = event.time
-      json_hash = event.to_json()
-      log.debug("logging event %r" % event)
-      self.output.write(json_hash + '\n')
+      self._serialize_event(event, self.output)
       if dp_event is not None:
         self.dp_events.append(dp_event)
+    else:
+      self._events_after_close.append(event)
+
+  def dump_buffered_events(self, events):
+    ''' If there were buffered message receives or state changes, dump them to
+    a separate input trace ".buffered" '''
+    with open(self.output_path + ".buffered", 'w') as output:
+      for event in events + self._events_after_close:
+        self._serialize_event(event, output)
 
   def close(self, control_flow, simulation_cfg, skip_mcs_cfg=False):
     # First, insert a WaitTime, in case there was a controller crash

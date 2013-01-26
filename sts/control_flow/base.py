@@ -125,6 +125,10 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     ''' Return any pending state changes '''
     return self._pending_state_changes.keys()
 
+  def pending_state_changes_with_counts(self):
+    ''' Return any pending state changes '''
+    return self._pending_state_changes
+
   def get_deterministic_value(self, controller, name, xid):
     # TODO(cs): xid arguably shouldn't be known to STS
     if name != "gettimeofday":
