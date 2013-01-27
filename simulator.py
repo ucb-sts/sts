@@ -68,7 +68,7 @@ if not hasattr(config, 'results_dir'):
 
 now = timestamp_string()
 if hasattr(config, 'timestamp_results') and config.timestamp_results:
-  config.results_dir += str(now)
+  config.results_dir += "_" + str(now)
 
 if not os.path.exists(config.results_dir):
   os.makedirs(config.results_dir)
