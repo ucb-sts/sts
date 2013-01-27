@@ -14,6 +14,8 @@ from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.peeker import Peeker
 
+
+from collections import defaultdict
 import itertools
 import sys
 import time
@@ -237,6 +239,10 @@ class MCSFinder(ControlFlow):
       if violations != []:
         # Violation in the subset
         self.log_violation("Violation! Considering %d'th" % subset_index)
+        if self._runtime_stats is not None:
+          if "violation_found_in_run" not in self._runtime_stats:
+            self._runtime_stats["violation_found_in_run"] = defaultdict(lambda : 0)
+          self._runtime_stats["violation_found_in_run"][i] += 1
         return True
 
     # No violation!
