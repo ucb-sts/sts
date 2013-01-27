@@ -22,7 +22,17 @@ def dump_metadata(metadata_file):
                'argv' : sys.argv,
                'user' : getpass.getuser(),
                'cwd' : os.getcwd(),
-               'host' : socket.gethostname(),
+               'host' : {
+                  'name' : socket.gethostname(),
+                  'uptime' : backtick("uptime"),
+                  'free' : backtick("free"),
+                  'num_cores' : backtick("cat /proc/cpuinfo  | grep '^processor[[:space:]]' | wc -l"),
+                  'cpu_info' : backtick("cat /proc/cpuinfo | grep 'model name[[:space:]]' | uniq | sed 's/.*://' | perl -pi -e 's/\s+/ /g'")
+                },
+               'sys' : {
+                 'lsb_release' : backtick("lsb_release --description --short"),
+                 'uname' : backtick("uname -a")
+               },
                'modules' : {
                  module : { 'commit' : backtick("git rev-parse HEAD", cwd=path),
                             'branch' : backtick("git rev-parse --abbrev-ref HEAD", cwd=path)
