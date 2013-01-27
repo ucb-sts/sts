@@ -236,7 +236,7 @@ class MCSFinder(ControlFlow):
                         #auto_permit_dp_events=True,
                         **self.kwargs)
     simulation = replayer.simulate()
-    self._track_new_internal_events(simulation)
+    self._track_new_internal_events(simulation, replayer)
     # Wait a bit in case the bug takes awhile to happen
     self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
     time.sleep(self.end_wait_seconds)
@@ -244,7 +244,7 @@ class MCSFinder(ControlFlow):
     simulation.clean_up()
     return violations
 
-  def _track_new_internal_events(self, simulation):
+  def _track_new_internal_events(self, simulation, replayer):
     ''' Pre: simulation must have been run through a replay'''
     # We always check against internal events that were buffered at the end of
     # the original run (don't want to overcount)
@@ -254,19 +254,13 @@ class MCSFinder(ControlFlow):
       return
     prev_buffered_receives = [ e.pending_receive for e in
                                EventDag(superlog_parser.parse_path(path)).events ]
-
-    log.debug("Pending Message Receives:")
     new_message_receipts = []
     for p in simulation.god_scheduler.pending_receives():
       if p not in prev_buffered_receives:
         new_message_receipts.append(repr(p))
       else:
         prev_buffered_receives.remove(p)
-    log.debug("Pending State Changes:")
-    new_state_changes = []
-    for p, count in simulation.controller_sync_callback.pending_state_changes_with_counts():
-      for _ in xrange(count):
-        new_state_changes.append(repr(p))
+    new_state_changes = replayer.unexpected_state_changes
     if "new_internal_events" not in self._runtime_stats:
       # { replay iteration -> [string representations new internal events] }
       self._runtime_stats["new_internal_events"] = {}

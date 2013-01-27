@@ -711,22 +711,19 @@ class ControllerStateChange(InternalEvent):
     self.value = value
 
   def proceed(self, simulation):
-    pending_state_change = PendingStateChange(self.controller_id, self.time,
-                                              self._get_message_fingerprint(),
-                                              self.name, self.value)
     observed_yet = simulation.controller_sync_callback\
-                             .state_change_pending(pending_state_change)
+                             .state_change_pending(self.pending_state_change)
     if observed_yet:
       simulation.controller_sync_callback\
-                .ack_pending_state_change(pending_state_change)
+                .ack_pending_state_change(self.pending_state_change)
       return True
-    # TODO(cs): possibly need to flush all pending state changes our change
-    # hasn't been observed yet, since:
-    #  - pending state changes block the controller
-    #  - after pruning, different code paths may be taken, and the
-    #    controller may just blocked on a pending state change prior to this
-    #    one. Seems like scenario this would cause excessive timeouts.
     return False
+
+  @property
+  def pending_state_change(self):
+    return PendingStateChange(self.controller_id, self.time,
+                              self._get_message_fingerprint(),
+                              self.name, self.value)
 
   def _get_message_fingerprint(self):
     return self._fingerprint[1]

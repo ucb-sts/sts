@@ -35,7 +35,8 @@ class Replayer(ControlFlow):
   time_epsilon_microseconds = 500
 
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
-               print_buffers=True, wait_on_deterministic_values=False, auto_permit_dp_events=False, **kwargs):
+               print_buffers=True, wait_on_deterministic_values=False,
+               auto_permit_dp_events=False, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -55,6 +56,7 @@ class Replayer(ControlFlow):
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
     self.auto_permit_dp_events = auto_permit_dp_events
+    self.unexpected_state_changes = []
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -125,16 +127,18 @@ class Replayer(ControlFlow):
     self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
 
     try:
-      for event in dag.events:
+      for i, event in enumerate(dag.events):
         try:
           self.logical_time += 1
           self.compute_interpolated_time(event)
+          self._check_new_state_changes(dag, i)
+          # TODO(cs): quasi race-condition here. If unexpected state change
+          # happens *while* we're waiting for event, we basically have a
+          # deadlock (if controller logging is set to blocking) until the
+          # timeout occurs
           event_scheduler.schedule(event)
           if self.auto_permit_dp_events:
-            patch_panel = self.simulation.patch_panel
-            for e in patch_panel.queued_dataplane_events:
-              log.debug("Permitting dataplane event: %s" % str(e))
-              patch_panel.permit_dp_event(e)
+            self._permit_dp_events()
           self.increment_round()
         except KeyboardInterrupt as e:
           if self.interrupted:
@@ -147,3 +151,25 @@ class Replayer(ControlFlow):
       if self.old_interrupt:
         signal.signal(signal.SIGINT, self.old_interrupt)
       msg.event(color.B_BLUE+"Event Stats: %s" % str(event_scheduler.stats))
+
+  def _check_new_state_changes(self, dag, current_index):
+    ''' If we are blocking controllers, it's bad news bears if an unexpected
+    internal state change occurs. Check if there are any, and ACK them so that
+    the execution can proceed.'''
+    pending_state_changes = self.sync_callback.pending_state_changes()
+    if len(pending_state_changes) > 0:
+      # TODO(cs): currently assumes a single controller (single pending state
+      # change)
+      next_expected = dag.next_state_change(current_index)
+      if (next_expected is None or
+          pending_state_changes[0] != next_expected.pending_state_change):
+        log.info("Unexpected state change. Ack'ing")
+        self.unexpected_state_changes.append(repr(pending_state_changes[0]))
+        self.sync_callback.ack_pending_state_change(pending_state_changes[0])
+
+  def _permit_dp_events(self):
+    patch_panel = self.simulation.patch_panel
+    for e in patch_panel.queued_dataplane_events:
+      log.debug("Permitting dataplane event: %s" % str(e))
+      patch_panel.permit_dp_event(e)
+
