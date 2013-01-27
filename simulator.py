@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.7
 
+from sts.util.console import tee_stdout
 from sts.util.procutils import kill_procs
 from sts.control_flow import Fuzzer
 from sts.simulation_state import SimulationConfig
@@ -74,6 +75,7 @@ if not os.path.exists(config.results_dir):
 module_init_py = os.path.join(config.results_dir, "__init__.py")
 if not os.path.exists(module_init_py):
   open(module_init_py,"a").close()
+tee_stdout(os.path.join(config.results_dir, "simulator.out"))
 
 if args.publish:
   exp_lifecycle.publish_prepare(config.exp_name, config.results_dir)

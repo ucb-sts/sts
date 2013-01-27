@@ -1,3 +1,5 @@
+import sys
+
 BEGIN = '\033[1;'
 END = '\033[1;m'
 
@@ -65,4 +67,20 @@ class msg():
   def unset_io_master():
     msg.global_io_master = None
 
+def tee_stdout(file):
+  if not hasattr(tee_stdout, "_orig_stdout"):
+    tee_stdout._orig_stdout = sys.stdout
+  class Tee(object):
+    def __init__(self, file):
+      self.file = open(file,"w")
+    def write(self, *args, **kwargs):
+      tee_stdout._orig_stdout.write(*args, **kwargs)
+      self.file.write(*args, **kwargs)
+      self.file.flush()
+  sys.stdout = Tee(file)
+
+def untee_stdout():
+  if hasattr(tee_stdout, "_orig_stdout"):
+    sys.stdout = tee_stdout._orig_stdout
+    delattr(tee_stdout, "_orig_stdout")
 
