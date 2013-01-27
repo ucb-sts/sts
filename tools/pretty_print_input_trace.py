@@ -19,7 +19,7 @@ parser.add_argument('-f', '--format-file',
                     help='The output format configuration file',
                     default=None)
 parser.add_argument('-N', '--no-stats', action="store_false", dest="stats",
-                    help='The output format configuration file',
+                    help="Don't print statistics",
                     default=True)
 args = parser.parse_args()
 
