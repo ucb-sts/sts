@@ -10,7 +10,6 @@ from sts.replay_event import *
 from sts.event_dag import EventDag
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.util.console import color
-
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 
 import signal
@@ -22,20 +21,22 @@ import logging
 log = logging.getLogger("Replayer")
 
 class Replayer(ControlFlow):
-  # Runtime stats:
-  total_replays = 0
-  total_inputs_replayed = 0
-  # Interpolated time parameter. *not* the event scheduling epsilon:
-  time_epsilon_microseconds = 500
-
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
 
   To set the event scheduling paramters, pass them as keyword args to the
   constructor of this class, which will pass them on to the EventScheduler object it creates.
   '''
+
+  # Runtime stats:
+  total_replays = 0
+  total_inputs_replayed = 0
+  # Interpolated time parameter. *not* the event scheduling epsilon:
+  time_epsilon_microseconds = 500
+
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
-               print_buffers=True, wait_on_deterministic_values=False, auto_permit_dp_events=False, **kwargs):
+               print_buffers=True, wait_on_deterministic_values=False,
+               auto_permit_dp_events=False, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -55,6 +56,8 @@ class Replayer(ControlFlow):
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
     self.auto_permit_dp_events = auto_permit_dp_events
+    self.unexpected_state_changes = []
+    self.early_state_changes = []
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -128,16 +131,20 @@ class Replayer(ControlFlow):
     self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
 
     try:
-      for event in dag.events:
+      for i, event in enumerate(dag.events):
         try:
           self.logical_time += 1
           self.compute_interpolated_time(event)
+          if isinstance(event, InputEvent):
+            self._check_early_state_changes(dag, i, event)
+          self._check_new_state_changes(dag, i)
+          # TODO(cs): quasi race-condition here. If unexpected state change
+          # happens *while* we're waiting for event, we basically have a
+          # deadlock (if controller logging is set to blocking) until the
+          # timeout occurs
           event_scheduler.schedule(event)
           if self.auto_permit_dp_events:
-            patch_panel = self.simulation.patch_panel
-            for e in patch_panel.queued_dataplane_events:
-              log.debug("Permitting dataplane event: %s" % str(e))
-              patch_panel.permit_dp_event(e)
+            self._permit_dp_events()
           self.increment_round()
         except KeyboardInterrupt as e:
           if self.interrupted:
@@ -150,3 +157,44 @@ class Replayer(ControlFlow):
       if self.old_interrupt:
         signal.signal(signal.SIGINT, self.old_interrupt)
       msg.event(color.B_BLUE+"Event Stats: %s" % str(event_scheduler.stats))
+
+  def _check_early_state_changes(self, dag, current_index, input):
+    ''' Check whether the any pending state change were supposed to come
+    *after* the current input. If so, we have violated causality.'''
+    pending_state_changes = self.sync_callback.pending_state_changes()
+    if len(pending_state_changes) > 0:
+      # TODO(cs): currently assumes a single controller (-> single pending state
+      # change)
+      state_change = pending_state_changes[0]
+      next_expected = dag.next_state_change(current_index)
+      original_input_index = dag.get_original_index_for_event(input)
+      if (next_expected is not None and
+          state_change == next_expected.pending_state_change and
+          dag.get_original_index_for_event(next_expected) > original_input_index):
+        # TODO(cs): should arguably raise an exception here until we have
+        # implemented a proper swap-over to peek()
+        log.warn("State change happened before expected! Causality violated")
+        self.early_state_changes.append(repr(next_expected))
+
+  def _check_new_state_changes(self, dag, current_index):
+    ''' If we are blocking controllers, it's bad news bears if an unexpected
+    internal state change occurs. Check if there are any, and ACK them so that
+    the execution can proceed.'''
+    pending_state_changes = self.sync_callback.pending_state_changes()
+    if len(pending_state_changes) > 0:
+      # TODO(cs): currently assumes a single controller (-> single pending state
+      # change)
+      state_change = pending_state_changes[0]
+      next_expected = dag.next_state_change(current_index)
+      if (next_expected is None or
+          state_change != next_expected.pending_state_change):
+        log.info("Unexpected state change. Ack'ing")
+        self.unexpected_state_changes.append(repr(state_change))
+        self.sync_callback.ack_pending_state_change(state_change)
+
+  def _permit_dp_events(self):
+    patch_panel = self.simulation.patch_panel
+    for e in patch_panel.queued_dataplane_events:
+      log.debug("Permitting dataplane event: %s" % str(e))
+      patch_panel.permit_dp_event(e)
+

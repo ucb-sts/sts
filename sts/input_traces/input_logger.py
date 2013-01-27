@@ -99,9 +99,9 @@ class InputLogger(object):
       self._events_after_close.append(event)
 
   def dump_buffered_events(self, events):
-    ''' If there were buffered message receives or state changes, dump them to
-    a separate input trace ".buffered" '''
-    with open(self.output_path + ".buffered", 'w') as output:
+    ''' If there were un-acknowledge message receives or state changes at the
+    end of the run, dump them to a separate input trace ".unacked" '''
+    with open(self.output_path + ".unacked", 'w') as output:
       for event in events + self._events_after_close:
         self._serialize_event(event, output)
 

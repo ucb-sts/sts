@@ -82,6 +82,12 @@ class EventDagView(object):
   def add_inputs(self, inputs):
     return self._parent.add_inputs(inputs, self._events_list)
 
+  def next_state_change(self, index):
+    return self._parent.next_state_change(index, events=self.events)
+
+  def get_original_index_for_event(self, event):
+    return self._parent.get_original_index_for_event(event)
+
   def __len__(self):
     return len(self._events_list)
 
@@ -195,8 +201,7 @@ class EventDag(object):
     for e in [e for e in self._events_list if type(e) == CheckInvariants]:
       e.fail_on_error = False
     return EventDagView(self, (e for e in self._events_list
-                              if type(e) not in self._ignored_input_types))
-
+                               if type(e) not in self._ignored_input_types))
 
   def compute_remaining_input_events(self, ignored_portion, events_list=None):
     ''' ignore all input events in ignored_inputs,
@@ -283,7 +288,6 @@ class EventDag(object):
     ignored = self._ignored_except_internals_and_recoveries(ignored)
     remaining_events = self.compute_remaining_input_events(ignored)
     return EventDagView(self, remaining_events)
-
 
   def atomic_input_subset(self, subset):
     ''' Return a view of the dag with only the subset dependents
@@ -388,6 +392,20 @@ class EventDag(object):
         #elif type(event) in self._ignored_input_types:
         #  raise RuntimeError("No support for %s dependencies" %
         #                      type(event).__name__)
+
+  def next_state_change(self, index, events=None):
+    ''' Return the next ControllerStateChange that occurs at or after
+    index.'''
+    if events is None:
+      events = self.events
+    # TODO(cs): for now, assumes a single controller
+    for event in events[index:]:
+      if type(event) == ControllerStateChange:
+        return event
+    return None
+
+  def get_original_index_for_event(self, event):
+    return self._event2idx[event]
 
   def __len__(self):
     return len(self._events_list)

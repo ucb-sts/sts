@@ -41,6 +41,6 @@ set yrange [0:]
 #set output "runtime_graph.pdf"
 #set title "runtime seconds=?, replay duration=?"
 #plot 'foo.dat' index 0:1 title "" w lp ls 1
-set output "2013_01_26_12_04_54.pdf"
-set title "total runtime=132.7s, original runtime=4.2s"
-plot "2013_01_26_12_04_54.dat" index 0:1 title "" w p pt 2
+set output "2013_01_26_18_37_11.pdf"
+set title "total runtime=141.0s, original runtime=3.9s"
+plot "2013_01_26_18_37_11.dat" index 0:1 title "" w p pt 2
