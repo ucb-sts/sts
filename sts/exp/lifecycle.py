@@ -84,8 +84,6 @@ def publish_prepare(exp_name, results_dir):
   res_git_dir = find_git_dir(results_dir)
   if not res_git_dir:
     raise Exception("Cannot publish - no git dir found in results tree")
-  if git_has_uncommitted_files(res_git_dir):
-      raise Exception("Cannot publish: uncommitted changes in sts module %s" % res_git_dir)
 
 def publish_results(exp_name, results_dir):
     res_git_dir = find_git_dir(results_dir)
