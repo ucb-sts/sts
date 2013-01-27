@@ -8,8 +8,7 @@ import json
 import os
 
 parser = argparse.ArgumentParser(description="generate a plot")
-parser.add_argument('-i', '--input',
-                    required=True,
+parser.add_argument('input', metavar="INPUT",
                     help='''The input json file''')
 args = parser.parse_args()
 
