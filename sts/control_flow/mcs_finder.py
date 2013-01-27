@@ -265,7 +265,13 @@ class MCSFinder(ControlFlow):
       # { replay iteration -> [string representations new internal events] }
       self._runtime_stats["new_internal_events"] = {}
     self._runtime_stats["new_internal_events"][Replayer.total_replays] =\
-       new_message_receipts + new_state_changes
+        new_state_changes + new_message_receipts
+    if "early_internal_events" not in self._runtime_stats:
+      # { replay iteration -> [string representations internal events that
+      #                        violated causality] }
+      self._runtime_stats["early_internal_events"] = {}
+    self._runtime_stats["early_internal_events"][Replayer.total_replays] =\
+       replayer.early_state_changes
 
   def _dump_mcs_trace(self):
     # Dump the mcs trace

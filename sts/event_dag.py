@@ -82,6 +82,12 @@ class EventDagView(object):
   def add_inputs(self, inputs):
     return self._parent.add_inputs(inputs, self._events_list)
 
+  def next_state_change(self, index):
+    return self._parent.next_state_change(index, events=self.events)
+
+  def get_original_index_for_event(self, event):
+    return self._parent.get_original_index_for_event(event)
+
   def __len__(self):
     return len(self._events_list)
 
@@ -387,14 +393,19 @@ class EventDag(object):
         #  raise RuntimeError("No support for %s dependencies" %
         #                      type(event).__name__)
 
-  def next_state_change(self, index):
+  def next_state_change(self, index, events=None):
     ''' Return the next ControllerStateChange that occurs at or after
     index.'''
+    if events is None:
+      events = self.events
     # TODO(cs): for now, assumes a single controller
-    for event in self.events[index:]:
+    for event in events[index:]:
       if type(event) == ControllerStateChange:
         return event
     return None
+
+  def get_original_index_for_event(self, event):
+    return self._event2idx[event]
 
   def __len__(self):
     return len(self._events_list)

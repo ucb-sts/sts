@@ -57,6 +57,7 @@ class Replayer(ControlFlow):
     self.compute_interpolated_time(self.dag.events[0])
     self.auto_permit_dp_events = auto_permit_dp_events
     self.unexpected_state_changes = []
+    self.early_state_changes = []
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -131,6 +132,8 @@ class Replayer(ControlFlow):
         try:
           self.logical_time += 1
           self.compute_interpolated_time(event)
+          if isinstance(event, InputEvent):
+            self._check_early_state_changes(dag, i, event)
           self._check_new_state_changes(dag, i)
           # TODO(cs): quasi race-condition here. If unexpected state change
           # happens *while* we're waiting for event, we basically have a
@@ -152,20 +155,39 @@ class Replayer(ControlFlow):
         signal.signal(signal.SIGINT, self.old_interrupt)
       msg.event(color.B_BLUE+"Event Stats: %s" % str(event_scheduler.stats))
 
+  def _check_early_state_changes(self, dag, current_index, input):
+    ''' Check whether the any pending state change were supposed to come
+    *after* the current input. If so, we have violated causality.'''
+    pending_state_changes = self.sync_callback.pending_state_changes()
+    if len(pending_state_changes) > 0:
+      # TODO(cs): currently assumes a single controller (-> single pending state
+      # change)
+      state_change = pending_state_changes[0]
+      next_expected = dag.next_state_change(current_index)
+      original_input_index = dag.get_original_index_for_event(input)
+      if (next_expected is not None and
+          state_change == next_expected.pending_state_change and
+          dag.get_original_index_for_event(next_expected) > original_input_index):
+        # TODO(cs): should arguably raise an exception here until we have
+        # implemented a proper swap-over to peek()
+        log.warn("State change happened before expected! Causality violated")
+        self.early_state_changes.append(repr(next_expected))
+
   def _check_new_state_changes(self, dag, current_index):
     ''' If we are blocking controllers, it's bad news bears if an unexpected
     internal state change occurs. Check if there are any, and ACK them so that
     the execution can proceed.'''
     pending_state_changes = self.sync_callback.pending_state_changes()
     if len(pending_state_changes) > 0:
-      # TODO(cs): currently assumes a single controller (single pending state
+      # TODO(cs): currently assumes a single controller (-> single pending state
       # change)
+      state_change = pending_state_changes[0]
       next_expected = dag.next_state_change(current_index)
       if (next_expected is None or
-          pending_state_changes[0] != next_expected.pending_state_change):
+          state_change != next_expected.pending_state_change):
         log.info("Unexpected state change. Ack'ing")
-        self.unexpected_state_changes.append(repr(pending_state_changes[0]))
-        self.sync_callback.ack_pending_state_change(pending_state_changes[0])
+        self.unexpected_state_changes.append(repr(state_change))
+        self.sync_callback.ack_pending_state_change(state_change)
 
   def _permit_dp_events(self):
     patch_panel = self.simulation.patch_panel
