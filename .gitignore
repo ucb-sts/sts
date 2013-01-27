@@ -10,11 +10,11 @@ old.*
 *.swp
 *.out
 ext/*
-exp/
-pox/
-betta/
-betta
-pox
+/exp/
+/pox/
+/betta/
+/betta
+/pox
 pox/lib/pxpcap/pxpcap_c/build
 pox/lib/pxpcap/pxpcap_c/WpdPack
 pypy/
