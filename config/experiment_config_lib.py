@@ -6,6 +6,7 @@ import socket
 
 def socket_used(address='127.0.0.1', port=6633):
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   try:
     s.bind((address, port))
     s.listen(1)
@@ -39,6 +40,7 @@ class ControllerConfig(object):
     self.address = address
     if (re.match("[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}", address) or
         address == "localhost"):
+      orig_port = port
       # Normal TCP socket
       if not port:
         port = self._port_gen.next()
@@ -46,7 +48,7 @@ class ControllerConfig(object):
         print "Socket %d in use... trying next" % port
         port += 1
       self.port = port
-      self.server_info = uuid if uuid else (self.address, self.port)
+      self.server_info = uuid if uuid else (self.address, orig_port if orig_port else 6633)
     else:
       # Unix domain socket
       self.port = None
