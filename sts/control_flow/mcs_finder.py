@@ -140,7 +140,7 @@ class MCSFinder(ControlFlow):
     if self._runtime_stats is not None:
       self._runtime_stats["prune_end_epoch"] = time.time()
       self._dump_runtime_stats()
-    self.log("Final MCS (%d elements):")
+    self.log("Final MCS (%d elements):" % len(self.dag.input_events))
     for i in self.dag.input_events:
       self.log(" - %s" % str(i))
     if self.mcs_trace_path is not None:
@@ -294,6 +294,7 @@ class MCSFinder(ControlFlow):
   def _dump_mcs_trace(self):
     # Dump the mcs trace
     input_logger = InputLogger(output_path=self.mcs_trace_path)
+    input_logger.open(self.results_dir)
     for e in self.dag.events:
       input_logger.log_input_event(e)
     input_logger.close(self, self.simulation_cfg, skip_mcs_cfg=True)
