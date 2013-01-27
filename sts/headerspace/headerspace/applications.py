@@ -85,6 +85,10 @@ def get_all_x(NTF):
 
 def detect_loop(NTF, TTF, ports, test_packet = None):
     ports = list(ports)
+    if len(ports) == 0:
+      log.warn("No ports to check")
+      return []
+
     if type(ports[0]) != int:
       # They are switch objects
       port_nos = []
