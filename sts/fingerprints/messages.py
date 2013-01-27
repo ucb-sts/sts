@@ -27,7 +27,7 @@ class OFFingerprint(Fingerprint):
     "ofp_switch_config" : ["flags"],
     "ofp_flow_mod" : ["command", "match", "idle_timeout", "hard_timeout", "priority",
                      "out_port", "flags", "actions"],
-    "ofp_port_mod" : ["port_no", "hw_addr", "config", "mask", "advertise"],
+    "ofp_port_mod" : ["port_no", "config", "mask", "advertise"],
     "ofp_queue_get_config_request" : [],
     "ofp_queue_get_config_reply" : [],
     "ofp_stats_request" : ["type", "flags"],
