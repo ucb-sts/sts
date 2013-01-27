@@ -1,4 +1,4 @@
-from experiment_config_lib import ControllerConfig
+from config.experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology, BufferedPatchPanel
 from sts.control_flow import Interactive
 from sts.input_traces.input_logger import InputLogger

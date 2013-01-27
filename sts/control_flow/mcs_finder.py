@@ -22,10 +22,14 @@ import logging
 import json
 import os
 
-def write_runtime_stats(runtime_stats):
+def write_runtime_stats(runtime_stats_file, runtime_stats):
   # Now write contents to a file
   now = timestamp_string()
-  with file("runtime_stats/" + now + ".json", "w") as output:
+
+  if runtime_stats_file is None:
+    runtime_stats_file = "runtime_stats/" + now + ".json"
+
+  with file(runtime_stats_file, "w") as output:
     json_string = json.dumps(runtime_stats, sort_keys=True, indent=2,
                              separators=(',', ': '))
     output.write(json_string)
@@ -34,7 +38,7 @@ class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
                invariant_check=InvariantChecker.check_correspondence,
                transform_dag=None, end_wait_seconds=0.5,
-               mcs_trace_path=None, extra_log=None, dump_runtime_stats=True,
+               mcs_trace_path=None, extra_log=None, runtime_stats_file=None, dump_runtime_stats=True,
                wait_on_deterministic_values=False,
                no_violation_verification_runs=1,
                **kwargs):
@@ -59,6 +63,7 @@ class MCSFinder(ControlFlow):
     self.wait_on_deterministic_values = wait_on_deterministic_values
     # `no' means "number"
     self.no_violation_verification_runs = no_violation_verification_runs
+    self._runtime_stats_file = runtime_stats_file
     self._runtime_stats = None
     if dump_runtime_stats:
       self._runtime_stats = {}
@@ -83,6 +88,15 @@ class MCSFinder(ControlFlow):
     if self._extra_log is not None:
       self._extra_log.write(s + '\n')
       self._extra_log.flush()
+
+  def init_results(self, results_dir):
+    self.results_dir = results_dir
+    if self._extra_log is None:
+      self._extra_log = open("%s/mcs_finder.log" % results_dir, "w")
+    if self._runtime_stats_file is None:
+      self._runtime_stats_file = "%s/runtime_stats.json" % results_dir
+    if self.mcs_trace_path is None:
+      self.mcs_trace_path = "%s/mcs.trace"
 
   def simulate(self, check_reproducability=True):
     if self._runtime_stats is not None:
@@ -300,7 +314,7 @@ class MCSFinder(ControlFlow):
       self._runtime_stats["peeker"] = self.transform_dag is not None
       self._runtime_stats["config"] = str(self.simulation_cfg)
 
-      write_runtime_stats(self._runtime_stats)
+      write_runtime_stats(self._runtime_stats_file, self._runtime_stats)
 
 # TODO(cs): Hack alert. Shouldn't be a subclass
 class EfficientMCSFinder(MCSFinder):
