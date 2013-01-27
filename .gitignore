@@ -17,9 +17,9 @@ pypy/
 config/20*.py
 config/*final.py
 input_traces/20*.trace
-input_traces/20*.trace.buffered
+input_traces/20*.trace.unacked
 input_traces/*final.trace
-input_traces/20*.final.buffered
+input_traces/20*.final.unacked
 dataplane_traces/20*.trace
 sts/headerspace/hassel-c/tfs/sts/*tf
 sts/headerspace/hassel-c/data/*

@@ -248,7 +248,7 @@ class MCSFinder(ControlFlow):
     ''' Pre: simulation must have been run through a replay'''
     # We always check against internal events that were buffered at the end of
     # the original run (don't want to overcount)
-    path = self.superlog_path + ".buffered"
+    path = self.superlog_path + ".unacked"
     if not os.path.exists(path):
       log.warn("Original buffered internals events file does not exists")
       return
