@@ -88,6 +88,13 @@ class SimulationConfig(object):
 
        May be invoked multiple times!
     '''
+    def remove_monkey_patch():
+      if hasattr(select, "_old_select"):
+        # Revert the previous monkeypatch to allow the new true_sockets to
+        # connect
+        select.select = select._old_select
+        socket.socket = socket._old_socket
+
     def initialize_io_loop():
       ''' boot the IOLoop (needed for the controllers) '''
       _io_master = IOMaster()
@@ -119,6 +126,7 @@ class SimulationConfig(object):
       return topology
 
     # Instantiate the pieces needed for Simulation's constructor
+    remove_monkey_patch()
     io_master = initialize_io_loop()
     sync_connection_manager = STSSyncConnectionManager(io_master,
                                                        sync_callback)
