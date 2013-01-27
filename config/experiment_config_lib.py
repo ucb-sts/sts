@@ -48,11 +48,13 @@ class ControllerConfig(object):
         print "Socket %d in use... trying next" % port
         port += 1
       self.port = port
-      self.server_info = uuid if uuid else (self.address, orig_port if orig_port else 6633)
+      self._uuid = uuid if uuid else (self.address, orig_port if orig_port else 6633)
+      self._server_info = (self.address, port)
     else:
       # Unix domain socket
       self.port = None
-      self.server_info = uuid if uuid else address
+      self._uuid = uuid if uuid else (self.address, orig_port if orig_port else 6633)
+      self._server_info = address
 
     # TODO(sam): we should either call them all controller_type or all 'name'
     # we only accept strings
@@ -84,7 +86,13 @@ class ControllerConfig(object):
 
   @property
   def uuid(self):
-    return self.server_info
+    """ information about the (virtual/non-translated) socket to be matched in finger prints"""
+    return self._uuid
+
+  @property
+  def server_info(self):
+    """ information about the _real_ socket that the controller is listening on"""
+    return self._server_info
 
   @property
   def expanded_cmdline(self):
