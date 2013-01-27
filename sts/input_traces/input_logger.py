@@ -9,7 +9,7 @@ import sts.dataplane_traces.trace_generator as tg
 # TODO(cs): need to copy some optional params from Fuzzer ctor to Replayer
 # ctor
 replay_config_template = '''
-from experiment_config_lib import ControllerConfig
+from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import Replayer
 from sts.simulation_state import SimulationConfig
@@ -17,12 +17,11 @@ from sts.simulation_state import SimulationConfig
 simulation_config = %s
 
 control_flow = Replayer(simulation_config, "%s",
-                        # MCS trace path: %s
                         wait_on_deterministic_values=%s)
 '''
 
 mcs_config_template = '''
-from experiment_config_lib import ControllerConfig
+from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import EfficientMCSFinder
 from sts.invariant_checker import InvariantChecker
@@ -32,7 +31,6 @@ simulation_config = %s
 
 control_flow = EfficientMCSFinder(simulation_config, "%s",
                                   invariant_check=InvariantChecker.check_liveness,
-                                  mcs_trace_path="%s",
                                   wait_on_deterministic_values=%s)
 '''
 

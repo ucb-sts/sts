@@ -1,5 +1,5 @@
 
-from experiment_config_lib import ControllerConfig
+from config.experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology
 from sts.control_flow import MCSFinder, Peeker
 from sts.invariant_checker import InvariantChecker

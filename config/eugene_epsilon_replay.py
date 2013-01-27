@@ -1,5 +1,5 @@
 
-from experiment_config_lib import ControllerConfig
+from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import Replayer
 from sts.simulation_state import SimulationConfig
