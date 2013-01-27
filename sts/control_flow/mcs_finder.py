@@ -92,7 +92,7 @@ class MCSFinder(ControlFlow):
   def init_results(self, results_dir):
     self.results_dir = results_dir
     if self._extra_log is None:
-      self._extra_log = open("%s/mcs_finder.log" % results_dir)
+      self._extra_log = open("%s/mcs_finder.log" % results_dir, "w")
     if self._runtime_stats_file is None:
       self._runtime_stats_file = "%s/runtime_stats.json" % results_dir
     if self.mcs_trace_path is None:
