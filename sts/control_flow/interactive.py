@@ -225,6 +225,9 @@ class Interactive(ControlFlow):
     if self._input_logger is not None:
       self._input_logger.log_input_event(event, **kws)
 
+  def init_results(self, results_dir):
+    self._input_logger.open(results_dir)
+
   def simulate(self, simulation=None, bound_objects=()):
     if simulation is None:
       self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)

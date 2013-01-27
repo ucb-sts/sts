@@ -1,5 +1,6 @@
 import getpass
 import os
+import re
 import socket
 import sys
 import json
@@ -29,6 +30,17 @@ def dump_metadata(metadata_file):
                }
              }
     t.write(json.dumps(metadata, sort_keys=True, indent=2, separators=(',', ": ")) + "\n")
+
+def guess_config_name(config):
+  parts = config.__name__.split(".")
+  while parts[0] == "config" or parts[0] == "exp":
+    parts = parts[1:]
+
+  if parts[-1] == "orig_config":
+    del parts[-1]
+
+  parts[-1] = re.sub(r'_conf(ig)?$', '', parts[-1])
+  return "_".join(parts)
 
 def walk_dirs_up(path):
   while path != "" and path != "/":
@@ -63,7 +75,7 @@ def publish_prepare(exp_name, results_dir):
   if not res_git_dir:
     raise Exception("Cannot publish - no git dir found in results tree")
   if git_has_uncommitted_files(res_git_dir):
-      raise Exception("Cannot publish: uncommitted changes in sts module %s" % module)
+      raise Exception("Cannot publish: uncommitted changes in sts module %s" % res_git_dir)
 
 def publish_results(exp_name, results_dir):
     res_git_dir = find_git_dir(results_dir)

@@ -79,6 +79,9 @@ class Fuzzer(ControlFlow):
       raise IOError("Could not find logging config file: %s" %
                     fuzzer_params_path)
 
+  def init_results(self, results_dir):
+    self._input_logger.open(results_dir)
+
   def simulate(self):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)

@@ -44,20 +44,30 @@ class InputLogger(object):
     Automatically generate an output_path in input_traces/
     if one is not provided.
     '''
-    if output_path is None:
-      now = timestamp_string()
-      output_path = "input_traces/" + now + ".trace"
     self.output_path = output_path
-    self.mcs_output_path = output_path.replace(".trace", "_mcs_final.trace")
-    self.output = open(output_path, 'w')
     self.dp_events = []
-    basename = os.path.basename(output_path)
-    self.dp_trace_path = "./dataplane_traces/" + basename
-    self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
-    self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
     self.last_time = SyncTime.now()
     self._disallow_timeouts = False
     self._events_after_close = []
+    self.output = None
+
+  def open(self, results_dir=None):
+    if results_dir != None:
+      self.output_path = results_dir + "/events.trace"
+      self.dp_trace_path = results_dir + "/dataplane.trace"
+      self.replay_cfg_path = results_dir + "/replay_config.py"
+      self.mcs_cfg_path = results_dir + "/mcs_config.py"
+    else:
+      if self.output_path is None:
+        now = timestamp_string()
+        self.output_path = "input_traces/" + now + ".trace"
+      basename = os.path.basename(self.output_path)
+
+      self.dp_trace_path = "./dataplane_traces/" + basename
+      self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
+      self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
+
+    self.output = open(self.output_path, 'w')
 
   def disallow_timeouts(self):
     self._disallow_timeouts = True
@@ -79,6 +89,8 @@ class InputLogger(object):
     separate pickle log, so we optionally allow a packet parameter to be
     logged separately.
     '''
+    if not self.output:
+      raise Exception("Not opened -- call InputLogger.open")
     if not self.output.closed:
       self._serialize_event(event, self.output)
       if dp_event is not None:
@@ -118,6 +130,5 @@ class InputLogger(object):
       with open(path, 'w') as cfg_out:
         config_string = template % (str(simulation_cfg),
                                     self.output_path,
-                                    self.mcs_output_path,
                                     str(wait_on_deterministic_values))
         cfg_out.write(config_string)

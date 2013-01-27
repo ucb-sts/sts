@@ -60,7 +60,7 @@ except ImportError:
   config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
 
 if not hasattr(config, 'exp_name'):
-  config.exp_name = config.__name__.split(".")[-1]
+  config.exp_name = exp_lifecycle.guess_config_name(config)
 
 if not hasattr(config, 'results_dir'):
   config.results_dir = "exp/%s" % config.exp_name
@@ -71,16 +71,18 @@ if hasattr(config, 'timestamp_results') and config.timestamp_results:
 
 if not os.path.exists(config.results_dir):
   os.makedirs(config.results_dir)
-
-exp_lifecycle.dump_metadata("%s/metadata" % config.results_dir)
+module_init_py = os.path.join(config.results_dir, "__init__.py")
+if not os.path.exists(module_init_py):
+  open(module_init_py,"a").close()
 
 if args.publish:
   exp_lifecycle.publish_prepare(config.exp_name, config.results_dir)
 
+exp_lifecycle.dump_metadata("%s/metadata" % config.results_dir)
 
 config_file = re.sub(r'\.pyc$', '.py', config.__file__)
 if os.path.exists(config_file):
-  canonical_config_file = config.results_dir + "/exp_config.py"
+  canonical_config_file = config.results_dir + "/orig_config.py"
   if  config_file != canonical_config_file:
     shutil.copy(config_file, canonical_config_file)
 
@@ -103,6 +105,7 @@ signal.signal(signal.SIGTERM, handle_int)
 
 # Start the simulation
 try:
+  simulator.init_results(config.results_dir)
   res = simulator.simulate()
   # TODO(cs); temporary hack: replayer returns self.simulation no a return
   # code
