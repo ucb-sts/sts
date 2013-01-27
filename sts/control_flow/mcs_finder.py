@@ -36,7 +36,7 @@ def write_runtime_stats(runtime_stats_file, runtime_stats):
 
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
-               invariant_check=InvariantChecker.check_correspondence,
+               invariant_check=None,
                transform_dag=None, end_wait_seconds=0.5,
                mcs_trace_path=None, extra_log=None, runtime_stats_file=None, dump_runtime_stats=True,
                wait_on_deterministic_values=False,
@@ -45,6 +45,10 @@ class MCSFinder(ControlFlow):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.sync_callback = None
     self._log = logging.getLogger("mcs_finder")
+
+    if invariant_check is None:
+      # TODO(cs): figure this out automatically from the original config
+      raise ValueError("Must specify invariant check manually (for now)")
 
     if type(superlog_path_or_dag) == str:
       self.superlog_path = superlog_path_or_dag

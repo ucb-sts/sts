@@ -30,7 +30,6 @@ from sts.simulation_state import SimulationConfig
 simulation_config = %s
 
 control_flow = EfficientMCSFinder(simulation_config, "%s",
-                                  invariant_check=InvariantChecker.check_liveness,
                                   wait_on_deterministic_values=%s)
 '''
 
