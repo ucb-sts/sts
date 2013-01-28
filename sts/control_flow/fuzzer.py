@@ -86,6 +86,7 @@ class Fuzzer(ControlFlow):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
+    self.traffic_generator.set_hosts(self.simulation.topology.hosts)
     return self.loop()
 
   def loop(self):
