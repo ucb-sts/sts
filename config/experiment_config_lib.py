@@ -51,7 +51,7 @@ class ControllerConfig(object):
   _port_gen = itertools.count(6633)
   _controller_count_gen = itertools.count(1)
 
-  def __init__(self, cmdline="", address="127.0.0.1", port=None, additional_ports=None, cwd=None, sync=None, controller_type=None, label=None, uuid=None, config_file=None, config_template=None):
+  def __init__(self, cmdline="", address="127.0.0.1", port=None, additional_ports={}, cwd=None, sync=None, controller_type=None, label=None, uuid=None, config_file=None, config_template=None):
     '''
     Store metadata for the controller.
       - cmdline is an array of command line tokens.
