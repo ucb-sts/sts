@@ -71,12 +71,15 @@ class Fuzzer(ControlFlow):
       self._input_logger.log_input_event(event, **kws)
 
   def _load_fuzzer_params(self, fuzzer_params_path):
+    if fuzzer_params_path.endswith('.py'):
+      fuzzer_params_path = fuzzer_params_path[:-3].replace("/", ".")
+
     try:
       self.params = __import__(fuzzer_params_path, globals(), locals(), ["*"])
       # TODO(cs): temporary hack until we get determinism figured out
       self.params.link_discovery_rate = 0.1
     except:
-      raise IOError("Could not find logging config file: %s" %
+      raise IOError("Could not find fuzzer params config file: %s" %
                     fuzzer_params_path)
 
   def init_results(self, results_dir):
@@ -140,6 +143,7 @@ class Fuzzer(ControlFlow):
           else:
             raise e
 
+      log.info("Terminating fuzzing after %d rounds" % self.steps)
       if self.print_buffers:
         self._print_buffers()
 
