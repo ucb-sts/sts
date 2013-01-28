@@ -399,19 +399,23 @@ class Interactive(ControlFlow):
 
 
   def invariant_check(self, kind):
-    if kind == "omega":
+    if kind == "omega" or kind == "o":
       self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_correspondence))
       result = InvariantChecker.check_correspondence(self.simulation)
       message = "Controllers with miscorrepondence: "
-    elif kind == "connectivity":
+    elif kind == "connectivity" or kind == "c":
       self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_connectivity))
       result = InvariantChecker.check_connectivity(self.simulation)
       message = "Disconnected host pairs: "
-    elif kind == "loops":
+    elif kind == "python_connectivity" or kind == "pc":
+      self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.python_check_connectivity))
+      result = InvariantChecker.python_check_connectivity(self.simulation)
+      message = "Disconnected host pairs: "
+    elif kind == "loops" or kind == "lo":
       self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_loops))
       result = InvariantChecker.check_loops(self.simulation)
       message = "Loops: "
-    elif kind == "liveness":
+    elif kind == "liveness" or kind == "li":
       self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_liveness))
       result = InvariantChecker.check_loops(self.simulation)
       message = "Crashed controllers: "
