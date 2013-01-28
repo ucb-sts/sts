@@ -153,7 +153,7 @@ class DPFingerprint(Fingerprint):
       # TODO(cs): should include more context
       return DPFingerprint({'class': 'arp'})
     elif type(ip) == str:
-      return DPFingerprint({'class' : 'str', 'crc32' : binascii.crc32(ip) })
+      return DPFingerprint({'dl_type' : eth.type })
     else:
       raise ValueError("Unknown dataplane packet type %s (eth type 0x%x)" % (str(type(ip)), eth.type))
 
@@ -164,10 +164,9 @@ class DPFingerprint(Fingerprint):
       hash += self._field2value['class'].__hash__()
       return hash
 
-    if 'class' in self._field2value and 'crc32' in self._field2value and len(self._field2value) == 2:
+    if 'dl_type' in self._field2value and len(self._field2value) == 1:
       # This is not an IP packet -- it could be, e.g., an LLDAP packet
-      hash += self._field2value['class'].__hash__()
-      hash += self._field2value['crc32'].__hash__()
+      hash += self._field2value['dl_type'].__hash__()
       return hash
 
     # Else it's an IP packet
@@ -181,6 +180,9 @@ class DPFingerprint(Fingerprint):
       return False
     if len(self._field2value) != len(other._field2value):
       return False
+    if 'dl_type' in self._field2value:
+      return ('dl_type' in other._field2value and
+              self._field2value['dl_type'] == other._field2value['dl_type'])
     if 'class' in self._field2value:
       return ('class' in other._field2value and
               self._field2value['class'] == other._field2value['class'])
