@@ -14,6 +14,7 @@ import os
 import subprocess
 import logging
 log = logging.getLogger("headerspace")
+from collections import defaultdict
 
 # What is a p_node?
 # A hash apparently:
@@ -27,54 +28,78 @@ def print_p_node(p_node):
     log.debug(p_node["visits"])
     log.debug("-----")
 
-def find_reachability(NTF, TTF, in_port, out_ports, input_pkt):
-    paths = []
+def translate_ports(ports):
+  ports = list(ports)
+  if type(ports[0]) != int:
+    # They are switch objects
+    port_nos = []
+    for sw in ports:
+      for port_no in sw.ports.keys():
+        port_nos.append(get_uniq_port_id(sw, port_no))
+    ports = port_nos
+  return ports
+
+def find_reachability(NTF, TTF, edge_links, test_packet=None):
+    edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
+    paths = defaultdict(list)
     propagation = []
 
-    p_node = {}
-    p_node["hdr"] = input_pkt
-    p_node["port"] = in_port
-    p_node["visits"] = []
-    p_node["hs_history"] = []
-    propagation.append(p_node)
+    if len(edge_ports) == 0:
+       log.warn("No ports to check!")
+       return []
 
-    while len(propagation)>0:
-        #get the next node in propagation graph and apply it to NTF and TTF
-        log.debug("Propagation has length: %d"%len(propagation))
-        tmp_propagate = []
-        for p_node in propagation:
-            next_hp = NTF.T(p_node["hdr"],p_node["port"])
-            for (next_h,next_ps) in next_hp:
-                for next_p in next_ps:
-                    if next_p in out_ports:
-                        reached = {}
-                        reached["hdr"] = next_h
-                        reached["port"] = next_p
-                        reached["visits"] = list(p_node["visits"])
-                        reached["visits"].append(p_node["port"])
-                        reached["hs_history"] = list(p_node["hs_history"])
-                        paths.append(reached)
-                    else:
-                        linked = TTF.T(next_h,next_p)
-                        for (linked_h,linked_ports) in linked:
-                            for linked_p in linked_ports:
-                                new_p_node = {}
-                                new_p_node["hdr"] = linked_h
-                                new_p_node["port"] = linked_p
-                                new_p_node["visits"] = list(p_node["visits"])
-                                new_p_node["visits"].append(p_node["port"])
-                                new_p_node["visits"].append(next_p)
-                                new_p_node["hs_history"] = list(p_node["hs_history"])
-                                new_p_node["hs_history"].append(p_node["hdr"])
-                                if linked_p in out_ports:
-                                    paths.append(new_p_node)
-                                elif linked_p in new_p_node["visits"]:
-                                    log.warn("WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %d "%(\
-                                        new_p_node["hdr"],new_p_node["visits"],new_p_node["port"]))
-                                else:
-                                    tmp_propagate.append(new_p_node)
-        propagation = tmp_propagate
+    for in_port in edge_ports:
+      out_ports = list(set(edge_ports) - set([in_port]))
 
+      # put all-x test packet in propagation graph
+      input_pkt = test_packet
+      if input_pkt == None:
+        input_pkt = get_all_x(NTF)
+
+      p_node = {}
+      p_node["hdr"] = input_pkt
+      p_node["port"] = in_port
+      p_node["visits"] = []
+      p_node["hs_history"] = []
+      propagation.append(p_node)
+  
+      while len(propagation)>0:
+          #get the next node in propagation graph and apply it to NTF and TTF
+          log.debug("Propagation has length: %d"%len(propagation))
+          tmp_propagate = []
+          for p_node in propagation:
+              next_hp = NTF.T(p_node["hdr"],p_node["port"])
+              for (next_h,next_ps) in next_hp:
+                  for next_p in next_ps:
+                      if next_p in out_ports:
+                          reached = {}
+                          reached["hdr"] = next_h
+                          reached["port"] = next_p
+                          reached["visits"] = list(p_node["visits"])
+                          reached["visits"].append(p_node["port"])
+                          reached["hs_history"] = list(p_node["hs_history"])
+                          paths[in_port].append(reached)
+                      else:
+                          linked = TTF.T(next_h,next_p)
+                          for (linked_h,linked_ports) in linked:
+                              for linked_p in linked_ports:
+                                  new_p_node = {}
+                                  new_p_node["hdr"] = linked_h
+                                  new_p_node["port"] = linked_p
+                                  new_p_node["visits"] = list(p_node["visits"])
+                                  new_p_node["visits"].append(p_node["port"])
+                                  new_p_node["visits"].append(next_p)
+                                  new_p_node["hs_history"] = list(p_node["hs_history"])
+                                  new_p_node["hs_history"].append(p_node["hdr"])
+                                  if linked_p in out_ports:
+                                      paths[in_port].append(new_p_node)
+                                  elif linked_p in new_p_node["visits"]:
+                                      log.warn("WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %d "%(\
+                                          new_p_node["hdr"],new_p_node["visits"],new_p_node["port"]))
+                                  else:
+                                      tmp_propagate.append(new_p_node)
+          propagation = tmp_propagate
+  
     return paths
 
 def get_all_x(NTF):
@@ -89,13 +114,7 @@ def detect_loop(NTF, TTF, ports, test_packet = None):
       log.warn("No ports to check")
       return []
 
-    if type(ports[0]) != int:
-      # They are switch objects
-      port_nos = []
-      for sw in ports:
-        for port_no in sw.ports.keys():
-          port_nos.append(get_uniq_port_id(sw, port_no))
-      ports = port_nos
+    ports = translate_ports(ports)
 
     loops = []
     for port in ports:

@@ -60,6 +60,44 @@ class InvariantChecker(object):
     return loops
 
   @staticmethod
+  def _get_all_pairs(simulation):
+    # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
+    # headerspace/ module instead of computing uniq_port_id here
+    access_links = simulation.topology.access_links
+    all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port),get_uniq_port_id(l2.switch, l2.switch_port))
+                  for l1 in access_links
+                  for l2 in access_links if l1 != l2 ]
+    all_pairs = set(all_pairs)
+    return all_pairs
+
+  @staticmethod
+  def python_check_connectivity(simulation):
+    # Warning! depends on python Hassell -- may be really slow!
+    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
+    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
+    paths = hsa.find_reachability(NTF, TTF, simulation.topology.access_links)
+    # Paths is: in_port -> [p_node1, p_node2]
+    # Where p_node is a hash:
+    #  "hdr" -> foo
+    #  "port" -> foo
+    #  "visits" -> foo
+    connected_pairs = set()
+    for in_port, p_nodes in paths.iteritems():
+      for p_node in p_nodes:
+        import pdb; pdb.set_trace()
+        connected_pairs.add((in_port, p_node["port"]))
+    all_pairs = InvariantChecker._get_all_pairs(simulation)
+    remaining_pairs = all_pairs - connected_pairs
+    # TODO(cs): don't print results here
+    if len(remaining_pairs) > 0:
+      msg.fail("Not all %d pairs are connected! (%d missing)" %
+               (len(all_pairs),len(remaining_pairs)))
+      log.info("remaining_pairs: %s" % (str(remaining_pairs)))
+    else:
+      msg.success("Fully connected!")
+    return list(remaining_pairs)
+
+  @staticmethod
   def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
     # Dynamic imports to allow this method to be serialized
@@ -81,14 +119,7 @@ class InvariantChecker(object):
     for start_port, final_location_list in physical_omega.iteritems():
       for _, final_port in final_location_list:
         connected_pairs.add((start_port, final_port))
-
-    # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
-    # headerspace/ module instead of computing uniq_port_id here
-    access_links = simulation.topology.access_links
-    all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port),get_uniq_port_id(l2.switch, l2.switch_port))
-                  for l1 in access_links
-                  for l2 in access_links if l1 != l2 ]
-    all_pairs = set(all_pairs)
+    all_pairs = InvariantChecker._get_all_pairs(simulation)
     remaining_pairs = all_pairs - connected_pairs
     # TODO(cs): don't print results here
     if len(remaining_pairs) > 0:
