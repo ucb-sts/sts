@@ -1,3 +1,4 @@
+import binascii
 
 from sts.fingerprints.base import Fingerprint
 from pox.openflow.libopenflow_01 import *
@@ -151,14 +152,22 @@ class DPFingerprint(Fingerprint):
     elif type(ip) == arp:
       # TODO(cs): should include more context
       return DPFingerprint({'class': 'arp'})
+    elif type(ip) == str:
+      return DPFingerprint({'class' : 'str', 'crc32' : binascii.crc32(ip) })
     else:
-      raise ValueError("Unknown dataplane packet type %s" % str(type(ip)))
+      raise ValueError("Unknown dataplane packet type %s (eth type 0x%x)" % (str(type(ip)), eth.type))
 
   def __hash__(self):
     hash = 0
     if 'class' in self._field2value and len(self._field2value) == 1:
       # This is not an IP packet -- it could be, e.g., an LLDAP packet
       hash += self._field2value['class'].__hash__()
+      return hash
+
+    if 'class' in self._field2value and 'crc32' in self._field2value and len(self._field2value) == 2:
+      # This is not an IP packet -- it could be, e.g., an LLDAP packet
+      hash += self._field2value['class'].__hash__()
+      hash += self._field2value['crc32'].__hash__()
       return hash
 
     # Else it's an IP packet
