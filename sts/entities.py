@@ -88,7 +88,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
         # cause errors to be raised
         conn.error_handler = self.error_handler
         # controller (ip, port) -> connection
-        self.uuid2connection[conn.io_worker.socket.getpeername()] = conn
+        self.uuid2connection[info.uuid] = conn
         connected_to_at_least_one = True
 
     return connected_to_at_least_one
