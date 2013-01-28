@@ -89,7 +89,7 @@ exp_lifecycle.dump_metadata("%s/metadata" % config.results_dir)
 config_file = re.sub(r'\.pyc$', '.py', config.__file__)
 if os.path.exists(config_file):
   canonical_config_file = config.results_dir + "/orig_config.py"
-  if  config_file != canonical_config_file:
+  if  os.path.abspath(config_file) != os.path.abspath(canonical_config_file):
     shutil.copy(config_file, canonical_config_file)
 
 # For controlling the simulation
