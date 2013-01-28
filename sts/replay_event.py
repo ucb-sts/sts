@@ -460,9 +460,9 @@ class ControlChannelBlock(InputEvent):
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
     connection = switch.get_connection(self.controller_id)
-    if connection.currently_blocked:
+    if connection.io_worker.currently_blocked:
       raise RuntimeError("Expected channel %s to not be blocked" % str(connection))
-    connection.block()
+    connection.io_worker.block()
     return True
 
   @property
@@ -487,9 +487,9 @@ class ControlChannelUnblock(InputEvent):
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
     connection = switch.get_connection(self.controller_id)
-    if not connection.currently_blocked:
+    if not connection.io_worker.currently_blocked:
       raise RuntimeError("Expected channel %s to be blocked" % str(connection))
-    connection.unblock()
+    connection.io_worker.unblock()
     return True
 
   @property
