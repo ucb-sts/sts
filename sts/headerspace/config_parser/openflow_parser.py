@@ -309,6 +309,7 @@ def ofp_actions_to_output_ports(ofp_actions, switch, all_port_ids, in_port_id):
   def output_packet(action):
     out_port = action.port
     out_port_id = get_uniq_port_id(switch, out_port)
+    if out_port_id == in_port_id: return
     if out_port < OFPP_MAX:
       output_port_nos.append(out_port_id)
     elif out_port == OFPP_IN_PORT:
