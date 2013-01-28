@@ -77,7 +77,7 @@ if not os.path.exists(module_init_py):
   open(module_init_py,"a").close()
 tee_stdout(os.path.join(config.results_dir, "simulator.out"))
 
-for controller_config in config.controllers:
+for controller_config in config.simulation_config.controller_configs:
   if controller_config.config_template:
     controller_config.generate_config_file(config.results_dir)
 
