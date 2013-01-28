@@ -132,7 +132,7 @@ class ControllerConfig(object):
     return reduce(lambda s, (name, val): s.replace("__%s_port__" % name, str(val)), self.additional_ports.iteritems(), s) \
             .replace("__port__", str(self.port)) \
             .replace("__address__", str(self.address)) \
-            .replace("__config__", str(os.path.abspath(self.config_file)))
+            .replace("__config__", str(os.path.abspath(self.config_file) if self.config_file else ""))
 
   @property
   def expanded_cmdline(self):
