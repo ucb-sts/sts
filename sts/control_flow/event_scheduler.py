@@ -5,6 +5,7 @@ from sts.replay_event import *
 import logging
 log = logging.getLogger("event_scheduler")
 from collections import Counter
+import operator
 
 def format_time(time):
   mins = int(time/60)
@@ -43,10 +44,12 @@ class EventSchedulerStats(object):
     s.append("Events matched: %d, timed out: %d\n" % (total_matched,
                                                       total_timeouts))
     s.append("Matches per event type:\n")
-    for e, count in self.event2matched.iteritems():
+    for e, count in sorted(self.event2matched.items(),
+                           key=operator.itemgetter(1)):
       s.append("  %s %d\n" % (e, count,))
     s.append("Timeouts per event type:\n")
-    for e, count in self.event2timeouts.iteritems():
+    for e, count in sorted(self.event2timeouts.iteritems(),
+                           key=operator.itemgetter(1)):
       s.append("  %s %d\n" % (e, count,))
     return "".join(s)
 
