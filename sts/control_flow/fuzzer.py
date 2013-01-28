@@ -143,7 +143,7 @@ class Fuzzer(ControlFlow):
           else:
             raise e
 
-      log.info("Terminating fuzzing after %d rounds" % self.steps)
+      log.info("Terminating fuzzing after %d rounds" % self.logical_time)
       if self.print_buffers:
         self._print_buffers()
 
