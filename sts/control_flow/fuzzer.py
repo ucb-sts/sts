@@ -87,6 +87,8 @@ class Fuzzer(ControlFlow):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.traffic_generator.set_hosts(self.simulation.topology.hosts)
+    if self._input_logger is not None:
+      self.simulation.set_dataplane_trace_path(self._input_logger.dp_trace_path)
     return self.loop()
 
   def loop(self):

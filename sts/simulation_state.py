@@ -145,6 +145,10 @@ class SimulationConfig(object):
     self.current_simulation = simulation
     return simulation
 
+  def set_dataplane_trace_path(self, path):
+    if self._dataplane_trace_path is None:
+      self._dataplane_trace_path = path
+
   def __str__(self):
     return ('''SimulationConfig(controller_configs=%s,\n'''
             '''                 topology_class=%s,\n'''
