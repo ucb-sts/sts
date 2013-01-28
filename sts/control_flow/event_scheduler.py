@@ -37,6 +37,16 @@ class EventSchedulerStats(object):
     msg.event_timeout(self.time(event) + " Event timed out "+str(event))
     self.event2timeouts[event.__class__.__name__] += 1
 
+  def sorted_match_counts(self):
+    for e, count in sorted(self.event2matched.items(),
+                           key=operator.itemgetter(1)):
+      yield (e, count)
+
+  def sorted_timeout_counts(self):
+    for e, count in sorted(self.event2timeouts.items(),
+                           key=operator.itemgetter(1)):
+      yield (e, count,)
+
   def __str__(self):
     total_matched = sum(self.event2matched.values())
     total_timeouts = sum(self.event2timeouts.values())
@@ -44,12 +54,10 @@ class EventSchedulerStats(object):
     s.append("Events matched: %d, timed out: %d\n" % (total_matched,
                                                       total_timeouts))
     s.append("Matches per event type:\n")
-    for e, count in sorted(self.event2matched.items(),
-                           key=operator.itemgetter(1)):
+    for e, count in self.sorted_match_counts():
       s.append("  %s %d\n" % (e, count,))
     s.append("Timeouts per event type:\n")
-    for e, count in sorted(self.event2timeouts.iteritems(),
-                           key=operator.itemgetter(1)):
+    for e, count in self.sorted_timeout_counts():
       s.append("  %s %d\n" % (e, count,))
     return "".join(s)
 
