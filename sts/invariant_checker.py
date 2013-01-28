@@ -84,7 +84,6 @@ class InvariantChecker(object):
     connected_pairs = set()
     for in_port, p_nodes in paths.iteritems():
       for p_node in p_nodes:
-        import pdb; pdb.set_trace()
         connected_pairs.add((in_port, p_node["port"]))
     all_pairs = InvariantChecker._get_all_pairs(simulation)
     remaining_pairs = all_pairs - connected_pairs
