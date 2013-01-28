@@ -15,6 +15,9 @@ from pox.lib.util import TimeoutError
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
+import os
+import re
+import shutil
 import select
 import signal
 import sys
@@ -84,6 +87,11 @@ class Fuzzer(ControlFlow):
 
   def init_results(self, results_dir):
     self._input_logger.open(results_dir)
+    params_file = re.sub(r'\.pyc$', '.py', self.params.__file__)
+    if os.path.exists(params_file):
+      new_params_file = os.path.join(results_dir, os.path.basename(params_file))
+      if  os.path.abspath(params_file) != os.path.abspath(new_params_file):
+        shutil.copy(params_file, new_params_file)
 
   def simulate(self):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
