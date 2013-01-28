@@ -296,6 +296,16 @@ class MCSFinder(ControlFlow):
       self._runtime_stats["early_internal_events"] = {}
     self._runtime_stats["early_internal_events"][Replayer.total_replays] =\
        replayer.early_state_changes
+    if "timed_out_events" not in self._runtime_stats:
+      # { replay iteration -> { event type -> timeouts } }
+      self._runtime_stats["timed_out_events"] = {}
+    self._runtime_stats["timed_out_events"][Replayer.total_replays] =\
+       dict(replayer.event_scheduler_stats.event2timeouts)
+    if "matched_events" not in self._runtime_stats:
+      # { replay iteration -> { event type -> successful matches } }
+      self._runtime_stats["matched_events"] = {}
+    self._runtime_stats["matched_events"][Replayer.total_replays] =\
+       dict(replayer.event_scheduler_stats.event2matched)
 
   def _dump_mcs_trace(self):
     # Dump the mcs trace
