@@ -261,7 +261,6 @@ def compute_single_omega(start_port, edge_ports):
       #  ...
 
       line = proc.stdout.readline()
-      print line
       if line == '':
         break
 
