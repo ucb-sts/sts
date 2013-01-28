@@ -1,10 +1,16 @@
+from collections import namedtuple
 import itertools
+import os
 import string
 import sys
 import re
 import socket
+import random
 
-def socket_used(address='127.0.0.1', port=6633):
+# don't use the standard instance - we don't want to be seeded
+true_random = random.Random()
+
+def port_used(address='127.0.0.1', port=6633):
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   try:
@@ -16,11 +22,36 @@ def socket_used(address='127.0.0.1', port=6633):
     # TODO(cs): catch specific errors
     return True
 
+def find_port(port_spec):
+  if isinstance(port_spec, int):
+    def port_gen():
+      yield port_spec
+      raise Exception("Fixed port %d is busy. Consider specifying a range or a lambda " % port_spec)
+  elif isinstance(port_spec, list):
+    def port_gen():
+      cands = list(port_spec)
+      true_random.shuffle(cands)
+      for c in cands:
+        yield c
+      raise Exception("Port list/range %s exhausted" % str(port_spec))
+  elif isinstance(port_spec, types.FunctionType) or isinstance(port_spec, types.LambdaType):
+    port_gen = port_spec
+
+  gen = port_gen()
+  for attempt in range(0,100):
+    candidate = gen.next()
+    if not port_used(port=candidate):
+      return candidate
+  raise Exception("Could not find a port in 100 tries")
+
+def find_ports(**kwargs):
+  return { k : find_port(v) for k, v in kwargs.iteritems() }
+
 class ControllerConfig(object):
   _port_gen = itertools.count(6633)
   _controller_count_gen = itertools.count(1)
 
-  def __init__(self, cmdline="", address="127.0.0.1", port=None, cwd=None, sync=None, controller_type=None, label=None, uuid=None):
+  def __init__(self, cmdline="", address="127.0.0.1", port=None, additional_ports=None, cwd=None, sync=None, controller_type=None, label=None, uuid=None, config_file=None, config_template=None):
     '''
     Store metadata for the controller.
       - cmdline is an array of command line tokens.
@@ -44,9 +75,9 @@ class ControllerConfig(object):
       # Normal TCP socket
       if not port:
         port = self._port_gen.next()
-      while socket_used(port=port):
-        print "Socket %d in use... trying next" % port
-        port += 1
+      while port_used(port=port):
+        print "Port %d in use... trying next" % port
+        port += true_random.rand_int(0,50)
       self.port = port
       self._uuid = uuid if uuid else (self.address, orig_port if orig_port else 6633)
       self._server_info = (self.address, port)
@@ -83,6 +114,9 @@ class ControllerConfig(object):
     else:
       self.label = "c"+str(self._controller_count_gen.next())
 
+    self.config_file = config_file
+    self.config_template = config_template
+    self.additional_ports = additional_ports
 
   @property
   def uuid(self):
@@ -94,11 +128,23 @@ class ControllerConfig(object):
     """ information about the _real_ socket that the controller is listening on"""
     return self._server_info
 
+  def _expand_vars(self, s):
+    return reduce(lambda s, (name, val): s.replace("__%s_port__" % name, str(val)), self.additional_ports.iteritems(), s) \
+            .replace("__port__", str(self.port)) \
+            .replace("__address__", str(self.address)) \
+            .replace("__config__", str(os.path.abspath(self.config_file)))
+
   @property
   def expanded_cmdline(self):
-    return map(lambda(x): string.replace(x, "__port__", str(self.port)),
-           map(lambda(x): string.replace(x, "__address__", str(self.address)),
-             self.cmdline.split()))
+    return map(self._expand_vars, self.cmdline.split())
+
+  def generate_config_file(self, target_dir):
+    if self.config_file is None:
+      self.config_file = os.path.join(target_dir, os.path.basename(self.config_template).replace(".template", ""))
+
+    with open(self.config_template, "r") as in_file:
+      with open(self.config_file, "w") as out_file:
+        out_file.write(self._expand_vars(in_file.read()))
 
   def __repr__(self):
     attributes = ("cmdline", "address", "port", "cwd", "sync")

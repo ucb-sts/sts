@@ -77,6 +77,10 @@ if not os.path.exists(module_init_py):
   open(module_init_py,"a").close()
 tee_stdout(os.path.join(config.results_dir, "simulator.out"))
 
+for controller_config in config.controllers:
+  if controller_config.config_template:
+    controller_config.generate_config_file(config.results_dir)
+
 if args.publish:
   exp_lifecycle.publish_prepare(config.exp_name, config.results_dir)
 
