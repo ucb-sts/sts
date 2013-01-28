@@ -50,6 +50,7 @@ class InvariantChecker(object):
     import sts.headerspace.topology_loader.topology_loader as hsa_topo
     import sts.headerspace.headerspace.applications as hsa
     if len(simulation.controller_manager.controllers) == 1:
+      # TODO(cs): a better conditional would be: are all controllers down?
       down_controllers = InvariantChecker.check_liveness(simulation)
       if down_controllers != []:
         return down_controllers
@@ -104,6 +105,7 @@ class InvariantChecker(object):
     from sts.util.console import msg
     # Always check liveness if there is a single controllers
     if len(simulation.controller_manager.controllers) == 1:
+      # TODO(cs): a better conditional would be: are all controllers down?
       down_controllers = InvariantChecker.check_liveness(simulation)
       if down_controllers != []:
         return down_controllers
@@ -128,6 +130,34 @@ class InvariantChecker(object):
     else:
       msg.success("Fully connected!")
     return list(remaining_pairs)
+
+  @staticmethod
+  def check_blackholes(simulation):
+    '''Do any switches:
+         - send packets into a down link?
+         - drop packets that are supposed to go out their in_port?
+
+       This method double checks whether it's possible for any
+       packets to fall into the blackhole in the first place.
+
+       Slightly different than check_connectivity. blackholes imply no
+       connectivity, but not vice versa. No connectivity could also be due to:
+         - a loop
+         - PacketIn-based reactive routing
+    '''
+    # TODO(cs): just realized -- the C-version of Hassell might be configured to
+    # *stop* as soon as it gets to an edge port. At least, this is the
+    # behavior of the find_reachability function in python Hassell. So we'd
+    # have to do an iterative computation: all switches that are one
+    # hop away, then two hops, etc. Otherwise we wouldn't find blackholes in
+    # the middle of the network.
+    # For now, use a python method that explicitly
+    # finds blackholes rather than inferring them from check_reachability
+    # Warning! depends on python Hassell -- may be really slow!
+    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
+    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
+    blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
+    return blackholes
 
   @staticmethod
   def check_correspondence(simulation):

@@ -45,8 +45,8 @@ def find_reachability(NTF, TTF, edge_links, test_packet=None):
     propagation = []
 
     if len(edge_ports) == 0:
-       log.warn("No ports to check!")
-       return []
+      log.warn("No ports to check!")
+      return []
 
     for in_port in edge_ports:
       out_ports = list(set(edge_ports) - set([in_port]))
@@ -62,7 +62,7 @@ def find_reachability(NTF, TTF, edge_links, test_packet=None):
       p_node["visits"] = []
       p_node["hs_history"] = []
       propagation.append(p_node)
-  
+
       while len(propagation)>0:
           #get the next node in propagation graph and apply it to NTF and TTF
           log.debug("Propagation has length: %d"%len(propagation))
@@ -99,8 +99,78 @@ def find_reachability(NTF, TTF, edge_links, test_packet=None):
                                   else:
                                       tmp_propagate.append(new_p_node)
           propagation = tmp_propagate
-  
+
     return paths
+
+# TODO(cs): highly redundant
+def find_blackholes(NTF, TTF, edge_links, test_packet=None):
+  '''Do any switches:
+       - send packets into a down link?
+       - drop packets that are supposed to go out their in_port?
+
+     Specifically, checks whether it's possible for any
+     packets to fall into the blackhole in the first place.
+  '''
+  edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_links)
+  blackholes = []
+  propagation = []
+
+  if len(edge_ports) == 0:
+    log.warn("No ports to check!")
+    return []
+
+  for in_port in edge_ports:
+    out_ports = list(set(edge_ports) - set([in_port]))
+
+    # put all-x test packet in propagation graph
+    input_pkt = test_packet
+    if input_pkt == None:
+      input_pkt = get_all_x(NTF)
+
+    p_node = {}
+    p_node["hdr"] = input_pkt
+    p_node["port"] = in_port
+    p_node["visits"] = []
+    p_node["hs_history"] = []
+    propagation.append(p_node)
+
+    while len(propagation)>0:
+        #get the next node in propagation graph and apply it to NTF and TTF
+        log.debug("Propagation has length: %d"%len(propagation))
+        tmp_propagate = []
+        for p_node in propagation:
+            next_hp = NTF.T(p_node["hdr"],p_node["port"])
+            propagated = False
+            for (next_h,next_ps) in next_hp:
+                propagated = True
+                for next_p in next_ps:
+                    if next_p in out_ports:
+                        pass
+                    else: # Is an internal port
+                        linked = TTF.T(next_h,next_p)
+                        for (linked_h,linked_ports) in linked:
+                            for linked_p in linked_ports:
+                                new_p_node = {}
+                                new_p_node["hdr"] = linked_h
+                                new_p_node["port"] = linked_p
+                                new_p_node["visits"] = list(p_node["visits"])
+                                new_p_node["visits"].append(p_node["port"])
+                                new_p_node["visits"].append(next_p)
+                                new_p_node["hs_history"] = list(p_node["hs_history"])
+                                new_p_node["hs_history"].append(p_node["hdr"])
+                                if linked_p in out_ports:
+                                    pass
+                                elif linked_p in new_p_node["visits"]:
+                                    log.warn("WARNING: detected a loop - branch aborted: \nHeaderSpace: %s\n Visited Ports: %s\nLast Port %d "%(\
+                                        new_p_node["hdr"],new_p_node["visits"],new_p_node["port"]))
+                                else:
+                                    tmp_propagate.append(new_p_node)
+            if not propagated and len(list(p_node["visits"])) != 0:
+              # Append a tuple: (last egress port, [preceding ports])
+              blackholes.append((next_p,list(p_node["visits"])))
+
+        propagation = tmp_propagate
+  return blackholes
 
 def get_all_x(NTF):
   all_x = byte_array_get_all_x(NTF.length)
