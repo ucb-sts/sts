@@ -81,7 +81,7 @@ class ControllerConfig(object):
       if try_new_ports:
         while port_used(port=port):
           print "Port %d in use... trying next" % port
-          port += true_random.rand_int(0,50)
+          port += true_random.randint(0,50)
       self.port = port
       self._uuid = uuid if uuid else (self.address, orig_port if orig_port else 6633)
       self._server_info = (self.address, port)
