@@ -56,9 +56,12 @@ if args.config.endswith('.py'):
 
 try:
   config = __import__(args.config, globals(), locals(), ["*"])
-except ImportError:
-  # try again, but prepend config module path
-  config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
+except ImportError as e:
+  try:
+    # try again, but prepend config module path
+    config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
+  except ImportError:
+    raise e
 
 if not hasattr(config, 'exp_name'):
   config.exp_name = exp_lifecycle.guess_config_name(config)
