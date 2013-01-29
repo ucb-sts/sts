@@ -33,7 +33,7 @@ class applications_test(unittest.TestCase):
     access_links = [MockAccessLink(switch1, switch1.ports[1]),
                     MockAccessLink(switch2, switch2.ports[1])]
     blackholes = hsa.find_blackholes(NTF, TTF, access_links)
-    self.assertEqual((100002, [100001, 100002]), blackholes)
+    self.assertEqual([(100002, [100001, 100002])], blackholes)
 
   def test_no_blackhole(self):
     switch1 = create_switch(1, 2)
