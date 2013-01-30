@@ -73,6 +73,7 @@ class InvariantChecker(object):
 
   @staticmethod
   def python_check_connectivity(simulation):
+    # TODO(cs): first check whether network is partioned
     # Warning! depends on python Hassell -- may be really slow!
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
