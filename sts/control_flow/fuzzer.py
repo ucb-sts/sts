@@ -36,7 +36,7 @@ class Fuzzer(ControlFlow):
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
-               mock_link_discovery=False):
+               mock_link_discovery=False, learning_help_rounds=0):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger,
                            record_deterministic_values=record_deterministic_values)
@@ -62,6 +62,10 @@ class Fuzzer(ControlFlow):
     self.delay_startup = delay_startup
     self.print_buffers = print_buffers
     self.mock_link_discovery = mock_link_discovery
+    # How many rounds to only send packets directed at the source host itself.
+    # This helps the controller correctly learn our locations before we start
+    # injecting real traffic
+    self.learning_help_rounds = learning_help_rounds
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
@@ -330,8 +334,10 @@ class Fuzzer(ControlFlow):
           if len(host.interfaces) > 0:
             msg.event("injecting a random packet")
             traffic_type = "icmp_ping"
+            self_pkt = self.logical_time < self.learning_help_rounds
             # Generates a packet, and feeds it to the software_switch
-            dp_event = self.traffic_generator.generate(traffic_type, host)
+            dp_event = self.traffic_generator.generate(traffic_type, host,
+                                                       self_pkt=self_pkt)
             self._log_input_event(TrafficInjection(), dp_event=dp_event)
 
   def check_controllers(self):

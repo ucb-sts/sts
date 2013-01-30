@@ -22,7 +22,7 @@ class TrafficGenerator (object):
     ''' Let us know how to set the destination addresses '''
     self.hosts = set(hosts)
 
-  def generate(self, packet_type, host):
+  def generate(self, packet_type, host, self_pkt=False):
     if packet_type not in self._packet_generators:
       raise AttributeError("Unknown event type %s" % str(packet_type))
 
@@ -33,9 +33,12 @@ class TrafficGenerator (object):
 
     interface = self.random.choice(host.interfaces)
     destination_interface = None
-    if self.hosts:
+    if self_pkt:
+      # Send a packet to ourself to help the controller learn our location
+      destination_interface = interface
+    elif self.hosts:
       destination = self.random.choice(list(self.hosts - set([host])))
-      destination_interface =self.random.choice(destination.interfaces)
+      destination_interface = self.random.choice(destination.interfaces)
 
     packet = self._packet_generators[packet_type](interface, destination_interface)
     host.send(interface, packet)
