@@ -333,6 +333,7 @@ def compute_single_omega(start_port, edge_ports):
       line = proc.stdout.readline()
       if line == '':
         break
+      print line.rstrip()
 
       if line.startswith("-----"):
         hs_string = last_line.split(":")[1].strip()
