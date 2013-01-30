@@ -72,9 +72,9 @@ class ControllerConfig(object):
     self.cmdline = cmdline
 
     self.address = address
+    orig_port = port
     if (re.match("[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}", address) or
         address == "localhost"):
-      orig_port = port
       # Normal TCP socket
       if not port:
         port = self._port_gen.next()
