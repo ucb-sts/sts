@@ -36,7 +36,7 @@ class Fuzzer(ControlFlow):
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
-               mock_link_discovery=False, learning_help_rounds=0):
+               mock_link_discovery=False, initialization_rounds=20):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger,
                            record_deterministic_values=record_deterministic_values)
@@ -62,16 +62,28 @@ class Fuzzer(ControlFlow):
     self.delay_startup = delay_startup
     self.print_buffers = print_buffers
     self.mock_link_discovery = mock_link_discovery
-    # How many rounds to only send packets directed at the source host itself.
-    # This helps the controller correctly learn our locations before we start
-    # injecting real traffic
-    self.learning_help_rounds = learning_help_rounds
+    # How many rounds to let the controller initialize:
+    # send one round of packets directed at the source host itself (to facilitate
+    # learning), then send all-to-all packets until all pairs have been
+    # pinged. Tell MCSFinder not to prune initial inputs during this period.
+    self.initialization_rounds = initialization_rounds
+    # If initialization_rounds isn't 0, also make sure to send all-to-all
+    # pings before starting any events
+    self._pending_all_to_all = initialization_rounds != 0
+    # Our current place in the all-to-all cycle. Stop when == len(hosts)
+    self._all_to_all_iterations = 0
+    # How often (in terms of logical rounds) to inject all-to-all packets
+    self._all_to_all_interval = 5
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
 
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
+      if self._initializing():
+        # Tell MCSFinder never to prune this event
+        event.visible = False
+
       self._input_logger.log_input_event(event, **kws)
 
   def _load_fuzzer_params(self, fuzzer_params_path):
@@ -88,6 +100,9 @@ class Fuzzer(ControlFlow):
 
   def init_results(self, results_dir):
     self._input_logger.open(results_dir)
+
+  def _initializing(self):
+    return self.logical_time < self.initialization_rounds or self._pending_all_to_all
 
   def simulate(self):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
@@ -128,16 +143,35 @@ class Fuzzer(ControlFlow):
         while self.simulation.god_scheduler.pending_receives() == []:
           self.simulation.io_master.select(self.delay)
 
+      sent_self_packets = False
+
       while self.logical_time < end_time:
         self.logical_time += 1
         try:
-          self.trigger_events()
+          if not self._initializing():
+            self.trigger_events()
+            halt = self.maybe_check_invariant()
+            if halt:
+              exit_code = 5
+              break
+            self.maybe_inject_trace_event()
+          else:  # Initializing
+            self.check_message_receipts()
+            if not sent_self_packets and (self.logical_time % self._all_to_all_interval) == 0:
+              # Only need to send self packets once
+              self._send_initialization_packets(self_pkts=True)
+              sent_self_packets = True
+            elif self.logical_time > self.initialization_rounds:
+               # All-to-all mode
+               if (self.logical_time % self._all_to_all_interval) == 0:
+                  self._send_initialization_packets(self_pkts=False)
+                  self._all_to_all_iterations += 1
+                  if self._all_to_all_iterations > len(self.simulation.topology.hosts):
+                     log.info("Done initializing")
+                     self._pending_all_to_all = False
+            self.check_dataplane()
+
           msg.event("Round %d completed." % self.logical_time)
-          halt = self.maybe_check_invariant()
-          if halt:
-            exit_code = 5
-            break
-          self.maybe_inject_trace_event()
           time.sleep(self.delay)
         except KeyboardInterrupt as e:
           if self.interrupted:
@@ -158,6 +192,12 @@ class Fuzzer(ControlFlow):
         self._input_logger.close(self, self.simulation_cfg)
 
     return exit_code
+
+  def _send_initialization_packets(self, self_pkts=False):
+    traffic_type = "icmp_ping"
+    for host in self.simulation.topology.hosts:
+      dp_event = self.traffic_generator.generate(traffic_type, host, self_pkt=self_pkts)
+      self._log_input_event(TrafficInjection(), dp_event=dp_event)
 
   def _print_buffers(self):
     buffered_events = []
@@ -334,10 +374,8 @@ class Fuzzer(ControlFlow):
           if len(host.interfaces) > 0:
             msg.event("injecting a random packet")
             traffic_type = "icmp_ping"
-            self_pkt = self.logical_time < self.learning_help_rounds
             # Generates a packet, and feeds it to the software_switch
-            dp_event = self.traffic_generator.generate(traffic_type, host,
-                                                       self_pkt=self_pkt)
+            dp_event = self.traffic_generator.generate(traffic_type, host)
             self._log_input_event(TrafficInjection(), dp_event=dp_event)
 
   def check_controllers(self):
