@@ -82,7 +82,7 @@ class Fuzzer(ControlFlow):
     if self._input_logger is not None:
       if self._initializing():
         # Tell MCSFinder never to prune this event
-        event.visible = False
+        event.prunable = False
 
       self._input_logger.log_input_event(event, **kws)
 

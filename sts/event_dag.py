@@ -59,7 +59,7 @@ class EventDagView(object):
   @property
   def input_events(self):
     # TODO(cs): memoize?
-    return [ e for e in self._events_list if isinstance(e, InputEvent) ]
+    return [ e for e in self._events_list if isinstance(e, InputEvent) and e.prunable ]
 
   @property
   def atomic_input_events(self):
@@ -162,7 +162,7 @@ class EventDag(object):
   @property
   def input_events(self):
     # TODO(cs): memoize?
-    return [ e for e in self._events_list if isinstance(e, InputEvent) ]
+    return [ e for e in self._events_list if isinstance(e, InputEvent) and e.prunable ]
 
   @property
   def atomic_input_events(self):
@@ -275,11 +275,12 @@ class EventDag(object):
     # Also note that we treat failure/recovery as an atomic pair, so we don't prune
     # recovery events on their own.
     return set(e for e in ignored_portion
-               if (isinstance(e, InputEvent) and
+               if (isinstance(e, InputEvent) and e.prunable and
                    type(e) not in self._recovery_types))
 
   def _ignored_except_internals(self, ignored_portion):
-    return set(e for e in ignored_portion if isinstance(e, InputEvent))
+    return set(e for e in ignored_portion if isinstance(e, InputEvent) and
+               e.prunable)
 
   def input_subset(self, subset):
     ''' Return a view of the dag with only the subset dependents
