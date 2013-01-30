@@ -274,7 +274,12 @@ def check_partitions(switches, live_links, access_links):
   adjacency = defaultdict(lambda:defaultdict(lambda:None))
 
   for link in live_links:
-    adjacency[link.start_software_switch][link.end_software_switch] = link
+    # Make sure to disregard links that are adjacent to down switches
+    # (technically those links are still `live', but it's easier to treat it
+    #  this way)
+    if not (link.start_software_switch.failed or
+            link.end_software_switch.failed):
+      adjacency[link.start_software_switch][link.end_software_switch] = link
 
   # Switches we know of.  [dpid] -> Switch
   switches = { sw.dpid : sw for sw in switches }
