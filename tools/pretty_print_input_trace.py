@@ -39,7 +39,8 @@ def class_printer(event):
   print event.__class__.__name__
 
 def class_with_label_printer(event):
-  print event.label + ' ' + event.__class__.__name__
+  print (event.label + ' ' + event.__class__.__name__ +
+         ' (' + ("prunable" if event.prunable else "unprunable") + ')')
 
 def fingerprint_printer(event):
   fingerprint = None
@@ -127,14 +128,17 @@ def main(args):
   # ----------------------------------
   with open(args.input) as input_file:
     for line in input_file:
-      json_hash = json.loads(line.rstrip())
-      event = name_to_class[json_hash['class']].from_json(json_hash)
-      if type(event) not in filtered_classes:
-        for field in fields:
-          if field not in field_formatters:
-            raise ValueError("Unknown field %s" % field)
-          field_formatters[field](event)
-      stats.update(event)
+      try:
+        json_hash = json.loads(line.rstrip())
+        event = name_to_class[json_hash['class']].from_json(json_hash)
+        if type(event) not in filtered_classes:
+          for field in fields:
+            if field not in field_formatters:
+              raise ValueError("Unknown field %s" % field)
+            field_formatters[field](event)
+        stats.update(event)
+      except:
+        print >> sys.stderr, "Corrupt json hash found %s" % line
 
   if args.stats:
     print "Stats: %s" % stats
