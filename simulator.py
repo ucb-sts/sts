@@ -13,6 +13,8 @@ import shutil
 import signal
 import sys
 import argparse
+import logging
+import logging.config
 
 description = """
 Run a simulation.
@@ -40,6 +42,13 @@ parser.add_argument('-L', '--log-config',
                     help='''choose a python log configuration file''')
 
 args = parser.parse_args()
+
+if args.log_config:
+  logging.config.fileConfig(args.log_config)
+else:
+  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+
+log = logging.getLogger("sts")
 
 # Allow configs to be specified as paths as well as module names
 if args.config.endswith('.py'):
@@ -70,16 +79,6 @@ module_init_py = os.path.join(config.results_dir, "__init__.py")
 if not os.path.exists(module_init_py):
   open(module_init_py,"a").close()
 tee_stdout(os.path.join(config.results_dir, "simulator.out"))
-
-import logging
-import logging.config
-if args.log_config:
-  logging.config.fileConfig(args.log_config)
-else:
-  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
-
-log = logging.getLogger("sts")
-
 
 for controller_config in config.simulation_config.controller_configs:
   if controller_config.config_template:
