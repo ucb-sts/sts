@@ -156,7 +156,7 @@ class Fuzzer(ControlFlow):
               break
             self.maybe_inject_trace_event()
           else:  # Initializing
-            self.check_message_receipts()
+            self.check_message_receipts(pass_through=True)
             if not sent_self_packets and (self.logical_time % self._all_to_all_interval) == 0:
               # Only need to send self packets once
               self._send_initialization_packets(self_pkts=True)
@@ -169,7 +169,7 @@ class Fuzzer(ControlFlow):
                   if self._all_to_all_iterations > len(self.simulation.topology.hosts):
                      log.info("Done initializing")
                      self._pending_all_to_all = False
-            self.check_dataplane()
+            self.check_dataplane(pass_through=True)
 
           msg.event("Round %d completed." % self.logical_time)
           time.sleep(self.delay)
@@ -254,10 +254,13 @@ class Fuzzer(ControlFlow):
     self.check_controllers()
     self.check_migrations()
 
-  def check_dataplane(self):
+  def check_dataplane(self, pass_through=False):
     ''' Decide whether to delay, drop, or deliver packets '''
     for dp_event in self.simulation.patch_panel.queued_dataplane_events:
-      if self.random.random() < self.params.dataplane_delay_rate:
+      if pass_through:
+        self.simulation.patch_panel.permit_dp_event(dp_event)
+        self._log_input_event(DataplanePermit(dp_event.fingerprint))
+      elif self.random.random() < self.params.dataplane_delay_rate:
         self.simulation.patch_panel.delay_dp_event(dp_event)
       elif self.random.random() < self.params.dataplane_drop_rate:
         self.simulation.patch_panel.drop_dp_event(dp_event)
@@ -297,10 +300,11 @@ class Fuzzer(ControlFlow):
         self._log_input_event(ControlChannelUnblock(switch.dpid,
                               controller_id=connection.get_controller_id()))
 
-  def check_message_receipts(self):
+  def check_message_receipts(self, pass_through=False):
     for pending_receipt in self.simulation.god_scheduler.pending_receives():
       # TODO(cs): this is a really dumb way to fuzz packet receipt scheduling
-      if self.random.random() < self.params.ofp_message_receipt_rate:
+      if (self.random.random() < self.params.ofp_message_receipt_rate or
+          pass_through):
         self.simulation.god_scheduler.schedule(pending_receipt)
         self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                     pending_receipt.controller_id,
