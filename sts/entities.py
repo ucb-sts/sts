@@ -9,6 +9,7 @@ from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
+from itertools import count
 
 import logging
 import os
@@ -254,6 +255,7 @@ class Host (EventMixin):
   hosts on their own machines!
   '''
   _eventMixin_events = set([DpPacketOut])
+  _hids = count(1)
 
   def __init__(self, interfaces, name=""):
     '''
@@ -262,6 +264,7 @@ class Host (EventMixin):
     self.interfaces = interfaces
     self.log = logging.getLogger(name)
     self.name = name
+    self.hid = self._hids.next()
 
   def send(self, interface, packet):
     ''' Send a packet out a given interface '''
@@ -281,8 +284,15 @@ class Host (EventMixin):
     # Hack
     return self.name
 
+  # Currently only used by interactive
+  def hid(self):
+    return self.hid
+
   def __str__(self):
     return self.name
+
+  def __repr__(self):
+    return "Host(%d)" % self.hid
 
 class Controller(object):
   '''Encapsulates the state of a running controller.'''
