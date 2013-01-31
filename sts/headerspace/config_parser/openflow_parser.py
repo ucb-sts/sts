@@ -9,6 +9,7 @@ from sts.headerspace.headerspace.hs import *
 from pox.openflow.libopenflow_01 import *
 from pox.openflow.flow_table import SwitchFlowTable, TableEntry
 from pox.openflow.software_switch import SoftwareSwitch
+from pox.lib.packet.ethernet import ethernet
 
 import re
 from collections import namedtuple
@@ -337,7 +338,7 @@ def ofp_actions_to_output_ports(ofp_actions, switch, all_port_ids, in_port_id):
 
   return output_port_nos
 
-def generate_transfer_function(tf, software_switch):
+def generate_transfer_function(tf, software_switch, ignore_lldp=True):
   '''
   The rules will be added to transfer function tf passed to the function.
   '''
@@ -349,6 +350,8 @@ def generate_transfer_function(tf, software_switch):
     # TODO: For now, we're assuming completely non-overlapping entries. Need to
     #       deal with priorities properly!
     ofp_match = flow_entry.match
+    if ignore_lldp and ofp_match.dl_type == ethernet.LLDP_TYPE:
+      continue
     ofp_actions = flow_entry.actions
 
     hsa_match = ofp_match_to_hsa_match(ofp_match)
