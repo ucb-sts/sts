@@ -41,8 +41,14 @@ parser.add_argument('-L', '--log-config',
                     metavar="FILE", dest="log_config",
                     help='''choose a python log configuration file''')
 
-args = parser.parse_args()
+parser.add_argument('-T', '--timestamp-results',
+                    action="store_true", default=False,# metavar="timestamp_results",
+                    help='''add a timestamp to the experiment in the exp directory''')
 
+parser.add_argument('-E', '--experiment-name', metavar='exp_name',
+                    help='''store the results with the specified experiment name''')
+
+args = parser.parse_args()
 
 # Allow configs to be specified as paths as well as module names
 if args.config.endswith('.py'):
@@ -58,13 +64,16 @@ except ImportError as e:
     raise e
 
 if not hasattr(config, 'exp_name'):
-  config.exp_name = exp_lifecycle.guess_config_name(config)
+  if args.exp_name:
+    config.exp_name = args.exp_name
+  else:
+    config.exp_name = exp_lifecycle.guess_config_name(config)
 
 if not hasattr(config, 'results_dir'):
   config.results_dir = "exp/%s" % config.exp_name
 
 now = timestamp_string()
-if hasattr(config, 'timestamp_results') and config.timestamp_results:
+if (hasattr(config, 'timestamp_results') and config.timestamp_results) or args.timestamp_results:
   config.results_dir += "_" + str(now)
 
 if not os.path.exists(config.results_dir):
