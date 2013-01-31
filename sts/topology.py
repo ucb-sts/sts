@@ -334,6 +334,7 @@ class Topology(object):
   def __init__(self):
     self.dpid2switch = {}
     self.hosts = []
+    self.hid2host = {}
 
     # SoftwareSwitch objects
     self.failed_switches = set()
@@ -364,10 +365,15 @@ class Topology(object):
     return switches
 
   def get_switch(self, dpid):
-    dpid = dpid
     if dpid not in self.dpid2switch:
       raise RuntimeError("unknown dpid %d" % dpid)
     return self.dpid2switch[dpid]
+
+  def get_host(self, hid):
+    if hid not in self.hid2host:
+      raise RuntimeError("unknown hid %d" % hid)
+    return self.hid2host[hid]
+
 
   @property
   def live_switches(self):
@@ -527,6 +533,7 @@ class MeshTopology(Topology):
     self._populate_dpid2switch(switches)
     host_access_link_pairs = [ create_host(switch) for switch in self.switches ]
     self.hosts = map(lambda pair: pair[0], host_access_link_pairs)
+    self.hid2host = { h.hid : h for h in self.hosts }
     access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
     # this is python's .flatten:
     access_links = list(itertools.chain.from_iterable(access_link_list_list))
@@ -582,6 +589,7 @@ class FatTree (Topology):
     self.dpid2switch = {}
     self.link_tracker = None
     self.construct_tree(num_pods)
+    self.hid2host = { h.hid : h for h in self.hosts }
 
   def construct_tree(self, num_pods):
     '''

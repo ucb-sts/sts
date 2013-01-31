@@ -4,6 +4,8 @@ from sts.replay_event import *
 
 import logging
 log = logging.getLogger("event_scheduler")
+from collections import Counter
+import operator
 
 def format_time(time):
   mins = int(time/60)
@@ -13,9 +15,10 @@ def format_time(time):
 
 class EventSchedulerStats(object):
   def __init__(self):
-    self.matched = 0
-    self.timed_out = 0
+    self.event2matched = Counter()
+    self.event2timeouts = Counter()
     self.replay_start = None
+    self.record_start = None
 
   def start_replay(self, event):
     self.replay_start = time.time()
@@ -27,14 +30,36 @@ class EventSchedulerStats(object):
 
   def event_matched(self, event):
     msg.event_success(self.time(event) + " Sucessfully matched event "+str(event))
-    self.matched += 1
+    # TODO(cs): maybe want more info than just class name? (e.g. fingerprint)
+    self.event2matched[event.__class__.__name__] += 1
 
   def event_timed_out(self, event):
     msg.event_timeout(self.time(event) + " Event timed out "+str(event))
-    self.timed_out += 1
+    self.event2timeouts[event.__class__.__name__] += 1
+
+  def sorted_match_counts(self):
+    for e, count in sorted(self.event2matched.items(),
+                           key=operator.itemgetter(1)):
+      yield (e, count)
+
+  def sorted_timeout_counts(self):
+    for e, count in sorted(self.event2timeouts.items(),
+                           key=operator.itemgetter(1)):
+      yield (e, count,)
 
   def __str__(self):
-    return "Events matched: %d, timed out: %d" % (self.matched, self.timed_out)
+    total_matched = sum(self.event2matched.values())
+    total_timeouts = sum(self.event2timeouts.values())
+    s = []
+    s.append("Events matched: %d, timed out: %d\n" % (total_matched,
+                                                      total_timeouts))
+    s.append("Matches per event type:\n")
+    for e, count in self.sorted_match_counts():
+      s.append("  %s %d\n" % (e, count,))
+    s.append("Timeouts per event type:\n")
+    for e, count in self.sorted_timeout_counts():
+      s.append("  %s %d\n" % (e, count,))
+    return "".join(s)
 
 class DumbEventScheduler(object):
 

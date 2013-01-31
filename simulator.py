@@ -50,9 +50,9 @@ parser.add_argument('-L', '--log-config',
                     metavar="FILE", dest="log_config",
                     help='''choose a python log configuration file''')
 
-args = parser.parse_args()
-
 log = logging.getLogger("sts")
+
+args = parser.parse_args()
 
 # Allow configs to be specified as paths as well as module names
 if args.config.endswith('.py'):
@@ -60,19 +60,26 @@ if args.config.endswith('.py'):
 
 try:
   config = __import__(args.config, globals(), locals(), ["*"])
-except ImportError:
-  # try again, but prepend config module path
-  config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
+except ImportError as e:
+  try:
+    # try again, but prepend config module path
+    config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
+  except ImportError:
+    raise e
 
 if args.exp_name:
   config.exp_name = args.exp_name
 if not hasattr(config, 'exp_name'):
-  config.exp_name = exp_lifecycle.guess_config_name(config)
+  if args.experiment_name:
+    config.exp_name = args.experiment_name
+  else:
+    config.exp_name = exp_lifecycle.guess_config_name(config)
 
 if not hasattr(config, 'results_dir'):
   config.results_dir = "exp/%s" % config.exp_name
 
 now = timestamp_string()
+
 if args.timestamp_results is not None:
   ####  AAAAAAargsparse returns a list. WAT?
   config.timestamp_results = args.timestamp_results[0]
@@ -94,8 +101,8 @@ tee.tee_stderr()
 if args.log_config:
   logging.config.fileConfig(args.log_config)
 else:
-  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
-
+  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
+                      stream=sys.stdout)
 
 for controller_config in config.simulation_config.controller_configs:
   if controller_config.config_template:

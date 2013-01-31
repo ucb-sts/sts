@@ -51,7 +51,10 @@ class ControllerConfig(object):
   _port_gen = itertools.count(6633)
   _controller_count_gen = itertools.count(1)
 
-  def __init__(self, cmdline="", address="127.0.0.1", port=None, additional_ports={}, cwd=None, sync=None, controller_type=None, label=None, uuid=None, config_file=None, config_template=None):
+  def __init__(self, cmdline="", address="127.0.0.1", port=None,
+          additional_ports={}, cwd=None, sync=None, controller_type=None,
+          label=None, uuid=None, config_file=None, config_template=None,
+          try_new_ports=True):
     '''
     Store metadata for the controller.
       - cmdline is an array of command line tokens.
@@ -69,15 +72,16 @@ class ControllerConfig(object):
     self.cmdline = cmdline
 
     self.address = address
+    orig_port = port
     if (re.match("[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}", address) or
         address == "localhost"):
-      orig_port = port
       # Normal TCP socket
       if not port:
         port = self._port_gen.next()
-      while port_used(port=port):
-        print "Port %d in use... trying next" % port
-        port += true_random.rand_int(0,50)
+      if try_new_ports:
+        while port_used(port=port):
+          print "Port %d in use... trying next" % port
+          port += true_random.randint(0,50)
       self.port = port
       self._uuid = uuid if uuid else (self.address, orig_port if orig_port else 6633)
       self._server_info = (self.address, port)

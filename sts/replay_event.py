@@ -35,7 +35,8 @@ class Event(object):
   # Ensure globally unique labels
   _all_label_ids = set()
 
-  def __init__(self, prefix="e", label=None, time=None, dependent_labels=None):
+  def __init__(self, prefix="e", label=None, time=None, dependent_labels=None,
+               prunable=True):
     if label is None:
       label_id = Event._label_gen.next()
       label = prefix + str(label_id)
@@ -51,6 +52,9 @@ class Event(object):
     # Add on dependent labels to appease log_processing.superlog_parser.
     # TODO(cs): Replayer shouldn't depend on superlog_parser
     self.dependent_labels = dependent_labels if dependent_labels else []
+    # Whether this event should be prunable by MCSFinder. Initialization
+    # inputs are not pruned. 
+    self.prunable = True
 
   @abc.abstractmethod
   def proceed(self, simulation):
@@ -99,8 +103,10 @@ class InternalEvent(Event):
   '''An InternalEvent is one that happens within the controller(s) under
   simulation. Derivatives of this class verify that the internal event has
   occured in its proceed method before it returns.'''
-  def __init__(self, label=None, time=None, timeout_disallowed=False):
-    super(InternalEvent, self).__init__(prefix='i', label=label, time=time)
+  def __init__(self, label=None, time=None, timeout_disallowed=False,
+               prunable=False):
+    super(InternalEvent, self).__init__(prefix='i', label=label, time=time,
+                                        prunable=prunable)
     self.timeout_disallowed = timeout_disallowed
 
   def proceed(self, simulation):
@@ -121,9 +127,11 @@ class InputEvent(Event):
   This class also conceptually models (because it is equivalent to) 'external
   events', which is a term that may be used elsewhere in documentation or
   code.'''
-  def __init__(self, label=None, time=None, dependent_labels=None):
+  def __init__(self, label=None, time=None, dependent_labels=None,
+               prunable=True):
     super(InputEvent, self).__init__(prefix='e', label=label, time=time,
-                                     dependent_labels=dependent_labels)
+                                     dependent_labels=dependent_labels,
+                                     prunable=prunable)
 
 # --------------------------------- #
 #  Concrete classes of InputEvents  #
@@ -369,8 +377,9 @@ class PolicyChange(InputEvent):
     return PolicyChange(request_type, label=label, time=time)
 
 class TrafficInjection(InputEvent):
-  def __init__(self, label=None, time=None):
-    super(TrafficInjection, self).__init__(label=label, time=time)
+  def __init__(self, label=None, time=None, prunable=True):
+    super(TrafficInjection, self).__init__(label=label, time=time,
+                                           prunable=prunable)
 
   def proceed(self, simulation):
     if simulation.dataplane_trace is None:
@@ -381,7 +390,10 @@ class TrafficInjection(InputEvent):
   @staticmethod
   def from_json(json_hash):
     (label, time) = extract_label_time(json_hash)
-    return TrafficInjection(label, time)
+    prunable = True
+    if 'prunable' in json_hash:
+      prunable = json_hash['prunable']
+    return TrafficInjection(label, time, prunable=prunable)
 
 class WaitTime(InputEvent):
   def __init__(self, wait_time, label=None, time=None):
@@ -541,8 +553,9 @@ class DataplaneDrop(InputEvent):
     return json.dumps(fields)
 
 class DataplanePermit(InputEvent):
-  def __init__(self, fingerprint, label=None, time=None):
-    super(DataplanePermit, self).__init__(label=label, time=time)
+  def __init__(self, fingerprint, label=None, time=None, prunable=True):
+    super(DataplanePermit, self).__init__(label=label, time=time,
+                                          prunable=prunable)
     if fingerprint[0] != self.__class__.__name__:
       fingerprint = list(fingerprint)
       fingerprint.insert(0, self.__class__.__name__)
@@ -563,7 +576,11 @@ class DataplanePermit(InputEvent):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
     fingerprint = json_hash['fingerprint']
-    return DataplanePermit(fingerprint, label=label, time=time)
+    prunable = True
+    if 'prunable' in json_hash:
+      prunable = json_hash['prunable']
+    return DataplanePermit(fingerprint, label=label, time=time,
+                           prunable=prunable)
 
   def to_json(self):
     fields = dict(self.__dict__)

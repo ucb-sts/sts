@@ -58,6 +58,7 @@ class Replayer(ControlFlow):
     self.auto_permit_dp_events = auto_permit_dp_events
     self.unexpected_state_changes = []
     self.early_state_changes = []
+    self.event_scheduler_stats = None
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -116,6 +117,7 @@ class Replayer(ControlFlow):
 
   def run_simulation_forward(self, dag, post_bootstrap_hook=None):
     event_scheduler = self.create_event_scheduler(self.simulation)
+    self.event_scheduler_stats = event_scheduler.stats
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()
 

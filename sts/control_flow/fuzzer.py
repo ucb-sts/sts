@@ -39,7 +39,7 @@ class Fuzzer(ControlFlow):
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
-               mock_link_discovery=False):
+               mock_link_discovery=False, initialization_rounds=0):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger,
                            record_deterministic_values=record_deterministic_values)
@@ -65,12 +65,28 @@ class Fuzzer(ControlFlow):
     self.delay_startup = delay_startup
     self.print_buffers = print_buffers
     self.mock_link_discovery = mock_link_discovery
+    # How many rounds to let the controller initialize:
+    # send one round of packets directed at the source host itself (to facilitate
+    # learning), then send all-to-all packets until all pairs have been
+    # pinged. Tell MCSFinder not to prune initial inputs during this period.
+    self.initialization_rounds = initialization_rounds
+    # If initialization_rounds isn't 0, also make sure to send all-to-all
+    # pings before starting any events
+    self._pending_all_to_all = initialization_rounds != 0
+    # Our current place in the all-to-all cycle. Stop when == len(hosts)
+    self._all_to_all_iterations = 0
+    # How often (in terms of logical rounds) to inject all-to-all packets
+    self._all_to_all_interval = 5
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
 
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
+      if self._initializing():
+        # Tell MCSFinder never to prune this event
+        event.prunable = False
+
       self._input_logger.log_input_event(event, **kws)
 
   def _load_fuzzer_params(self, fuzzer_params_path):
@@ -92,6 +108,9 @@ class Fuzzer(ControlFlow):
       new_params_file = os.path.join(results_dir, os.path.basename(params_file))
       if  os.path.abspath(params_file) != os.path.abspath(new_params_file):
         shutil.copy(params_file, new_params_file)
+
+  def _initializing(self):
+    return self.logical_time < self.initialization_rounds or self._pending_all_to_all
 
   def simulate(self):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
@@ -132,16 +151,35 @@ class Fuzzer(ControlFlow):
         while self.simulation.god_scheduler.pending_receives() == []:
           self.simulation.io_master.select(self.delay)
 
+      sent_self_packets = False
+
       while self.logical_time < end_time:
         self.logical_time += 1
         try:
-          self.trigger_events()
+          if not self._initializing():
+            self.trigger_events()
+            halt = self.maybe_check_invariant()
+            if halt:
+              exit_code = 5
+              break
+            self.maybe_inject_trace_event()
+          else:  # Initializing
+            self.check_message_receipts(pass_through=True)
+            if not sent_self_packets and (self.logical_time % self._all_to_all_interval) == 0:
+              # Only need to send self packets once
+              self._send_initialization_packets(self_pkts=True)
+              sent_self_packets = True
+            elif self.logical_time > self.initialization_rounds:
+               # All-to-all mode
+               if (self.logical_time % self._all_to_all_interval) == 0:
+                  self._send_initialization_packets(self_pkts=False)
+                  self._all_to_all_iterations += 1
+                  if self._all_to_all_iterations > len(self.simulation.topology.hosts):
+                     log.info("Done initializing")
+                     self._pending_all_to_all = False
+            self.check_dataplane(pass_through=True)
+
           msg.event("Round %d completed." % self.logical_time)
-          halt = self.maybe_check_invariant()
-          if halt:
-            exit_code = 5
-            break
-          self.maybe_inject_trace_event()
           time.sleep(self.delay)
         except KeyboardInterrupt as e:
           if self.interrupted:
@@ -162,6 +200,15 @@ class Fuzzer(ControlFlow):
         self._input_logger.close(self, self.simulation_cfg)
 
     return exit_code
+
+  def _send_initialization_packet(self, host, self_pkt=False):
+    traffic_type = "icmp_ping"
+    dp_event = self.traffic_generator.generate(traffic_type, host, self_pkt=self_pkt)
+    self._log_input_event(TrafficInjection(), dp_event=dp_event)
+
+  def _send_initialization_packets(self, self_pkts=False):
+    for host in self.simulation.topology.hosts:
+      self._send_initialization_packet(host, self_pkt=self_pkts)
 
   def _print_buffers(self):
     buffered_events = []
@@ -215,10 +262,13 @@ class Fuzzer(ControlFlow):
     self.check_controllers()
     self.check_migrations()
 
-  def check_dataplane(self):
+  def check_dataplane(self, pass_through=False):
     ''' Decide whether to delay, drop, or deliver packets '''
     for dp_event in self.simulation.patch_panel.queued_dataplane_events:
-      if self.random.random() < self.params.dataplane_delay_rate:
+      if pass_through:
+        self.simulation.patch_panel.permit_dp_event(dp_event)
+        self._log_input_event(DataplanePermit(dp_event.fingerprint))
+      elif self.random.random() < self.params.dataplane_delay_rate:
         self.simulation.patch_panel.delay_dp_event(dp_event)
       elif self.random.random() < self.params.dataplane_drop_rate:
         self.simulation.patch_panel.drop_dp_event(dp_event)
@@ -258,10 +308,11 @@ class Fuzzer(ControlFlow):
         self._log_input_event(ControlChannelUnblock(switch.dpid,
                               controller_id=connection.get_controller_id()))
 
-  def check_message_receipts(self):
+  def check_message_receipts(self, pass_through=False):
     for pending_receipt in self.simulation.god_scheduler.pending_receives():
       # TODO(cs): this is a really dumb way to fuzz packet receipt scheduling
-      if self.random.random() < self.params.ofp_message_receipt_rate:
+      if (self.random.random() < self.params.ofp_message_receipt_rate or
+          pass_through):
         self.simulation.god_scheduler.schedule(pending_receipt)
         self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                     pending_receipt.controller_id,
@@ -373,6 +424,7 @@ class Fuzzer(ControlFlow):
           new_switch = random.choice(live_edge_switches)
           new_switch_dpid = new_switch.dpid
           new_port_no = max(new_switch.ports.keys()) + 1
+          msg.event("Migrating host %s" % str(access_link.host))
           self.simulation.topology.migrate_host(old_ingress_dpid,
                                                 old_ingress_port_no,
                                                 new_switch_dpid,
@@ -382,4 +434,5 @@ class Fuzzer(ControlFlow):
                                               new_switch_dpid,
                                               new_port_no,
                                               access_link.host.name))
+          self._send_initialization_packet(access_link.host, self_pkt=True)
 

@@ -9,6 +9,7 @@ import logging
 import collections
 from sts.util.console import msg
 import json
+from collections import defaultdict
 
 log = logging.getLogger("invariant_checker")
 
@@ -50,6 +51,7 @@ class InvariantChecker(object):
     import sts.headerspace.topology_loader.topology_loader as hsa_topo
     import sts.headerspace.headerspace.applications as hsa
     if len(simulation.controller_manager.controllers) == 1:
+      # TODO(cs): a better conditional would be: are all controllers down?
       down_controllers = InvariantChecker.check_liveness(simulation)
       if down_controllers != []:
         return down_controllers
@@ -87,6 +89,13 @@ class InvariantChecker(object):
         connected_pairs.add((in_port, p_node["port"]))
     all_pairs = InvariantChecker._get_all_pairs(simulation)
     remaining_pairs = all_pairs - connected_pairs
+    partitioned_pairs = check_partitions(simulation.topology.switches,
+                                         simulation.topology.live_links,
+                                         simulation.topology.access_links)
+    if len(partitioned_pairs) != 0:
+      log.info("Partitioned pairs! %s" % str(partitioned_pairs))
+    remaining_pairs -= partitioned_pairs
+
     # TODO(cs): don't print results here
     if len(remaining_pairs) > 0:
       msg.fail("Not all %d pairs are connected! (%d missing)" %
@@ -104,6 +113,7 @@ class InvariantChecker(object):
     from sts.util.console import msg
     # Always check liveness if there is a single controllers
     if len(simulation.controller_manager.controllers) == 1:
+      # TODO(cs): a better conditional would be: are all controllers down?
       down_controllers = InvariantChecker.check_liveness(simulation)
       if down_controllers != []:
         return down_controllers
@@ -120,6 +130,13 @@ class InvariantChecker(object):
         connected_pairs.add((start_port, final_port))
     all_pairs = InvariantChecker._get_all_pairs(simulation)
     remaining_pairs = all_pairs - connected_pairs
+    partitioned_pairs = check_partitions(simulation.topology.switches,
+                                         simulation.topology.live_links,
+                                         simulation.topology.access_links)
+    if len(partitioned_pairs) != 0:
+      log.info("Partitioned pairs! %s" % str(partitioned_pairs))
+    remaining_pairs -= partitioned_pairs
+
     # TODO(cs): don't print results here
     if len(remaining_pairs) > 0:
       msg.fail("Not all %d pairs are connected! (%d missing)" %
@@ -128,6 +145,34 @@ class InvariantChecker(object):
     else:
       msg.success("Fully connected!")
     return list(remaining_pairs)
+
+  @staticmethod
+  def check_blackholes(simulation):
+    '''Do any switches:
+         - send packets into a down link?
+         - drop packets that are supposed to go out their in_port?
+
+       This method double checks whether it's possible for any
+       packets to fall into the blackhole in the first place.
+
+       Slightly different than check_connectivity. blackholes imply no
+       connectivity, but not vice versa. No connectivity could also be due to:
+         - a loop
+         - PacketIn-based reactive routing
+    '''
+    # TODO(cs): just realized -- the C-version of Hassell might be configured to
+    # *stop* as soon as it gets to an edge port. At least, this is the
+    # behavior of the find_reachability function in python Hassell. So we'd
+    # have to do an iterative computation: all switches that are one
+    # hop away, then two hops, etc. Otherwise we wouldn't find blackholes in
+    # the middle of the network.
+    # For now, use a python method that explicitly
+    # finds blackholes rather than inferring them from check_reachability
+    # Warning! depends on python Hassell -- may be really slow!
+    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
+    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
+    blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
+    return blackholes
 
   @staticmethod
   def check_correspondence(simulation):
@@ -220,3 +265,78 @@ class InvariantChecker(object):
     missing_acl_entries = print_missing_entries("final locations in virtual missing from physical",
                                                 controller_omega, physical_omega)
     return missing_routing_entries or missing_acl_entries
+
+def check_partitions(switches, live_links, access_links):
+  # TODO(cs): lifted directly from pox.forwarding.l2_multi. Highly
+  # redundant!
+
+  # Adjacency map.  [sw1][sw2] -> port from sw1 to sw2
+  adjacency = defaultdict(lambda:defaultdict(lambda:None))
+
+  for link in live_links:
+    # Make sure to disregard links that are adjacent to down switches
+    # (technically those links are still `live', but it's easier to treat it
+    #  this way)
+    if not (link.start_software_switch.failed or
+            link.end_software_switch.failed):
+      adjacency[link.start_software_switch][link.end_software_switch] = link
+
+  # Switches we know of.  [dpid] -> Switch
+  switches = { sw.dpid : sw for sw in switches }
+
+  # [sw1][sw2] -> (distance, intermediate)
+  path_map = defaultdict(lambda:defaultdict(lambda:(None,None)))
+
+  def _calc_paths ():
+    """
+    Essentially Floyd-Warshall algorithm
+    """
+    sws = switches.values()
+    path_map.clear()
+    for k in sws:
+      for j,port in adjacency[k].iteritems():
+        if port is None: continue
+        path_map[k][j] = (1,None)
+      path_map[k][k] = (0,None) # distance, intermediate
+  
+    """
+    for i in sws:
+      for j in sws:
+        a = path_map[i][j][0]
+        #a = adjacency[i][j]
+        if a is None: a = "*"
+        print a,
+      print
+    """
+  
+    for k in sws:
+      for i in sws:
+        for j in sws:
+          if path_map[i][k][0] is not None:
+            if path_map[k][j][0] is not None:
+              # i -> k -> j exists
+              ikj_dist = path_map[i][k][0]+path_map[k][j][0]
+              if path_map[i][j][0] is None or ikj_dist < path_map[i][j][0]:
+                # i -> k -> j is better than existing
+                path_map[i][j] = (ikj_dist, k)
+  
+    """
+    print "--------------------"
+    for i in sws:
+      for j in sws:
+        print path_map[i][j][0],
+      print
+    """
+
+  all_link_pairs = [ (l1,l2) for l1 in access_links
+                                for l2 in access_links if l1 != l2 ]
+
+  _calc_paths()
+  partioned_pairs = set()
+  for link_pair in all_link_pairs:
+    if path_map[link_pair[0].switch][link_pair[1].switch] == (None,None):
+      id1 = get_uniq_port_id(link_pair[0].switch, link_pair[0].switch_port)
+      id2 = get_uniq_port_id(link_pair[1].switch, link_pair[1].switch_port)
+      partioned_pairs.add((id1,id2))
+  return partioned_pairs   
+

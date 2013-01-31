@@ -4,6 +4,7 @@ from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
 from sts.dataplane_traces.trace import DataplaneEvent
 import random
+import itertools
 
 class TrafficGenerator (object):
   """
@@ -12,7 +13,7 @@ class TrafficGenerator (object):
 
   def __init__(self, random=random.Random()):
     self.random = random
-    self.hosts = []
+    self.host2dests = {}
 
     self._packet_generators = {
       "icmp_ping" : self.icmp_ping
@@ -20,9 +21,11 @@ class TrafficGenerator (object):
 
   def set_hosts(self, hosts):
     ''' Let us know how to set the destination addresses '''
-    self.hosts = set(hosts)
+    for host in hosts: 
+      others = [ h for h in hosts if h != host ]
+      self.host2dests[host] = itertools.cycle(others)
 
-  def generate(self, packet_type, host):
+  def generate(self, packet_type, host, self_pkt=False):
     if packet_type not in self._packet_generators:
       raise AttributeError("Unknown event type %s" % str(packet_type))
 
@@ -33,9 +36,12 @@ class TrafficGenerator (object):
 
     interface = self.random.choice(host.interfaces)
     destination_interface = None
-    if self.hosts:
-      destination = self.random.choice(list(self.hosts - set([host])))
-      destination_interface =self.random.choice(destination.interfaces)
+    if self_pkt:
+      # Send a packet to ourself to help the controller learn our location
+      destination_interface = interface
+    elif self.host2dests:
+      destination = self.host2dests[host].next()
+      destination_interface = self.random.choice(destination.interfaces)
 
     packet = self._packet_generators[packet_type](interface, destination_interface)
     host.send(interface, packet)

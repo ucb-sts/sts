@@ -8,6 +8,8 @@ from sts.util.tabular import Tabular
 from sts.topology import BufferedPatchPanel
 from sts.util.console import msg, color
 from sts.replay_event import *
+from sts.util.convenience import find
+from sts.traffic_generator import TrafficGenerator
 
 import pox.openflow.libopenflow_01 as of
 
@@ -19,6 +21,7 @@ import code
 import sys
 import types
 import re
+from random import Random
 
 import readline
 readline.parse_and_bind('tab:complete')
@@ -54,6 +57,7 @@ class STSCommand(object):
 
   def arg(self, name, help_msg=None, values=None):
     self.args.append(STSCommandArg(name, help_msg, values))
+    return self
 
   def arg_help(self):
     return [ "  <%s>: %s"%(a.name, a.arg_help()) for a in self.args if a.arg_help() ]
@@ -201,14 +205,12 @@ class Interactive(ControlFlow):
   Presents an interactive prompt for injecting events and
   checking for invariants at the users' discretion
   '''
-  # TODO(cs): rather than just prompting "Continue to next round? [Yn]", allow
-  #           the user to examine the state of the network interactively (i.e.,
-  #           provide them with the normal POX cli + the simulated events
   def __init__(self, simulation_cfg, input_logger=None):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
     self.logical_time = 0
     self._input_logger = input_logger
+    self.traffic_generator = TrafficGenerator(random.Random())
     # TODO(cs): future feature: allow the user to interactively choose the order
     # events occur for each round, whether to delay, drop packets, fail nodes,
     # etc.
@@ -261,6 +263,10 @@ class Interactive(ControlFlow):
       c.cmd(self.kill_switch,  "kill_switch", alias="ks", help_msg="Kill a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
       c.cmd(self.start_switch,  "start_switch", alias="ss", help_msg="Restart a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
       c.cmd(self.show_flow_table,  "show_flows", alias="sf", help_msg="Show flowtable of a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.list_hosts, "list_hosts", alias="lhs", help_msg="List hosts")
+      c.cmd(self.migrate_host, "migrate_host", alias="mh", help_msg="Migrate a host to switch dpid")\
+            .arg("hid", values=lambda: map(lambda h: h.hid, self.simulation.topology.hosts))\
+            .arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
 
       c.cmd_group("Python objects")
       c.register_obj(self.simulation, "simulation", help_msg="access the simulation object")
@@ -333,6 +339,12 @@ class Interactive(ControlFlow):
     for s in topology.switches:
       print "%d %s %s" % (s.dpid, repr(s), "[ALIVE]" if s in live else "[DEAD]")
 
+  def list_hosts(self):
+    topology = self.simulation.topology
+    print "Hosts:"
+    for h in topology.hosts:
+      print "%d %s" % (h.hid, str(h),)
+
   def kill_switch(self, dpid):
     topology = self.simulation.topology
     switch = topology.get_switch(dpid)
@@ -345,6 +357,31 @@ class Interactive(ControlFlow):
     topology.recover_switch(switch, down_controller_ids=map(lambda c: c.uuid, self.simulation.controller_manager.down_controllers))
     self._log_input_event(SwitchRecovery(switch.dpid))
 
+  def migrate_host(self, hid, dpid):
+    topology = self.simulation.topology
+    host = topology.get_host(hid)
+    # TODO(cs): make this lookup more efficient
+    access_link = find(lambda a: a.host == host, topology.access_links)
+    old_ingress_dpid = access_link.switch.dpid
+    old_ingress_port_no = access_link.switch_port.port_no
+    new_switch = topology.get_switch(dpid)
+    new_port_no = max(new_switch.ports.keys()) + 1
+    self.simulation.topology.migrate_host(old_ingress_dpid,
+                                          old_ingress_port_no,
+                                          dpid,
+                                          new_port_no)
+    self._log_input_event(HostMigration(old_ingress_dpid,
+                                        old_ingress_port_no,
+                                        dpid,
+                                        new_port_no,
+                                        access_link.host.name))
+    self._send_initialization_packet(access_link.host, self_pkt=True)
+
+  # TODO(cs): ripped directly from fuzzer. Redundant!
+  def _send_initialization_packet(self, host, self_pkt=False):
+    traffic_type = "icmp_ping"
+    dp_event = self.traffic_generator.generate(traffic_type, host, self_pkt=self_pkt)
+    self._log_input_event(TrafficInjection(), dp_event=dp_event)
 
   def show_flow_table(self, dpid):
     topology = self.simulation.topology
@@ -555,6 +592,6 @@ class Interactive(ControlFlow):
                                                   pending_receipt.controller_id,
                                                   pending_receipt.fingerprint))
 
-  # TODO(cs): add support for control channel blocking + switch, link,
-  # controller failures, host migration, god scheduling
+  # TODO(cs): add support for control channel blocking + link,
+  # controller failures, god scheduling
 
