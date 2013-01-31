@@ -67,20 +67,32 @@ class msg():
   def unset_io_master():
     msg.global_io_master = None
 
-def tee_stdout(file):
-  if not hasattr(tee_stdout, "_orig_stdout"):
-    tee_stdout._orig_stdout = sys.stdout
-  class Tee(object):
-    def __init__(self, file):
-      self.file = open(file,"w")
-    def write(self, *args, **kwargs):
-      tee_stdout._orig_stdout.write(*args, **kwargs)
-      self.file.write(*args, **kwargs)
-      self.file.flush()
-  sys.stdout = Tee(file)
+class Tee(object):
+  def __init__(self, target):
+    self.target = target
+    self.orig_stdout = None
+    self.orig_stderr = None
 
-def untee_stdout():
-  if hasattr(tee_stdout, "_orig_stdout"):
-    sys.stdout = tee_stdout._orig_stdout
-    delattr(tee_stdout, "_orig_stdout")
+  def tee_src(self, src):
+    _self = self
+    class DoubleIO(object):
+      def write(self, s):
+        src.write(s)
+        _self.target.write(s)
+        _self.target.flush()
+    return DoubleIO()
 
+  def tee_stdout(self):
+    self.orig_stderr = sys.stderr
+    sys.stdout = self.tee_src(sys.stdout)
+
+  def tee_stderr(self):
+    self.orig_stderr = sys.stderr
+    sys.stderr = self.tee_src(sys.stderr)
+
+  def close(self):
+    self.target.close()
+    if self.orig_stdout:
+      sys.stdout = self.orig_stdout
+    if self.orig_stderr:
+      sys.stderr = self.orig_stderr

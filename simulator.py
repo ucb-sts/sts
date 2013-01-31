@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.7
 
-from sts.util.console import tee_stdout
+from sts.util.console import Tee
 from sts.util.procutils import kill_procs
 from sts.control_flow import Fuzzer
 from sts.simulation_state import SimulationConfig
@@ -26,6 +26,15 @@ $ %s -c config.fat_tree
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  description=description)
 
+parser.add_argument('-n', '--exp-name', dest="exp_name",
+                    default=None,
+                    help='''experiment name ''')
+
+# need to parse this ourselves, because type=bool doesn't work as expected
+parser.add_argument('-t', '--timestamp-results', dest="timestamp_results",
+                    default=None, nargs=1, action="store", type=lambda s: s.lower() in ('y', 'yes', 'on', 't', 'true', '1', 'yeay', 'ja', 'jepp'),
+                    help=''' whether to time stamp the result directory ''')
+
 parser.add_argument('-c', '--config',
                     default='config.fuzz_pox_fattree',
                     help='''experiment config module in the config/ '''
@@ -43,11 +52,6 @@ parser.add_argument('-L', '--log-config',
 
 args = parser.parse_args()
 
-if args.log_config:
-  logging.config.fileConfig(args.log_config)
-else:
-  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
-
 log = logging.getLogger("sts")
 
 # Allow configs to be specified as paths as well as module names
@@ -60,6 +64,8 @@ except ImportError:
   # try again, but prepend config module path
   config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
 
+if args.exp_name:
+  config.exp_name = args.exp_name
 if not hasattr(config, 'exp_name'):
   config.exp_name = exp_lifecycle.guess_config_name(config)
 
@@ -67,6 +73,10 @@ if not hasattr(config, 'results_dir'):
   config.results_dir = "exp/%s" % config.exp_name
 
 now = timestamp_string()
+if args.timestamp_results is not None:
+  ####  AAAAAAargsparse returns a list. WAT?
+  config.timestamp_results = args.timestamp_results[0]
+
 if hasattr(config, 'timestamp_results') and config.timestamp_results:
   config.results_dir += "_" + str(now)
 
@@ -75,7 +85,17 @@ if not os.path.exists(config.results_dir):
 module_init_py = os.path.join(config.results_dir, "__init__.py")
 if not os.path.exists(module_init_py):
   open(module_init_py,"a").close()
-tee_stdout(os.path.join(config.results_dir, "simulator.out"))
+
+tee = Tee(open(os.path.join(config.results_dir, "simulator.out"), "w"))
+tee.tee_stdout()
+tee.tee_stderr()
+
+# delay log configuration until the tee is warm
+if args.log_config:
+  logging.config.fileConfig(args.log_config)
+else:
+  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+
 
 for controller_config in config.simulation_config.controller_configs:
   if controller_config.config_template:
