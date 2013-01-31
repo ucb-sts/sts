@@ -135,6 +135,7 @@ def handle_int(signal, frame):
 
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
+signal.signal(signal.SIGQUIT, handle_int)
 
 # Start the simulation
 try:
