@@ -45,7 +45,7 @@ parser.add_argument('-T', '--timestamp-results',
                     action="store_true", default=False,# metavar="timestamp_results",
                     help='''add a timestamp to the experiment in the exp directory''')
 
-parser.add_argument('-E', '--experiment-name', metavar='exp_name',
+parser.add_argument('-E', '--experiment-name',
                     help='''store the results with the specified experiment name''')
 
 args = parser.parse_args()
@@ -64,8 +64,8 @@ except ImportError as e:
     raise e
 
 if not hasattr(config, 'exp_name'):
-  if args.exp_name:
-    config.exp_name = args.exp_name
+  if args.experiment_name:
+    config.exp_name = args.experiment_name
   else:
     config.exp_name = exp_lifecycle.guess_config_name(config)
 
