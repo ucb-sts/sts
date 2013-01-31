@@ -5,6 +5,7 @@ This module mocks out openflow switches, links, and hosts. These are all the
 
 from pox.openflow.software_switch import DpPacketOut, OFConnection
 from pox.openflow.nx_software_switch import NXSoftwareSwitch
+from pox.openflow.flow_table import FlowTableModification
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
 from sts.util.procutils import popen_filtered, kill_procs
@@ -43,9 +44,9 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
   _eventMixin_events = set([DpPacketOut])
 
-  def __init__ (self, dpid, name=None, ports=4, miss_send_len=128,
-                n_buffers=100, n_tables=1, capabilities=None,
-                can_connect_to_endhosts=True):
+  def __init__(self, dpid, name=None, ports=4, miss_send_len=128,
+               n_buffers=100, n_tables=1, capabilities=None,
+               can_connect_to_endhosts=True):
     NXSoftwareSwitch.__init__(self, dpid, name, ports, miss_send_len,
                               n_buffers, n_tables, capabilities)
 
@@ -55,6 +56,12 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
 
     self.failed = False
     self.log = logging.getLogger("FuzzSoftwareSwitch(%d)" % dpid)
+
+    if logging.getLogger().getEffectiveLevel() <= logging.DEBUG:
+       def _print_entry_remove(table_mod):
+         if table_mod.removed != []:
+           self.log.debug("Table entry removed %s" % str(table_mod.removed))
+       self.table.addListener(FlowTableModification, _print_entry_remove)
 
     def error_handler(e):
       self.log.exception(e)
