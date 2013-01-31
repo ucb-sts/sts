@@ -36,7 +36,7 @@ class Fuzzer(ControlFlow):
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
-               mock_link_discovery=False, initialization_rounds=20):
+               mock_link_discovery=False, initialization_rounds=0):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger,
                            record_deterministic_values=record_deterministic_values)
