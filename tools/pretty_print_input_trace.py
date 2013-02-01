@@ -79,21 +79,53 @@ field_formatters = {
 
 class Stats:
   def __init__(self):
-    self.input_events = 0
-    self.internal_events = 0
+    self.input_events = {}
+    self.internal_events = {}
 
   def update(self, event):
     if isinstance(event, replay_events.InputEvent):
-      self.input_events += 1
+      event_name = str(event.__class__.__name__)
+      if event_name in self.input_events.keys():
+	self.input_events[event_name] += 1
+      else:
+	self.input_events[event_name] = 1
     else:
-      self.internal_events += 1
+      event_name = str(event.__class__.__name__)
+      if event_name in self.internal_events.keys():
+	self.internal_events[event_name] += 1
+      else:
+	self.internal_events[event_name] = 1
 
   @property
-  def total_events(self):
-    return self.input_events + self.internal_events
+  def input_event_count(self):
+    input_count = 0
+    for count in self.input_events.values():
+      input_count += count
+    return input_count
+
+  @property
+  def internal_event_count(self):
+    internal_count = 0
+    for count in self.internal_events.values():
+      internal_count += count
+    return internal_count
+
+  @property
+  def total_event_count(self):
+    return self.input_event_count + self.internal_event_count
 
   def __str__(self):
-    return "Events: %d total (%d input, %d internal)." % (self.total_events, self.input_events, self.internal_events)
+    s = "Events: %d total (%d input, %d internal).\n" % (self.total_event_count, self.input_event_count, self.internal_event_count)
+    if len(self.input_events) > 0:
+      s += "\n\tInput Events:\n"
+      for event_name, count in self.input_events.items():
+        s += "\t  %s : %d\n" % (event_name, count)
+    if len(self.internal_events) > 0:
+      s += "\n\tInternal Events:\n"
+      for event_name, count in self.internal_events.items():
+        s += "\t  %s : %d\n" % (event_name, count)
+    return s
+
 
 def main(args):
   def load_format_file(format_file):
