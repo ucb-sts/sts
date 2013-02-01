@@ -69,11 +69,8 @@ except ImportError as e:
 
 if args.exp_name:
   config.exp_name = args.exp_name
-if not hasattr(config, 'exp_name'):
-  if args.experiment_name:
-    config.exp_name = args.experiment_name
-  else:
-    config.exp_name = exp_lifecycle.guess_config_name(config)
+elif not hasattr(config, 'exp_name'):
+  config.exp_name = exp_lifecycle.guess_config_name(config)
 
 if not hasattr(config, 'results_dir'):
   config.results_dir = "exp/%s" % config.exp_name
