@@ -429,8 +429,10 @@ class Fuzzer(ControlFlow):
     '''A hack to migrate a single host once.
     We are just trying to provoke the host migration bug in POX/NOX.'''
     l_access_links = list(self.simulation.topology.access_links)
-    if (not self.migrated_link) and len(l_access_links) > 0: #be idempotent
-      access_link = random.choice(l_access_links)
+    if (not self.migrated_link) and len(l_access_links) > 0: #be idempotent and smart
+      access_link = [ x for x in l_access_links if x.host.hid == 1]
+      assert(len(access_link) == 1)
+      access_link = access_link[0]
       self.old_routing_entries = access_link.switch.table.entries_for_port(
         access_link.switch_port.port_no)
       self.migrated_link = self._migrate_host_at_access_link(access_link)
