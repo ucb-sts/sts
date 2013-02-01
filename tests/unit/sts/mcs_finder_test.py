@@ -33,6 +33,10 @@ class MockMCSFinderBase(object):
     self.no_violation_verification_runs = True
     self._extra_log = None
     self._runtime_stats = {}
+    self.results_dir = tempfile.mkdtemp()
+    self._runtime_stats_file = os.path.join(self.results_dir, "runtimestats.json")
+    self.mcs_trace_path = os.path.join(self.results_dir, "mcs.trace")
+    self.sync_callback = None
 
   def log(self, message):
     self._log.info(message)

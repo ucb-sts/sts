@@ -101,9 +101,10 @@ else:
   logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
                       stream=sys.stdout)
 
-for controller_config in config.simulation_config.controller_configs:
-  if controller_config.config_template:
-    controller_config.generate_config_file(config.results_dir)
+if hasattr(config, 'simulation_config') and hasattr(config.simulation_config, 'controller_configs'):
+  for controller_config in config.simulation_config.controller_configs:
+    if controller_config.config_template:
+      controller_config.generate_config_file(config.results_dir)
 
 if args.publish:
   exp_lifecycle.publish_prepare(config.exp_name, config.results_dir)

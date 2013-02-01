@@ -16,6 +16,7 @@ from sts.control_flow.peeker import Peeker
 
 
 from collections import defaultdict
+import copy
 import itertools
 import sys
 import time
@@ -122,8 +123,13 @@ class MCSFinder(ControlFlow):
       # First, run through without pruning to verify that the violation exists
       if self._runtime_stats is not None:
         self._runtime_stats["replay_start_epoch"] = time.time()
-      violations = self.replay(self.dag)
+
+      for i in range(0, self.no_violation_verification_runs):
+        violations = self.replay(self.dag)
+        if violations != []:
+          break
       if self._runtime_stats is not None:
+        self._runtime_stats["initial_verification_runs_needed"] = i
         self._runtime_stats["replay_end_epoch"] = time.time()
       if violations == []:
         msg.fail("Unable to reproduce correctness violation!")
@@ -131,7 +137,7 @@ class MCSFinder(ControlFlow):
       self.log("Violation reproduced successfully! Proceeding with pruning")
       Replayer.total_replays = 0
       Replayer.total_inputs_replayed = 0
-    
+
     if self._runtime_stats is not None:
       self._runtime_stats["prune_start_epoch"] = time.time()
 
@@ -163,6 +169,9 @@ class MCSFinder(ControlFlow):
     if split_ways > len(dag.input_events):
       self.log("Done")
       return (dag, total_inputs_pruned)
+
+    # dump intermediate mcs
+    self._maybe_dump_intermediate_mcs(dag, label='.'.join(map(str, label_prefix)))
 
     local_label = lambda i, inv=False: "%s%d/%d" % ("~" if inv else "", i, split_ways)
     subset_label = lambda label: ".".join(map(str, label_prefix + ( label, )))
@@ -328,35 +337,57 @@ class MCSFinder(ControlFlow):
     self._runtime_stats["matched_events"][Replayer.total_replays] =\
        dict(replayer.event_scheduler_stats.event2matched)
 
-  def _dump_mcs_trace(self):
+  def _maybe_dump_intermediate_mcs(self, dag, label):
+    class InterMCS(object):
+      def __init__(self):
+        self.min_size = sys.maxint
+        self.count = 0
+    if not hasattr(self, "_intermcs"):
+      self._intermcs = InterMCS()
+    if len(dag.events) < self._intermcs.min_size:
+      self._intermcs.min_size = len(dag.events)
+      self._intermcs.count += 1
+      dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self._intermcs.count, label.replace("/", ".")))
+      os.makedirs(dst)
+      self._dump_mcs_trace(dag, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
+      self._dump_runtime_stats(os.path.join(dst, os.path.basename(self._runtime_stats_file)))
+
+  def _dump_mcs_trace(self, dag=None, mcs_trace_path=None):
+    if dag is None:
+      dag = self.dag
+    if mcs_trace_path is None:
+      mcs_trace_path = self.mcs_trace_path
     # Dump the mcs trace
-    input_logger = InputLogger(output_path=self.mcs_trace_path)
-    input_logger.open(self.results_dir)
-    for e in self.dag.events:
+    input_logger = InputLogger(output_path=mcs_trace_path)
+    input_logger.open(os.path.dirname(mcs_trace_path))
+    for e in dag.events:
       input_logger.log_input_event(e)
     input_logger.close(self, self.simulation_cfg, skip_mcs_cfg=True)
 
-  def _dump_runtime_stats(self):
-    if self._runtime_stats is not None:
+  def _dump_runtime_stats(self, runtime_stats_file=None):
+    if runtime_stats_file is None:
+      runtime_stats_file = self._runtime_stats_file
+    runtime_stats = copy.deepcopy(self._runtime_stats)
+    if runtime_stats is not None:
       # First compute durations
-      if "replay_end_epoch" in self._runtime_stats:
-        self._runtime_stats["replay_duration_seconds"] =\
-          (self._runtime_stats["replay_end_epoch"] -
-           self._runtime_stats["replay_start_epoch"])
-      if "prune_end_epoch" in self._runtime_stats:
-        self._runtime_stats["prune_duration_seconds"] =\
-          (self._runtime_stats["prune_end_epoch"] -
-           self._runtime_stats["prune_start_epoch"])
-      self._runtime_stats["total_replays"] = Replayer.total_replays
-      self._runtime_stats["total_inputs_replayed"] = Replayer.total_inputs_replayed
+      if "replay_end_epoch" in runtime_stats:
+        runtime_stats["replay_duration_seconds"] =\
+          (runtime_stats["replay_end_epoch"] -
+           runtime_stats["replay_start_epoch"])
+      if "prune_end_epoch" in runtime_stats:
+        runtime_stats["prune_duration_seconds"] =\
+          (runtime_stats["prune_end_epoch"] -
+           runtime_stats["prune_start_epoch"])
+      runtime_stats["total_replays"] = Replayer.total_replays
+      runtime_stats["total_inputs_replayed"] = Replayer.total_inputs_replayed
       if self.transform_dag is not None:
         # TODO(cs): assumes that Peeker is the dag transformer
-        self._runtime_stats["ambiguous_counts"] = dict(Peeker.ambiguous_counts)
-        self._runtime_stats["ambiguous_events"] = dict(Peeker.ambiguous_events)
-      self._runtime_stats["peeker"] = self.transform_dag is not None
-      self._runtime_stats["config"] = str(self.simulation_cfg)
+        runtime_stats["ambiguous_counts"] = dict(Peeker.ambiguous_counts)
+        runtime_stats["ambiguous_events"] = dict(Peeker.ambiguous_events)
+      runtime_stats["peeker"] = self.transform_dag is not None
+      runtime_stats["config"] = str(self.simulation_cfg)
 
-      write_runtime_stats(self._runtime_stats_file, self._runtime_stats)
+      write_runtime_stats(runtime_stats_file, runtime_stats)
 
 # TODO(cs): Hack alert. Shouldn't be a subclass
 class EfficientMCSFinder(MCSFinder):
@@ -368,6 +399,9 @@ class EfficientMCSFinder(MCSFinder):
   '''
   def _ddmin(self, dag, carryover_inputs, precompute_cache=None,
              recursion_level=0, label_prefix=(), total_inputs_pruned=0):
+    # dump intermediate mcs
+    self._maybe_dump_intermediate_mcs(dag, label='.'.join(map(str, label_prefix)))
+
     ''' carryover_inputs is the variable "r" from the paper. '''
     # Hack: superclass calls _ddmin with an integer, which doesn't match our
     # API. Translate that to an empty sequence. (we also don't use precompute_cache)

@@ -419,6 +419,7 @@ class Controller(object):
         else:
           self.log.warn("Could not find pox ext dir in %s. Cannot check/link in sync module" % pox_ext_dir)
 
+    self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_cmdline)))
     self.process = popen_filtered("[%s]"%self.label, self.config.expanded_cmdline, self.config.cwd, env=env)
     self._register_proc(self.process)
 
