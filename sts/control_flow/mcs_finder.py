@@ -141,7 +141,7 @@ class MCSFinder(ControlFlow):
     if self._runtime_stats is not None:
       self._runtime_stats["prune_start_epoch"] = time.time()
 
-    self._optimize_event_dag()
+    #self._optimize_event_dag()
     precompute_cache = PrecomputeCache()
     (dag, total_inputs_pruned) = self._ddmin(self.dag, 2, precompute_cache=precompute_cache)
     # Make sure to track the final iteration size
