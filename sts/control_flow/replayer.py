@@ -36,7 +36,7 @@ class Replayer(ControlFlow):
 
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
                print_buffers=True, wait_on_deterministic_values=False,
-               auto_permit_dp_events=False, **kwargs):
+               auto_permit_dp_events=False, fail_to_interactive=False, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -59,6 +59,7 @@ class Replayer(ControlFlow):
     self.unexpected_state_changes = []
     self.early_state_changes = []
     self.event_scheduler_stats = None
+    self.fail_to_interactive = fail_to_interactive
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -101,6 +102,8 @@ class Replayer(ControlFlow):
     Replayer.total_replays += 1
     Replayer.total_inputs_replayed += len(self.dag.input_events)
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
+    ### TODO aw remove this hack
+    self.simulation.fail_to_interactive = self.fail_to_interactive
     self.logical_time = 0
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
     if self.print_buffers:

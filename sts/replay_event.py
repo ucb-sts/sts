@@ -432,6 +432,8 @@ class CheckInvariants(InputEvent):
     if violations != []:
       msg.fail("The following controllers had correctness violations!: %s"
                % str(violations))
+      if hasattr(simulation, "fail_to_interactive" and simulation.fail_to_interactive)
+        raise KeyboardInterrupt("fail to interactive")
       if self.fail_on_error:
         msg.fail("Exiting: fail_on_error=True")
         exit(5)
