@@ -39,10 +39,16 @@ class Fuzzer(ControlFlow):
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
+               single_hm_wait_rounds=None,
                mock_link_discovery=False, initialization_rounds=0):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger,
                            record_deterministic_values=record_deterministic_values)
+
+    # huge deadline hack to automatically inject a single host migration
+    # after the all_to_all ping phase exists (wait single_hm_wait_rounds)
+    self.single_hm_wait_rounds=single_hm_wait_rounds
+    self.migrated_link=None
 
     self.check_interval = check_interval
     self.invariant_check = invariant_check
@@ -157,6 +163,9 @@ class Fuzzer(ControlFlow):
         self.logical_time += 1
         try:
           if not self._initializing():
+            #TODO(sw): manually inject migration somewhere in here...
+            if (not self._pending_all_to_all) and self.single_hm_wait_rounds and self.logical_time >= self.single_hm_wait_rounds:
+              self.migrate_single_host()
             self.trigger_events()
             halt = self.maybe_check_invariant()
             if halt:
@@ -177,6 +186,8 @@ class Fuzzer(ControlFlow):
                   if self._all_to_all_iterations > len(self.simulation.topology.hosts):
                      log.info("Done initializing")
                      self._pending_all_to_all = False
+                     if self.single_hm_wait_rounds: # none if not set
+                       self.single_hm_wait_rounds += self.logical_time
             self.check_dataplane(pass_through=True)
 
           msg.event("Round %d completed." % self.logical_time)
@@ -414,25 +425,35 @@ class Fuzzer(ControlFlow):
     crashed_this_round = crash_controllers()
     reboot_controllers(crashed_this_round)
 
+  def migrate_single_host(self):
+    '''A hack to migrate a single host once.
+    We are just trying to provoke the host migration bug in POX/NOX.'''
+    l_access_links = list(self.simulation.topology.access_links)
+    if (not self.migrated_link) and len(l_access_links) > 0: #be idempotent
+      self.migrated_link = self._migrate_host_at_access_link(random.choice(l_access_links))
+
   def check_migrations(self):
     for access_link in list(self.simulation.topology.access_links):
       if self.random.random() < self.params.host_migration_rate:
-        old_ingress_dpid = access_link.switch.dpid
-        old_ingress_port_no = access_link.switch_port.port_no
-        live_edge_switches = list(self.simulation.topology.live_edge_switches)
-        if len(live_edge_switches) > 0:
-          new_switch = random.choice(live_edge_switches)
-          new_switch_dpid = new_switch.dpid
-          new_port_no = max(new_switch.ports.keys()) + 1
-          msg.event("Migrating host %s" % str(access_link.host))
-          self.simulation.topology.migrate_host(old_ingress_dpid,
-                                                old_ingress_port_no,
-                                                new_switch_dpid,
-                                                new_port_no)
-          self._log_input_event(HostMigration(old_ingress_dpid,
-                                              old_ingress_port_no,
-                                              new_switch_dpid,
-                                              new_port_no,
-                                              access_link.host.name))
-          self._send_initialization_packet(access_link.host, self_pkt=True)
+        self._migrate_host_at_access_link(access_link)
 
+  def _migrate_host_at_access_link(self, access_link):
+    old_ingress_dpid = access_link.switch.dpid
+    old_ingress_port_no = access_link.switch_port.port_no
+    live_edge_switches = list(self.simulation.topology.live_edge_switches)
+    if len(live_edge_switches) > 0:
+      new_switch = random.choice(live_edge_switches)
+      new_switch_dpid = new_switch.dpid
+      new_port_no = max(new_switch.ports.keys()) + 1
+      msg.event("Migrating host %s" % str(access_link.host))
+      self.simulation.topology.migrate_host(old_ingress_dpid,
+                                            old_ingress_port_no,
+                                            new_switch_dpid,
+                                            new_port_no)
+      self._log_input_event(HostMigration(old_ingress_dpid,
+                                          old_ingress_port_no,
+                                          new_switch_dpid,
+                                          new_port_no,
+                                          access_link.host.name))
+      self._send_initialization_packet(access_link.host, self_pkt=True)
+      return access_link
