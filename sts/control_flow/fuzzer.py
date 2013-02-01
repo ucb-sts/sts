@@ -430,7 +430,10 @@ class Fuzzer(ControlFlow):
     We are just trying to provoke the host migration bug in POX/NOX.'''
     l_access_links = list(self.simulation.topology.access_links)
     if (not self.migrated_link) and len(l_access_links) > 0: #be idempotent
-      self.migrated_link = self._migrate_host_at_access_link(random.choice(l_access_links))
+      access_link = random.choice(l_access_links)
+      self.old_routing_entries = access_link.switch.table.entries_for_port(
+        access_link.switch_port.port_no)
+      self.migrated_link = self._migrate_host_at_access_link(access_link)
 
   def check_migrations(self):
     for access_link in list(self.simulation.topology.access_links):

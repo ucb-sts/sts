@@ -133,7 +133,7 @@ class SyncProtocolSpeaker(object):
 class SyncProtocolListener(object):
   ''' Speaker delegates to this class to wait on messages '''
   def __init__(self, handlers, io_delegate, collect_stats=True,
-               delay_threshold_ms=3.0):
+               delay_threshold_ms=20.0):
     self.handlers = handlers
     self.collect_stats = collect_stats
     self.delay_threshold_ms = delay_threshold_ms
