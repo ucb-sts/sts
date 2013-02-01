@@ -134,32 +134,10 @@ class MCSFinder(ControlFlow):
     
     if self._runtime_stats is not None:
       self._runtime_stats["prune_start_epoch"] = time.time()
-   
-    self.log("=== Replays before everything: %d ===" % Replayer.total_replays)
- 
-    #(aor-1014)
-#    event_types = [TrafficInjection, DataplaneDrop, DataplanePermit, SwitchFailure,
-#                   SwitchRecovery, LinkFailure, LinkRecovery, HostMigration,
-#                   ControllerFailure, ControllerRecovery, PolicyChange, ControlChannelBlock,
-#                   ControlChannelUnblock]
-#    for event_type in event_types:
-#      pruned = [e for e in self.dag.input_events if not isinstance(e, event_type)]
-#      if len(pruned)==len(self.dag.input_events):
-#        self.log("\t** No events pruned for type %s. Next!" % event_type)
-#        continue
-#      pruned_dag = self.dag.input_complement(pruned)
-#      violations = self.replay(pruned_dag)
-#      if violations != []:
-#        self.log("\t** VIOLATION for pruning type %s! Resizing original dag" % event_type)
-#        self.dag = pruned_dag
-    #(aor-1014)
 
-    self.log("=== Replays after optimization: %d ===" % Replayer.total_replays)
-
+    self._optimize_event_dag()
     precompute_cache = PrecomputeCache()
     (dag, total_inputs_pruned) = self._ddmin(self.dag, 2, precompute_cache=precompute_cache)
-    self.log("=== Replays after optimization: %d ===" % Replayer.total_replays)
-
     # Make sure to track the final iteration size
     self._track_iteration_size(total_inputs_pruned)
     self.dag = dag
@@ -171,9 +149,8 @@ class MCSFinder(ControlFlow):
       self.log(" - %s" % str(i))
     if self.mcs_trace_path is not None:
       self._dump_mcs_trace()
-    
     self.log("=== Total replays: %d ===" % Replayer.total_replays)
-    
+
     return self.dag.events
 
   def _ddmin(self, dag, split_ways, precompute_cache=None, label_prefix=(),
@@ -304,12 +281,12 @@ class MCSFinder(ControlFlow):
     for event_type in event_types:
       pruned = [e for e in self.dag.input_events if not isinstance(e, event_type)]
       if len(pruned)==len(self.dag.input_events):
-        self.log("\t** No events pruned for type %s. Next!" % event_type)
+        self.log("\t** No events pruned for event type %s. Next!" % event_type)
         continue
       pruned_dag = self.dag.input_complement(pruned)
       violations = self.replay(pruned_dag)
       if violations != []:
-        self.log("\t** VIOLATION for pruning type %s! Resizing original dag" % event_type)
+        self.log("\t** VIOLATION for pruning event type %s! Resizing original dag" % event_type)
         self.dag = pruned_dag
 
   def _track_new_internal_events(self, simulation, replayer):
