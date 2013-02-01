@@ -4,6 +4,7 @@ import unittest
 import sys
 import os
 import itertools
+import time
 from threading import Thread
 import logging
 log = logging.getLogger()
@@ -57,8 +58,14 @@ class MultiplexerTest(unittest.TestCase):
       self.wait_for_next_accept(listener, mux_select)
       mock_sock = listener.accept()[0]
       (rl, _, _) = mux_select.select([mock_sock], [], [])
+      start = last = time.time()
       while mock_sock not in rl:
-        log.debug(".")
+        time.sleep(0.05)
+        if time.time() - start > 5:
+          self.fail("Did not find socket in rl in 5 seconds")
+        elif time.time() - last > 1:
+          log.debug("waiting for socket %s in rl %s..." % ( str(mock_sock), repr(rl)))
+          last = time.time()
         (rl, _, _) = mux_select.select(rl, [], [])
       d = mock_sock.recv(2048)
       self.assertEqual(self.client_messages[0], d)
@@ -80,9 +87,15 @@ class MultiplexerTest(unittest.TestCase):
         self.wait_for_next_accept(listener, mux_select)
         mock_sock = listener.accept()[0]
         (rl, _, _) = mux_select.select([mock_sock], [], [])
+        start = last = time.time()
         while mock_sock not in rl:
-          log.debug(".")
+          if time.time() - start > 5:
+            self.fail("Did not find socket in rl in 5 seconds")
+          elif time.time() - last > 1:
+            log.debug("waiting for socket %s in rl %s..." % ( str(mock_sock), repr(rl)))
+            last = time.time()
           (rl, _, _) = mux_select.select(rl, [], [])
+          time.sleep(0.05)
         d = mock_sock.recv(2048)
         # order should be deterministic
         self.assertEqual(self.client_messages[i], d)
