@@ -33,6 +33,7 @@ class MockMCSFinderBase(object):
     self.no_violation_verification_runs = True
     self._extra_log = None
     self._runtime_stats = {}
+    self._runtime_stats_file = None
 
   def log(self, message):
     self._log.info(message)

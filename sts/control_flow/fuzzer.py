@@ -102,7 +102,8 @@ class Fuzzer(ControlFlow):
                     fuzzer_params_path)
 
   def init_results(self, results_dir):
-    self._input_logger.open(results_dir)
+    if self._input_logger:
+      self._input_logger.open(results_dir)
     params_file = re.sub(r'\.pyc$', '.py', self.params.__file__)
     if os.path.exists(params_file):
       new_params_file = os.path.join(results_dir, os.path.basename(params_file))

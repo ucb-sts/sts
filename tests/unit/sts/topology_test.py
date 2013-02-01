@@ -196,7 +196,7 @@ class BufferedPanelTest(unittest.TestCase):
     self.switch1 = self.switches[0]
     self.switch2 = self.switches[1]
     self.port = self.switch1.ports.values()[0]
-    self.icmp_packet = self.traffic_generator.icmp_ping(self.port)
+    self.icmp_packet = self.traffic_generator.icmp_ping(self.port, None)
     self.dp_out_event = DpPacketOut(self.switch1, self.icmp_packet, self.port)
 
   def test_buffering(self):
