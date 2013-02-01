@@ -103,7 +103,7 @@ class MCSFinder(ControlFlow):
     if self._runtime_stats_file is None:
       self._runtime_stats_file = "%s/runtime_stats.json" % results_dir
     if self.mcs_trace_path is None:
-      self.mcs_trace_path = "%s/mcs.trace"
+      self.mcs_trace_path = "%s/mcs.trace" % results_dir
 
   def simulate(self, check_reproducability=True):
     if self._runtime_stats is not None:
