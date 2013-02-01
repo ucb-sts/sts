@@ -47,6 +47,9 @@ class IOMaster(object):
   def __init__ (self):
     self._workers = set()
     self.pinger = makePinger()
+    self.closed = False
+    self._close_requested = False
+    self._in_select = 0
 
   def create_worker_for_socket(self, socket):
     '''
@@ -68,6 +71,8 @@ class IOMaster(object):
   def monkey_time_sleep(self):
     """monkey patches time.sleep to use this io_masters's time.sleep"""
     self.original_time_sleep = time.sleep
+    # keep time._orig_sleep around for interrupt handler (procutils)
+    time._orig_sleep = time.sleep
     time.sleep = self.sleep
 
   def raw_input(self, prompt):
@@ -103,9 +108,17 @@ class IOMaster(object):
       io_thread.join()
 
   def _ping(self):
-    self.pinger.ping()
+    if self.pinger:
+      self.pinger.ping()
 
   def close_all(self):
+    if self._in_select > 0:
+      self._close_requested = True
+      self._ping()
+    else:
+      self._do_close_all()
+
+  def _do_close_all(self):
     for w in list(self._workers):
       try:
         w.close()
@@ -115,12 +128,19 @@ class IOMaster(object):
     if time.sleep is self.sleep:
       time.sleep = self.original_time_sleep
 
+    if (self.pinger):
+      self.pinger.ping()
+      self.pinger.close()
+      self.pinger = None
+
+    self.closed = True
+
   def poll(self):
     self.select(0)
 
   def sleep(self, timeout):
     start = time.time()
-    while True:
+    while not self.closed:
       elapsed = time.time() - start
       remaining = timeout - elapsed
       if remaining < 0.01:
@@ -135,9 +155,15 @@ class IOMaster(object):
     return (read_sockets, write_sockets, exception_sockets)
 
   def select(self, timeout=0):
-    read_sockets, write_sockets, exception_sockets = self.grab_workers_rwe()
-    rlist, wlist, elist = select.select(read_sockets, write_sockets, exception_sockets, timeout)
-    self.handle_workers_rwe(rlist, wlist, elist)
+    self._in_select += 1
+    try:
+      read_sockets, write_sockets, exception_sockets = self.grab_workers_rwe()
+      rlist, wlist, elist = select.select(read_sockets, write_sockets, exception_sockets, timeout)
+      self.handle_workers_rwe(rlist, wlist, elist)
+    finally:
+      self._in_select -= 1
+    if self._in_select == 0 and self._close_requested and not self.closed:
+      self._do_close_all()
 
   def handle_workers_rwe(self, rlist, wlist, elist):
     if self.pinger in rlist:

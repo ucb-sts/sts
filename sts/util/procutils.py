@@ -3,8 +3,19 @@ import threading
 import os
 import sys
 import time
+import traceback
 
 from sts.util.console import color
+
+def split_up(f, l):
+  trues = []
+  falses = []
+  for elem in l:
+    if(f(elem)):
+      trues.append(elem)
+    else:
+      falses.append(elem)
+  return (trues, falses)
 
 def kill_procs(child_processes, kill=None, verbose=True, timeout=5):
   child_processes = filter(lambda e: e is not None, child_processes)
@@ -31,11 +42,16 @@ def kill_procs(child_processes, kill=None, verbose=True, timeout=5):
 
   start_time = time.time()
   last_dot = start_time
+  all_dead = []
   while True:
-    child_processes = [ child for child in child_processes if child.poll() is None ]
+    (child_processes, new_dead) = split_up(lambda child: child.poll() is None, child_processes)
+    all_dead += new_dead
     if len(child_processes) == 0:
       break
-    time.sleep(0.1)
+    if hasattr(time, "_orig_sleep"):
+      time._orig_sleep(0.1)
+    else:
+      time.sleep(0.1)
     now = time.time()
     if (now - last_dot) > 1:
       msg(".")
@@ -45,8 +61,24 @@ def kill_procs(child_processes, kill=None, verbose=True, timeout=5):
         break
       else:
         msg(' FAILED (timeout)!\n')
-        return kill_procs(child_processes, kill=True)
-  msg(' OK\n')
+        kill_procs(child_processes, kill=True)
+        break
+
+  for child in all_dead:
+    for attr_name in "stdin", "stdout", "stderr":
+      if hasattr(child, attr_name):
+        try:
+          attr = getattr(child, attr_name)
+          if attr:
+            attr.close()
+        except:
+          msg("Error closing child io.")
+          tb = traceback.format_exc()
+          msg(tb)
+
+
+  if len(child_processes) == 0:
+    msg(' OK\n')
 
 printlock = threading.Lock()
 def _prefix_thread(f, func):
@@ -58,9 +90,16 @@ def _prefix_thread(f, func):
       printlock.acquire()
       print func(line),
       printlock.release()
+    try:
+      sys.stderr.write("Closing fd %d\n" % f)
+      f.close()
+    except:
+      # well, we tried
+      pass
   t = threading.Thread(target=run)
   t.daemon = True
   t.start()
+  return t
 
 def popen_filtered(name, args, cwd=None, env=None):
   try:
@@ -69,6 +108,6 @@ def popen_filtered(name, args, cwd=None, env=None):
                            preexec_fn=lambda: os.setsid())
   except OSError as e:
     raise OSError("Error launching %s in directory %s: %s (error %d)" % (args, cwd, e.strerror, e.errno))
-  _prefix_thread(cmd.stdout, lambda l: "%s%s %s%s\n" % (color.YELLOW, name, l.rstrip(), color.NORMAL))
-  _prefix_thread(cmd.stderr, lambda l: "%s%s %s%s\n" % (color.B_RED + color.YELLOW, name, l.rstrip(), color.NORMAL))
+  cmd._stdout_thread = _prefix_thread(cmd.stdout, lambda l: "%s%s %s%s\n" % (color.YELLOW, name, l.rstrip(), color.NORMAL))
+  cmd._stderr_thread = _prefix_thread(cmd.stderr, lambda l: "%s%s %s%s\n" % (color.B_RED + color.YELLOW, name, l.rstrip(), color.NORMAL))
   return cmd

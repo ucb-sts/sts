@@ -214,9 +214,9 @@ class Simulation(object):
 
     # Just to make sure there isn't any state lying around, throw out
     # the old RecocoIOLoop
+    msg.unset_io_master()
     if self._io_master is not None:
       self._io_master.close_all()
-    msg.unset_io_master()
 
   @property
   def io_master(self):
