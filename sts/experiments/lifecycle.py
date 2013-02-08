@@ -43,7 +43,7 @@ def dump_metadata(metadata_file):
 
 def guess_config_name(config):
   parts = config.__name__.split(".")
-  while parts[0] == "config" or parts[0] == "exp":
+  while parts[0] == "config" or parts[0] == "experiments":
     parts = parts[1:]
 
   if parts[-1] == "orig_config":

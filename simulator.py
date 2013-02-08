@@ -5,7 +5,7 @@ from sts.util.procutils import kill_procs
 from sts.control_flow import Fuzzer
 from sts.simulation_state import SimulationConfig
 from sts.util.convenience import timestamp_string
-import sts.exp.lifecycle as exp_lifecycle
+import sts.experiments.lifecycle as exp_lifecycle
 
 import os
 import re
