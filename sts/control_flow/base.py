@@ -20,6 +20,10 @@ class ControlFlow(object):
     ''' Move the simulation forward!'''
     pass
 
+  def init_results(self):
+    ''' Set up event log files'''
+    pass
+
   def get_sync_callback(self):
     return self.sync_callback
 

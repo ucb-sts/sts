@@ -1,15 +1,11 @@
 #!/usr/bin/env python2.7
 
-from sts.util.console import Tee
 from sts.util.procutils import kill_procs
 from sts.control_flow import Fuzzer
 from sts.simulation_state import SimulationConfig
-from sts.util.convenience import timestamp_string
+import sts.experiments.setup as experiment_setup
 import sts.experiments.lifecycle as exp_lifecycle
 
-import os
-import re
-import shutil
 import signal
 import sys
 import argparse
@@ -26,15 +22,6 @@ $ %s -c config.fat_tree
 parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                  description=description)
 
-parser.add_argument('-n', '--exp-name', dest="exp_name",
-                    default=None,
-                    help='''experiment name ''')
-
-# need to parse this ourselves, because type=bool doesn't work as expected
-parser.add_argument('-t', '--timestamp-results', dest="timestamp_results",
-                    default=None, nargs=1, action="store", type=lambda s: s.lower() in ('y', 'yes', 'on', 't', 'true', '1', 'yeay', 'ja', 'jepp'),
-                    help=''' whether to time stamp the result directory ''')
-
 parser.add_argument('-c', '--config',
                     default='config.fuzz_pox_fattree',
                     help='''experiment config module in the config/ '''
@@ -43,14 +30,21 @@ parser.add_argument('-c', '--config',
 parser.add_argument('-v', '--verbose', action="count", default=0,
                     help='''increase verbosity''')
 
-parser.add_argument('-p', '--publish', action="store_true", default=False,
-                    help='''publish experiment results to git''')
-
 parser.add_argument('-L', '--log-config',
                     metavar="FILE", dest="log_config",
                     help='''choose a python log configuration file''')
 
-log = logging.getLogger("sts")
+parser.add_argument('-n', '--exp-name', dest="exp_name",
+                    default=None,
+                    help='''experiment name''')
+
+parser.add_argument('-t', '--timestamp-results', dest="timestamp_results",
+                    default=None, nargs=1, action="store",
+                    type=lambda s: s.lower() in ('y', 'yes', 'on', 't', 'true', '1', 'yeay', 'ja', 'jepp'),
+                    help='''whether to time stamp the result directory''')
+
+parser.add_argument('-p', '--publish', action="store_true", default=False,
+                    help='''publish experiment results to git''')
 
 args = parser.parse_args()
 
@@ -62,62 +56,21 @@ try:
   config = __import__(args.config, globals(), locals(), ["*"])
 except ImportError as e:
   try:
-    # try again, but prepend config module path
+    # module path might not have been specified. Try again with path prepended
     config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
   except ImportError:
     raise e
 
-if args.exp_name:
-  config.exp_name = args.exp_name
-elif not hasattr(config, 'exp_name'):
-  config.exp_name = exp_lifecycle.guess_config_name(config)
+# Set up the experiment results directories
+experiment_setup.setup_experiment(args, config)
 
-if not hasattr(config, 'results_dir'):
-  config.results_dir = "exp/%s" % config.exp_name
-
-now = timestamp_string()
-
-if args.timestamp_results is not None:
-  ####  AAAAAAargsparse returns a list. WAT?
-  config.timestamp_results = args.timestamp_results[0]
-
-if hasattr(config, 'timestamp_results') and config.timestamp_results:
-  config.results_dir += "_" + str(now)
-
-if not os.path.exists(config.results_dir):
-  os.makedirs(config.results_dir)
-module_init_py = os.path.join(config.results_dir, "__init__.py")
-if not os.path.exists(module_init_py):
-  open(module_init_py,"a").close()
-
-tee = Tee(open(os.path.join(config.results_dir, "simulator.out"), "w"))
-tee.tee_stdout()
-tee.tee_stderr()
-
-# delay log configuration until the tee is warm
+# Load log configuration
 if args.log_config:
   logging.config.fileConfig(args.log_config)
 else:
-  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
-                      stream=sys.stdout)
+  logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-if hasattr(config, 'simulation_config') and hasattr(config.simulation_config, 'controller_configs'):
-  for controller_config in config.simulation_config.controller_configs:
-    if controller_config.config_template:
-      controller_config.generate_config_file(config.results_dir)
-
-if args.publish:
-  exp_lifecycle.publish_prepare(config.exp_name, config.results_dir)
-
-exp_lifecycle.dump_metadata("%s/metadata" % config.results_dir)
-
-config_file = re.sub(r'\.pyc$', '.py', config.__file__)
-if os.path.exists(config_file):
-  canonical_config_file = config.results_dir + "/orig_config.py"
-  if  os.path.abspath(config_file) != os.path.abspath(canonical_config_file):
-    shutil.copy(config_file, canonical_config_file)
-
-# For controlling the simulation
+# Simulator controls the simulation
 if hasattr(config, 'control_flow'):
   simulator = config.control_flow
 else:
@@ -137,6 +90,7 @@ signal.signal(signal.SIGQUIT, handle_int)
 
 # Start the simulation
 try:
+  # First tell simulator where to log
   simulator.init_results(config.results_dir)
   res = simulator.simulate()
   # TODO(cs); temporary hack: replayer returns self.simulation no a return

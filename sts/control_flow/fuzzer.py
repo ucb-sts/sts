@@ -105,9 +105,12 @@ class Fuzzer(ControlFlow):
     if self._input_logger:
       self._input_logger.open(results_dir)
     params_file = re.sub(r'\.pyc$', '.py', self.params.__file__)
+    # Move over our fuzzer params
+    # TODO(cs): need to modify copied config file to point to the new fuzzer
+    # params
     if os.path.exists(params_file):
       new_params_file = os.path.join(results_dir, os.path.basename(params_file))
-      if  os.path.abspath(params_file) != os.path.abspath(new_params_file):
+      if os.path.abspath(params_file) != os.path.abspath(new_params_file):
         shutil.copy(params_file, new_params_file)
 
   def _initializing(self):
