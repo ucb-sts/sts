@@ -14,7 +14,8 @@ simple_cfg = '''
 from sts.control_flow import Replayer
 from sts.simulation_state import SimulationConfig
 
-control_flow = Replayer(SimulationConfig(), "%s")
+simulation_config = SimulationConfig()
+control_flow = Replayer(simulation_config, "%s")
 '''
 
 class ReplayerTest(unittest.TestCase):

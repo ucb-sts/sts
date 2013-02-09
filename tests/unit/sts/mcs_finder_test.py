@@ -3,6 +3,7 @@
 import unittest
 import sys
 import os
+import shutil
 import itertools
 from copy import copy
 import types
@@ -20,23 +21,15 @@ import logging
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
-class MockMCSFinderBase(object):
+class MockMCSFinderBase(MCSFinder):
   ''' Overrides self.invariant_check and run_simulation_forward() '''
   def __init__(self, event_dag, mcs):
+    super(MockMCSFinderBase, self).__init__(None, None,
+                                            invariant_check=self.invariant_check)
     self.dag = event_dag
     self.new_dag = None
     self.mcs = mcs
-    self.mcs_trace_path = None
-    self.transform_dag = None
-    self.simulation_cfg = None
-    self.ignore_powersets = False
-    self.no_violation_verification_runs = True
-    self._extra_log = None
-    self._runtime_stats = {}
-    self.results_dir = tempfile.mkdtemp()
-    self._runtime_stats_file = os.path.join(self.results_dir, "runtimestats.json")
-    self.mcs_trace_path = os.path.join(self.results_dir, "mcs.trace")
-    self.sync_callback = None
+    self.simulation = None
 
   def log(self, message):
     self._log.info(message)
@@ -70,6 +63,8 @@ class MockInputEvent(InputEvent):
   def proceed(self, simulation):
     return True
 
+mcs_results_path = "/tmp/mcs_results"
+
 class MCSFinderTest(unittest.TestCase):
   def test_basic(self):
     self.basic(MockMCSFinder)
@@ -82,8 +77,13 @@ class MCSFinderTest(unittest.TestCase):
     dag = EventDag(trace)
     mcs = [trace[0]]
     mcs_finder = mcs_finder_type(dag, mcs)
-    result = mcs_finder.simulate()
-    self.assertEqual(mcs, result)
+    try:
+      os.makedirs(mcs_results_path)
+      mcs_finder.init_results(mcs_results_path)
+      mcs_finder.simulate()
+    finally:
+      shutil.rmtree(mcs_results_path)
+    self.assertEqual(mcs, mcs_finder.dag.input_events)
 
   def test_straddle(self):
     self.straddle(MockMCSFinder)
@@ -96,8 +96,13 @@ class MCSFinderTest(unittest.TestCase):
     dag = EventDag(trace)
     mcs = [trace[0],trace[5]]
     mcs_finder = mcs_finder_type(dag, mcs)
-    result = mcs_finder.simulate()
-    self.assertEqual(mcs, result)
+    try:
+      os.makedirs(mcs_results_path)
+      mcs_finder.init_results(mcs_results_path)
+      mcs_finder.simulate()
+    finally:
+      shutil.rmtree(mcs_results_path)
+    self.assertEqual(mcs, mcs_finder.dag.input_events)
 
   def test_all(self):
     self.all(MockMCSFinder)
@@ -110,8 +115,13 @@ class MCSFinderTest(unittest.TestCase):
     dag = EventDag(trace)
     mcs = trace
     mcs_finder = mcs_finder_type(dag, mcs)
-    result = mcs_finder.simulate()
-    self.assertEqual(mcs, result)
+    try:
+      os.makedirs(mcs_results_path)
+      mcs_finder.init_results(mcs_results_path)
+      mcs_finder.simulate()
+    finally:
+      shutil.rmtree(mcs_results_path)
+    self.assertEqual(mcs, mcs_finder.dag.input_events)
 
 if __name__ == '__main__':
   unittest.main()
