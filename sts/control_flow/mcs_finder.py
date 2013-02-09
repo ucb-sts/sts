@@ -157,7 +157,7 @@ class MCSFinder(ControlFlow):
       self._dump_mcs_trace()
     self.log("=== Total replays: %d ===" % Replayer.total_replays)
 
-    return self.dag.events
+    return self.simulation
 
   def _ddmin(self, dag, split_ways, precompute_cache=None, label_prefix=(),
              total_inputs_pruned=0):

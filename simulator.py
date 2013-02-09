@@ -92,15 +92,11 @@ signal.signal(signal.SIGQUIT, handle_int)
 try:
   # First tell simulator where to log
   simulator.init_results(config.results_dir)
-  res = simulator.simulate()
-  # TODO(cs); temporary hack: replayer returns self.simulation no a return
-  # code
-  if type(res) != int:
-    res = 0
+  simulation = simulator.simulate()
 finally:
   if (simulator.simulation_cfg.current_simulation is not None):
     simulator.simulation_cfg.current_simulation.clean_up()
   if args.publish:
     exp_lifecycle.publish_results(config.exp_name, config.results_dir)
 
-sys.exit(res)
+sys.exit(simulation.exit_code)

@@ -182,6 +182,10 @@ class Simulation(object):
     self.patch_panel = patch_panel
     self.controller_sync_callback = controller_sync_callback
     self.multiplex_sockets = multiplex_sockets
+    self.exit_code = 0
+
+  def set_exit_code(self, code):
+    self.exit_code = code
 
   def set_pass_through(self):
     ''' Set to pass-through during bootstrap, so that switch initialization

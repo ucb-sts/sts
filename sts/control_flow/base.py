@@ -20,7 +20,7 @@ class ControlFlow(object):
     ''' Move the simulation forward!'''
     pass
 
-  def init_results(self):
+  def init_results(self, results_dir):
     ''' Set up event log files'''
     pass
 

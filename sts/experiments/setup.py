@@ -55,6 +55,6 @@ def setup_experiment(args, config):
   config_file = re.sub(r'\.pyc$', '.py', config.__file__)
   if os.path.exists(config_file):
     canonical_config_file = config.results_dir + "/orig_config.py"
-    if  os.path.abspath(config_file) != os.path.abspath(canonical_config_file):
+    if os.path.abspath(config_file) != os.path.abspath(canonical_config_file):
       shutil.copy(config_file, canonical_config_file)
 

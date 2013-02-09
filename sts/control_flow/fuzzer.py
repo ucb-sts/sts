@@ -131,7 +131,6 @@ class Fuzzer(ControlFlow):
     else:
       end_time = sys.maxint
 
-    exit_code = 0
     self.interrupted = False
     old_interrupt = None
 
@@ -164,7 +163,7 @@ class Fuzzer(ControlFlow):
             self.trigger_events()
             halt = self.maybe_check_invariant()
             if halt:
-              exit_code = 5
+              self.simulation.set_exit_code(5)
               break
             self.maybe_inject_trace_event()
           else:  # Initializing
@@ -203,7 +202,7 @@ class Fuzzer(ControlFlow):
       if self._input_logger is not None:
         self._input_logger.close(self, self.simulation_cfg)
 
-    return exit_code
+    return self.simulation
 
   def _send_initialization_packet(self, host, self_pkt=False):
     traffic_type = "icmp_ping"
