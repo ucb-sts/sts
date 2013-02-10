@@ -15,7 +15,7 @@ args = parser.parse_args()
 def write_data_file(dat_filename, stats):
   ''' Write out the datapoints '''
   sorted_keys = stats["iteration_size"].keys()
-  sorted_keys.sort()
+  sorted_keys.sort(lambda a,b: -1 if int(a) < int (b) else 1 if int(a) > int(b) else 0)
   with open(dat_filename, "w") as dat:
     for key in sorted_keys:
       dat.write(str(key) + " " + str(stats["iteration_size"][key]) + '\n')
@@ -34,7 +34,8 @@ with open(gpi_filename, "w") as gpi:
   # Finish off the rest of the template
   gpi.write(template)
   gpi.write('''set output "%s"\n''' % output_filename)
-  gpi.write('''set title "total runtime=%.1fs, original runtime=%.1fs"\n''' %
+  if('prune_duration_seconds' in stats and 'replay_duration_seconds' in stats):
+    gpi.write('''set title "total runtime=%.1fs, original runtime=%.1fs"\n''' %
             (stats["prune_duration_seconds"], stats["replay_duration_seconds"]))
   gpi.write('''plot "%s" index 0:1 title "" with steps ls 1\n''' %
             (dat_filename,))

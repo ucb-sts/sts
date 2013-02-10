@@ -170,9 +170,6 @@ class MCSFinder(ControlFlow):
       self.log("Done")
       return (dag, total_inputs_pruned)
 
-    # dump intermediate mcs
-    self._maybe_dump_intermediate_mcs(dag, label='.'.join(map(str, label_prefix)))
-
     local_label = lambda i, inv=False: "%s%d/%d" % ("~" if inv else "", i, split_ways)
     subset_label = lambda label: ".".join(map(str, label_prefix + ( label, )))
     print_subset = lambda label, s: subset_label(label) + ": "+" ".join(map(lambda e: e.label, s))
@@ -196,6 +193,8 @@ class MCSFinder(ControlFlow):
       violation = self._check_violation(new_dag, i)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
+        self._maybe_dump_intermediate_mcs(new_dag, subset_label(label))
+
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         return self._ddmin(new_dag, 2, precompute_cache=precompute_cache,
                            label_prefix = label_prefix + (label, ),
@@ -221,6 +220,7 @@ class MCSFinder(ControlFlow):
       violation = self._check_violation(new_dag, i)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
+        self._maybe_dump_intermediate_mcs(new_dag, subset_label(label))
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         return self._ddmin(new_dag, max(split_ways - 1, 2),
                            precompute_cache=precompute_cache,
@@ -399,8 +399,6 @@ class EfficientMCSFinder(MCSFinder):
   '''
   def _ddmin(self, dag, carryover_inputs, precompute_cache=None,
              recursion_level=0, label_prefix=(), total_inputs_pruned=0):
-    # dump intermediate mcs
-    self._maybe_dump_intermediate_mcs(dag, label='.'.join(map(str, label_prefix)))
 
     ''' carryover_inputs is the variable "r" from the paper. '''
     # Hack: superclass calls _ddmin with an integer, which doesn't match our
@@ -438,6 +436,7 @@ class EfficientMCSFinder(MCSFinder):
       if violation:
         self.log("Violation found in %dth half. Recursing" % i)
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
+        self._maybe_dump_intermediate_mcs(new_dag, "")
         return self._ddmin(new_dag, carryover_inputs,
                            recursion_level=recursion_level+1,
                            label_prefix=prefix,
