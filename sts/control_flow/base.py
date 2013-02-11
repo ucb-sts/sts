@@ -52,9 +52,9 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     # Each controller can have at most one outstanding state change (since
     # it's blocked)
     # { controller id -> function to send ACK message }
-    self.uuid2ack = {}
+    self.cid2ack = {}
     # { controller id -> function to send deterministic value responses }
-    self.uuid2deterministic_value = {}
+    self.cid2deterministic_value = {}
     self.log = logging.getLogger("synccallback")
 
   def _pass_through_handler(self, state_change_event):
@@ -62,7 +62,7 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     # Pass through
     self.ack_pending_state_change(state_change)
     # Record
-    replay_event = ControllerStateChange(tuple(state_change.controller_id),
+    replay_event = ControllerStateChange(state_change.controller_id,
                                          state_change.fingerprint,
                                          state_change.name,
                                          state_change.value,
@@ -91,10 +91,10 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
     self._pending_state_changes[pending_state_change] -= 1
     if self._pending_state_changes[pending_state_change] <= 0:
       del self._pending_state_changes[pending_state_change]
-    if pending_state_change.controller_id in self.uuid2ack:
+    if pending_state_change.controller_id in self.cid2ack:
       # Send an ACK to the controller to let it proceed
-      self.uuid2ack[pending_state_change.controller_id]()
-      del self.uuid2ack[pending_state_change.controller_id]
+      self.cid2ack[pending_state_change.controller_id]()
+      del self.cid2ack[pending_state_change.controller_id]
 
   def flush(self):
     ''' ACK any pending state changes '''
@@ -103,21 +103,21 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
       self.log.info("Flushing %d pending state changes" %
                     num_pending_state_changes)
     self._pending_state_changes = Counter()
-    for uuid, ack in self.uuid2ack.iteritems():
+    for cid, ack in self.cid2ack.iteritems():
       ack()
-    self.uuid2ack = {}
+    self.cid2ack = {}
 
   def state_change(self, sync_type, xid, controller, time, fingerprint, name, value):
     # TODO(cs): xid arguably shouldn't be known to STS
-    pending_state_change = PendingStateChange(controller.uuid, time,
+    pending_state_change = PendingStateChange(controller.cid, time,
                                               fingerprint, name, value)
     self._pending_state_changes[pending_state_change] += 1
     if sync_type == "SYNC":
-      uuid = controller.uuid
-      if uuid in self.uuid2ack:
+      cid = controller.cid
+      if cid in self.cid2ack:
         raise RuntimeError("More than one outstanding ACKs for %s" %
-                           str(uuid))
-      self.uuid2ack[uuid] =\
+                           str(cid))
+      self.cid2ack[cid] =\
             partial(controller.sync_connection.ack_sync_notification,
                     "StateChange", xid)
     self.raiseEvent(StateChange(pending_state_change))
@@ -141,15 +141,15 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
       value = self.get_interpolated_time()
       controller.sync_connection.send_deterministic_value(xid, value)
     else:
-      self.uuid2deterministic_value[controller.uuid] =\
+      self.cid2deterministic_value[controller.cid] =\
           partial(controller.sync_connection.send_deterministic_value, xid)
 
   def pending_deterministic_value_request(self, controller_id):
-    return controller_id in self.uuid2deterministic_value
+    return controller_id in self.cid2deterministic_value
 
   def send_deterministic_value(self, controller_id, value):
-    self.uuid2deterministic_value[controller_id](value)
-    del self.uuid2deterministic_value[controller_id]
+    self.cid2deterministic_value[controller_id](value)
+    del self.cid2deterministic_value[controller_id]
 
 class RecordingSyncCallback(STSSyncCallback):
   def __init__(self, input_logger, record_deterministic_values=False):
@@ -159,7 +159,7 @@ class RecordingSyncCallback(STSSyncCallback):
   def state_change(self, sync_type, xid, controller, time, fingerprint, name, value):
     # TODO(cs): xid arguably shouldn't be known to STS
     if self.input_logger is not None:
-      self.input_logger.log_input_event(ControllerStateChange(controller.uuid,
+      self.input_logger.log_input_event(ControllerStateChange(controller.cid,
                                                               fingerprint,
                                                               name, value,
                                                               time=time))
@@ -176,7 +176,7 @@ class RecordingSyncCallback(STSSyncCallback):
 
     # TODO(cs): implement Andi's improved gettime heuristic
     if self.record_deterministic_values:
-      self.input_logger.log_input_event(DeterministicValue(controller.uuid,
+      self.input_logger.log_input_event(DeterministicValue(controller.cid,
                                                            name, value,
                                                            time=value))
     controller.sync_connection.send_deterministic_value(xid, value)

@@ -112,7 +112,7 @@ class SimulationConfig(object):
                                 self.snapshot_service)
         controller.start()
         log.info("Launched controller c%s: %s [PID %d]" %
-                 (str(c.uuid), " ".join(c.expanded_cmdline), controller.pid))
+                 (str(c.cid), " ".join(c.expanded_cmdline), controller.pid))
         controllers.append(controller)
       return ControllerManager(controllers)
 
@@ -272,9 +272,7 @@ class Simulation(object):
       # Set non-blocking
       socket.setblocking(0)
       io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(socket))
-      connection = DeferredOFConnection(io_worker, switch.dpid, self.god_scheduler)
-      # TODO HACK ALERT - this is really ugly
-      connection.controller_id = controller_info.uuid
+      connection = DeferredOFConnection(io_worker, controller_info.cid, switch.dpid, self.god_scheduler)
       return connection
 
     (self.mux_select, self.demuxers) = monkeypatch_select()

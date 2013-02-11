@@ -179,7 +179,7 @@ class SwitchRecovery(InputEvent):
   def proceed(self, simulation):
     software_switch = simulation.topology.get_switch(self.dpid)
     try:
-      down_controller_ids = map(lambda c: c.uuid,
+      down_controller_ids = map(lambda c: c.cid,
                                 simulation.controller_manager.down_controllers)
 
       simulation.topology.recover_switch(software_switch,
@@ -286,7 +286,6 @@ class ControllerFailure(InputEvent):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist('controller_id')
     controller_id = json_hash['controller_id']
-    controller_id = (controller_id[0], int(controller_id[1]))
     return ControllerFailure(controller_id, label=label, time=time)
 
   @property
@@ -308,7 +307,6 @@ class ControllerRecovery(InputEvent):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist('controller_id')
     controller_id = json_hash['controller_id']
-    controller_id = (controller_id[0], int(controller_id[1]))
     return ControllerFailure(controller_id, label=label, time=time)
 
   @property
@@ -489,7 +487,7 @@ class ControlChannelBlock(InputEvent):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'dpid', 'controller_id')
     dpid = json_hash['dpid']
-    controller_id = tuple(json_hash['controller_id'])
+    controller_id = json_hash['controller_id']
     return ControlChannelBlock(dpid, controller_id, label=label, time=time)
 
 class ControlChannelUnblock(InputEvent):
@@ -516,7 +514,7 @@ class ControlChannelUnblock(InputEvent):
     (label, time) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'dpid', 'controller_id')
     dpid = json_hash['dpid']
-    controller_id = tuple(json_hash['controller_id'])
+    controller_id = json_hash['controller_id']
     return ControlChannelUnblock(dpid, controller_id, label=label, time=time)
 
 # TODO(cs): DataplaneDrop/Permits have really complicated dependencies
@@ -597,7 +595,7 @@ class LinkDiscovery(InputEvent):
     super(LinkDiscovery, self).__init__(label=label, time=time)
     self.fingerprint = (self.__class__.__name__,
                         controller_id, tuple(link_attrs))
-    self.controller_id = tuple(controller_id)
+    self.controller_id = controller_id
     self.link_attrs = link_attrs
 
   def proceed(self, simulation):
@@ -669,7 +667,7 @@ class ControlMessageReceive(InternalEvent):
     (label, time, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
     dpid = json_hash['dpid']
-    controller_id = tuple(json_hash['controller_id'])
+    controller_id = json_hash['controller_id']
     fingerprint = json_hash['fingerprint']
     return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time, timeout_disallowed=timeout_disallowed)
 
@@ -678,7 +676,7 @@ class PendingStateChange(namedtuple('PendingStateChange',
                                 ['controller_id', 'time', 'fingerprint',
                                  'name', 'value'])):
   def __new__(cls, controller_id, time, fingerprint, name, value):
-    controller_id = tuple(controller_id)
+    controller_id = controller_id
     if type(time) == list:
       time = tuple(time)
     if type(fingerprint) == list:
@@ -759,7 +757,7 @@ class ControllerStateChange(InternalEvent):
     (label, time, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'controller_id', '_fingerprint',
                         'name', 'value')
-    controller_id = tuple(json_hash['controller_id'])
+    controller_id = json_hash['controller_id']
     fingerprint = json_hash['_fingerprint']
     name = json_hash['name']
     value = json_hash['value']
@@ -773,7 +771,7 @@ class DeterministicValue(InternalEvent):
   '''
   def __init__(self, controller_id, name, value, label=None, time=None, timeout_disallowed=False):
     super(DeterministicValue, self).__init__(label=label, time=time, timeout_disallowed=timeout_disallowed)
-    self.controller_id = tuple(controller_id)
+    self.controller_id = controller_id
     self.name = name
     if name == "gettimeofday":
       value = SyncTime(seconds=value[0], microSeconds=value[1])
@@ -794,7 +792,7 @@ class DeterministicValue(InternalEvent):
     (label, time, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'controller_id',
                         'name', 'value')
-    controller_id = tuple(json_hash['controller_id'])
+    controller_id = json_hash['controller_id']
     name = json_hash['name']
     value = json_hash['value']
     return DeterministicValue(controller_id, name, value,

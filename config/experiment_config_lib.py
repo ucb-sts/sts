@@ -22,6 +22,7 @@ def port_used(address='127.0.0.1', port=6633):
     # TODO(cs): catch specific errors
     return True
 
+# TODO(cs): this function don't appear to be invoked?
 def find_port(port_spec):
   if isinstance(port_spec, int):
     def port_gen():
@@ -44,17 +45,19 @@ def find_port(port_spec):
       return candidate
   raise Exception("Could not find a port in 100 tries")
 
+# TODO(cs): this function don't appear to be invoked?
 def find_ports(**kwargs):
   return { k : find_port(v) for k, v in kwargs.iteritems() }
 
 class ControllerConfig(object):
   _port_gen = itertools.count(6633)
   _controller_count_gen = itertools.count(1)
+  _controller_labels = set()
 
   def __init__(self, cmdline="", address="127.0.0.1", port=None,
-          additional_ports={}, cwd=None, sync=None, controller_type=None,
-          label=None, uuid=None, config_file=None, config_template=None,
-          try_new_ports=True):
+               additional_ports={}, cwd=None, sync=None, controller_type=None,
+               label=None, config_file=None, config_template=None,
+               try_new_ports=True):
     '''
     Store metadata for the controller.
       - cmdline is an array of command line tokens.
@@ -83,12 +86,10 @@ class ControllerConfig(object):
           print "Port %d in use... trying next" % port
           port += true_random.randint(0,50)
       self.port = port
-      self._uuid = uuid if uuid else (self.address, orig_port if orig_port else 6633)
       self._server_info = (self.address, port)
     else:
       # Unix domain socket
       self.port = None
-      self._uuid = uuid if uuid else (self.address, orig_port if orig_port else 6633)
       self._server_info = address
 
     # TODO(sam): we should either call them all controller_type or all 'name'
@@ -105,7 +106,7 @@ class ControllerConfig(object):
     if not cwd:
         sys.stderr.write("""
         =======================================================================
-        WARN - no working directory defined for controller with command line 
+        WARN - no working directory defined for controller with command line
         %s
         The controller is run in the STS base directory. This may result
         in unintended consequences (i.e., POX not logging correctly).
@@ -114,18 +115,22 @@ class ControllerConfig(object):
 
     self.sync = sync
     if label:
-      self.label = label
+      label = label
     else:
-      self.label = "c"+str(self._controller_count_gen.next())
+      label = "c"+str(self._controller_count_gen.next())
+    if label in self._controller_labels:
+      raise ValueError("Label %s already registered!" % label)
+    self._controller_labels.add(label)
+    self.label = label
 
     self.config_file = config_file
     self.config_template = config_template
     self.additional_ports = additional_ports
 
   @property
-  def uuid(self):
-    """ information about the (virtual/non-translated) socket to be matched in finger prints"""
-    return self._uuid
+  def cid(self):
+    ''' Return this controller's id '''
+    return self.label
 
   @property
   def server_info(self):

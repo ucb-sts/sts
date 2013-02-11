@@ -311,7 +311,7 @@ class Interactive(ControlFlow):
     live = cm.live_controllers
     print "Controllers:"
     for c in cm.controllers:
-      print "%s %s %s %s" % (c.label, c.uuid, repr(c), "[ALIVE]" if c in live else "[DEAD]")
+      print "%s %s %s %s" % (c.label, c.cid, repr(c), "[ALIVE]" if c in live else "[DEAD]")
 
   def kill_controller(self, label):
     cm = self.simulation.controller_manager
@@ -319,7 +319,7 @@ class Interactive(ControlFlow):
     if c:
       print "Killing controller: %s %s" % (label, repr(c))
       cm.kill_controller(c)
-      self._log_input_event(ControllerFailure(c.uuid))
+      self._log_input_event(ControllerFailure(c.cid))
     else:
       print "Controller with label %s not found" %label
 
@@ -329,7 +329,7 @@ class Interactive(ControlFlow):
     if c:
       print "Killing controller: %s %s" % (label, repr(c))
       cm.reboot_controller(c)
-      self._log_input_event(ControllerRecovery(c.uuid))
+      self._log_input_event(ControllerRecovery(c.cid))
     else:
       print "Controller with label %s not found" %label
 
@@ -355,7 +355,8 @@ class Interactive(ControlFlow):
   def start_switch(self, dpid):
     topology = self.simulation.topology
     switch = topology.get_switch(dpid)
-    topology.recover_switch(switch, down_controller_ids=map(lambda c: c.uuid, self.simulation.controller_manager.down_controllers))
+    down_controllers_ids = map(lambda c: c.cid, self.simulation.controller_manager.down_controllers)
+    topology.recover_switch(switch, down_controller_ids=down_controller_ids)
     self._log_input_event(SwitchRecovery(switch.dpid))
 
   def migrate_host(self, hid, dpid):

@@ -3,8 +3,8 @@ from sts.util.console import msg
 class ControllerManager(object):
   ''' Encapsulate a list of controllers objects '''
   def __init__(self, controllers):
-    self.uuid2controller = {
-      controller.uuid : controller
+    self.cid2controller = {
+      controller.cid : controller
       for controller in controllers
     }
 
@@ -14,8 +14,8 @@ class ControllerManager(object):
 
   @property
   def controllers(self):
-     cs = self.uuid2controller.values()
-     cs.sort(key=lambda c: c.uuid)
+     cs = self.cid2controller.values()
+     cs.sort(key=lambda c: c.cid)
      return cs
 
   @property
@@ -29,20 +29,20 @@ class ControllerManager(object):
     return set(down)
 
   def get_controller_by_label(self, label):
-    for c in self.uuid2controller.values():
+    for c in self.cid2controller.values():
       if c.label == label:
         return c
     return None
 
-  def get_controller(self, uuid):
-    if uuid not in self.uuid2controller:
-      raise ValueError("unknown uuid %s" % str(uuid))
-    return self.uuid2controller[uuid]
+  def get_controller(self, cid):
+    if cid not in self.cid2controller:
+      raise ValueError("unknown cid %s" % str(cid))
+    return self.cid2controller[cid]
 
   def kill_all(self):
     for c in self.live_controllers:
       c.kill()
-    self.uuid2controller = {}
+    self.cid2controller = {}
 
   @staticmethod
   def kill_controller(controller):
@@ -57,7 +57,7 @@ class ControllerManager(object):
   def check_controller_processes_alive(self):
     controllers_with_problems = []
     live = list(self.live_controllers)
-    live.sort(key=lambda c: c.uuid)
+    live.sort(key=lambda c: c.cid)
     for c in live:
       (rc, msg) = c.check_process_status()
       if not rc:

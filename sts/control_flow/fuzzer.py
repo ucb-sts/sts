@@ -295,7 +295,7 @@ class Fuzzer(ControlFlow):
       if self.simulation.controller_manager.live_controllers != []:
         c = self.random.choice(list(self.simulation.controller_manager.live_controllers))
         c.sync_connection.send_link_notification(attrs)
-        self._log_input_event(LinkDiscovery(c.uuid, attrs))
+        self._log_input_event(LinkDiscovery(c.cid, attrs))
 
   def check_tcp_connections(self):
     ''' Decide whether to block or unblock control channels '''
@@ -334,7 +334,7 @@ class Fuzzer(ControlFlow):
 
     def restart_switches(crashed_this_round):
       # Make sure we don't try to connect to dead controllers
-      down_controller_ids = map(lambda c: c.uuid,
+      down_controller_ids = map(lambda c: c.cid,
                                 self.simulation.controller_manager.down_controllers)
 
       for software_switch in list(self.simulation.topology.failed_switches):
@@ -403,7 +403,7 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.controller_crash_rate:
           crashed_this_round.add(controller)
           controller.kill()
-          self._log_input_event(ControllerFailure(controller.uuid))
+          self._log_input_event(ControllerFailure(controller.cid))
       return crashed_this_round
 
     def reboot_controllers(crashed_this_round):
@@ -412,7 +412,7 @@ class Fuzzer(ControlFlow):
           continue
         if self.random.random() < self.params.controller_recovery_rate:
           controller.start()
-          self._log_input_event(ControllerRecovery(controller.uuid))
+          self._log_input_event(ControllerRecovery(controller.cid))
 
     crashed_this_round = crash_controllers()
     reboot_controllers(crashed_this_round)

@@ -69,6 +69,12 @@ def parse_path(logfile_path):
   with open(logfile_path) as logfile:
     return parse(logfile)
 
+def check_legacy_format(json_hash):
+  if (hasattr(json_hash, 'controller_id') and
+      type(json_hash.controller_id) == list):
+    # TODO(cs): translate rather than throwing up
+    raise ValueError("Legacy controller id. Should be a string label: %s" % json_hash.controller_id)
+
 def parse(logfile):
   '''Input: logfile.
 
@@ -86,6 +92,7 @@ def parse(logfile):
   for line in logfile:
     json_hash = json.loads(line.rstrip())
     check_unique_label(json_hash['label'], event_labels)
+    check_legacy_format(json_hash)
     if json_hash['class'] in input_name_to_class:
       sanity_check_external_input_event(event_labels,
                                         dependent_labels,

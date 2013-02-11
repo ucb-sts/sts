@@ -5,8 +5,7 @@ from sts.simulation_state import SimulationConfig
 from sts.invariant_checker import InvariantChecker
 
 # Use POX as our controller
-# Use POX as our controller
-command_line = ('''./pox.py --verbose --no-cli sts.syncproto.pox_syncer '''
+command_line = ('''./pox.py --verbose --no-cli sts.syncproto.pox_syncer --blocking=False'''
                 '''samples.topo forwarding.l2_multi '''
                 '''sts.util.socket_mux.pox_monkeypatcher '''
                 '''openflow.of_01 --address=../sts_socket_pipe''')

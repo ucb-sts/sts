@@ -6,7 +6,7 @@ from sts.invariant_checker import InvariantChecker
 from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller
-command_line = ('''./pox.py --verbose --random-seed=1 '''
+command_line = ('''./pox.py --verbose ''' #--random-seed=1 '''
                 #'''sts.syncproto.pox_syncer --blocking=False '''
                 #'''openflow.mock_discovery forwarding.l2_multi '''
                 '''openflow.discovery forwarding.l2_multi '''

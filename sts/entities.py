@@ -18,17 +18,21 @@ import re
 import pickle
 
 class DeferredOFConnection(OFConnection):
-  def __init__(self, io_worker, dpid, god_scheduler):
+  def __init__(self, io_worker, cid, dpid, god_scheduler):
     super(DeferredOFConnection, self).__init__(io_worker)
+    self.cid = cid
     self.dpid = dpid
     self.god_scheduler = god_scheduler
     # Don't feed messages to the switch directly
     self.on_message_received = self.insert_into_god_scheduler
     self.true_on_message_handler = None
 
+  def get_controller_id(self):
+    return self.cid
+
   def insert_into_god_scheduler(self, _, ofp_msg):
     ''' Rather than pass directly on to the switch, feed into the god scheduler'''
-    self.god_scheduler.insert_pending_message(self.dpid, self.get_controller_id(), ofp_msg, self)
+    self.god_scheduler.insert_pending_message(self.dpid, self.cid, ofp_msg, self)
 
   def set_message_handler(self, handler):
     ''' Take the switch's handler, and store it for later use '''
@@ -68,7 +72,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       raise e
 
     # controller (ip, port) -> connection
-    self.uuid2connection = {}
+    self.cid2connection = {}
     self.error_handler = error_handler
     self.controller_info = []
 
@@ -90,21 +94,21 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     connected_to_at_least_one = False
     for info in self.controller_info:
       # Don't connect to down controllers
-      if info.uuid not in down_controller_ids:
+      if info.cid not in down_controller_ids:
         conn = create_connection(info, self)
         self.set_connection(conn)
         # cause errors to be raised
         conn.error_handler = self.error_handler
         # controller (ip, port) -> connection
-        self.uuid2connection[info.uuid] = conn
+        self.cid2connection[info.cid] = conn
         connected_to_at_least_one = True
 
     return connected_to_at_least_one
 
-  def get_connection(self, uuid):
-    if uuid not in self.uuid2connection:
-      raise ValueError("No such connection %s" % str(uuid))
-    return self.uuid2connection[uuid]
+  def get_connection(self, cid):
+    if cid not in self.cid2connection:
+      raise ValueError("No such connection %s" % str(cid))
+    return self.cid2connection[cid]
 
   def fail(self):
     # TODO(cs): depending on the type of failure, a real switch failure
@@ -352,13 +356,13 @@ class Controller(object):
     return self.config.label
 
   @property
-  def uuid(self):
-    '''Return the uuid of this controller. See ControllerConfig for more details.'''
-    return tuple(self.config.uuid)
+  def cid(self):
+    '''Return the id of this controller. See ControllerConfig for more details.'''
+    return self.config.label
 
   def kill(self):
     '''Kill the process the controller is running in.'''
-    msg.event("Killing controller %s" % (str(self.uuid)))
+    msg.event("Killing controller %s" % (str(self.cid)))
     if self.sync_connection:
       self.sync_connection.close()
 
@@ -371,7 +375,7 @@ class Controller(object):
     '''Start a new controller process based on the config's cmdline
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process.'''
-    msg.event("Starting controller %s" % (str(self.uuid)))
+    msg.event("Starting controller %s" % (str(self.cid)))
     env = None
 
     if self.config.sync:
