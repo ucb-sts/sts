@@ -15,7 +15,7 @@ from sts.control_flow.replayer import Replayer
 from sts.control_flow.peeker import Peeker
 
 
-from collections import defaultdict
+from collections import defaultdict, Counter
 import copy
 import itertools
 import sys
@@ -25,23 +25,97 @@ import logging
 import json
 import os
 
-def write_runtime_stats(runtime_stats_file, runtime_stats):
-  # Now write contents to a file
-  now = timestamp_string()
+class RuntimeStats(object):
+  def __init__(self, runtime_stats_file):
+    self.runtime_stats_file = runtime_stats_file
+    self.iteration_size = {}
+    self.violation_found_in_run = Counter()
+    # { replay iteration -> [string representations new internal events] }
+    self.new_internal_events = {}
+    # { replay iteration -> [string representations internal events that
+    #                        violated causality] }
+    self.early_internal_events = {}
+    # { replay iteration -> { event type -> timeouts } }
+    self.timed_out_events = {}
+    # { replay iteration -> { event type -> successful matches } }
+    self.matched_events = {}
 
-  if runtime_stats_file is None:
-    runtime_stats_file = "runtime_stats/" + now + ".json"
 
-  with file(runtime_stats_file, "w") as output:
-    json_string = json.dumps(runtime_stats, sort_keys=True, indent=2,
-                             separators=(',', ': '))
-    output.write(json_string)
+  def write_runtime_stats(self):
+    # Now write contents to a file
+    now = timestamp_string()
+
+    if self.runtime_stats_file is None:
+      self.runtime_stats_file = "runtime_stats/" + now + ".json"
+
+    with file(self.runtime_stats_file, "w") as output:
+      json_string = json.dumps(self.__dict__, sort_keys=True, indent=2,
+                               separators=(',', ': '))
+      output.write(json_string)
+
+  def set_dag_stats(self, dag):
+    self.total_inputs = len(dag.input_events)
+    self.total_events = len(dag)
+    self.original_duration_seconds = \
+      (dag.events[-1].time.as_float() -
+       dag.events[0].time.as_float())
+
+  def record_replay_start(self):
+    self.replay_start_epoch = time.time()
+
+  def record_replay_end(self):
+    self.replay_end_epoch = time.time()
+    self.replay_duration_seconds = self.replay_end_epoch - self.replay_start_epoch
+
+  def record_prune_start(self):
+    self.prune_start_epoch = time.time()
+
+  def record_prune_end(self):
+    self.prune_end_epoch = time.time()
+    self.prune_duration_seconds = self.prune_end_epoch - self.prune_start_epoch
+
+  def set_initial_verification_runs_needed(self, verification_runs):
+    self.initial_verification_runs_needed = verification_runs
+
+  def set_peeker(self, peeker):
+    self.peeker = peeker
+
+  def set_config(self, config):
+    self.config = config
+
+  def record_iteration_size(self, iteration_size):
+    self.iteration_size[Replayer.total_replays] = iteration_size
+
+  def record_violation_found(self, verification_iteration):
+    self.violation_found_in_run[verification_iteration] += 1
+
+  def record_new_internal_events(self, new_internal_events):
+    self.new_internal_events[Replayer.total_replays] = new_internal_events
+
+  def record_early_internal_events(self, early_internal_events):
+    self.early_internal_events[Replayer.total_replays] = early_internal_events
+
+  def record_timed_out_events(self, timed_out_events):
+    self.timed_out_events[Replayer.total_replays] = timed_out_events
+
+  def record_matched_events(self, matched_events):
+    self.matched_events[Replayer.total_replays] = matched_events
+
+  def record_global_stats(self):
+    self.total_replays = Replayer.total_replays
+    self.total_inputs_replayed = Replayer.total_inputs_replayed
+    # TODO(cs): assumes that Peeker is the dag transformer
+    self.ambiguous_counts = dict(Peeker.ambiguous_counts)
+    self.ambiguous_events = dict(Peeker.ambiguous_events)
+
+  def clone(self):
+    return copy.deepcopy(self)
 
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
                invariant_check=None,
                transform_dag=None, end_wait_seconds=0.5,
-               mcs_trace_path=None, extra_log=None, runtime_stats_file=None, dump_runtime_stats=True,
+               mcs_trace_path=None, extra_log=None, runtime_stats_file=None,
                wait_on_deterministic_values=False,
                no_violation_verification_runs=1,
                **kwargs):
@@ -70,10 +144,7 @@ class MCSFinder(ControlFlow):
     self.wait_on_deterministic_values = wait_on_deterministic_values
     # `no' means "number"
     self.no_violation_verification_runs = no_violation_verification_runs
-    self._runtime_stats_file = runtime_stats_file
-    self._runtime_stats = None
-    if dump_runtime_stats:
-      self._runtime_stats = {}
+    self._runtime_stats = RuntimeStats(runtime_stats_file)
 
   def log(self, s):
     ''' Output a message to both self._log and self._extra_log '''
@@ -100,17 +171,13 @@ class MCSFinder(ControlFlow):
     self.results_dir = results_dir
     if self._extra_log is None:
       self._extra_log = open("%s/mcs_finder.log" % results_dir, "w")
-    if self._runtime_stats_file is None:
-      self._runtime_stats_file = "%s/runtime_stats.json" % results_dir
+    if self._runtime_stats.runtime_stats_file is None:
+      self._runtime_stats.runtime_stats_file = "%s/runtime_stats.json" % results_dir
     if self.mcs_trace_path is None:
       self.mcs_trace_path = "%s/mcs.trace" % results_dir
 
   def simulate(self, check_reproducability=True):
-    if self._runtime_stats is not None:
-      self._runtime_stats["total_inputs"] = len(self.dag.input_events)
-      self._runtime_stats["total_events"] = len(self.dag)
-      self._runtime_stats["original_duration_seconds"] =\
-        self.dag.events[-1].time.as_float() - self.dag.events[0].time.as_float()
+    self._runtime_stats.set_dag_stats(self.dag)
 
     # inject domain knowledge into the dag
     self.dag.mark_invalid_input_sequences()
@@ -121,16 +188,14 @@ class MCSFinder(ControlFlow):
 
     if check_reproducability:
       # First, run through without pruning to verify that the violation exists
-      if self._runtime_stats is not None:
-        self._runtime_stats["replay_start_epoch"] = time.time()
+      self._runtime_stats.record_replay_start()
 
       for i in range(0, self.no_violation_verification_runs):
         violations = self.replay(self.dag)
         if violations != []:
           break
-      if self._runtime_stats is not None:
-        self._runtime_stats["initial_verification_runs_needed"] = i
-        self._runtime_stats["replay_end_epoch"] = time.time()
+      self._runtime_stats.set_initial_verification_runs_needed(i)
+      self._runtime_stats.record_replay_end()
       if violations == []:
         msg.fail("Unable to reproduce correctness violation!")
         sys.exit(5)
@@ -138,18 +203,18 @@ class MCSFinder(ControlFlow):
       Replayer.total_replays = 0
       Replayer.total_inputs_replayed = 0
 
-    if self._runtime_stats is not None:
-      self._runtime_stats["prune_start_epoch"] = time.time()
+    self._runtime_stats.record_prune_start()
 
+    # TODO(cs): add a boolean flag for optimization
     #self._optimize_event_dag()
     precompute_cache = PrecomputeCache()
     (dag, total_inputs_pruned) = self._ddmin(self.dag, 2, precompute_cache=precompute_cache)
     # Make sure to track the final iteration size
     self._track_iteration_size(total_inputs_pruned)
     self.dag = dag
-    if self._runtime_stats is not None:
-      self._runtime_stats["prune_end_epoch"] = time.time()
-      self._dump_runtime_stats()
+
+    self._runtime_stats.record_prune_end()
+    self._dump_runtime_stats()
     self.log("Final MCS (%d elements):" % len(self.dag.input_events))
     for i in self.dag.input_events:
       self.log(" - %s" % str(i))
@@ -237,11 +302,7 @@ class MCSFinder(ControlFlow):
     return (dag, total_inputs_pruned)
 
   def _track_iteration_size(self, total_inputs_pruned):
-    if self._runtime_stats is not None:
-      if "iteration_size" not in self._runtime_stats:
-        self._runtime_stats["iteration_size"] = {}
-      self._runtime_stats["iteration_size"][Replayer.total_replays] =\
-              len(self.dag.input_events) - total_inputs_pruned
+    self._runtime_stats.record_iteration_size(len(self.dag.input_events) - total_inputs_pruned)
 
   def _check_violation(self, new_dag, subset_index):
     ''' Check if there were violations '''
@@ -252,10 +313,7 @@ class MCSFinder(ControlFlow):
       if violations != []:
         # Violation in the subset
         self.log_violation("Violation! Considering %d'th" % subset_index)
-        if self._runtime_stats is not None:
-          if "violation_found_in_run" not in self._runtime_stats:
-            self._runtime_stats["violation_found_in_run"] = defaultdict(lambda : 0)
-          self._runtime_stats["violation_found_in_run"][i] += 1
+        self._runtime_stats.record_violation_found(i)
         return True
 
     # No violation!
@@ -315,27 +373,11 @@ class MCSFinder(ControlFlow):
       else:
         prev_buffered_receives.remove(p)
     new_state_changes = replayer.unexpected_state_changes
-    if "new_internal_events" not in self._runtime_stats:
-      # { replay iteration -> [string representations new internal events] }
-      self._runtime_stats["new_internal_events"] = {}
-    self._runtime_stats["new_internal_events"][Replayer.total_replays] =\
-        new_state_changes + new_message_receipts
-    if "early_internal_events" not in self._runtime_stats:
-      # { replay iteration -> [string representations internal events that
-      #                        violated causality] }
-      self._runtime_stats["early_internal_events"] = {}
-    self._runtime_stats["early_internal_events"][Replayer.total_replays] =\
-       replayer.early_state_changes
-    if "timed_out_events" not in self._runtime_stats:
-      # { replay iteration -> { event type -> timeouts } }
-      self._runtime_stats["timed_out_events"] = {}
-    self._runtime_stats["timed_out_events"][Replayer.total_replays] =\
-       dict(replayer.event_scheduler_stats.event2timeouts)
-    if "matched_events" not in self._runtime_stats:
-      # { replay iteration -> { event type -> successful matches } }
-      self._runtime_stats["matched_events"] = {}
-    self._runtime_stats["matched_events"][Replayer.total_replays] =\
-       dict(replayer.event_scheduler_stats.event2matched)
+    new_internal_events = new_state_changes + new_message_receipts
+    self._runtime_stats.record_new_internal_events(new_internal_events)
+    self._runtime_stats.record_early_internal_events(replayer.early_state_changes)
+    self._runtime_stats.record_timed_out_events(dict(replayer.event_scheduler_stats.event2timeouts))
+    self._runtime_stats.record_matched_events(dict(replayer.event_scheduler_stats.event2matched))
 
   def _maybe_dump_intermediate_mcs(self, dag, label):
     class InterMCS(object):
@@ -350,7 +392,8 @@ class MCSFinder(ControlFlow):
       dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self._intermcs.count, label.replace("/", ".")))
       os.makedirs(dst)
       self._dump_mcs_trace(dag, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
-      self._dump_runtime_stats(os.path.join(dst, os.path.basename(self._runtime_stats_file)))
+      self._dump_runtime_stats(os.path.join(dst,
+          os.path.basename(self._runtime_stats.runtime_stats_file)))
 
   def _dump_mcs_trace(self, dag=None, mcs_trace_path=None):
     if dag is None:
@@ -365,29 +408,12 @@ class MCSFinder(ControlFlow):
     input_logger.close(self, self.simulation_cfg, skip_mcs_cfg=True)
 
   def _dump_runtime_stats(self, runtime_stats_file=None):
-    if runtime_stats_file is None:
-      runtime_stats_file = self._runtime_stats_file
-    runtime_stats = copy.deepcopy(self._runtime_stats)
-    if runtime_stats is not None:
-      # First compute durations
-      if "replay_end_epoch" in runtime_stats:
-        runtime_stats["replay_duration_seconds"] =\
-          (runtime_stats["replay_end_epoch"] -
-           runtime_stats["replay_start_epoch"])
-      if "prune_end_epoch" in runtime_stats:
-        runtime_stats["prune_duration_seconds"] =\
-          (runtime_stats["prune_end_epoch"] -
-           runtime_stats["prune_start_epoch"])
-      runtime_stats["total_replays"] = Replayer.total_replays
-      runtime_stats["total_inputs_replayed"] = Replayer.total_inputs_replayed
-      if self.transform_dag is not None:
-        # TODO(cs): assumes that Peeker is the dag transformer
-        runtime_stats["ambiguous_counts"] = dict(Peeker.ambiguous_counts)
-        runtime_stats["ambiguous_events"] = dict(Peeker.ambiguous_events)
-      runtime_stats["peeker"] = self.transform_dag is not None
-      runtime_stats["config"] = str(self.simulation_cfg)
-
-      write_runtime_stats(runtime_stats_file, runtime_stats)
+    runtime_stats = self._runtime_stats.clone()
+    if runtime_stats_file is not None:
+      runtime_stats.runtime_stats_file = runtime_stats_file
+    runtime_stats.set_peeker(self.transform_dag is not None)
+    runtime_stats.set_config(str(self.simulation_cfg))
+    runtime_stats.write_runtime_stats()
 
 # TODO(cs): Hack alert. Shouldn't be a subclass
 class EfficientMCSFinder(MCSFinder):
