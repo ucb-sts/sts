@@ -40,7 +40,6 @@ class RuntimeStats(object):
     # { replay iteration -> { event type -> successful matches } }
     self.matched_events = {}
 
-
   def write_runtime_stats(self):
     # Now write contents to a file
     now = timestamp_string()
@@ -118,6 +117,7 @@ class MCSFinder(ControlFlow):
                mcs_trace_path=None, extra_log=None, runtime_stats_file=None,
                wait_on_deterministic_values=False,
                no_violation_verification_runs=1,
+               optimized_filtering=False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.sync_callback = None
@@ -148,6 +148,7 @@ class MCSFinder(ControlFlow):
     # `no' means "number"
     self.no_violation_verification_runs = no_violation_verification_runs
     self._runtime_stats = RuntimeStats(runtime_stats_file)
+    self.optimized_filtering = optimized_filtering
 
   def log(self, s):
     ''' Output a message to both self._log and self._extra_log '''
@@ -208,8 +209,10 @@ class MCSFinder(ControlFlow):
 
     self._runtime_stats.record_prune_start()
 
-    # TODO(cs): add a boolean flag for optimization
-    #self._optimize_event_dag()
+    # TODO(cs): Better than a boolean flag: check if
+    # log(len(self.dag)) > number of input types to try
+    if self.optimized_filtering:
+      self._optimize_event_dag()
     precompute_cache = PrecomputeCache()
     (dag, total_inputs_pruned) = self._ddmin(self.dag, 2, precompute_cache=precompute_cache)
     # Make sure to track the final iteration size
