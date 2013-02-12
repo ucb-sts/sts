@@ -11,6 +11,7 @@ old.*
 *.out
 ext/*
 /exp/
+/experiments/
 /pox/
 /betta/
 /betta
