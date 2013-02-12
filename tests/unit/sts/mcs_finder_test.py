@@ -25,7 +25,11 @@ class MockMCSFinderBase(MCSFinder):
   ''' Overrides self.invariant_check and run_simulation_forward() '''
   def __init__(self, event_dag, mcs):
     super(MockMCSFinderBase, self).__init__(None, None,
-                                            invariant_check=self.invariant_check)
+                                            invariant_check_name="InvariantChecker.check_liveness")
+    # Hack! Give a fake name in config.invariant_checks.name_to_invariant_checks, but
+    # but remove it from our dict directly after. This is to prevent
+    # sanity check exceptions from being thrown.
+    self.invariant_check = self._invariant_check
     self.dag = event_dag
     self.new_dag = None
     self.mcs = mcs
@@ -34,7 +38,7 @@ class MockMCSFinderBase(MCSFinder):
   def log(self, message):
     self._log.info(message)
 
-  def invariant_check(self, _):
+  def _invariant_check(self, _):
     for e in self.mcs:
       if e not in self.new_dag._events_set:
         return []

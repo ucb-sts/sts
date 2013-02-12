@@ -27,25 +27,11 @@ simulation_config = SimulationConfig(controller_configs=controllers,
                                      #multiplex_sockets=True
                                      )
 
-def my_funky_invariant_check(simulation):
-  from sts.invariant_checker import InvariantChecker
-  result = InvariantChecker.check_loops(simulation)
-  if result:
-    return result
-  result = InvariantChecker.check_connectivity(simulation)
-  if not result:
-    print "Connectivity established - bailing out"
-    import sys
-    sys.exit(0)
-  return []
-
-
-
 control_flow = Fuzzer(simulation_config, check_interval=20,
                       #mock_link_discovery=True,
                       halt_on_violation=True,
                       input_logger=InputLogger(),
-                      invariant_check=my_funky_invariant_check,
+                      invariant_check_name="check_for_loops_or_connectivity",
                       steps=141,
                       #random_seed=466448715
                       )

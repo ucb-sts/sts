@@ -12,6 +12,7 @@ from sts.traffic_generator import TrafficGenerator
 from sts.util.console import msg
 from sts.replay_event import *
 from pox.lib.util import TimeoutError
+from config.invariant_checks import name_to_invariant_check
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -35,7 +36,7 @@ class Fuzzer(ControlFlow):
   def __init__(self, simulation_cfg, fuzzer_params="config.fuzzer_params",
                check_interval=None, traffic_inject_interval=10, random_seed=None,
                delay=0.1, steps=None, input_logger=None,
-               invariant_check=InvariantChecker.check_correspondence,
+               invariant_check_name="InvariantChecker.check_correspondence",
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
@@ -45,7 +46,12 @@ class Fuzzer(ControlFlow):
                            record_deterministic_values=record_deterministic_values)
 
     self.check_interval = check_interval
-    self.invariant_check = invariant_check
+    if invariant_check_name not in name_to_invariant_check:
+      raise ValueError('''Unknown invariant check %s.\n'''
+                       '''Invariant check name must be defined in config.invariant_checks''',
+                       invariant_check_name)
+    self.invariant_check_name = invariant_check_name
+    self.invariant_check = name_to_invariant_check[invariant_check_name]
     self.log_invariant_checks = log_invariant_checks
     self.traffic_inject_interval = traffic_inject_interval
     # Make execution deterministic to allow the user to easily replay
@@ -234,7 +240,7 @@ class Fuzzer(ControlFlow):
       # long
       def do_invariant_check():
         if self.log_invariant_checks:
-          self._log_input_event(CheckInvariants(invariant_check=self.invariant_check,
+          self._log_input_event(CheckInvariants(invariant_check_name=self.invariant_check_name,
                                                 fail_on_error=self.halt_on_violation))
 
         controllers_with_violations = self.invariant_check(self.simulation)

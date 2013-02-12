@@ -13,5 +13,5 @@ simulation_config = SimulationConfig(controller_configs=[ControllerConfig(cmdlin
                                      switch_init_sleep_seconds=2.0)
 
 control_flow = MCSFinder(simulation_config, "input_traces/pox_attr_error.trace",
-                         invariant_check=InvariantChecker.check_liveness,
+                         invariant_check_name="InvariantChecker.check_liveness",
                          mcs_trace_path="input_traces/pox_attr_error.trace")

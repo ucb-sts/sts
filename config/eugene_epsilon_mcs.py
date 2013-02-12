@@ -11,7 +11,7 @@ simulation_config = SimulationConfig(controller_configs=[ControllerConfig(cmdlin
                  dataplane_trace="dataplane_traces/ping_pong_same_subnet_4_switches.trace")
 
 control_flow = EfficientMCSFinder(simulation_config, "input_traces/eugene_epsilon.trace",
-                                  invariant_check=InvariantChecker.check_liveness,
+                                  invariant_check_mcs="InvariantChecker.check_liveness",
                                   mcs_trace_path="input_traces/eugene_epsilon_mcs_final.trace",
                                   extra_log=open("mcs_log.out", "w"),
                                   epsilon_seconds=0.25)

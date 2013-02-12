@@ -13,7 +13,7 @@ from sts.input_traces.input_logger import InputLogger
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.peeker import Peeker
-
+from config.invariant_checks import name_to_invariant_check
 
 from collections import defaultdict, Counter
 import copy
@@ -113,7 +113,7 @@ class RuntimeStats(object):
 
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
-               invariant_check=None,
+               invariant_check_name=None,
                transform_dag=None, end_wait_seconds=0.5,
                mcs_trace_path=None, extra_log=None, runtime_stats_file=None,
                wait_on_deterministic_values=False,
@@ -123,9 +123,13 @@ class MCSFinder(ControlFlow):
     self.sync_callback = None
     self._log = logging.getLogger("mcs_finder")
 
-    if invariant_check is None:
-      # TODO(cs): figure this out automatically from the original config
-      raise ValueError("Must specify invariant check manually (for now)")
+    if invariant_check_name is None:
+      raise ValueError("Must specify invariant check")
+    if invariant_check_name not in name_to_invariant_check:
+      raise ValueError('''Unknown invariant check %s.\n'''
+                       '''Invariant check name must be defined in config.invariant_checks''',
+                       invariant_check_name)
+    self.invariant_check = name_to_invariant_check[invariant_check_name]
 
     if type(superlog_path_or_dag) == str:
       self.superlog_path = superlog_path_or_dag
@@ -135,7 +139,6 @@ class MCSFinder(ControlFlow):
     else:
       self.dag = superlog_path_or_dag
 
-    self.invariant_check = invariant_check
     self.transform_dag = transform_dag
     self.mcs_trace_path = mcs_trace_path
     self._extra_log = extra_log

@@ -439,23 +439,23 @@ class Interactive(ControlFlow):
 
   def invariant_check(self, kind):
     if kind == "omega" or kind == "o":
-      self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_correspondence))
+      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_correspondence"))
       result = InvariantChecker.check_correspondence(self.simulation)
       message = "Controllers with miscorrepondence: "
     elif kind == "connectivity" or kind == "c":
-      self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_connectivity))
+      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_connectivity"))
       result = InvariantChecker.check_connectivity(self.simulation)
       message = "Disconnected host pairs: "
     elif kind == "python_connectivity" or kind == "pc":
-      self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.python_check_connectivity))
+      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.python_check_connectivity"))
       result = InvariantChecker.python_check_connectivity(self.simulation)
       message = "Disconnected host pairs: "
     elif kind == "loops" or kind == "lo":
-      self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_loops))
+      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_loops"))
       result = InvariantChecker.check_loops(self.simulation)
       message = "Loops: "
     elif kind == "liveness" or kind == "li":
-      self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_liveness))
+      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_liveness"))
       result = InvariantChecker.check_loops(self.simulation)
       message = "Crashed controllers: "
     else:
@@ -533,19 +533,19 @@ class Interactive(ControlFlow):
       result = None
       message = ""
       if answer.lower() == 'o':
-        self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_correspondence))
+        self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_correspondence"))
         result = InvariantChecker.check_correspondence(self.simulation)
         message = "Controllers with miscorrepondence: "
       elif answer.lower() == 'c':
-        self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_connectivity))
+        self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_connectivity"))
         result = self.invariant_checker.check_connectivity(self.simulation)
         message = "Disconnected host pairs: "
       elif answer.lower() == 'lo':
-        self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_loops))
+        self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_loops"))
         result = self.invariant_checker.check_loops(self.simulation)
         message = "Loops: "
       elif answer.lower() == 'li':
-        self._log_input_event(CheckInvariants(invariant_check=InvariantChecker.check_liveness))
+        self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_liveness"))
         result = self.invariant_checker.check_loops(self.simulation)
         message = "Crashed controllers: "
       else:

@@ -298,7 +298,7 @@ def check_partitions(switches, live_links, access_links):
         if port is None: continue
         path_map[k][j] = (1,None)
       path_map[k][k] = (0,None) # distance, intermediate
-  
+
     """
     for i in sws:
       for j in sws:
@@ -308,7 +308,7 @@ def check_partitions(switches, live_links, access_links):
         print a,
       print
     """
-  
+
     for k in sws:
       for i in sws:
         for j in sws:
@@ -319,7 +319,7 @@ def check_partitions(switches, live_links, access_links):
               if path_map[i][j][0] is None or ikj_dist < path_map[i][j][0]:
                 # i -> k -> j is better than existing
                 path_map[i][j] = (ikj_dist, k)
-  
+
     """
     print "--------------------"
     for i in sws:
@@ -338,5 +338,5 @@ def check_partitions(switches, live_links, access_links):
       id1 = get_uniq_port_id(link_pair[0].switch, link_pair[0].switch_port)
       id2 = get_uniq_port_id(link_pair[1].switch, link_pair[1].switch_port)
       partioned_pairs.add((id1,id2))
-  return partioned_pairs   
+  return partioned_pairs
 

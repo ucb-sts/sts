@@ -15,6 +15,7 @@ class ControlFlow(object):
   def __init__(self, simulation_cfg):
     self.simulation_cfg = simulation_cfg
     self.sync_callback = None
+    self.invariant_check_name = None
 
   def simulate(self):
     ''' Move the simulation forward!'''

@@ -18,6 +18,7 @@ simulation_config = %s
 
 control_flow = Replayer(simulation_config, "%s",
                         wait_on_deterministic_values=%s)
+# Invariant check: %s
 '''
 
 mcs_config_template = '''
@@ -30,7 +31,8 @@ from sts.simulation_state import SimulationConfig
 simulation_config = %s
 
 control_flow = EfficientMCSFinder(simulation_config, "%s",
-                                  wait_on_deterministic_values=%s)
+                                  wait_on_deterministic_values=%s,
+                                  invariant_check_name=%s)
 '''
 
 log = logging.getLogger("input_logger")
@@ -129,5 +131,6 @@ class InputLogger(object):
       with open(path, 'w') as cfg_out:
         config_string = template % (str(simulation_cfg),
                                     self.output_path,
-                                    str(wait_on_deterministic_values))
+                                    str(wait_on_deterministic_values),
+                                    "'%s'" % str(control_flow.invariant_check_name))
         cfg_out.write(config_string)

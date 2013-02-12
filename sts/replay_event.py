@@ -15,6 +15,7 @@ from sts.entities import Link
 from sts.god_scheduler import PendingReceive, MessageReceipt
 from sts.fingerprints.messages import *
 from invariant_checker import InvariantChecker
+from config.invariant_checks import name_to_invariant_check
 import itertools
 import abc
 import logging
@@ -413,10 +414,22 @@ class WaitTime(InputEvent):
 
 class CheckInvariants(InputEvent):
   def __init__(self, fail_on_error=False, label=None, time=None,
-               invariant_check=InvariantChecker.check_correspondence):
+               invariant_check_name="InvariantChecker.check_correspondence"):
     super(CheckInvariants, self).__init__(label=label, time=time)
     self.fail_on_error = fail_on_error
-    self.invariant_check = invariant_check
+    # For backwards compatbility.. (invariants used to be specified as
+    # marshalled functions, not invariant check names)
+    self.legacy_invariant_check = not isinstance(invariant_check_name, basestring)
+    if self.legacy_invariant_check:
+      self.invariant_check = invariant_check_name
+    else:
+      # Otherwise, invariant check is specified as a name
+      self.invariant_check_name = invariant_check_name
+      if invariant_check_name not in name_to_invariant_check:
+        raise ValueError('''Unknown invariant check %s.\n'''
+                         '''Invariant check name must be defined in config.invariant_checks''',
+                         invariant_check_name)
+      self.invariant_check = name_to_invariant_check[invariant_check_name]
 
   def proceed(self, simulation):
     try:
@@ -441,10 +454,14 @@ class CheckInvariants(InputEvent):
 
   def to_json(self):
     fields = dict(self.__dict__)
-    fields['invariant_check'] = marshal.dumps(self.invariant_check.func_code)\
-                                       .encode('base64')
-    fields['invariant_name'] = self.invariant_check.__name__
     fields['class'] = self.__class__.__name__
+    if self.legacy_invariant_check:
+      fields['invariant_check'] = marshal.dumps(self.invariant_check.func_code)\
+                                         .encode('base64')
+      fields['invariant_name'] = self.invariant_check.__name__
+    else:
+      fields['invariant_name'] = self.invariant_check_name
+      fields['invariant_check'] = None
     return json.dumps(fields)
 
   @staticmethod
@@ -453,15 +470,19 @@ class CheckInvariants(InputEvent):
     fail_on_error = False
     if 'fail_on_error' in json_hash:
       fail_on_error = json_hash['fail_on_error']
-    invariant_check = InvariantChecker.check_correspondence
-    if 'invariant_check' in json_hash:
+
+    invariant_check_name = "InvariantChecker.check_connectivity"
+    if 'invariant_name' in json_hash:
+      invariant_check_name  = json_hash['invariant_name']
+    elif 'invariant_check' in json_hash:
+      # Legacy code (marshalled function)
       # Assumes that the closure is empty
       code = marshal.loads(json_hash['invariant_check'].decode('base64'))
-      invariant_check = types.FunctionType(code, globals())
+      invariant_check_name = types.FunctionType(code, globals())
 
     return CheckInvariants(label=label, time=time,
                            fail_on_error=fail_on_error,
-                           invariant_check=invariant_check)
+                           invariant_check_name=invariant_check_name)
 
 class ControlChannelBlock(InputEvent):
   def __init__(self, dpid, controller_id, label=None, time=None):

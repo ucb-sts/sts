@@ -26,5 +26,5 @@ simulation_config = SimulationConfig(controller_configs=controllers,
 # Use a Fuzzer (already the default)
 control_flow = Fuzzer(simulation_config, input_logger=InputLogger(),
                       check_interval=80,
-                      invariant_check=InvariantChecker.check_connectivity)
+                      invariant_check_name="InvariantChecker.python_check_connectivity")
 
