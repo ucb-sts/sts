@@ -37,6 +37,7 @@ dataplane_delay_rate = 0.5
 controlplane_block_rate = 0.5
 controlplane_unblock_rate = 0.5
 ofp_message_receipt_rate = 0.5
+ofp_message_send_rate = 0.5
 link_failure_rate = 0.5
 link_recovery_rate = 0.5
 controller_crash_rate = 0.1

@@ -12,7 +12,7 @@ Author: sw
 
 from sts.util.console import msg
 from sts.entities import Link
-from sts.god_scheduler import PendingReceive, MessageReceipt
+from sts.god_scheduler import PendingReceive, PendingSend
 from sts.fingerprints.messages import *
 from invariant_checker import InvariantChecker
 from config.invariant_checks import name_to_invariant_check
@@ -649,15 +649,15 @@ def extract_base_fields(json_hash):
     timeout_disallowed = json_hash['timeout_disallowed']
   return (label, time, timeout_disallowed)
 
-class ControlMessageReceive(InternalEvent):
+class ControlMessageBase(InternalEvent):
   '''
-  Logged whenever the GodScheduler decides to allow a switch to see an
-  openflow packet.
+  Logged whenever the GodScheduler decides to allow a switch to receive or
+  send an openflow packet.
   '''
   def __init__(self, dpid, controller_id, fingerprint, label=None, time=None, timeout_disallowed=False):
     # If constructed directly (not from json), fingerprint is the
     # OFFingerprint, not including dpid and controller_id
-    super(ControlMessageReceive, self).__init__(label=label, time=time, timeout_disallowed=timeout_disallowed)
+    super(ControlMessageBase, self).__init__(label=label, time=time, timeout_disallowed=timeout_disallowed)
     self.dpid = dpid
     self.controller_id = controller_id
     if type(fingerprint) == list:
@@ -669,8 +669,9 @@ class ControlMessageReceive(InternalEvent):
 
     self.fingerprint = fingerprint
 
+class ControlMessageReceive(ControlMessageBase):
   def proceed(self, simulation):
-    message_waiting = simulation.god_scheduler.message_waiting(self.pending_receive)
+    message_waiting = simulation.god_scheduler.message_receipt_waiting(self.pending_receive)
     if message_waiting:
       simulation.god_scheduler.schedule(self.pending_receive)
       return True
@@ -681,7 +682,7 @@ class ControlMessageReceive(InternalEvent):
     return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
 
   def __str__(self):
-    return "ControlMessageReceive c %s -> s %s [%s]" % (self.controller_id, self.dpid, self.fingerprint[1].human_str())
+    return "ControlMessageReceive:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
 
   @staticmethod
   def from_json(json_hash):
@@ -691,6 +692,34 @@ class ControlMessageReceive(InternalEvent):
     controller_id = json_hash['controller_id']
     fingerprint = json_hash['fingerprint']
     return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time, timeout_disallowed=timeout_disallowed)
+
+class ControlMessageSend(ControlMessageBase):
+  '''
+  Logged whenever the GodScheduler decides to allow a switch to send a message
+  to a controller.
+  '''
+  def proceed(self, simulation):
+    message_waiting = simulation.god_scheduler.message_send_waiting(self.pending_send)
+    if message_waiting:
+      simulation.god_scheduler.schedule(self.pending_send)
+      return True
+    return False
+
+  @property
+  def pending_send(self):
+    return PendingSend(self.dpid, self.controller_id, self.fingerprint[1])
+
+  def __str__(self):
+    return "ControlMessageSend:%s c %s -> s %s [%s]" % (self.label, self.dpid, self.controller_id, self.fingerprint[1].human_str())
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
+    assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
+    dpid = json_hash['dpid']
+    controller_id = json_hash['controller_id']
+    fingerprint = json_hash['fingerprint']
+    return ControlMessageSend(dpid, controller_id, fingerprint, label=label, time=time, timeout_disallowed=timeout_disallowed)
 
 # TODO(cs): move me?
 class PendingStateChange(namedtuple('PendingStateChange',
@@ -819,7 +848,6 @@ class DeterministicValue(InternalEvent):
     return DeterministicValue(controller_id, name, value,
                               label=label, time=time, timeout_disallowed=timeout_disallowed)
 
-
 # TODO(cs): this should really be an input event. But need to make sure that
 # it can be pruned safely
 class ConnectToControllers(InternalEvent):
@@ -833,8 +861,9 @@ class ConnectToControllers(InternalEvent):
     return ConnectToControllers(label=label, time=time, timeout_disallowed=timeout_disallowed)
 
 
-all_internal_events = [ControlMessageReceive, ConnectToControllers,
-                       ControllerStateChange, DeterministicValue]
+all_internal_events = [ControlMessageReceive, ControlMessageSend,
+                       ConnectToControllers, ControllerStateChange,
+                       DeterministicValue]
 
 
 # Special event:

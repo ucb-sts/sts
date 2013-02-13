@@ -291,7 +291,7 @@ class Interactive(ControlFlow):
     print "End console with CTRL-D"
 
   def next_step(self):
-    self.check_message_receipts()
+    self.check_pending_messages()
     time.sleep(0.05)
     self.logical_time += 1
     self._forwarded_this_step = 0
@@ -513,7 +513,7 @@ class Interactive(ControlFlow):
         self.invariant_check_prompt()
         self.dataplane_trace_prompt()
         self.check_dataplane()
-        self.check_message_receipts()
+        self.check_pending_messages()
         answer = msg.raw_input('Continue to next round? [Yn]').strip()
         if answer != '' and answer.lower() != 'y':
           break
@@ -585,7 +585,7 @@ class Interactive(ControlFlow):
           log.warn("Unknown input...")
           self.simulation.patch_panel.delay_dp_event(dp_event)
 
-  def check_message_receipts(self):
+  def check_pending_messages(self):
     for pending_receipt in self.simulation.god_scheduler.pending_receives():
       # For now, just schedule FIFO.
       # TODO(cs): make this interactive
@@ -593,7 +593,11 @@ class Interactive(ControlFlow):
       self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                   pending_receipt.controller_id,
                                                   pending_receipt.fingerprint))
+    for pending_send in self.simulation.god_scheduler.pending_sends():
+      self.simulation.god_scheduler.schedule(pending_send)
+      self._log_input_event(ControlMessageSend(pending_send.dpid,
+                                               pending_send.controller_id,
+                                               pending_send.fingerprint))
 
   # TODO(cs): add support for control channel blocking + link,
   # controller failures, god scheduling
-

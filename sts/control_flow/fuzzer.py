@@ -173,7 +173,7 @@ class Fuzzer(ControlFlow):
               break
             self.maybe_inject_trace_event()
           else:  # Initializing
-            self.check_message_receipts(pass_through=True)
+            self.check_pending_messages(pass_through=True)
             if not sent_self_packets and (self.logical_time % self._all_to_all_interval) == 0:
               # Only need to send self packets once
               self._send_initialization_packets(self_pkts=True)
@@ -264,7 +264,7 @@ class Fuzzer(ControlFlow):
   def trigger_events(self):
     self.check_dataplane()
     self.check_tcp_connections()
-    self.check_message_receipts()
+    self.check_pending_messages()
     self.check_switch_crashes()
     self.check_link_failures()
     self.fuzz_traffic()
@@ -317,7 +317,7 @@ class Fuzzer(ControlFlow):
         self._log_input_event(ControlChannelUnblock(switch.dpid,
                               controller_id=connection.get_controller_id()))
 
-  def check_message_receipts(self, pass_through=False):
+  def check_pending_messages(self, pass_through=False):
     for pending_receipt in self.simulation.god_scheduler.pending_receives():
       # TODO(cs): this is a really dumb way to fuzz packet receipt scheduling
       if (self.random.random() < self.params.ofp_message_receipt_rate or
@@ -326,6 +326,13 @@ class Fuzzer(ControlFlow):
         self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                     pending_receipt.controller_id,
                                                     pending_receipt.fingerprint))
+    for pending_send in self.simulation.god_scheduler.pending_sends():
+      if (self.random.random() < self.params.ofp_message_send_rate or
+          pass_through):
+        self.simulation.god_scheduler.schedule(pending_send)
+        self._log_input_event(ControlMessageSend(pending_send.dpid,
+                                                 pending_send.controller_id,
+                                                 pending_send.fingerprint))
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
