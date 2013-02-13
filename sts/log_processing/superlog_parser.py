@@ -16,9 +16,9 @@ must the following key:
                       event is pruned)
 '''
 
-import logging
 import json
 import sts.replay_event as event
+import logging
 log = logging.getLogger("superlog_parser")
 
 input_name_to_class = {
@@ -103,7 +103,7 @@ def parse(logfile):
                                   json_hash)
       event = internal_event_name_to_class[json_hash['class']].from_json(json_hash)
     else:
-      log.warn("Unknown class type %s" % json_hash['class'])
+      print "Warning: Unknown class type %s" % json_hash['class']
       continue
     trace.append(event)
 
