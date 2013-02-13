@@ -570,20 +570,21 @@ class Interactive(ControlFlow):
     ''' Decide whether to delay, drop, or deliver packets '''
     if type(self.simulation.patch_panel) == BufferedPatchPanel:
       for dp_event in self.simulation.patch_panel.queued_dataplane_events:
-        answer = msg.raw_input('Allow [a], Drop [d], or Delay [e] dataplane packet %s? [Ade]' %
-                               dp_event)
-        if ((answer == '' or answer.lower() == 'a') and
-                self.simulation.topology.ok_to_send(dp_event)):
-          self.simulation.patch_panel.permit_dp_event(dp_event)
-          self._log_input_event(DataplanePermit(dp_event.fingerprint))
-        elif answer.lower() == 'd':
-          self.simulation.patch_panel.drop_dp_event(dp_event)
-          self._log_input_event(DataplaneDrop(dp_event.fingerprint))
-        elif answer.lower() == 'e':
-          self.simulation.patch_panel.delay_dp_event(dp_event)
-        else:
-          log.warn("Unknown input...")
-          self.simulation.patch_panel.delay_dp_event(dp_event)
+        done = False
+        while not done:
+          done = True
+          answer = msg.raw_input('Allow [a], or Drop [d] dataplane packet %s? [Ad]' %
+                                 dp_event)
+          if ((answer == '' or answer.lower() == 'a') and
+                  self.simulation.topology.ok_to_send(dp_event)):
+            self.simulation.patch_panel.permit_dp_event(dp_event)
+            self._log_input_event(DataplanePermit(dp_event.fingerprint))
+          elif answer.lower() == 'd':
+            self.simulation.patch_panel.drop_dp_event(dp_event)
+            self._log_input_event(DataplaneDrop(dp_event.fingerprint))
+          else:
+            log.warn("Unknown input...")
+            done = False
 
   def check_pending_messages(self):
     for pending_receipt in self.simulation.god_scheduler.pending_receives():

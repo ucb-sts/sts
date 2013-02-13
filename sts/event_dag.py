@@ -130,7 +130,7 @@ class EventDag(object):
   # For now, we're ignoring these input types, since their dependencies with
   # other inputs are too complicated to model
   # TODO(cs): model these!
-  _ignored_input_types = set([WaitTime]) # set([DataplaneDrop, WaitTime, DataplanePermit])
+  _ignored_input_types = set([WaitTime]) # set([DataplaneDrop, WaitTime])
 
   def __init__(self, events, prefix_trie=None):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to

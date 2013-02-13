@@ -277,8 +277,6 @@ class Fuzzer(ControlFlow):
       if pass_through:
         self.simulation.patch_panel.permit_dp_event(dp_event)
         self._log_input_event(DataplanePermit(dp_event.fingerprint))
-      elif self.random.random() < self.params.dataplane_delay_rate:
-        self.simulation.patch_panel.delay_dp_event(dp_event)
       elif self.random.random() < self.params.dataplane_drop_rate:
         self.simulation.patch_panel.drop_dp_event(dp_event)
         self._log_input_event(DataplaneDrop(dp_event.fingerprint))

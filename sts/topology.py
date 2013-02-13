@@ -192,13 +192,6 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     if self.fingerprint2dp_outs[dp_event.fingerprint] == []:
       del self.fingerprint2dp_outs[dp_event.fingerprint]
 
-  def delay_dp_event(self, dp_event):
-    msg.event("Delaying dataplane event")
-    # (Monkey patch on a delay counter)
-    if not hasattr(dp_event, "delayed_rounds"):
-      dp_event.delayed_rounds = 0
-    dp_event.delayed_rounds += 1
-
   def get_buffered_dp_event(self, fingerprint):
     if fingerprint in self.fingerprint2dp_outs:
       return self.fingerprint2dp_outs[fingerprint][0]
