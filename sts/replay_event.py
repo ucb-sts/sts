@@ -54,7 +54,7 @@ class Event(object):
     # TODO(cs): Replayer shouldn't depend on superlog_parser
     self.dependent_labels = dependent_labels if dependent_labels else []
     # Whether this event should be prunable by MCSFinder. Initialization
-    # inputs are not pruned. 
+    # inputs are not pruned.
     self.prunable = True
 
   @abc.abstractmethod
@@ -538,7 +538,7 @@ class ControlChannelUnblock(InputEvent):
     controller_id = json_hash['controller_id']
     return ControlChannelUnblock(dpid, controller_id, label=label, time=time)
 
-# TODO(cs): DataplaneDrop/Permits have really complicated dependencies
+# TODO(cs): DataplaneDrops have really complicated dependencies
 # with other input events!
 # For now, turn them off completely.
 class DataplaneDrop(InputEvent):
@@ -864,7 +864,6 @@ class ConnectToControllers(InternalEvent):
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
                        ConnectToControllers, ControllerStateChange,
                        DeterministicValue]
-
 
 # Special event:
 
