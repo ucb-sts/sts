@@ -12,6 +12,7 @@ import sts.log_processing.superlog_parser as superlog_parser
 from sts.util.console import color
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.util.convenience import find
+from sts.topology import BufferedPatchPanel
 
 import signal
 import sys
