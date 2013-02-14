@@ -11,7 +11,7 @@ import tempfile
 
 from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import Replayer, MCSFinder, EfficientMCSFinder
-from sts.topology import FatTree, PatchPanel, MeshTopology
+from sts.topology import FatTree, BufferedPatchPanel, MeshTopology
 from sts.simulation_state import Simulation, SimulationConfig
 from sts.replay_event import Event, InternalEvent, InputEvent
 from sts.event_dag import EventDag
@@ -63,7 +63,7 @@ class ReplayerTest(unittest.TestCase):
     controllers = []
     topology_class = FatTree
     topology_params = ""
-    patch_panel_class = PatchPanel
+    patch_panel_class = BufferedPatchPanel
     sim = SimulationConfig(controllers, topology_class, topology_params, patch_panel_class)
     global _running_simulation
     _running_simulation = sim
@@ -100,7 +100,7 @@ class ReplayerTest(unittest.TestCase):
     controllers = [ControllerConfig(cwd='pox', cmdline=cmdline, address="127.0.0.1", port=8899, sync="tcp:localhost:18899")]
     topology_class = MeshTopology
     topology_params = "num_switches=2"
-    patch_panel_class = PatchPanel
+    patch_panel_class = BufferedPatchPanel
     return SimulationConfig(controllers,
                             topology_class,
                             topology_params,
@@ -136,7 +136,7 @@ class ReplayerTest(unittest.TestCase):
     controllers = []
     topology_class = MeshTopology
     topology_params = "num_switches=2"
-    patch_panel_class = PatchPanel
+    patch_panel_class = BufferedPatchPanel
     dataplane_trace_path = "./dataplane_traces/ping_pong_same_subnet.trace"
     return SimulationConfig(controllers, topology_class, topology_params,
                             patch_panel_class, dataplane_trace=dataplane_trace_path)
@@ -173,7 +173,7 @@ class ReplayerTest(unittest.TestCase):
     controllers = []
     topology_class = FatTree
     topology_params = ""
-    patch_panel_class = PatchPanel
+    patch_panel_class = BufferedPatchPanel
     return SimulationConfig(controllers, topology_class, topology_params,
                             patch_panel_class)
 
