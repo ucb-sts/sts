@@ -176,9 +176,7 @@ class Replayer(ControlFlow):
       if (next_expected is not None and
           state_change == next_expected.pending_state_change and
           dag.get_original_index_for_event(next_expected) > original_input_index):
-        # TODO(cs): should arguably raise an exception here until we have
-        # implemented a proper swap-over to peek()
-        log.warn("State change happened before expected! Causality violated")
+        raise RuntimeError("State change happened before expected! Causality violated")
         self.early_state_changes.append(repr(next_expected))
 
   def _check_new_state_changes(self, dag, current_index):
