@@ -186,7 +186,7 @@ class STSConsole(object):
       if self.default_command:
         prompt = prompt + color.GRAY + "["+ self.default_command + "]" + color.WHITE + " >"
       else:
-        prompt = prompt + " >"
+        prompt = prompt + "> "
       x = msg.raw_input(prompt)
       if x == "" and self.default_command:
         x = self.default_command
