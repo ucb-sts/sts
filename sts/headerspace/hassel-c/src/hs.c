@@ -1,3 +1,11 @@
+/*
+  Copyright 2012, Stanford University. This file is licensed under GPL v2 plus
+  a special exception, as described in included LICENSE_EXCEPTION.txt.
+
+  Author: mchang@cs.stanford.com (Michael Chang)
+          peyman.kazemian@gmail.com (Peyman Kazemian)
+*/
+
 #include "hs.h"
 
 #define MAX_STR 65536
@@ -62,25 +70,22 @@ vec_elem_free (struct hs_vec *v, int i)
   }
 }
 
-static void
-vec_isect (struct hs_vec *a, const struct hs_vec *b, int len)
+struct hs_vec
+vec_isect_a (const struct hs_vec *a, const struct hs_vec *b, int len)
 {
   struct hs_vec new_list = {0};
-
   for (int i = 0; i < a->used; i++) {
     for (int j = 0; j < b->used; j++) {
       array_t *isect = array_isect_a (a->elems[i], b->elems[j], len);
       if (!isect) continue;
-
       vec_append (&new_list, isect, false);
-      int idx = new_list.used;
+      int idx = new_list.used - 1;
       struct hs_vec *d = &new_list.diff[idx];
       vec_diff (d, isect, &a->diff[i], len);
       vec_diff (d, isect, &b->diff[j], len);
     }
   }
-  vec_destroy (a);
-  *a = new_list;
+  return new_list;
 }
 
 static char *
@@ -101,7 +106,7 @@ vec_to_str (const struct hs_vec *v, int len, char *res)
     }
   }
   if (!v->diff) *res++ = ')';
-  else *res++ = 0;
+  *res = 0;
   return res;
 }
 
@@ -109,20 +114,36 @@ vec_to_str (const struct hs_vec *v, int len, char *res)
 /* Remove elems of V that are covered by another elem. V must be a diff list.
    LEN is length of each array. */
 static void
-vec_compact (struct hs_vec *v, int len)
+vec_compact (struct hs_vec *v, const array_t* mask, int len)
 {
   for (int i = 0; i < v->used; i++) {
     for (int j = i + 1; j < v->used; j++) {
-      int sub;
-      if (array_is_sub (v->elems[i], v->elems[j], len)) sub = j;
-      else if (array_is_sub (v->elems[j], v->elems[i], len)) sub = i;
-      else continue;
-
-      vec_elem_free (v, sub);
-      if (sub == j) { j--; continue; }
-      else { i--; break; }
+      array_t *extra;
+      array_combine(&(v->elems[i]), &(v->elems[j]), &extra, mask, len);
+      if (extra) {
+        vec_append(v,extra,true);
+      }
+      if (v->elems[i] == NULL) {
+        vec_elem_free (v, i);
+        if (v->elems[j] == NULL) vec_elem_free (v, j);
+        i--;
+        break;
+      }
+      if (v->elems[j] == NULL) {
+        vec_elem_free (v, j);
+        j--;
+        continue;
+      }
     }
   }
+}
+
+static void
+vec_isect (struct hs_vec *a, const struct hs_vec *b, int len)
+{
+  struct hs_vec v = vec_isect_a (a, b, len);
+  vec_destroy (a);
+  *a = v;
 }
 
 
@@ -134,6 +155,18 @@ hs_create (int len)
   return hs;
 }
 
+void
+hs_destroy (struct hs *hs)
+{ vec_destroy (&hs->list); }
+
+void
+hs_free (struct hs *hs)
+{
+  hs_destroy (hs);
+  free (hs);
+}
+
+
 void
 hs_copy (struct hs *dst, const struct hs *src)
 {
@@ -149,15 +182,19 @@ hs_copy_a (const struct hs *hs)
   return res;
 }
 
-void
-hs_destroy (struct hs *hs)
-{ vec_destroy (&hs->list); }
+
+int
+hs_count (const struct hs *hs)
+{ return hs->list.used; }
 
-void
-hs_free (struct hs *hs)
+int
+hs_count_diff (const struct hs *hs)
 {
-  hs_destroy (hs);
-  free (hs);
+  int sum = 0;
+  const struct hs_vec *v = &hs->list;
+  for (int i = 0; i < v->used; i++)
+    sum += v->diff[i].used;
+  return sum;
 }
 
 void
@@ -191,13 +228,17 @@ hs_diff (struct hs *hs, const array_t *a)
   }
 }
 
-
 bool
-hs_compact (struct hs *hs)
+hs_compact (struct hs *hs) {
+  return hs_compact_m(hs,NULL);
+}
+
+bool
+hs_compact_m (struct hs *hs, const array_t *mask)
 {
   struct hs_vec *v = &hs->list;
   for (int i = 0; i < v->used; i++) {
-    vec_compact (&v->diff[i], hs->len);
+    vec_compact (&v->diff[i], mask, hs->len);
     for (int j = 0; j < v->diff[i].used; j++) {
       if (!array_is_sub (v->diff[i].elems[j], v->elems[i], hs->len)) continue;
       vec_elem_free (v, i);
@@ -279,6 +320,21 @@ hs_isect (struct hs *a, const struct hs *b)
   return a->list.used;
 }
 
+struct hs*
+hs_isect_a (const struct hs *a, const struct hs *b)
+{
+  assert (a->len == b->len);
+  struct hs_vec r = vec_isect_a (&a->list, &b->list, a->len);
+  if (r.used > 0) {
+    struct hs *h = malloc(sizeof *h);
+    h->list = r;
+    h->len = a->len;
+    return h;
+  } else {
+    return NULL;
+  }
+}
+
 bool
 hs_isect_arr (struct hs *res, const struct hs *hs, const array_t *a)
 {
@@ -342,3 +398,28 @@ hs_rewrite (struct hs *hs, const array_t *mask, const array_t *rewrite)
   }
 }
 
+bool hs_potponed_diff_and_rewrite (const struct hs *orig_hs, struct hs *rw_hs,
+    const array_t *diff, const array_t *mask, const array_t *rewrite) {
+
+  const struct hs_vec *orig_v = &orig_hs->list;
+  struct hs_vec *rw_v = &rw_hs->list;
+  bool changed = false;
+
+  for (int i = 0; i < orig_v->used; i++) {
+    array_t *tmp = array_isect_a (orig_v->elems[i], diff, orig_hs->len);
+    if (!tmp) continue;
+    int n = array_x_count (orig_v->elems[i], mask, orig_hs->len);
+    int m = array_rewrite (tmp, mask, rewrite, orig_hs->len);
+    if (n == m) {
+      changed = true;
+      vec_append (&rw_v->diff[i], tmp, true);
+    } else {
+      free(tmp);
+    }
+  }
+  return changed;
+}
+
+void
+hs_vec_append (struct hs_vec *v, array_t *a, bool diff)
+{ vec_append (v, a, diff); }

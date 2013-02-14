@@ -1,3 +1,11 @@
+/*
+  Copyright 2012, Stanford University. This file is licensed under GPL v2 plus
+  a special exception, as described in included LICENSE_EXCEPTION.txt.
+
+  Author: mchang@cs.stanford.com (Michael Chang)
+          peyman.kazemian@gmail.com (Peyman Kazemian)
+*/
+
 #include "tf.h"
 #include "data.h"
 
@@ -29,6 +37,7 @@ port_match (uint32_t port, int32_t ofs, const struct tf *tf)
   return int_find (port, p->arr, p->n);
 }
 
+
 static void
 deps_diff (struct hs *hs, uint32_t port, const struct deps *deps,
            const struct tf *tf, const uint32_t *app, int napp)
@@ -59,6 +68,7 @@ print_ports (int32_t p, const struct tf *tf)
   printf ("\n");
 }
 
+
 static struct list_res
 rule_apply (const struct rule *r, const struct tf *tf, const struct res *in,
             bool append, uint32_t *app, int *napp)
@@ -73,8 +83,8 @@ rule_apply (const struct rule *r, const struct tf *tf, const struct res *in,
   else {
     if (!hs_isect_arr (&hs, &in->hs, DATA_ARR (r->match))) return res;
     if (r->deps) deps_diff (&hs, in->port, DEPS (tf, r->deps), tf, app, *napp);
+    if (!hs_compact_m (&hs, r->mask ? DATA_ARR (r->mask) : NULL)) { hs_destroy (&hs); return res; }
     if (r->mask) hs_rewrite (&hs, DATA_ARR (r->mask), DATA_ARR (r->rewrite));
-    if (!hs_compact (&hs)) { hs_destroy (&hs); return res; }
   }
 
   bool used_hs = false;
@@ -136,6 +146,7 @@ rule_print (const struct rule *r, const struct tf *tf)
   printf ("-----\n");
 }
 
+
 struct list_res
 tf_apply (const struct tf *tf, const struct res *in, bool append)
 {
