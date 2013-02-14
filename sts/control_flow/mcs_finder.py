@@ -334,7 +334,6 @@ class MCSFinder(ControlFlow):
     # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
     replayer = Replayer(self.simulation_cfg, new_dag,
                         wait_on_deterministic_values=self.wait_on_deterministic_values,
-                        #auto_permit_dp_events=True,
                         **self.kwargs)
     simulation = replayer.simulate()
     self._track_new_internal_events(simulation, replayer)
@@ -347,7 +346,7 @@ class MCSFinder(ControlFlow):
 
   def _optimize_event_dag(self):
     ''' Employs domain knowledge of event classes to reduce the size of event dag '''
-    event_types = [TrafficInjection, DataplaneDrop, DataplanePermit, SwitchFailure,
+    event_types = [TrafficInjection, DataplaneDrop, SwitchFailure,
                    SwitchRecovery, LinkFailure, LinkRecovery, HostMigration,
                    ControllerFailure, ControllerRecovery, PolicyChange, ControlChannelBlock,
                    ControlChannelUnblock]
