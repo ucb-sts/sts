@@ -1,3 +1,11 @@
+/*
+  Copyright 2012, Stanford University. This file is licensed under GPL v2 plus
+  a special exception, as described in included LICENSE_EXCEPTION.txt.
+
+  Author: mchang@cs.stanford.com (Michael Chang)
+          peyman.kazemian@gmail.com (Peyman Kazemian)
+*/
+
 #include "app.h"
 #include "data.h"
 #include "ntf.h"
@@ -36,6 +44,7 @@ ref_add (struct res *child, struct res *parent)
   parent->refs++;
 }
 
+
 void
 app_init (void)
 {
@@ -49,9 +58,18 @@ app_init (void)
 void
 app_fini (void)
 {
-  //free (locks);
   free (conds);
   free (queues);
+}
+
+
+void
+app_add_in (const struct hs *hs, uint32_t port)
+{
+  struct res *in = res_create (data_file->stages + 1);
+  hs_copy (&in->hs, hs);
+  in->port = port;
+  list_append (&queues[ntf_get_sw (in->port)], in);
 }
 
 static void *
@@ -156,14 +174,9 @@ reach_thread (void *vdata)
 }
 
 struct list_res
-reachability (const struct hs *hs, uint32_t port, const uint32_t *out, int nout)
+reachability (const uint32_t *out, int nout)
 {
-  struct res *in = res_create (data_file->stages + 1);
   struct list_res res = {0};
-  hs_copy (&in->hs, hs);
-  in->port = port;
-  list_append (&queues[ntf_get_sw (in->port)], in);
-
   int n = data_file->ntfs - 1;
   struct tdata data[n];
   memset (data, 0, sizeof data);

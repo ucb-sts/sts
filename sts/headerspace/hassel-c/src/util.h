@@ -1,3 +1,11 @@
+/*
+  Copyright 2012, Stanford University. This file is licensed under GPL v2 plus
+  a special exception, as described in included LICENSE_EXCEPTION.txt.
+
+  Author: mchang@cs.stanford.com (Michael Chang)
+          peyman.kazemian@gmail.com (Peyman Kazemian)
+*/
+
 #ifndef _UTIL_H_
 #define _UTIL_H_
 
@@ -39,7 +47,7 @@
   struct arr_ptr_ ## ID { int n; union { T a[sizeof (T *) / sizeof (T)]; T *p; } e; }
 #define ARR(X) ( (X).n > ARR_LEN ((X).e.a) ? (X).e.p : (X).e.a )
 #define ARR_ALLOC(X, N) \
-  do { (X).n = N; if ((X).n > ARR_LEN ((X).e.a)) (X).e.p = xmalloc (N * sizeof *(X).e.p); } while (0)
+  do { (X).n = (N); if ((X).n > ARR_LEN ((X).e.a)) (X).e.p = xmalloc ((N) * sizeof *(X).e.p); } while (0)
 #define ARR_FREE(X) \
   do { if ((X).n > ARR_LEN ((X).e.a)) free ((X).e.p); } while (0)
 

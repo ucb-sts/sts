@@ -1,3 +1,11 @@
+/*
+  Copyright 2012, Stanford University. This file is licensed under GPL v2 plus
+  a special exception, as described in included LICENSE_EXCEPTION.txt.
+
+  Author: mchang@cs.stanford.com (Michael Chang)
+          peyman.kazemian@gmail.com (Peyman Kazemian)
+*/
+
 #include "array.h"
 #include <limits.h>
 
@@ -157,6 +165,98 @@ array_is_sub (const array_t *a, const array_t *b, int len)
   return true;
 }
 
+void
+array_combine(array_t **_a, array_t **_b, array_t **extra,
+              const array_t *mask, int len) {
+  array_t *a = *_a;
+  array_t *b = *_b;
+  bool equal = true;
+  bool aSubb = true;
+  bool bSuba = true;
+  int diff_count = 0;
+  array_t tmp[SIZE (len)];
+  for (int i = 0; i < SIZE (len); i++) {
+    if (equal && a[i] != b[i]) equal = false;
+    if (!equal && bSuba && (b[i] & ~a[i])) bSuba = false;
+    if (!equal && aSubb && (a[i] & ~b[i])) aSubb = false;
+    if (mask && diff_count <= 1) {
+      if (bSuba) tmp[i] = b[i];
+      else if (aSubb) tmp[i] = a[i];
+      else {
+        array_t isect = a[i] & b[i];
+        array_t diffs = ((isect | (isect >> 1)) & ODD_MASK) |
+            ((isect | (isect << 1)) & EVEN_MASK);
+        diffs = ~diffs;
+        if (diffs & mask[i] & EVEN_MASK) {*extra = NULL; return;}
+        int count = __builtin_popcountll(diffs) / 2;
+        if (count == 0) tmp[i] = isect;
+        else {
+          diff_count += count;
+          if (diff_count == 1) tmp[i] = isect | diffs;
+        }
+      }
+    // in case of no combine, if no subset detected, return.
+    } else if (!mask && !bSuba && !aSubb) {*extra = NULL; return;}
+    // more than one non-intersecting bits - no combine.
+    if (diff_count > 1) {*extra = NULL; return;}
+  }
+  // keep a if equal or b is subset of a
+  if (equal || bSuba) {free(b); *_b = NULL; *extra = NULL;}
+  // keep b if a is subset of b
+  else if (aSubb) {free(a); *_a = NULL; *extra = NULL; }
+  // keep b and a untouched if there is no merge. e.g. 100x u 1xx0
+  else if (diff_count == 0) {*extra = NULL;}
+  // or we will have a combine:
+  else {
+    bool b1 = array_is_sub(tmp,a,len);
+    bool b2 = array_is_sub(tmp,b,len);
+    // e.g. 10x0 U 10x1 --> 10xx
+    if (b1 && b2) { free(a); free(b); *_a = NULL; *_b = NULL;
+      *extra = array_copy(tmp,len); }
+    // e.g. 1001 U 1xx0 --> 100x U 1xx0
+    else if (b1) { free(a); *_a = NULL; *extra = array_copy(tmp,len);}
+    // e.g. 1xx0 U 1001 --> 1xx0 U 100x
+    else if (b2) { free(b); *_b = NULL; *extra = array_copy(tmp,len);}
+    // e.g. 10x1 U 1x00 --> 10x1 U 1x00 U 100X
+    else {*extra = array_copy(tmp,len);}
+  }
+}
+
+
+enum bit_val
+array_get_bit (const array_t *a, int byte, int bit)
+{
+  const uint8_t *p = (const uint8_t *) a;
+  uint8_t x = p[2 * byte + bit / (CHAR_BIT / 2)];
+  int shift = 2 * (CHAR_BIT / 2 - (bit % (CHAR_BIT / 2)) - 1);
+  return x >> shift;
+}
+
+uint16_t
+array_get_byte (const array_t *a, int byte)
+{
+  const uint8_t *p = (const uint8_t *) a;
+  return (p[2 * byte] << CHAR_BIT) | p[2 * byte + 1];
+}
+
+void
+array_set_bit (array_t *a, enum bit_val val, int byte, int bit)
+{
+  uint8_t *p = (uint8_t *) a;
+  int idx = 2 * byte + bit / (CHAR_BIT / 2);
+  int shift = 2 * (CHAR_BIT / 2 - (bit % (CHAR_BIT / 2)) - 1);
+  uint8_t mask = BIT_X >> shift;
+  p[idx] = (p[idx] & ~mask) | (val << shift);
+}
+
+void
+array_set_byte (array_t *a, uint16_t val, int byte)
+{
+  uint8_t *p = (uint8_t *) a;
+  p[2 * byte] = val >> CHAR_BIT;
+  a[2 * byte + 1] = val & 0xff;
+}
+
 
 void
 array_and (const array_t *a, const array_t *b, int len, array_t *res)
@@ -298,5 +398,28 @@ array_or_a (const array_t *a, const array_t *b, int len)
   array_t *res = array_create (len, BIT_UNDEF);
   array_or (a, b, len, res);
   return res;
+}
+
+
+void
+array_shift_left (array_t *a, int len, int start, int shift, enum bit_val val)
+{
+  assert (start % 4 == 0 && shift % 4 == 0);
+  assert (start / 4 + shift / 4 <= len * 2);
+  uint8_t *p = (uint8_t *) a;
+  int bytes = 2 * len - start / 4 - shift / 4;
+  memmove (p + start / 4, p + start / 4 + shift / 4, bytes);
+  memset (p + 2 * len - shift / 4, 0x55 * val, shift / 4);
+}
+
+void
+array_shift_right (array_t *a, int len, int start, int shift, enum bit_val val)
+{
+  assert (start % 4 == 0 && shift % 4 == 0);
+  assert (start / 4 + shift / 4 <= len * 2);
+  uint8_t *p = (uint8_t *) a;
+  int bytes = 2 * len - start / 4 - shift / 4;
+  memmove (p + start / 4 + shift / 4, p + start / 4, bytes);
+  memset (p + start / 4, 0x55 * val, shift / 4);
 }
 

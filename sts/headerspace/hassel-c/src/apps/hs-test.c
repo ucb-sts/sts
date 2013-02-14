@@ -1,3 +1,11 @@
+/*
+  Copyright 2012, Stanford University. This file is licensed under GPL v2 plus
+  a special exception, as described in included LICENSE_EXCEPTION.txt.
+
+  Author: mchang@cs.stanford.com (Michael Chang)
+          peyman.kazemian@gmail.com (Peyman Kazemian)
+*/
+
 #include "hs.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -80,8 +88,8 @@ hs_test (void)
   hs_free (b);
 
   a = hs_create (1);
-  hs_add (a, array_from_str ("1xxxxxxx"));
-  hs_add (a, array_from_str ("xxxxxxx1"));
+  hs_add (a, array_from_str ("11111111"));
+  //hs_add (a, array_from_str ("xxxxxxx1"));
   hs_diff (a, arr);
   hs_print (a);
   hs_comp_diff (a);
@@ -95,9 +103,17 @@ hs_test (void)
 int
 main (void)
 {
-  printf ("%s\n", array_to_str (array_from_str ("11111111,00000000"), 2, true));
   //array_test ();
-  hs_test ();
+  array_t *a = array_from_str ("1000xxxx,11110000");
+  char *s = array_to_str (a, 2, false);
+  printf ("Before: %s\n", s);
+  free (s);
+  array_shift_left (a, 2, 4, 8, BIT_X);
+  s = array_to_str (a, 2, false);
+  printf ("After: %s\n", s);
+  free (s);
+  array_free (a);
+  //hs_test ();
   return 0;
 }
 

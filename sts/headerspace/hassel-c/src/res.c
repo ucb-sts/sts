@@ -1,3 +1,11 @@
+/*
+  Copyright 2012, Stanford University. This file is licensed under GPL v2 plus
+  a special exception, as described in included LICENSE_EXCEPTION.txt.
+
+  Author: mchang@cs.stanford.com (Michael Chang)
+          peyman.kazemian@gmail.com (Peyman Kazemian)
+*/
+
 #include "res.h"
 #include "data.h"
 #include "tf.h"
@@ -66,6 +74,7 @@ res_print (const struct res *res)
   printf ("\n");
 }
 
+
 struct res *
 res_extend (const struct res *src, const struct hs *hs, uint32_t port,
             bool append)
@@ -88,6 +97,7 @@ res_rule_add (struct res *res, const struct tf *tf, int rule)
   res->rules.arr[res->rules.cur++] = tmp;
 }
 
+
 /* Won't free structs with refs, but next pointers will be NULLed. */
 void
 list_res_free (struct list_res *l)
