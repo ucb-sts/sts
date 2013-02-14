@@ -15,7 +15,7 @@ from tests.unit.sts.event_dag_test import MockInternalEvent
 from tests.unit.sts.mcs_finder_test import MockInputEvent
 from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import Replayer, MCSFinder
-from sts.topology import FatTree, PatchPanel, MeshTopology
+from sts.topology import FatTree, MeshTopology
 from sts.simulation_state import Simulation, SimulationConfig
 from sts.replay_event import Event, InternalEvent, InputEvent
 from sts.event_dag import EventDag

@@ -257,7 +257,6 @@ class MCSFinder(ControlFlow):
     # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
     replayer = Replayer(self.simulation_cfg, new_dag,
                         wait_on_deterministic_values=self.wait_on_deterministic_values,
-                        #auto_permit_dp_events=True,
                         **self.kwargs)
     simulation = replayer.simulate()
     self._track_new_internal_events(simulation, replayer)
@@ -267,6 +266,23 @@ class MCSFinder(ControlFlow):
     violations = self.invariant_check(simulation)
     simulation.clean_up()
     return violations
+
+  def _optimize_event_dag(self):
+    ''' Employs domain knowledge of event classes to reduce the size of event dag '''
+    event_types = [TrafficInjection, DataplaneDrop, SwitchFailure,
+                   SwitchRecovery, LinkFailure, LinkRecovery, HostMigration,
+                   ControllerFailure, ControllerRecovery, PolicyChange, ControlChannelBlock,
+                   ControlChannelUnblock]
+    for event_type in event_types:
+      pruned = [e for e in self.dag.input_events if not isinstance(e, event_type)]
+      if len(pruned)==len(self.dag.input_events):
+        self.log("\t** No events pruned for event type %s. Next!" % event_type)
+        continue
+      pruned_dag = self.dag.input_complement(pruned)
+      violations = self.replay(pruned_dag)
+      if violations != []:
+        self.log("\t** VIOLATION for pruning event type %s! Resizing original dag" % event_type)
+        self.dag = pruned_dag
 
   def _track_new_internal_events(self, simulation, replayer):
     ''' Pre: simulation must have been run through a replay'''
