@@ -125,14 +125,12 @@ class Replayer(ControlFlow):
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()
 
-    self.interrupted = False
     old_interrupt = None
 
     def interrupt(sgn, frame):
       msg.interactive("Interrupting replayer, dropping to console (press ^C again to terminate)")
       signal.signal(signal.SIGINT, self.old_interrupt)
       self.old_interrupt = None
-      self.interrupted = True
       raise KeyboardInterrupt()
     self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
 
@@ -152,12 +150,9 @@ class Replayer(ControlFlow):
           event_scheduler.schedule(event)
           self.increment_round()
         except KeyboardInterrupt as e:
-          if self.interrupted:
-            interactive = Interactive(self.simulation_cfg)
-            interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
-            self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
-          else:
-            raise e
+          interactive = Interactive(self.simulation_cfg)
+          interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
+          self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
     finally:
       if self.old_interrupt:
         signal.signal(signal.SIGINT, self.old_interrupt)
