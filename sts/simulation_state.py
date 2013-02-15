@@ -116,11 +116,11 @@ class SimulationConfig(object):
         controllers.append(controller)
       return ControllerManager(controllers)
 
-    def instantiate_topology():
+    def instantiate_topology(create_io_worker):
       '''construct a clean topology object from topology_class and
       topology_params'''
       # If you want to shoot yourself in the foot, feel free :)
-      topology = eval("%s(%s)" %
+      topology = eval("%s(%s,create_io_worker=create_io_worker)" %
                       (self._topology_class.__name__,
                        self._topology_params))
       return topology
@@ -131,7 +131,7 @@ class SimulationConfig(object):
     sync_connection_manager = STSSyncConnectionManager(io_master,
                                                        sync_callback)
     controller_manager = boot_controllers(sync_connection_manager)
-    topology = instantiate_topology()
+    topology = instantiate_topology(io_master.create_worker_for_socket)
     patch_panel = self._patch_panel_class(topology.switches, topology.hosts,
                                           topology.get_connected_port)
     god_scheduler = GodScheduler()

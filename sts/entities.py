@@ -8,14 +8,26 @@ from pox.openflow.nx_software_switch import NXSoftwareSwitch
 from pox.openflow.flow_table import FlowTableModification
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
+import pox.lib.packet.ethernet as eth
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
 from itertools import count
+from pox.lib.addresses import EthAddr, IPAddr
 
 import logging
 import os
+import socket
+import subprocess
+import fcntl
+import struct
 import re
 import pickle
+import sys
+
+from pox.lib.addresses import EthAddr
+from os import geteuid
+from exceptions import EnvironmentError
+from platform import system
 
 class DeferredOFConnection(OFConnection):
   def __init__(self, io_worker, cid, dpid, god_scheduler):
@@ -303,15 +315,160 @@ class Host (EventMixin):
     # Hack
     return self.name
 
-  # Currently only used by interactive
-  def hid(self):
-    return self.hid
-
   def __str__(self):
     return self.name
 
   def __repr__(self):
     return "Host(%d)" % self.hid
+
+class NamespaceHost(Host):
+  '''
+  A host that launches a process in a separate namespace process.
+
+  '''
+  ETH_P_ALL = 3                     # from linux/if_ether.h
+
+  def __init__(self, ip_addr_str, create_io_worker, name="", cmd="xterm"):
+    '''
+    - ip_addr_str must be a string! not a IPAddr object
+    - cmd: a string of the command to execute in the separate namespace
+      The default is "xterm", which opens up a new terminal window.
+    '''
+    self.hid = self._hids.next()
+    self.socket = None
+    self.guest = None
+    self.guest_eth_addr = None
+    self.guest_device = None
+    self._launch_namespace(cmd, ip_addr_str, create_io_worker)
+    self.interfaces = [HostInterface(self.guest_eth_addr, IPAddr(ip_addr_str))]
+    if name == "":
+      name = "host:" + ip_addr_str
+    self.name = name
+
+  def _launch_namespace(self, cmd, ip_addr_str, create_io_worker):
+    '''
+    Set up and launch cmd in a new network namespace.
+
+    Returns a tuple of the (socket, Popen object of unshared project in netns, EthAddr of guest device).
+
+    This method uses functionality that requires CAP_NET_ADMIN capabilites. This
+    means that the calling method should check that the python process was
+    launched as admin/superuser.
+
+    Parameters:
+      - cmd: the string to launch, in a separate namespace
+    '''
+
+    if system() != 'Linux':
+      raise EnvironmentError('network namespace functionality requires a Linux environment')
+
+    uid = geteuid()
+    if uid != 0:
+      # user must have CAP_NET_ADMIN, which doesn't have to be su, but most often is
+      raise EnvironmentError("superuser privileges required to launch network namespace")
+
+    iface_index = self.hid
+
+    host_device = "heth%d" % (iface_index)
+    guest_device = "geth%d" % (iface_index)
+
+    try:
+      null = open(os.devnull, 'wb') # FIXME(sw): this file is never actually closed
+
+      # Clean up previos network namespaces
+      # (Delete the device if it already exists)
+      for dev in (host_device, guest_device):
+        if subprocess.call(['ip', 'link', 'show', dev], stdout=null, stderr=null) == 0:
+          subprocess.check_call(['ip', 'link', 'del', dev])
+
+      # create a veth pair and set the host end to be promiscuous
+      subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
+      subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
+      # Our end of the veth pair
+      subprocess.check_call(['ip','link','set',host_device,'up'])
+    except subprocess.CalledProcessError:
+      raise # TODO raise a more informative exception
+
+    guest_eth_addr = self.get_eth_address_for_interface(guest_device)
+
+    # make the host-side (STS-side) socket
+    # do this before unshare/fork to make failure/cleanup easier
+    # Make sure we aren't monkeypatched first:
+    if hasattr(socket, "_old_socket"):
+      raise RuntimeError("MonkeyPatched socket! Bailing")
+    s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, self.ETH_P_ALL)
+    # Make sure the buffers are big enough to fit at least one full ethernet
+    # packet
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
+    s.bind((host_device, self.ETH_P_ALL))
+    s.setblocking(0) # set non-blocking
+
+    # all else should have succeeded, so now we fork and unshare for the guest
+    # `ifconfig $ifname set ip $ifaddr netmask 255.255.255.0 up ; xterm`
+    guest = subprocess.Popen(["unshare", "-n", "--", "/bin/bash"],
+                             stdin=subprocess.PIPE)
+
+    # push down the guest device into the netns
+    try:
+      subprocess.check_call(['ip', 'link', 'set', guest_device, 'netns', str(guest.pid)])
+    except subprocess.CalledProcessError:
+      # Failed to push down guest side of veth pair
+      s.close()
+      raise # TODO raise a more informative exception
+
+    # Set the IP address of the virtual interface
+    # TODO(cs): currently failing with the following error:
+    #   set: Host name lookup failure
+    #   ifconfig: `--help' gives usage information.
+    # I think we may need to add an entry to /etc/hosts before invoking
+    # ifconfig
+    # For now, just force the user to configure it themselves in the xterm
+    #guest.communicate("ifconfig %s set ip %s netmask 255.255.255.0 up" %
+    #                  (guest_device,ip_addr_str))
+    # Send the command
+    guest.communicate(cmd)
+
+    self.socket = s
+    # Set up an io worker for our end of the socket
+    self.io_worker = create_io_worker(self.socket)
+    self.io_worker.set_receive_handler(self.send)
+    self.guest = guest
+    self.guest_eth_addr = guest_eth_addr
+    self.guest_device = guest_device
+
+  @staticmethod
+  def get_eth_address_for_interface(ifname):
+    '''Returns an EthAddr object from the interface specified by the argument.
+
+    interface is a string, commonly eth0, wlan0, lo.'''
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    info = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('256s', ifname[:15]))
+    return EthAddr(''.join(['%02x:' % ord(char) for char in info[18:24]])[:-1])
+
+  def send(self, io_worker):
+    message = io_worker.peek_receive_buf()
+    # Create an ethernet packet
+    # TODO(cs): this assumes that the raw socket returns exactly one ethernet
+    # packet. Since ethernet frames do not include length information, the
+    # only way to correctly handle partial packets would be to get access to
+    # framing information. Should probably look at what Mininet does.
+    packet = eth.ethernet(raw=message)
+    if not packet.parsed:
+      return
+    io_worker.consume_receive_buf(packet.hdr_len + packet.payload_len)
+    super(NamespaceHost, self).send(packet)
+
+  def receive(self, interface, packet):
+    '''
+    Process an incoming packet from a switch
+
+    Called by PatchPanel
+    '''
+    self.log.info("received packet on interface %s: %s. Passing to netns" %
+                  (interface.name, str(packet)))
+    self.io_worker.send(packet.pack())
+
 
 class Controller(object):
   '''Encapsulates the state of a running controller.'''
