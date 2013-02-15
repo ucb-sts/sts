@@ -8,6 +8,7 @@ from pox.openflow.nx_software_switch import NXSoftwareSwitch
 from pox.openflow.flow_table import FlowTableModification
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
+import pox.lib.packet.ethernet as eth
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
 from itertools import count
@@ -329,15 +330,23 @@ class NamespaceHost(Host):
   A host that launches a process in a separate namespace process.
   '''
 
-  def __init__(self, interfaces, name="", cmd="xterm"):
+  def __init__(self, ip_addr_str, create_io_worker, name="", cmd="xterm"):
     '''
+    - ip_addr_str must be a string! not a IpAddr object
     - cmd: a string of the command to execute in the separate namespace
       The default is "xterm", which opens up a new terminal window.
     '''
-    super(NamespaceHost, self).__init__(interfaces, name)
-    self._launch_namespace(cmd)
+    self.socket = None
+    self.guest = None
+    self.guest_eth_addr = None
+    self.guest_device = None
+    self._launch_namespace(cmd, ip_addr_str, create_io_worker)
+    self.interfaces = [HostInterface(self.guest_eth_addr, ip_addr_str)]
+    if name == "":
+      name = "host:" + ip_addr_str
+    super(NamespaceHost, self).__init__(self.interfaces, name=name)
 
-  def _launch_namespace(cmd):
+  def _launch_namespace(self, cmd, ip_addr, create_io_worker):
     '''
     Set up and launch cmd in a new network namespace.
 
@@ -367,28 +376,40 @@ class NamespaceHost(Host):
     try:
       null = open(os.devnull, 'wb') # FIXME(sw): this file is never actually closed
 
+      # Clean up previos network namespaces
+      # (Delete the device if it already exists)
       for dev in (host_device, guest_device):
         if subprocess.call(['ip', 'link', 'show', dev], stdout=null, stderr=sys.stderr) == 0:
-          # Delete the device if it already exists in case cleanup was bad previously
           subprocess.check_call(['ip', 'link', 'del', dev])
 
       # create a veth pair and set the host end to be promiscuous
       subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
       subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
+      # Our end of the veth pair
       subprocess.check_call(['ip','link','set',host_device,'up'])
     except subprocess.CalledProcessError:
       raise # TODO raise a more informative exception
 
-    guest_eth_addr = get_eth_address_for_interface(guest_device)
+    guest_eth_addr = self.get_eth_address_for_interface(guest_device)
 
-    # make the host-side socket
+    # make the host-side (STS-side) socket
     # do this before unshare/fork to make failure/cleanup easier
+    # Make sure we aren't monkeypatched first:
+    if hasattr(socket, "_old_socket"):
+      raise RuntimeError("MonkeyPatched socket! Bailing")
     s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, ETH_P_ALL)
+    # Make sure the buffers are big enough to fit at least one full ethernet
+    # packet
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
     s.bind((host_device, ETH_P_ALL))
     s.setblocking(0) # set non-blocking
 
     # all else should have succeeded, so now we fork and unshare for the guest
-    guest = subprocess.Popen(["unshare", "-n", "--"] + cmd.split())
+    # `ifconfig $ifname set ip $ifaddr netmask 255.255.255.0 up ; xterm`
+    guest = subprocess.Popen(["unshare", "-n", "--", "ifconfig", guest_device,
+                              "set", "ip", ip_addr_str, "netmask",
+                              "255.255.255.0", "up", ";"] + cmd.split())
 
     # push down the guest device into the netns
     try:
@@ -398,7 +419,13 @@ class NamespaceHost(Host):
       s.close()
       raise # TODO raise a more informative exception
 
-    # TODO(sw): save relevant state (s, guest, guest_eth_addr, guest_device)
+    self.socket = s
+    # Set up an io worker for our end of the socket
+    self.io_worker = create_socket(self.socket)
+    self.io_worker.set_receive_handler(self.send)
+    self.guest = guest
+    self.guest_eth_addr = guest_eth_addr
+    self.guest_device = guest_device
 
   @staticmethod
   def get_eth_address_for_interface(ifname):
@@ -408,6 +435,29 @@ class NamespaceHost(Host):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     info = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('256s', ifname[:15]))
     return EthAddr(''.join(['%02x:' % ord(char) for char in info[18:24]])[:-1])
+
+  def send(self, io_worker):
+    message = io_worker.peek_receive_buf()
+    # Create an ethernet packet
+    # TODO(cs): this assumes that the raw socket returns exactly one ethernet
+    # packet. Since ethernet frames do not include length information, the
+    # only way to correctly handle partial packets would be to get access to
+    # framing information. Should probably look at what Mininet does.
+    packet = eth.ethernet(raw=message)
+    if not packet.parsed:
+      return
+    io_worker.consume_receive_buf(packet.hdr_len + packet.payload_len)
+    super(NamespaceHost, self).send(packet)
+
+  def receive(self, interface, packet):
+    '''
+    Process an incoming packet from a switch
+
+    Called by PatchPanel
+    '''
+    self.log.info("received packet on interface %s: %s. Passing to netns" %
+                  (interface.name, str(packet)))
+    self.io_worker.send(packet.pack())
 
 
 class Controller(object):

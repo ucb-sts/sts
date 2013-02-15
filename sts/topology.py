@@ -17,7 +17,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
 '''
 
 from sts.fingerprints.messages import DPFingerprint
-from entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink
+from entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink, NamespaceHost
 from pox.openflow.software_switch import DpPacketOut, SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
@@ -89,6 +89,25 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
   access_links = [ AccessLink(host, interface, switch, get_switch_port(switch))
                    for interface, switch in interface_switch_pairs ]
   return (host, access_links)
+
+def create_netns_host(create_io_worker, ingress_switch,
+                      ip_addr_str="",
+                      get_switch_port=get_switchs_host_port, cmd='xterm'):
+  ''' Create a host with a process running in a separate network namespace.
+  The netns can only communicate with a single interface (for now) because it must
+  correspond to the physical interface in the network namespace guest.
+
+  Because there is only 1 logical interface possible, this means that there can only be
+  1 switch as well.
+
+  - ip_addr_str must be a string! not a IpAddr object
+  '''
+  if ip_addr_str == "":
+    ip_addr_str = "123.123.%d.%d" % (ingress_switch.dpid, get_switch_port(ingress_switch).port_no)
+  host = NamespaceHost(ip_addr_str, create_io_worker, cmd=cmd)
+  interface = host.interfaces[0]
+  access_link = AccessLink(host, interface, ingress_switch, get_switch_port(ingress_switch))
+  return (host, [access_link]) # single item list to be consistent with create_host
 
 class PatchPanel(object):
   """ A Patch panel. Contains a bunch of wires to forward packets between switches.
@@ -331,7 +350,8 @@ class Topology(object):
   Abstract base class of all topology types. Wraps the edges and vertices of
   the network.
   '''
-  def __init__(self):
+  def __init__(self, create_io_worker=None):
+    self.create_io_worker = create_io_worker
     self.dpid2switch = {}
     self.hosts = []
     self.hid2host = {}
@@ -373,7 +393,6 @@ class Topology(object):
     if hid not in self.hid2host:
       raise RuntimeError("unknown hid %d" % hid)
     return self.hid2host[hid]
-
 
   @property
   def live_switches(self):
@@ -513,15 +532,17 @@ class Topology(object):
     return topology
 
 class MeshTopology(Topology):
-  def __init__(self, num_switches=3):
+  def __init__(self, num_switches=3, create_io_worker=None, netns_hosts=False):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers
 
     Optional argument(s):
       - num_switches. The total number of switches to include in the mesh
+      - netns_switches. Whether to create network namespace hosts instead of
+        normal hosts.
     '''
-    Topology.__init__(self)
+    Topology.__init__(self, create_io_worker=create_io_worker)
 
     # Every switch has a link to every other switch + 1 host,
     # for N*(N-1)+N = N^2 total ports
@@ -531,7 +552,11 @@ class MeshTopology(Topology):
     switches = [ create_switch(switch_id, ports_per_switch)
                   for switch_id in range(1, num_switches+1) ]
     self._populate_dpid2switch(switches)
-    host_access_link_pairs = [ create_host(switch) for switch in self.switches ]
+    if netns_hosts:
+      host_access_link_pairs = [ create_netns_host(create_io_worker, switch)
+                                 for switch in self.switches ]
+    else:
+      host_access_link_pairs = [ create_host(switch) for switch in self.switches ]
     self.hosts = map(lambda pair: pair[0], host_access_link_pairs)
     self.hid2host = { h.hid : h for h in self.hosts }
     access_link_list_list = map(lambda pair: pair[1], host_access_link_pairs)
@@ -577,10 +602,10 @@ class MeshTopology(Topology):
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
-  def __init__(self, num_pods=4):
+  def __init__(self, num_pods=4, create_io_worker=None):
     if num_pods < 2:
       raise "Can't handle Fat Trees with less than 2 pods"
-    Topology.__init__(self)
+    Topology.__init__(self, create_io_worker=create_io_worker)
     self.hosts = []
     self.cores = []
     self.aggs = []
