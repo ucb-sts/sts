@@ -12,7 +12,7 @@ import pox.lib.packet.ethernet as eth
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
 from itertools import count
-from pox.lib.addresses import EthAddr
+from pox.lib.addresses import EthAddr, IPAddr
 
 import logging
 import os
@@ -315,10 +315,6 @@ class Host (EventMixin):
     # Hack
     return self.name
 
-  # Currently only used by interactive
-  def hid(self):
-    return self.hid
-
   def __str__(self):
     return self.name
 
@@ -328,25 +324,28 @@ class Host (EventMixin):
 class NamespaceHost(Host):
   '''
   A host that launches a process in a separate namespace process.
+
   '''
+  ETH_P_ALL = 3                     # from linux/if_ether.h
 
   def __init__(self, ip_addr_str, create_io_worker, name="", cmd="xterm"):
     '''
-    - ip_addr_str must be a string! not a IpAddr object
+    - ip_addr_str must be a string! not a IPAddr object
     - cmd: a string of the command to execute in the separate namespace
       The default is "xterm", which opens up a new terminal window.
     '''
+    self.hid = self._hids.next()
     self.socket = None
     self.guest = None
     self.guest_eth_addr = None
     self.guest_device = None
     self._launch_namespace(cmd, ip_addr_str, create_io_worker)
-    self.interfaces = [HostInterface(self.guest_eth_addr, ip_addr_str)]
+    self.interfaces = [HostInterface(self.guest_eth_addr, IPAddr(ip_addr_str))]
     if name == "":
       name = "host:" + ip_addr_str
-    super(NamespaceHost, self).__init__(self.interfaces, name=name)
+    self.name = name
 
-  def _launch_namespace(self, cmd, ip_addr, create_io_worker):
+  def _launch_namespace(self, cmd, ip_addr_str, create_io_worker):
     '''
     Set up and launch cmd in a new network namespace.
 
@@ -379,7 +378,7 @@ class NamespaceHost(Host):
       # Clean up previos network namespaces
       # (Delete the device if it already exists)
       for dev in (host_device, guest_device):
-        if subprocess.call(['ip', 'link', 'show', dev], stdout=null, stderr=sys.stderr) == 0:
+        if subprocess.call(['ip', 'link', 'show', dev], stdout=null, stderr=null) == 0:
           subprocess.check_call(['ip', 'link', 'del', dev])
 
       # create a veth pair and set the host end to be promiscuous
@@ -397,19 +396,18 @@ class NamespaceHost(Host):
     # Make sure we aren't monkeypatched first:
     if hasattr(socket, "_old_socket"):
       raise RuntimeError("MonkeyPatched socket! Bailing")
-    s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, ETH_P_ALL)
+    s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, self.ETH_P_ALL)
     # Make sure the buffers are big enough to fit at least one full ethernet
     # packet
     s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
-    s.bind((host_device, ETH_P_ALL))
+    s.bind((host_device, self.ETH_P_ALL))
     s.setblocking(0) # set non-blocking
 
     # all else should have succeeded, so now we fork and unshare for the guest
     # `ifconfig $ifname set ip $ifaddr netmask 255.255.255.0 up ; xterm`
-    guest = subprocess.Popen(["unshare", "-n", "--", "ifconfig", guest_device,
-                              "set", "ip", ip_addr_str, "netmask",
-                              "255.255.255.0", "up", ";"] + cmd.split())
+    guest = subprocess.Popen(["unshare", "-n", "--", "/bin/bash"],
+                             stdin=subprocess.PIPE)
 
     # push down the guest device into the netns
     try:
@@ -419,9 +417,21 @@ class NamespaceHost(Host):
       s.close()
       raise # TODO raise a more informative exception
 
+    # Set the IP address of the virtual interface
+    # TODO(cs): currently failing with the following error:
+    #   set: Host name lookup failure
+    #   ifconfig: `--help' gives usage information.
+    # I think we may need to add an entry to /etc/hosts before invoking
+    # ifconfig
+    # For now, just force the user to configure it themselves in the xterm
+    #guest.communicate("ifconfig %s set ip %s netmask 255.255.255.0 up" %
+    #                  (guest_device,ip_addr_str))
+    # Send the command
+    guest.communicate(cmd)
+
     self.socket = s
     # Set up an io worker for our end of the socket
-    self.io_worker = create_socket(self.socket)
+    self.io_worker = create_io_worker(self.socket)
     self.io_worker.set_receive_handler(self.send)
     self.guest = guest
     self.guest_eth_addr = guest_eth_addr
