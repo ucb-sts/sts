@@ -332,73 +332,73 @@ class NamespaceHost(Host):
   def __init__(self, interfaces, name="", cmd="xterm"):
     '''
     - cmd: a string of the command to execute in the separate namespace
-      The default is "xterm".
+      The default is "xterm", which opens up a new terminal window.
     '''
     super(NamespaceHost, self).__init__(interfaces, name)
     self._launch_namespace(cmd)
 
   def _launch_namespace(cmd):
     '''
-    - cmd: the string to launch, in a separate namespace
+    Set up and launch cmd in a new network namespace.
+
+    Returns a tuple of the (socket, Popen object of unshared project in netns, EthAddr of guest device).
+
+    This method uses functionality that requires CAP_NET_ADMIN capabilites. This
+    means that the calling method should check that the python process was
+    launched as admin/superuser.
+
+    Parameters:
+      - cmd: the string to launch, in a separate namespace
     '''
-    '''
-  Set up and launch cmd in a new network namespace.
 
-  Returns a tuple of the (socket, Popen object of unshared project in netns, EthAddr of guest device).
+    if system() != 'Linux':
+      raise EnvironmentError('network namespace functionality requires a Linux environment')
 
-  This method uses functionality that requires CAP_NET_ADMIN capabilites. This
-  means that the calling method should check that the python process was
-  launched as admin/superuser.
-  '''
+    uid = geteuid()
+    if uid != 0:
+      # user must have CAP_NET_ADMIN, which doesn't have to be su, but most often is
+      raise EnvironmentError("superuser privileges required to launch network namespace")
 
-  if system() != 'Linux':
-    raise EnvironmentError('network namespace functionality requires a Linux environment')
+    iface_index = self.hid
 
-  uid = geteuid()
-  if uid != 0:
-    # user must have CAP_NET_ADMIN, which doesn't have to be su, but most often is
-    raise EnvironmentError("superuser privileges required to launch network namespace")
+    host_device = "heth%d" % (iface_index)
+    guest_device = "geth%d" % (iface_index)
 
-  iface_index = self.hid
+    try:
+      null = open(os.devnull, 'wb') # FIXME(sw): this file is never actually closed
 
-  host_device = "heth%d" % (iface_index)
-  guest_device = "geth%d" % (iface_index)
+      for dev in (host_device, guest_device):
+        if subprocess.call(['ip', 'link', 'show', dev], stdout=null, stderr=sys.stderr) == 0:
+          # Delete the device if it already exists in case cleanup was bad previously
+          subprocess.check_call(['ip', 'link', 'del', dev])
 
-  try:
-    null = open(os.devnull, 'wb') # FIXME(sw): this file is never actually closed
+      # create a veth pair and set the host end to be promiscuous
+      subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
+      subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
+      subprocess.check_call(['ip','link','set',host_device,'up'])
+    except subprocess.CalledProcessError:
+      raise # TODO raise a more informative exception
 
-    for dev in (host_device, guest_device):
-      if subprocess.call(['ip', 'link', 'show', dev], stdout=null, stderr=sys.stderr) == 0:
-        # Delete the device if it already exists in case cleanup was bad previously
-        subprocess.check_call(['ip', 'link', 'del', dev])
+    guest_eth_addr = get_eth_address_for_interface(guest_device)
 
-    # create a veth pair and set the host end to be promiscuous
-    subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
-    subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
-    subprocess.check_call(['ip','link','set',host_device,'up'])
-  except subprocess.CalledProcessError:
-    raise # TODO raise a more informative exception
+    # make the host-side socket
+    # do this before unshare/fork to make failure/cleanup easier
+    s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, ETH_P_ALL)
+    s.bind((host_device, ETH_P_ALL))
+    s.setblocking(0) # set non-blocking
 
-  guest_eth_addr = get_eth_address_for_interface(guest_device)
+    # all else should have succeeded, so now we fork and unshare for the guest
+    guest = subprocess.Popen(["unshare", "-n", "--"] + cmd.split())
 
-  # make the host-side socket
-  # do this before unshare/fork to make failure/cleanup easier
-  s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, ETH_P_ALL)
-  s.bind((host_device, ETH_P_ALL))
-  s.setblocking(0) # set non-blocking
+    # push down the guest device into the netns
+    try:
+      subprocess.check_call(['ip', 'link', 'set', guest_device, 'netns', str(guest.pid)])
+    except subprocess.CalledProcessError:
+      # Failed to push down guest side of veth pair
+      s.close()
+      raise # TODO raise a more informative exception
 
-  # all else should have succeeded, so now we fork and unshare for the guest
-  guest = subprocess.Popen(["unshare", "-n", "--"] + cmd.split())
-
-  # push down the guest device into the netns
-  try:
-    subprocess.check_call(['ip', 'link', 'set', guest_device, 'netns', str(guest.pid)])
-  except subprocess.CalledProcessError:
-    # Failed to push down guest side of veth pair
-    s.close()
-    raise # TODO raise a more informative exception
-
-  # TODO(sw): save relevant state (s, guest, guest_eth_addr, guest_device)
+    # TODO(sw): save relevant state (s, guest, guest_eth_addr, guest_device)
 
   @staticmethod
   def get_eth_address_for_interface(ifname):
