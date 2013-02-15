@@ -288,12 +288,12 @@ def invoke_hassel_c(start_port, edge_ports):
   if type(edge_ports[0]) != int:
     edge_ports = map(lambda access_link: get_uniq_port_id(access_link.switch, access_link.switch_port), edge_ports)
 
-  # TODO(cs): just noticed that invoking
+  edge_ports.remove(start_port)
+  # Note that invoking
   #  `sts 200002 200002 1000002` returns nothing, whereas
   #  `sts 200002 100002 2000002` returns something.
-  # Why should the order of the out ports matter? Need to check that
-  # hassel-c is actually computing all paths for all out ports
-  edge_ports.remove(start_port)
+  # It appears that hassel-c assumes that the out ports are sorted.
+  edge_ports.sort()
 
   log.debug("port %d is being checked" % start_port)
 
