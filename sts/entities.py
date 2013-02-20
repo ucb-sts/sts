@@ -125,6 +125,12 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
 
     return connected_to_at_least_one
 
+  def send(self, *args, **kwargs):
+    if self.failed:
+      self.log.warn("Currently down. Dropping send()")
+    else:
+      super(FuzzSoftwareSwitch, self).send(*args, **kwargs)
+
   def get_connection(self, cid):
     if cid not in self.cid2connection:
       raise ValueError("No such connection %s" % str(cid))
