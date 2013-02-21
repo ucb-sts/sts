@@ -49,6 +49,7 @@ class Event(object):
       time = SyncTime.now()
     self.label = label
     Event._all_label_ids.add(int(label[1:]))
+    self.round = round
     self.time = time
     # Add on dependent labels to appease log_processing.superlog_parser.
     # TODO(cs): Replayer shouldn't depend on superlog_parser

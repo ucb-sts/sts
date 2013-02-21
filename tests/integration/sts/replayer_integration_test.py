@@ -28,10 +28,10 @@ class ReplayerTest(unittest.TestCase):
     ''' Returns the file. Make sure to close afterwards! '''
     superlog = open(self.tmpsuperlog, 'w')
     e1 = str('''{"dependent_labels": ["e2"], "start_dpid": 8, "class": "LinkFailure",'''
-             ''' "start_port_no": 3, "end_dpid": 15, "end_port_no": 2, "label": "e1", "time": [0,0]}''')
+             ''' "start_port_no": 3, "end_dpid": 15, "end_port_no": 2, "label": "e1", "time": [0,0], "round": 0}''')
     superlog.write(e1 + '\n')
     e2 = str('''{"dependent_labels": [], "start_dpid": 8, "class": "LinkRecovery",'''
-             ''' "start_port_no": 3, "end_dpid": 15, "end_port_no": 2, "label": "e2", "time": [0,0]}''')
+             ''' "start_port_no": 3, "end_dpid": 15, "end_port_no": 2, "label": "e2", "time": [0,0], "round": 0}''')
     superlog.write(e2 + '\n')
     superlog.close()
 
