@@ -95,7 +95,6 @@ class Replayer(ControlFlow):
 
   def increment_round(self):
     msg.event(color.CYAN + ( "Round %d" % self.logical_time) + color.WHITE)
-    pass
 
   def simulate(self, post_bootstrap_hook=None):
     ''' Caller *must* call simulation.clean_up() '''
@@ -137,7 +136,6 @@ class Replayer(ControlFlow):
     try:
       for i, event in enumerate(dag.events):
         try:
-          self.logical_time += 1
           self.compute_interpolated_time(event)
           self.dp_checker.check_dataplane(i, self.simulation)
           if isinstance(event, InputEvent):
@@ -148,7 +146,9 @@ class Replayer(ControlFlow):
           # deadlock (if controller logging is set to blocking) until the
           # timeout occurs
           event_scheduler.schedule(event)
-          self.increment_round()
+          if self.logical_time != event.round:
+            self.logical_time = event.round
+            self.increment_round()
         except KeyboardInterrupt as e:
           interactive = Interactive(self.simulation_cfg)
           interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
