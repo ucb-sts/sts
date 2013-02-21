@@ -42,6 +42,9 @@ def class_with_label_printer(event):
   print (event.label + ' ' + event.__class__.__name__ +
          ' (' + ("prunable" if event.prunable else "unprunable") + ')')
 
+def round_printer(event):
+  print "Round: %d" % event.round
+
 def fingerprint_printer(event):
   fingerprint = None
   if hasattr(event, 'fingerprint'):
