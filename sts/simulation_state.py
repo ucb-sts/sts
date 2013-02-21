@@ -120,9 +120,10 @@ class SimulationConfig(object):
       '''construct a clean topology object from topology_class and
       topology_params'''
       # If you want to shoot yourself in the foot, feel free :)
-      topology = eval("%s(%s,create_io_worker=create_io_worker)" %
+      comma = "" if self._topology_params == "" else ","
+      topology = eval("%s(%s%screate_io_worker=create_io_worker)" %
                       (self._topology_class.__name__,
-                       self._topology_params))
+                       self._topology_params, comma))
       return topology
 
     # Instantiate the pieces needed for Simulation's constructor
