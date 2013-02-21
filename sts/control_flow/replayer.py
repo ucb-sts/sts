@@ -11,7 +11,7 @@ from sts.event_dag import EventDag
 import sts.log_processing.superlog_parser as superlog_parser
 from sts.util.console import color
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
-from sts.util.convenience import find
+from sts.util.convenience import find, find_index
 from sts.topology import BufferedPatchPanel
 
 import signal
@@ -196,8 +196,8 @@ class DataplaneChecker(object):
   ''' Dataplane permits are the default, *unless* they were explicitly dropped in the
   initial run. This class keeps track of whether pending dataplane events should
   be dropped or forwarded during replay'''
-  def __init__(self, event_dag, slop_buffer=7):
-    ''' Consider the position i of a DataplaneDrop in the original
+  def __init__(self, event_dag, slop_buffer=4):
+    ''' Consider the round i of a DataplaneDrop in the original
     event ordering. slop_buffer defines how tolerant we are to differences in
     the position of the correspdonding DataplaneDrop event in the
     pruned run. A slop_buffer of 4 says that we will tolerate the same
@@ -244,12 +244,18 @@ class DataplaneChecker(object):
     self.stats.record_drop(event_fingerprint)
     return True # DataplaneDrop
 
-  def update_window(self, current_event_idx):
+  def update_window(self, current_round):
     ''' Update the current slop buffer ("the dp_events we expect to see") '''
     self.current_dp_fingerprints = []
     self.fingerprint_2_event_idx = {}
-    head_idx = max(current_event_idx - self.slop_buffer, 0)
-    tail_idx = min(current_event_idx + self.slop_buffer, len(self.events))
+    # TODO(cs): O(n) operation
+    head_idx = find_index(lambda e: e.round == current_round - self.slop_buffer,
+                          self.events)
+    head_idx = max(head_idx, 0)
+    tail_idx = find_index(lambda e: e.round == current_round + self.slop_buffer,
+                          self.events)
+    if tail_idx is None:
+      tail_idx = len(self.events)
     for i in xrange(head_idx, tail_idx):
       if (type(self.events[i]) == DataplanePermit or
           type(self.events[i]) == DataplaneDrop):
@@ -257,11 +263,11 @@ class DataplaneChecker(object):
         self.current_dp_fingerprints.append(fingerprint)
         self.fingerprint_2_event_idx[fingerprint] = i
 
-  def check_dataplane(self, current_event_idx, simulation):
+  def check_dataplane(self, current_round, simulation):
     ''' Check dataplane events for before playing then next event.
        - current_event_idx allows us to adjust our current slop buffer
     '''
-    self.update_window(current_event_idx)
+    self.update_window(current_round)
 
     for dp_event in simulation.patch_panel.queued_dataplane_events:
       if self.decide_drop(dp_event):
@@ -282,7 +288,7 @@ class DataplaneCheckerStats(object):
   def __str__(self):
     ''' Warning: not idempotent! '''
     s = ["Expected drops (%d), Actual drops (%d)" % (len(self.expected_drops),
-                                                    len(self.actual_drops)) ]
+                                                     len(self.actual_drops)) ]
     s.append("Missed Drops (expected if TrafficInjections pruned):")
     for drop in self.expected_drops:
       if len(self.actual_drops) == 0 or drop != self.actual_drops[0]:
