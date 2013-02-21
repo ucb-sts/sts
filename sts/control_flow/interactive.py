@@ -225,6 +225,7 @@ class Interactive(ControlFlow):
   def _log_input_event(self, event, **kws):
     # TODO(cs): redundant with Fuzzer._log_input_event
     if self._input_logger is not None:
+      event.round = self.logical_time
       self._input_logger.log_input_event(event, **kws)
 
   def init_results(self, results_dir):

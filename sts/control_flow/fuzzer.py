@@ -93,6 +93,7 @@ class Fuzzer(ControlFlow):
         # Tell MCSFinder never to prune this event
         event.prunable = False
 
+      event.round = self.logical_time
       self._input_logger.log_input_event(event, **kws)
 
   def _load_fuzzer_params(self, fuzzer_params_path):

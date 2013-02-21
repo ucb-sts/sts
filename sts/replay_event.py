@@ -36,7 +36,7 @@ class Event(object):
   # Ensure globally unique labels
   _all_label_ids = set()
 
-  def __init__(self, prefix="e", label=None, time=None, dependent_labels=None,
+  def __init__(self, prefix="e", label=None, round=-1, time=None, dependent_labels=None,
                prunable=True):
     if label is None:
       label_id = Event._label_gen.next()
@@ -104,9 +104,9 @@ class InternalEvent(Event):
   '''An InternalEvent is one that happens within the controller(s) under
   simulation. Derivatives of this class verify that the internal event has
   occured in its proceed method before it returns.'''
-  def __init__(self, label=None, time=None, timeout_disallowed=False,
+  def __init__(self, label=None, round=-1, time=None, timeout_disallowed=False,
                prunable=False):
-    super(InternalEvent, self).__init__(prefix='i', label=label, time=time,
+    super(InternalEvent, self).__init__(prefix='i', label=label, round=round, time=time,
                                         prunable=prunable)
     self.timeout_disallowed = timeout_disallowed
 
@@ -128,9 +128,9 @@ class InputEvent(Event):
   This class also conceptually models (because it is equivalent to) 'external
   events', which is a term that may be used elsewhere in documentation or
   code.'''
-  def __init__(self, label=None, time=None, dependent_labels=None,
+  def __init__(self, label=None, round=-1, time=None, dependent_labels=None,
                prunable=True):
-    super(InputEvent, self).__init__(prefix='e', label=label, time=time,
+    super(InputEvent, self).__init__(prefix='e', label=label, round=round, time=time,
                                      dependent_labels=dependent_labels,
                                      prunable=prunable)
 
@@ -146,14 +146,15 @@ def assert_fields_exist(json_hash, *args):
       raise ValueError("Field %s not in json_hash %s" % (field, str(json_hash)))
 
 def extract_label_time(json_hash):
-  assert_fields_exist(json_hash, 'label', 'time')
+  assert_fields_exist(json_hash, 'label', 'time', 'round')
   label = json_hash['label']
   time = SyncTime(json_hash['time'][0], json_hash['time'][1])
-  return (label, time)
+  round = json_hash['round']
+  return (label, time, round)
 
 class SwitchFailure(InputEvent):
-  def __init__(self, dpid, label=None, time=None):
-    super(SwitchFailure, self).__init__(label=label, time=time)
+  def __init__(self, dpid, label=None, round=-1, time=None):
+    super(SwitchFailure, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
 
   def proceed(self, simulation):
@@ -163,18 +164,18 @@ class SwitchFailure(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'dpid')
     dpid = int(json_hash['dpid'])
-    return SwitchFailure(dpid, label=label, time=time)
+    return SwitchFailure(dpid, label=label, round=round, time=time)
 
   @property
   def fingerprint(self):
     return (self.__class__.__name__,self.dpid,)
 
 class SwitchRecovery(InputEvent):
-  def __init__(self, dpid, label=None, time=None):
-    super(SwitchRecovery, self).__init__(label=label, time=time)
+  def __init__(self, dpid, label=None, round=-1, time=None):
+    super(SwitchRecovery, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
 
   def proceed(self, simulation):
@@ -192,10 +193,10 @@ class SwitchRecovery(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'dpid')
     dpid = int(json_hash['dpid'])
-    return SwitchRecovery(dpid, label=label, time=time)
+    return SwitchRecovery(dpid, round=round, label=label, time=time)
 
   @property
   def fingerprint(self):
@@ -210,8 +211,8 @@ def get_link(link_event, simulation):
 
 class LinkFailure(InputEvent):
   def __init__(self, start_dpid, start_port_no, end_dpid, end_port_no,
-               label=None, time=None):
-    super(LinkFailure, self).__init__(label=label, time=time)
+               label=None, round=-1, time=None):
+    super(LinkFailure, self).__init__(label=label, round=round, time=time)
     self.start_dpid = start_dpid
     self.start_port_no = start_port_no
     self.end_dpid = end_dpid
@@ -224,7 +225,7 @@ class LinkFailure(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'start_dpid', 'start_port_no', 'end_dpid',
                         'end_port_no')
     start_dpid = int(json_hash['start_dpid'])
@@ -232,7 +233,7 @@ class LinkFailure(InputEvent):
     end_dpid = int(json_hash['end_dpid'])
     end_port_no = int(json_hash['end_port_no'])
     return LinkFailure(start_dpid, start_port_no, end_dpid, end_port_no,
-                       label=label, time=time)
+                       round=round, label=label, time=time)
 
   @property
   def fingerprint(self):
@@ -242,8 +243,8 @@ class LinkFailure(InputEvent):
 
 class LinkRecovery(InputEvent):
   def __init__(self, start_dpid, start_port_no, end_dpid, end_port_no,
-               label=None, time=None):
-    super(LinkRecovery, self).__init__(label=label, time=time)
+               label=None, round=-1, time=None):
+    super(LinkRecovery, self).__init__(label=label, round=round, time=time)
     self.start_dpid = start_dpid
     self.start_port_no = start_port_no
     self.end_dpid = end_dpid
@@ -256,7 +257,7 @@ class LinkRecovery(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'start_dpid', 'start_port_no', 'end_dpid',
                         'end_port_no')
     start_dpid = int(json_hash['start_dpid'])
@@ -264,7 +265,7 @@ class LinkRecovery(InputEvent):
     end_dpid = int(json_hash['end_dpid'])
     end_port_no = int(json_hash['end_port_no'])
     return LinkRecovery(start_dpid, start_port_no, end_dpid, end_port_no,
-                        label=label, time=time)
+                        round=round, label=label, time=time)
 
   @property
   def fingerprint(self):
@@ -273,8 +274,8 @@ class LinkRecovery(InputEvent):
             self.end_dpid, self.end_port_no)
 
 class ControllerFailure(InputEvent):
-  def __init__(self, controller_id, label=None, time=None):
-    super(ControllerFailure, self).__init__(label=label, time=time)
+  def __init__(self, controller_id, label=None, round=-1, time=None):
+    super(ControllerFailure, self).__init__(label=label, round=round, time=time)
     self.controller_id = controller_id
 
   def proceed(self, simulation):
@@ -284,18 +285,18 @@ class ControllerFailure(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist('controller_id')
     controller_id = json_hash['controller_id']
-    return ControllerFailure(controller_id, label=label, time=time)
+    return ControllerFailure(controller_id, round=round, label=label, time=time)
 
   @property
   def fingerprint(self):
     return (self.__class__.__name__,self.controller_id)
 
 class ControllerRecovery(InputEvent):
-  def __init__(self, controller_id, label=None, time=None):
-    super(ControllerRecovery, self).__init__(label=label, time=time)
+  def __init__(self, controller_id, label=None, round=-1, time=None):
+    super(ControllerRecovery, self).__init__(label=label, round=round, time=time)
     self.controller_id = controller_id
 
   def proceed(self, simulation):
@@ -305,10 +306,10 @@ class ControllerRecovery(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist('controller_id')
     controller_id = json_hash['controller_id']
-    return ControllerFailure(controller_id, label=label, time=time)
+    return ControllerFailure(controller_id, round=round, label=label, time=time)
 
   @property
   def fingerprint(self):
@@ -316,8 +317,8 @@ class ControllerRecovery(InputEvent):
 
 class HostMigration(InputEvent):
   def __init__(self, old_ingress_dpid, old_ingress_port_no,
-               new_ingress_dpid, new_ingress_port_no, host_id, label=None, time=None):
-    super(HostMigration, self).__init__(label=label, time=time)
+               new_ingress_dpid, new_ingress_port_no, host_id, label=None, round=-1, time=None):
+    super(HostMigration, self).__init__(label=label, round=round, time=time)
     self.old_ingress_dpid = old_ingress_dpid
     self.old_ingress_port_no = old_ingress_port_no
     self.new_ingress_dpid = new_ingress_dpid
@@ -333,7 +334,7 @@ class HostMigration(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'old_ingress_dpid', 'old_ingress_port_no',
                         'new_ingress_dpid', 'new_ingress_port_no', 'host_id')
     old_ingress_dpid = int(json_hash['old_ingress_dpid'])
@@ -343,7 +344,7 @@ class HostMigration(InputEvent):
     host_id = json_hash['host_id']
     return HostMigration(old_ingress_dpid, old_ingress_port_no,
                          new_ingress_dpid, new_ingress_port_no,
-                         host_id, label=label, time=time)
+                         host_id, round=round, label=label, time=time)
 
   @property
   def old_location(self):
@@ -360,8 +361,8 @@ class HostMigration(InputEvent):
             self.new_ingress_port_no, self.host_id)
 
 class PolicyChange(InputEvent):
-  def __init__(self, request_type, label=None, time=None):
-    super(PolicyChange, self).__init__(label=label, time=time)
+  def __init__(self, request_type, label=None, round=-1, time=None):
+    super(PolicyChange, self).__init__(label=label, round=round, time=time)
     self.request_type = request_type
 
   def proceed(self, simulation):
@@ -370,14 +371,14 @@ class PolicyChange(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'request_type')
     request_type = json_hash['request_type']
-    return PolicyChange(request_type, label=label, time=time)
+    return PolicyChange(request_type, round=round, label=label, time=time)
 
 class TrafficInjection(InputEvent):
-  def __init__(self, label=None, time=None, prunable=True):
-    super(TrafficInjection, self).__init__(label=label, time=time,
+  def __init__(self, label=None, round=-1, time=None, prunable=True):
+    super(TrafficInjection, self).__init__(label=label, round=round, time=time,
                                            prunable=prunable)
 
   def proceed(self, simulation):
@@ -388,16 +389,16 @@ class TrafficInjection(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     prunable = True
     if 'prunable' in json_hash:
       prunable = json_hash['prunable']
-    return TrafficInjection(label, time, prunable=prunable)
+    return TrafficInjection(label=label, time=time, round=round, prunable=prunable)
 
 class WaitTime(InputEvent):
-  def __init__(self, wait_time, label=None, time=None):
+  def __init__(self, wait_time, label=None, round=-1, time=None):
     ''' wait_time is specified in seconds '''
-    super(WaitTime, self).__init__(label=label, time=time)
+    super(WaitTime, self).__init__(label=label, round=round, time=time)
     self.wait_time = wait_time
 
   def proceed(self, simulation):
@@ -407,15 +408,15 @@ class WaitTime(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'wait_time')
     wait_time = json_hash['wait_time']
-    return WaitTime(wait_time, label=label, time=time)
+    return WaitTime(wait_time, round=round, label=label, time=time)
 
 class CheckInvariants(InputEvent):
-  def __init__(self, fail_on_error=False, label=None, time=None,
+  def __init__(self, fail_on_error=False, label=None, round=-1, time=None,
                invariant_check_name="InvariantChecker.check_correspondence"):
-    super(CheckInvariants, self).__init__(label=label, time=time)
+    super(CheckInvariants, self).__init__(label=label, round=round, time=time)
     self.fail_on_error = fail_on_error
     # For backwards compatbility.. (invariants used to be specified as
     # marshalled functions, not invariant check names)
@@ -466,7 +467,7 @@ class CheckInvariants(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     fail_on_error = False
     if 'fail_on_error' in json_hash:
       fail_on_error = json_hash['fail_on_error']
@@ -480,13 +481,13 @@ class CheckInvariants(InputEvent):
       code = marshal.loads(json_hash['invariant_check'].decode('base64'))
       invariant_check_name = types.FunctionType(code, globals())
 
-    return CheckInvariants(label=label, time=time,
+    return CheckInvariants(label=label, time=time, round=round,
                            fail_on_error=fail_on_error,
                            invariant_check_name=invariant_check_name)
 
 class ControlChannelBlock(InputEvent):
-  def __init__(self, dpid, controller_id, label=None, time=None):
-    super(ControlChannelBlock, self).__init__(label=label, time=time)
+  def __init__(self, dpid, controller_id, label=None, round=-1, time=None):
+    super(ControlChannelBlock, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
     self.controller_id = controller_id
 
@@ -505,15 +506,15 @@ class ControlChannelBlock(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'dpid', 'controller_id')
     dpid = json_hash['dpid']
     controller_id = json_hash['controller_id']
-    return ControlChannelBlock(dpid, controller_id, label=label, time=time)
+    return ControlChannelBlock(dpid, controller_id, round=round, label=label, time=time)
 
 class ControlChannelUnblock(InputEvent):
-  def __init__(self, dpid, controller_id, label=None, time=None):
-    super(ControlChannelUnblock, self).__init__(label=label, time=time)
+  def __init__(self, dpid, controller_id, label=None, round=-1, time=None):
+    super(ControlChannelUnblock, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
     self.controller_id = controller_id
 
@@ -532,15 +533,15 @@ class ControlChannelUnblock(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'dpid', 'controller_id')
     dpid = json_hash['dpid']
     controller_id = json_hash['controller_id']
-    return ControlChannelUnblock(dpid, controller_id, label=label, time=time)
+    return ControlChannelUnblock(dpid, controller_id, round=round, label=label, time=time)
 
 class DataplaneDrop(InputEvent):
-  def __init__(self, fingerprint, label=None, time=None):
-    super(DataplaneDrop, self).__init__(label=label, time=time)
+  def __init__(self, fingerprint, label=None, round=-1, time=None):
+    super(DataplaneDrop, self).__init__(label=label, round=round, time=time)
     if fingerprint[0] != self.__class__.__name__:
       fingerprint = list(fingerprint)
       fingerprint.insert(0, self.__class__.__name__)
@@ -555,10 +556,10 @@ class DataplaneDrop(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
     fingerprint = json_hash['fingerprint']
-    return DataplaneDrop(fingerprint, label=label, time=time)
+    return DataplaneDrop(fingerprint, round=round, label=label, time=time)
 
   def to_json(self):
     fields = dict(self.__dict__)
@@ -569,8 +570,8 @@ class DataplaneDrop(InputEvent):
 
 # TODO(cs): Temporary hack until we figure out determinism
 class LinkDiscovery(InputEvent):
-  def __init__(self, controller_id, link_attrs, label=None, time=None):
-    super(LinkDiscovery, self).__init__(label=label, time=time)
+  def __init__(self, controller_id, link_attrs, label=None, round=-1, time=None):
+    super(LinkDiscovery, self).__init__(label=label, round=round, time=time)
     self.fingerprint = (self.__class__.__name__,
                         controller_id, tuple(link_attrs))
     self.controller_id = controller_id
@@ -583,11 +584,11 @@ class LinkDiscovery(InputEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'controller_id', 'link_attrs')
     controller_id = json_hash['controller_id']
     link_attrs = json_hash['link_attrs']
-    return LinkDiscovery(controller_id, link_attrs, label=label, time=time)
+    return LinkDiscovery(controller_id, link_attrs, round=round, label=label, time=time)
 
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
@@ -600,21 +601,21 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
 # ----------------------------------- #
 
 def extract_base_fields(json_hash):
-  (label, time) = extract_label_time(json_hash)
+  (label, time, round) = extract_label_time(json_hash)
   timeout_disallowed = False
   if 'timeout_disallowed' in json_hash:
     timeout_disallowed = json_hash['timeout_disallowed']
-  return (label, time, timeout_disallowed)
+  return (label, time, round, timeout_disallowed)
 
 class ControlMessageBase(InternalEvent):
   '''
   Logged whenever the GodScheduler decides to allow a switch to receive or
   send an openflow packet.
   '''
-  def __init__(self, dpid, controller_id, fingerprint, label=None, time=None, timeout_disallowed=False):
+  def __init__(self, dpid, controller_id, fingerprint, label=None, round=-1, time=None, timeout_disallowed=False):
     # If constructed directly (not from json), fingerprint is the
     # OFFingerprint, not including dpid and controller_id
-    super(ControlMessageBase, self).__init__(label=label, time=time, timeout_disallowed=timeout_disallowed)
+    super(ControlMessageBase, self).__init__(label=label, round=round, time=time, timeout_disallowed=timeout_disallowed)
     self.dpid = dpid
     self.controller_id = controller_id
     if type(fingerprint) == list:
@@ -643,12 +644,13 @@ class ControlMessageReceive(ControlMessageBase):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
+    (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
     dpid = json_hash['dpid']
     controller_id = json_hash['controller_id']
     fingerprint = json_hash['fingerprint']
-    return ControlMessageReceive(dpid, controller_id, fingerprint, label=label, time=time, timeout_disallowed=timeout_disallowed)
+    return ControlMessageReceive(dpid, controller_id, fingerprint,
+            round=round, label=label, time=time, timeout_disallowed=timeout_disallowed)
 
 class ControlMessageSend(ControlMessageBase):
   '''
@@ -671,12 +673,12 @@ class ControlMessageSend(ControlMessageBase):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
+    (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
     dpid = json_hash['dpid']
     controller_id = json_hash['controller_id']
     fingerprint = json_hash['fingerprint']
-    return ControlMessageSend(dpid, controller_id, fingerprint, label=label, time=time, timeout_disallowed=timeout_disallowed)
+    return ControlMessageSend(dpid, controller_id, fingerprint, round=round, label=label, time=time, timeout_disallowed=timeout_disallowed)
 
 # TODO(cs): move me?
 class PendingStateChange(namedtuple('PendingStateChange',
@@ -721,8 +723,8 @@ class ControllerStateChange(InternalEvent):
   Logged for any relevent kind of state change in the controller (e.g.
   mastership change)
   '''
-  def __init__(self, controller_id, fingerprint, name, value, label=None, time=None, timeout_disallowed=False):
-    super(ControllerStateChange, self).__init__(label=label, time=time, timeout_disallowed=timeout_disallowed)
+  def __init__(self, controller_id, fingerprint, name, value, label=None, round=-1, time=None, timeout_disallowed=False):
+    super(ControllerStateChange, self).__init__(label=label, round=round, time=time, timeout_disallowed=timeout_disallowed)
     self.controller_id = tuple(controller_id)
     if type(fingerprint) == str or type(fingerprint) == unicode:
       fingerprint = (self.__class__.__name__, fingerprint)
@@ -761,7 +763,7 @@ class ControllerStateChange(InternalEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
+    (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'controller_id', '_fingerprint',
                         'name', 'value')
     controller_id = json_hash['controller_id']
@@ -769,15 +771,16 @@ class ControllerStateChange(InternalEvent):
     name = json_hash['name']
     value = json_hash['value']
     return ControllerStateChange(controller_id, fingerprint, name, value,
-                                 label=label, time=time, timeout_disallowed=timeout_disallowed)
+                                 round=round, label=label, time=time,
+                                 timeout_disallowed=timeout_disallowed)
 
 class DeterministicValue(InternalEvent):
   '''
   Logged whenever the controller asks for a deterministic value (e.g.
   gettimeofday()
   '''
-  def __init__(self, controller_id, name, value, label=None, time=None, timeout_disallowed=False):
-    super(DeterministicValue, self).__init__(label=label, time=time, timeout_disallowed=timeout_disallowed)
+  def __init__(self, controller_id, name, value, label=None, round=-1, time=None, timeout_disallowed=False):
+    super(DeterministicValue, self).__init__(label=label, round=round, time=time, timeout_disallowed=timeout_disallowed)
     self.controller_id = controller_id
     self.name = name
     if name == "gettimeofday":
@@ -796,13 +799,13 @@ class DeterministicValue(InternalEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
+    (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'controller_id',
                         'name', 'value')
     controller_id = json_hash['controller_id']
     name = json_hash['name']
     value = json_hash['value']
-    return DeterministicValue(controller_id, name, value,
+    return DeterministicValue(controller_id, name, value, round=round,
                               label=label, time=time, timeout_disallowed=timeout_disallowed)
 
 # TODO(cs): this should really be an input event. But need to make sure that
@@ -814,15 +817,16 @@ class ConnectToControllers(InternalEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time, timeout_disallowed) = extract_base_fields(json_hash)
-    return ConnectToControllers(label=label, time=time, timeout_disallowed=timeout_disallowed)
+    (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
+    return ConnectToControllers(label=label, time=time, round=round,
+                                timeout_disallowed=timeout_disallowed)
 
 class DataplanePermit(InternalEvent):
   ''' We basically just keep this around for bookkeeping purposes. During
   replay, this let's us know which packets to let through, and which to drop.
   '''
-  def __init__(self, fingerprint, label=None, time=None):
-    super(DataplanePermit, self).__init__(label=label, time=time, )
+  def __init__(self, fingerprint, label=None, round=-1, time=None):
+    super(DataplanePermit, self).__init__(label=label, round=round, time=time, )
     if fingerprint[0] != self.__class__.__name__:
       fingerprint = list(fingerprint)
       fingerprint.insert(0, self.__class__.__name__)
@@ -836,10 +840,10 @@ class DataplanePermit(InternalEvent):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'fingerprint')
     fingerprint = json_hash['fingerprint']
-    return DataplanePermit(fingerprint, label=label, time=time)
+    return DataplanePermit(fingerprint, label=label, round=round, time=time)
 
   def to_json(self):
     fields = dict(self.__dict__)
@@ -856,8 +860,8 @@ all_internal_events = [ControlMessageReceive, ControlMessageSend,
 
 class InvariantViolation(Event):
   ''' Class for logging violations as json dicts '''
-  def __init__(self, violations, label=None, time=None):
-    Event.__init__(self, label=label, time=time)
+  def __init__(self, violations, label=None, round=-1, time=None):
+    Event.__init__(self, label=label, round=round, time=time)
     self.violations = [ str(v) for v in violations ]
 
   def proceed(self, simulation):
@@ -865,10 +869,10 @@ class InvariantViolation(Event):
 
   @staticmethod
   def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
+    (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'violations')
     violations = json_hash['violations']
-    return InvariantViolation(violations, label=label, time=time)
+    return InvariantViolation(violations, label=label, round=round, time=time)
 
 all_special_events = [InvariantViolation]
 
