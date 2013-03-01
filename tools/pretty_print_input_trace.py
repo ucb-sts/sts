@@ -11,6 +11,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import sts.replay_event as replay_events
+from sts.log_processing.superlog_parser import parse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('input', metavar="INPUT",
@@ -89,15 +90,15 @@ class Stats:
     if isinstance(event, replay_events.InputEvent):
       event_name = str(event.__class__.__name__)
       if event_name in self.input_events.keys():
-	self.input_events[event_name] += 1
+	      self.input_events[event_name] += 1
       else:
-	self.input_events[event_name] = 1
+	      self.input_events[event_name] = 1
     else:
       event_name = str(event.__class__.__name__)
       if event_name in self.internal_events.keys():
-	self.internal_events[event_name] += 1
+	      self.internal_events[event_name] += 1
       else:
-	self.internal_events[event_name] = 1
+	      self.internal_events[event_name] = 1
 
   @property
   def input_event_count(self):
@@ -129,7 +130,6 @@ class Stats:
         s += "\t  %s : %d\n" % (event_name, count)
     return s
 
-
 def main(args):
   def load_format_file(format_file):
     if format_file.endswith('.py'):
@@ -147,6 +147,10 @@ def main(args):
   else:
     fields = default_fields
 
+  for field in fields:
+    if field not in field_formatters:
+      raise ValueError("Unknown field %s" % field)
+
   if hasattr(format_def, "filtered_classes"):
     filtered_classes = format_def.filtered_classes
   else:
@@ -162,18 +166,12 @@ def main(args):
   # separated by delimiter lines of the form:
   # ----------------------------------
   with open(args.input) as input_file:
-    for line in input_file:
-      try:
-        json_hash = json.loads(line.rstrip())
-        event = name_to_class[json_hash['class']].from_json(json_hash)
-        if type(event) not in filtered_classes:
-          for field in fields:
-            if field not in field_formatters:
-              raise ValueError("Unknown field %s" % field)
-            field_formatters[field](event)
+    trace = parse(input_file)
+    for event in trace:
+      if type(event) not in filtered_classes:
+        for field in fields:
+          field_formatters[field](event)
         stats.update(event)
-      except:
-        print >> sys.stderr, "Corrupt json hash found %s" % line
 
   if args.stats:
     print "Stats: %s" % stats
