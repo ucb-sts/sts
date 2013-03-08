@@ -356,7 +356,7 @@ class Interactive(ControlFlow):
   def start_switch(self, dpid):
     topology = self.simulation.topology
     switch = topology.get_switch(dpid)
-    down_controllers_ids = map(lambda c: c.cid, self.simulation.controller_manager.down_controllers)
+    down_controller_ids = map(lambda c: c.cid, self.simulation.controller_manager.down_controllers)
     topology.recover_switch(switch, down_controller_ids=down_controller_ids)
     self._log_input_event(SwitchRecovery(switch.dpid))
 
