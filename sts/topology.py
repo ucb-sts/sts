@@ -22,7 +22,6 @@ from pox.openflow.software_switch import DpPacketOut, SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
 from sts.util.console import msg
-from sts.gui.launcher import TopologyGui
 import itertools
 import logging
 import time
@@ -399,8 +398,11 @@ class Topology(object):
     # SoftwareSwitch objects
     self.failed_switches = set()
     self.link_tracker = None
-    
-    self.gui = TopologyGui(self) if gui else None
+
+    self.gui = None
+    if gui:
+      from sts.gui.launcher import TopologyGui
+      self.gui = TopologyGui(self)
 
   def _populate_dpid2switch(self, switches):
     self.dpid2switch = {
@@ -430,7 +432,7 @@ class Topology(object):
   def hosts(self):
     hosts = self.hid2host.values()
     hosts.sort(key=lambda h: h.hid)
-    return hosts 
+    return hosts
 
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
     ''' Create a switch and register it in the topology '''
@@ -451,7 +453,7 @@ class Topology(object):
       self.link_tracker.port2access_link[port] = access_link
       self.link_tracker.interface2access_link[interface] = access_link
     return host
-      
+
   def get_switch(self, dpid):
     if dpid not in self.dpid2switch:
       raise RuntimeError("unknown dpid %d" % dpid)
@@ -522,7 +524,7 @@ class Topology(object):
 
   def create_access_link(self, host, interface, switch, port):
     return self.link_tracker.create_access_link(host, interface, switch, port)
-    
+
   def create_network_link(self, from_switch, from_port, to_switch, to_port):
     return self.link_tracker.create_network_link(from_switch, from_port, to_switch, to_port)
 
@@ -604,7 +606,7 @@ class Topology(object):
                                   lambda n: isinstance(n[1][0], SoftwareSwitch),
                                   graph.ports_for_node(host).iteritems())]
     return topology
-  
+
   def reset(self):
     '''
     Reset topology without new controllers
@@ -648,14 +650,14 @@ class MeshTopology(Topology):
     for host, access_link_list in host_access_link_pairs:
       self.hid2host[host.hid] = host
       access_link_list_list.append(access_link_list)
-    
+
     # this is python's .flatten:
     access_links = list(itertools.chain.from_iterable(access_link_list_list))
 
     # grab a fully meshed patch panel to wire up these guys
     self.link_tracker = MeshTopology.FullyMeshedLinks(self.dpid2switch, access_links)
     self.get_connected_port = self.link_tracker
-    
+
     if self.gui is not None:
       self.gui.launch()
 
@@ -706,7 +708,7 @@ class FatTree (Topology):
     self.hid2host = {}
     self.link_tracker = None
     self.construct_tree(num_pods)
-    
+
     if self.gui is not None:
       self.gui.launch()
 
