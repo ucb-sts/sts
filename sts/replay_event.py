@@ -726,7 +726,7 @@ class ControllerStateChange(InternalEvent):
   '''
   def __init__(self, controller_id, fingerprint, name, value, label=None, round=-1, time=None, timeout_disallowed=False):
     super(ControllerStateChange, self).__init__(label=label, round=round, time=time, timeout_disallowed=timeout_disallowed)
-    self.controller_id = tuple(controller_id)
+    self.controller_id = controller_id
     if type(fingerprint) == str or type(fingerprint) == unicode:
       fingerprint = (self.__class__.__name__, fingerprint)
     if type(fingerprint) == list:
