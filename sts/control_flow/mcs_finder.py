@@ -367,7 +367,7 @@ class MCSFinder(ControlFlow):
     # the original run (don't want to overcount)
     path = self.superlog_path + ".unacked"
     if not os.path.exists(path):
-      log.warn("unacked internal events file from original run does not exists")
+      log.warn("unacked internal events file from original run does not exist")
       return
     prev_buffered_receives = [ e.pending_receive for e in
                                EventDag(superlog_parser.parse_path(path)).events ]
