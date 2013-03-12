@@ -62,20 +62,29 @@ $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 
 <p>This will boot up pox, generate a 2-node mesh network, and begin feeding in random inputs.</p>
 
-<p>You can also run sts interactively:</p>
+<p>Or you could try a more complex FatTree topology:</p>
 
-<pre><code>$ ./simulator.py -c config.interactive
+<pre><code>$ ./simulator.py -c config/fuzz_pox_fattree.py
 </code></pre>
 
-<p>You can also use sts to replay previous executions:</p>
+<p>You can also run sts interactively:</p>
 
-<pre><code>$ ./simulator.py -c config/pox_list_violation.py
+<pre><code>$ ./simulator.py -c config/interactive.py
+</code></pre>
+
+<p>sts can be used to replay previous executions:</p>
+
+<pre><code>$ ./simulator.py -c config/pox_example_replay.py
 </code></pre>
 
 <p>Finally, sts is able to identify the minimal set of inputs that trigger a given bug:</p>
 
-<pre><code>$ ./simulator.py -c config/pox_list_mcs.py
+<pre><code>$ ./simulator.py -c config/pox_example_mcs.py
 </code></pre>
+
+<p>You can turn up the verbosity of the simulator's console output by passing the '-v' flag to simulator.py. </p>
+
+<p>The simulator automatically copies your configuration parameters and console output into the experiments/ directory for later examination.</p>
 
 <p>The config/ directory contains sample configurations. You can specify your own config file by passing its path:</p>
 
