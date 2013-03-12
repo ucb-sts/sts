@@ -36,12 +36,12 @@ parser.add_argument('-L', '--log-config',
 
 parser.add_argument('-n', '--exp-name', dest="exp_name",
                     default=None,
-                    help='''experiment name''')
+                    help='''experiment name (determines result directory name)''')
 
 parser.add_argument('-t', '--timestamp-results', dest="timestamp_results",
                     default=None, nargs=1, action="store",
                     type=lambda s: s.lower() in ('y', 'yes', 'on', 't', 'true', '1', 'yeay', 'ja', 'jepp'),
-                    help='''whether to time stamp the result directory''')
+                    help='''whether to append a timestamp to the result directory name''')
 
 parser.add_argument('-p', '--publish', action="store_true", default=False,
                     help='''publish experiment results to git''')
@@ -92,6 +92,7 @@ signal.signal(signal.SIGQUIT, handle_int)
 try:
   # First tell simulator where to log
   simulator.init_results(config.results_dir)
+  # Now start the simulation
   simulation = simulator.simulate()
 finally:
   if (simulator.simulation_cfg.current_simulation is not None):
