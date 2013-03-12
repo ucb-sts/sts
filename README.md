@@ -1,6 +1,6 @@
 See http://ucb-sts.github.com/sts/ for an html version of this file.
 
-Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? sts seeks to eliminate this need, freeing you to debug the problematic code itself. 
+Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? sts seeks to eliminate this need, freeing you to debug the problematic code itself.
 
 sts simulates the devices of your network, allowing you to easily generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.
 
@@ -24,7 +24,7 @@ Take sts for a test drive with:
 $ ./simulator.py
 ```
 
-This will boot up pox, generate a FatTree network with 16 hosts, and begin feeding in random inputs.
+This will boot up pox, generate a 2-node mesh network, and begin feeding in random inputs.
 
 You can also run sts interactively:
 
@@ -50,7 +50,7 @@ The config/ directory contains sample configurations. You can specify your own c
 $ ./simulator.py -c config/my_config.py
 ```
 
-See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README) for more information. 
+See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README) for more information.
 
 ### Dependencies
 
@@ -68,7 +68,7 @@ If your controller supports OpenFlow 1.0, sts works out of the box. You'll only 
 
 ### Research
 
-For more information about the research behind sts, see our paper [draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf). 
+For more information about the research behind sts, see our paper [draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf).
 
 ### Questions?
 

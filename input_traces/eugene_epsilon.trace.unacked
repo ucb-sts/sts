@@ -1,1 +1,0 @@
-{"class": "ControlMessageReceive", "dependent_labels": [], "dpid": 2, "timeout_disallowed": false, "time": [1359230216, 806352], "fingerprint": ["ControlMessageReceive", {"class": "ofp_barrier_request"}, 2, ["127.0.0.1", 6633]], "controller_id": ["127.0.0.1", 6633], "label": "i202"}
