@@ -270,7 +270,10 @@ class DataplaneChecker(object):
     self.update_window(current_round)
 
     for dp_event in simulation.patch_panel.queued_dataplane_events:
-      if self.decide_drop(dp_event):
+      if not simulation.topology.ok_to_send(dp_event):
+        log.warn("Not valid to send dp_event %s" % str(dp_event))
+        simulation.patch_panel.drop_dp_event(dp_event)
+      elif self.decide_drop(dp_event):
         simulation.patch_panel.drop_dp_event(dp_event)
       else:
         simulation.patch_panel.permit_dp_event(dp_event)
