@@ -23,9 +23,9 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
                                  description=description)
 
 parser.add_argument('-c', '--config',
-                    default='config.fuzz_pox_fattree',
+                    default='config.fuzz_pox_mesh',
                     help='''experiment config module in the config/ '''
-                         '''subdirectory, e.g. config.fat_tree''')
+                         '''subdirectory, e.g. config.fuzz_pox_mesh''')
 
 parser.add_argument('-v', '--verbose', action="count", default=0,
                     help='''increase verbosity''')
