@@ -38,7 +38,7 @@ class Replayer(ControlFlow):
 
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
                print_buffers=True, wait_on_deterministic_values=False,
-               fail_to_interactive=False, **kwargs):
+               default_dp_permit=False, fail_to_interactive=False, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -53,7 +53,15 @@ class Replayer(ControlFlow):
     else:
       self.dag = superlog_path_or_dag
 
-    self.dp_checker = DataplaneChecker(self.dag)
+    self.default_dp_permit = default_dp_permit
+    # Set DataplanePermit and DataplaneDrop to passive if permit is set
+    # to default
+    for event in [ e for e in self.dag.events if type(e) in dp_events ]:
+      event.passive = default_dp_permit
+
+    self.dp_checker = None
+    if default_dp_permit:
+      self.dp_checker = DataplaneChecker(self.dag)
 
     self.print_buffers_flag = print_buffers
 
@@ -137,7 +145,8 @@ class Replayer(ControlFlow):
       for i, event in enumerate(dag.events):
         try:
           self.compute_interpolated_time(event)
-          self.dp_checker.check_dataplane(i, self.simulation)
+          if self.default_dp_permit:
+            self.dp_checker.check_dataplane(i, self.simulation)
           if isinstance(event, InputEvent):
             self._check_early_state_changes(dag, i, event)
           self._check_new_state_changes(dag, i)
@@ -157,7 +166,8 @@ class Replayer(ControlFlow):
       if self.old_interrupt:
         signal.signal(signal.SIGINT, self.old_interrupt)
       msg.event(color.B_BLUE+"Event Stats: %s" % str(event_scheduler.stats))
-      msg.event(color.B_BLUE+"DataplaneDrop Stats: %s" % str(self.dp_checker.stats))
+      if self.default_dp_permit:
+        msg.event(color.B_BLUE+"DataplaneDrop Stats: %s" % str(self.dp_checker.stats))
 
   def _check_early_state_changes(self, dag, current_index, input):
     ''' Check whether the any pending state change were supposed to come
@@ -196,7 +206,7 @@ class DataplaneChecker(object):
   ''' Dataplane permits are the default, *unless* they were explicitly dropped in the
   initial run. This class keeps track of whether pending dataplane events should
   be dropped or forwarded during replay'''
-  def __init__(self, event_dag, slop_buffer=4):
+  def __init__(self, event_dag, slop_buffer=10):
     ''' Consider the round i of a DataplaneDrop in the original
     event ordering. slop_buffer defines how tolerant we are to differences in
     the position of the correspdonding DataplaneDrop event in the

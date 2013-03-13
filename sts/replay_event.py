@@ -541,7 +541,9 @@ class ControlChannelUnblock(InputEvent):
     return ControlChannelUnblock(dpid, controller_id, round=round, label=label, time=time)
 
 class DataplaneDrop(InputEvent):
-  def __init__(self, fingerprint, label=None, round=-1, time=None):
+  def __init__(self, fingerprint, label=None, round=-1, time=None,
+               passive=True):
+    ''' - passive: whether we're using Replayer.DataplaneChecker '''
     super(DataplaneDrop, self).__init__(label=label, round=round, time=time)
     if fingerprint[0] != self.__class__.__name__:
       fingerprint = list(fingerprint)
@@ -550,10 +552,19 @@ class DataplaneDrop(InputEvent):
       fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]),
                      fingerprint[2], fingerprint[3])
     self.fingerprint = fingerprint
+    # TODO(cs): passive is a bit of a hack, but this was easier.
+    self.passive = passive
 
   def proceed(self, simulation):
     # Handled by control_flow.replayer.DataplaneChecker
-    return True
+    if self.passive:
+      return True
+    else:
+     dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1:])
+     if dp_event is not None:
+       simulation.patch_panel.drop_dp_event(dp_event)
+       return True
+     return False
 
   @staticmethod
   def from_json(json_hash):
@@ -826,7 +837,9 @@ class DataplanePermit(InternalEvent):
   ''' We basically just keep this around for bookkeeping purposes. During
   replay, this let's us know which packets to let through, and which to drop.
   '''
-  def __init__(self, fingerprint, label=None, round=-1, time=None):
+  def __init__(self, fingerprint, label=None, round=-1, time=None,
+               passive=True):
+    ''' - passive: whether we're using Replayer.DataplaneChecker '''
     super(DataplanePermit, self).__init__(label=label, round=round, time=time, )
     if fingerprint[0] != self.__class__.__name__:
       fingerprint = list(fingerprint)
@@ -835,9 +848,18 @@ class DataplanePermit(InternalEvent):
       fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]),
                      fingerprint[2], fingerprint[3])
     self.fingerprint = fingerprint
+    # TODO(cs): passive is a bit of a hack, but this was easier.
+    self.passive = passive
 
   def proceed(self, simulation):
-    return True
+    if self.passive:
+      return True
+    else:
+      dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1:])
+      if dp_event is not None:
+        simulation.patch_panel.permit_dp_event(dp_event)
+        return True
+      return False
 
   @staticmethod
   def from_json(json_hash):
@@ -878,3 +900,5 @@ class InvariantViolation(Event):
 all_special_events = [InvariantViolation]
 
 all_events = all_input_events + all_internal_events + all_special_events
+
+dp_events = set([DataplanePermit, DataplaneDrop])
