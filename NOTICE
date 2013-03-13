@@ -1,0 +1,23 @@
+STS
+===
+STS is written by a number of authors who retain their various copyrights.
+Please check individual source files to find their associated copyright
+holders. The following should be a list of all copyright holders.  All
+such code is licensed under the Apache license version 2.0.
+
+Copyright 2011-2013 Colin Scott
+Copyright 2011-2013 Andreas Wundsam
+Copyright 2012-2013 Sam Whitlock
+Copyright 2012-2013 Andrew Or
+Copyright 2012-2013 Eugene Huang
+Copyright 2012-2012 Kyriakos Zarifis
+
+STS depends on some libraries in the carp branch of POX, which is also
+licensed under Apache. POX can be found at: https://github.com/noxrepo/pox
+
+STS also (optionally) depends on the hassel network invariant checking
+library, which is licensed under GPLv2 with a FOSS exception. This means
+that the GPL header is not "viral" for open source projects as this one.
+For further information see sts/headerspace/LICENSE.
+
+# TODO(cs): Hassel's license was accidentally removed! Need to replace it.
