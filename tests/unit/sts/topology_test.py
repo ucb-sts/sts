@@ -1,3 +1,7 @@
+# Copyright 2011-2013 Colin Scott
+# Copyright 2011-2013 Andreas Wundsam
+# Copyright 2012-2013 Sam Whitlock
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at:
