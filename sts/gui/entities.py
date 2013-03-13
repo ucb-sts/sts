@@ -14,7 +14,7 @@
 # limitations under the License.
 
 '''
-Host, switch and link GUI entities that belong to the QGraphicsScene in TopologyView  
+Host, switch and link GUI entities that belong to the QGraphicsScene in TopologyView
 '''
 import math
 from PyQt4 import QtGui, QtCore
@@ -35,9 +35,9 @@ class GuiNode(QtGui.QGraphicsItem):
     self.setFlag(QtGui.QGraphicsItem.ItemSendsGeometryChanges)
     self.setZValue(1)
     self.setAcceptHoverEvents(True)
-    
+
     # Node attributes
-    self.is_up = True     # up/down state   
+    self.is_up = True     # up/down state
     self.showID = True    # Draw node ID
     self.showNode = True  # Draw node
 
@@ -56,7 +56,7 @@ class GuiNode(QtGui.QGraphicsItem):
     path = QtGui.QPainterPath()
     path.addEllipse(-10, -10, 20, 20)
     return path
-    
+
   def itemChange(self, change, value):
     if change == QtGui.QGraphicsItem.ItemPositionChange:
       for link in self.linkList:
@@ -70,12 +70,12 @@ class GuiNode(QtGui.QGraphicsItem):
 
   def mouseDoubleClickEvent(self, event):
     QtGui.QGraphicsItem.mouseDoubleClickEvent(self, event)
-  
-  @QtCore.pyqtSlot()  
+
+  @QtCore.pyqtSlot()
   def popupnode_detailsMenu(self):
     if self.still_hover:
       self.node_details.exec_(self.hover_pos)
-    
+
   def hoverLeaveEvent(self, event):
     self.still_hover = False
 
@@ -109,7 +109,7 @@ class GuiHost(GuiNode):
       painter.setBrush(QtGui.QBrush(gradient))
       painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
       painter.drawRect(-10, -10, 15, 15)
-      
+
     if self.showID:
       text_rect = self.boundingRect()
       message = str(self.id)
@@ -120,7 +120,7 @@ class GuiHost(GuiNode):
       painter.drawText(text_rect.translated(0.1, 0.1), message)
       painter.setPen(QtGui.QColor(QtCore.Qt.gray).light(130))
       painter.drawText(text_rect.translated(0, 0), message)
-  
+
   def mouseReleaseEvent(self, event):
     if event.button() == QtCore.Qt.RightButton:
       popup = QtGui.QMenu()
@@ -128,7 +128,7 @@ class GuiHost(GuiNode):
       popup.exec_(event.lastScreenPos())
     self.update()
     QtGui.QGraphicsItem.mouseReleaseEvent(self, event)
-  
+
   def hoverEnterEvent(self, event):
     self.still_hover = True
     self.node_details = QtGui.QMenu('&Node Details')
@@ -136,7 +136,7 @@ class GuiHost(GuiNode):
     self.hover_pos = event.lastScreenPos() + QtCore.QPoint(10, 10)
     self.hover_timer = QtCore.QTimer()
     self.hover_timer.singleShot(500, self.popupnode_detailsMenu)
-  
+
 class GuiSwitch(GuiNode):
   '''
   Interactive Switch
@@ -167,7 +167,7 @@ class GuiSwitch(GuiNode):
       painter.setBrush(QtGui.QBrush(gradient))
       painter.setPen(QtGui.QPen(QtCore.Qt.black, 0))
       painter.drawEllipse(-10, -10, 20, 20)
-    
+
     if self.showID:
       text_rect = self.boundingRect()
       message = str(self.id)
@@ -183,11 +183,11 @@ class GuiSwitch(GuiNode):
     if event.button() == QtCore.Qt.RightButton:
       popup = QtGui.QMenu()
       linkToMenu = QtGui.QMenu("Link to")
-        
+
       # Hack against python scoping
       def create_network_link_lambda(from_id, to_id):
         return lambda: self.graphics_scene.syncer.create_network_link(from_id, to_id)
-        
+
       # Creates a link to another unconnected switch
       for dpid in sorted(self.graphics_scene.syncer.dpid2switch.keys()):
         switch = self.graphics_scene.syncer.dpid2switch[dpid]
@@ -210,10 +210,10 @@ class GuiSwitch(GuiNode):
     self.hover_pos = event.lastScreenPos() + QtCore.QPoint(10, 10)
     self.hover_timer = QtCore.QTimer()
     self.hover_timer.singleShot(500, self.popupnode_detailsMenu)
-    
+
 class GuiLink(QtGui.QGraphicsItem):
   '''
-  Interactive Link 
+  Interactive Link
   '''
   def __init__(self, graphics_scene, source_node, dest_node):
     QtGui.QGraphicsItem.__init__(self)
@@ -230,13 +230,13 @@ class GuiLink(QtGui.QGraphicsItem):
     self.source.addLink(self)
     self.dest.addLink(self)
     self.adjust()
-    
+
     # Link attributes
-    self.is_up = True    # up/down state  
+    self.is_up = True    # up/down state
     self.show_link = True  # Draw link
-    self.show_id = False   # Draw link ID   
-    self.show_ports = True   # Draw connecting ports  
-    
+    self.show_id = False   # Draw link ID
+    self.show_ports = True   # Draw connecting ports
+
   def adjust(self):
     if not self.source or not self.dest:
       return
@@ -259,7 +259,7 @@ class GuiLink(QtGui.QGraphicsItem):
     return QtCore.QRectF(self.source_point,
                QtCore.QSizeF(self.dest_point.x() - self.source_point.x(),
                        self.dest_point.y() - self.source_point.y())).normalized().adjusted(-extra, -extra, extra, extra)
-    
+
   def paint(self, painter, option, widget):
     if not self.source or not self.dest:
       return
@@ -269,10 +269,10 @@ class GuiLink(QtGui.QGraphicsItem):
       line = QtCore.QLineF(self.source_point, self.dest_point)
       if line.length() == 0.0:
         return
-      
+
       color = QtCore.Qt.gray
       pattern = QtCore.Qt.SolidLine
-      
+
       # Select pen for line (color for util, pattern for state)
       if self.is_up:
         # Highlight when clicked/held
@@ -283,11 +283,11 @@ class GuiLink(QtGui.QGraphicsItem):
       else:
         color = QtCore.Qt.darkGray
         pattern = QtCore.Qt.DashLine
-              
+
       painter.setPen(QtGui.QPen(color, 1,
         pattern, QtCore.Qt.RoundCap, QtCore.Qt.RoundJoin))
       painter.drawLine(line)
-    
+
       # Draw the arrows if there's enough room.
       angle = math.acos(line.dx() / line.length())
       if line.dy() >= 0:
@@ -299,12 +299,12 @@ class GuiLink(QtGui.QGraphicsItem):
       dest_arrow_p2 = self.dest_point + \
         QtCore.QPointF(math.sin(angle - math.pi + math.pi / 3) * self.arrow_size,
         math.cos(angle - math.pi + math.pi / 3) * self.arrow_size)
-      
+
       if self.draw_arrow:
         painter.setBrush(color)
         painter.drawPolygon(QtGui.QPolygonF([line.p2(), \
           dest_arrow_p1, dest_arrow_p2]))
-    
+
   def mouseReleaseEvent(self, event):
     if event.button() == QtCore.Qt.RightButton:
       popup = QtGui.QMenu()

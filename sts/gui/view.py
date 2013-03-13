@@ -14,7 +14,7 @@
 # limitations under the License.
 
 '''
-Graphical representation of STS topology switch, host and link entities 
+Graphical representation of STS topology switch, host and link entities
 '''
 from sts.entities import Host as STSHost, HostInterface as STSHostInterface, \
                          FuzzSoftwareSwitch as STSSwitch, AccessLink as STSAccessLink, \
@@ -51,14 +51,14 @@ class TopologyView(QtGui.QGraphicsView):
     # Node boundaries
     self.minX, self.maxX = -300, 300
     self.minY, self.maxY = -200, 200
-    
+
     # Cursor
     self.setDragMode(self.ScrollHandDrag)
     self.setCursor(QtCore.Qt.ArrowCursor)
-  
-    # Syncer updates topology scene to contain entities matching those in STS  
+
+    # Syncer updates topology scene to contain entities matching those in STS
     self.syncer = STSSyncer(sts_topology, self, sync_period, debugging)
-    
+
   def mouseReleaseEvent(self, event):
     '''
     Show context menu when right-clicking on empty space on the scene.
@@ -77,7 +77,7 @@ class TopologyView(QtGui.QGraphicsView):
 class STSSyncer:
   '''
   Container of Gui Node and Link objects
-  Periodically syncs with STS Topology 
+  Periodically syncs with STS Topology
   '''
   def __init__(self, sts_topology, topology_view, sync_period=2.0, debugging=True):
     self.dpid2switch = {}
@@ -88,13 +88,13 @@ class STSSyncer:
     self.topology_view = topology_view
     self.topology_scene = topology_view.topology_scene
     self.debugging = debugging
-    
+
     # Sync with STS topology
     self.sts_topology = sts_topology
     self.sync_period = sync_period
     self.mismatch_count = 0
     self.sync_with_sts()
-    
+
   @property
   def switches(self):
     return self.dpid2switch.values()
@@ -102,11 +102,11 @@ class STSSyncer:
   @property
   def hosts(self):
     return self.hid2host.values()
-    
+
   @property
   def dpids(self):
     return self.dpid2switch.keys()
-    
+
   @property
   def hids(self):
     return self.hid2host.keys()
@@ -119,25 +119,25 @@ class STSSyncer:
     if self.debugging:
       print "sts.gui:%s" % msg
       #TODO: Change back to log.debug(msg)
-  
+
   def toggle_debug_messages(self):
     self.debugging = not self.debugging
-  
+
   def synced_with_sts(self):
     '''
     Return True if STSSyncer shares the same map of nodes and links with STS topology
     '''
-    self.debug("\n================== STS Sync Check ==================" + 
-               "\n\tSwitches: \tSTS = %s, Gui = %s" % 
-                    (len(self.sts_topology.switches), len(self.switches)) + 
-               "\n\tHosts:    \tSTS = %s, Gui = %s" % 
-                    (len(self.sts_topology.hosts), len(self.hosts)) + 
-               "\n\tAccess Link: \tSTS = %s, Gui = %s" % 
-                    (len(self.sts_topology.access_links), len(self.access_links)) + 
-               "\n\tNetwork Link: \tSTS = %s, Gui = %s" % 
-                    (len(self.sts_topology.network_links), len(self.network_links)) + 
+    self.debug("\n================== STS Sync Check ==================" +
+               "\n\tSwitches: \tSTS = %s, Gui = %s" %
+                    (len(self.sts_topology.switches), len(self.switches)) +
+               "\n\tHosts:    \tSTS = %s, Gui = %s" %
+                    (len(self.sts_topology.hosts), len(self.hosts)) +
+               "\n\tAccess Link: \tSTS = %s, Gui = %s" %
+                    (len(self.sts_topology.access_links), len(self.access_links)) +
+               "\n\tNetwork Link: \tSTS = %s, Gui = %s" %
+                    (len(self.sts_topology.network_links), len(self.network_links)) +
                "\n====================================================\n")
-    
+
     if len(self.switches) != len(self.sts_topology.switches) or\
        len(self.hosts) != len(self.sts_topology.hosts) or\
        len(self.access_links) != len(self.sts_topology.access_links) or\
@@ -150,27 +150,27 @@ class STSSyncer:
       if dpid not in self.dpids:
         return False
     return True
-  
+
   def sync_with_sts(self):
     '''
-    Resync all network elements if STS and GUI are desynchronized 
+    Resync all network elements if STS and GUI are desynchronized
     '''
     if self.sts_topology is None or self.synced_with_sts():
       Timer(self.sync_period, self.sync_with_sts).start()
       self.mismatch_count = 0
       return
-    
+
     self.mismatch_count += 1
-    
+
     # If inconsistency between STS and GUI is persistent, resync
     if self.mismatch_count >= 2:
-      self.mismatch_count = 0       
+      self.mismatch_count = 0
       for link in self.links:
         if link in self.topology_scene.items():
-          self.topology_scene.removeItem(link) 
+          self.topology_scene.removeItem(link)
       self.access_links = []
       self.network_links = []
-      
+
       # Remove switches found in GUI but not STS
       for dpid, switch in self.dpid2switch.items():
         if dpid not in self.sts_topology.dpid2switch.keys():
@@ -178,7 +178,7 @@ class STSSyncer:
             self.topology_scene.removeItem(switch)
           del self.dpid2switch[dpid]
           self.debug("--- Removing switch with dpid = %d" % dpid)
-      
+
       # Remove hosts found in GUI but not STS
       for hid, host in self.hid2host.items():
         if hid not in self.sts_topology.hid2host.keys():
@@ -186,17 +186,17 @@ class STSSyncer:
             self.topology_scene.removeItem(host)
           del self.hid2host[hid]
           self.debug("--- Removing host with hid = %d" % hid)
-      
+
       # Add switches found in STS but not in GUI
       for dpid in self.sts_topology.dpid2switch.keys():
         self.add_switch(dpid)
         self.debug("--- Adding new switch with dpid = %d" % dpid)
-      
+
       # Add hosts found in STS but not in GUI
       for hid in self.sts_topology.hid2host.keys():
         self.add_host(hid)
         self.debug("--- Adding new host with dpid = %d!" % hid)
-      
+
       # Reconnect all access links
       for access_link in self.sts_topology.access_links:
         sts_host = access_link.host
@@ -204,7 +204,7 @@ class STSSyncer:
         self.add_access_link(sts_host.hid, sts_switch.dpid)
         self.debug("--- Adding new access link connecting Host %d <--> Switch %d!"
                    % (sts_host.hid, sts_switch.dpid))
-      
+
       # Reconnect all network links
       for network_link in self.sts_topology.network_links:
         sts_from_switch = network_link.start_software_switch
@@ -225,7 +225,7 @@ class STSSyncer:
     self.dpid2switch = {}
     self.access_links = []
     self.network_links = []
-    
+
   def add_host(self, hid, position=None):
     '''
     Add and register a host in GUI with the given hid and position
@@ -255,7 +255,7 @@ class STSSyncer:
         position = (randint(self.topology_view.minX, self.topology_view.maxX),
                     randint(self.topology_view.minY, self.topology_view.maxY))
       switch.setPos(position[0], position[1])
-  
+
   def add_access_link(self, hid, dpid):
     '''
     Add and register an access link in GUI
@@ -266,7 +266,7 @@ class STSSyncer:
       link = GuiLink(self.topology_view, self.hid2host[hid], self.dpid2switch[dpid])
       self.access_links.append(link)
       self.topology_scene.addItem(link)
-      
+
   def add_network_link(self, from_dpid, to_dpid):
     '''
     Add and register a unidirectional network link in GUI
@@ -277,7 +277,7 @@ class STSSyncer:
       link = GuiLink(self.topology_view, self.dpid2switch[from_dpid], self.dpid2switch[to_dpid])
       self.network_links.append(link)
       self.topology_scene.addItem(link)
-  
+
   def get_sts_host(self, gui_host):
     '''
     Given a host in GUI, return the corresponding host in STS by hid
@@ -286,7 +286,7 @@ class STSSyncer:
       self.debug("Error: Host does not exist in STS!")
       return None
     return self.sts_topology.hid2host[gui_host.id]
-  
+
   def get_sts_switch(self, gui_switch):
     '''
     Given a switch in GUI, return the corresponding switch in STS by dpid
@@ -295,7 +295,7 @@ class STSSyncer:
       self.debug("Error: Switch does not exist in STS!")
       return None
     return self.sts_topology.dpid2switch[gui_switch.id]
-               
+
   def create_switch(self, dpid=None):
     '''
     Create a switch with the given dpid in both STS and GUI
@@ -305,7 +305,7 @@ class STSSyncer:
     num_ports = 2
     switch = self.sts_topology.create_switch(dpid, num_ports)
     self.add_switch(dpid)
-  
+
   def create_network_link(self, from_dpid, to_dpid):
     '''
     Create a unidirectional network link in both STS and GUI
@@ -318,8 +318,8 @@ class STSSyncer:
     sts_from_switch = self.sts_topology.dpid2switch[from_dpid]
     sts_to_switch = self.sts_topology.dpid2switch[to_dpid]
     self.sts_topology.create_network_link(sts_from_switch, None, sts_to_switch, None)
-    self.add_network_link(from_dpid, to_dpid) 
-        
+    self.add_network_link(from_dpid, to_dpid)
+
   def save_state(self):
     '''
     Save all JSON serialized entities of both the STS and GUI topologies to a file
@@ -342,7 +342,7 @@ class STSSyncer:
     for link in self.sts_topology.network_links:
       line = json.dumps(("l", self.serialize_network_link(link)))
       lines.append(line)
-    
+
     title = "Specify file to store topology state"
     filename = QtGui.QFileDialog.getSaveFileName(self.topology_view, title, "gui/layouts")
     f = QtCore.QFile(filename)
@@ -350,7 +350,7 @@ class STSSyncer:
     for line in lines:
       f.write(QtCore.QByteArray(line + "\n"))
     f.close()
-  
+
   def load_state(self):
     '''
     Load all JSON serialized entities of both the STS and GUI topologies from a file
@@ -370,11 +370,11 @@ class STSSyncer:
     if line.isNull():
       self.debug("Error in load_state: Empty file!")
       return
-    
+
     # Reset both STS and GUI topology
     self.sts_topology.reset()
     self.reset()
-    
+
     type2handler = {
       "s" : self.deserialize_switch,
       "h" : self.deserialize_host,
@@ -387,7 +387,7 @@ class STSSyncer:
       type2handler[type](s)
       line = f.readLine()
     f.close()
-    
+
   def serialize_host(self, gui_host, sts_host):
     '''
     Format Example:
@@ -406,7 +406,7 @@ class STSSyncer:
     info["ingress_switch_dpids"] = ingress_switch_dpids
     info["position"] = position
     return json.dumps(info)
-  
+
   def serialize_switch(self, gui_switch, sts_switch):
     '''
     Format Example:
@@ -422,7 +422,7 @@ class STSSyncer:
     info["numports"] = numports
     info["position"] = position
     return json.dumps(info)
-  
+
   def serialize_network_link(self, sts_link):
     '''
     Format Example:
@@ -450,7 +450,7 @@ class STSSyncer:
     self.add_host(sts_host.hid, position)
     for dpid in ingress_switch_dpids:
       self.add_access_link(sts_host.hid, dpid)
-  
+
   def deserialize_switch(self, s):
     '''
     Format Example:
@@ -464,7 +464,7 @@ class STSSyncer:
     position = info["position"]
     sts_switch = self.sts_topology.create_switch(dpid, numports)
     self.add_switch(dpid, position)
-  
+
   def deserialize_network_link(self, s):
     '''
     Format Example:
@@ -474,8 +474,8 @@ class STSSyncer:
     info = json.loads(s)
     from_switch_dpid = info["from_switch_dpid"]
     to_switch_dpid = info["to_switch_dpid"]
-    sts_from_switch = self.sts_topology.dpid2switch[from_switch_dpid] 
+    sts_from_switch = self.sts_topology.dpid2switch[from_switch_dpid]
     sts_to_switch = self.sts_topology.dpid2switch[to_switch_dpid]
     sts_link = self.sts_topology.create_network_link(sts_from_switch, None, sts_to_switch, None)
     self.add_network_link(from_switch_dpid, to_switch_dpid)
-    
+

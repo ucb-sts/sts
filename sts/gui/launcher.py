@@ -38,7 +38,7 @@ class TopologyGui:
     self.sts_topology = sts_topology
     self.syncPeriod = syncPeriod
     self.debugging = debugging
-    
+
   def launch(self):
     def create_gui_instance():
       self.app = QtGui.QApplication(sys.argv)
@@ -77,4 +77,4 @@ class TopologyWidget(QtGui.QWidget):
     vbox.addWidget(self.topology_view)
     self.setLayout(vbox)
     self.resize(300, 150)
-    
+
