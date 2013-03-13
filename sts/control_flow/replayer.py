@@ -55,7 +55,7 @@ class Replayer(ControlFlow):
 
     self.dp_checker = DataplaneChecker(self.dag)
 
-    self.print_buffers = print_buffers
+    self.print_buffers_flag = print_buffers
 
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
@@ -106,7 +106,7 @@ class Replayer(ControlFlow):
     self.simulation.fail_to_interactive = self.fail_to_interactive
     self.logical_time = 0
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
-    if self.print_buffers:
+    if self.print_buffers_flag:
       self._print_buffers()
     return self.simulation
 
