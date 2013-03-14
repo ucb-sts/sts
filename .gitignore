@@ -39,9 +39,11 @@ runtime_stats/*json
 runtime_stats/*pdf
 runtime_stats/*gpi
 runtime_stats/*dat
+
+# Controllers
 nox/
 nox_classic/
-
+floodlight/
 
 # ignore eclipse project files
 .pydevproject
@@ -52,3 +54,4 @@ tags
 
 # ignore  mcs log
 mcs_log.txt
+
