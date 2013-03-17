@@ -487,8 +487,6 @@ class STSSyncer:
     for access_link in self.access_links:
       if access_link.source.id == gui_host.id:
         ingress_switch_dpids.add(access_link.dest.id)
-      if access_link.dest.id == gui_host.id:
-        ingress_switch_dpids.add(access_link.source.id)
     ingress_switch_dpids = list(ingress_switch_dpids)
     position = (round(gui_host.x(), 2), round(gui_host.y(), 2))
     info = {}
