@@ -60,9 +60,7 @@ class TopologyView(QtGui.QGraphicsView):
     self.syncer = STSSyncer(sts_topology, self, sync_period, debugging)
 
   def mouseReleaseEvent(self, event):
-    '''
-    Show context menu when right-clicking on empty space on the scene.
-    '''
+    ''' Show context menu when right-clicking on empty space on the scene. '''
     if not self.itemAt(event.pos()):
       if event.button() == QtCore.Qt.RightButton:
         popup = QtGui.QMenu()
@@ -76,8 +74,7 @@ class TopologyView(QtGui.QGraphicsView):
 
 class STSSyncer:
   '''
-  Container of Gui Node and Link objects
-  Periodically syncs with STS Topology
+  Container of Node and Link objects in GUI that periodically syncs with STS Topology
   '''
   def __init__(self, sts_topology, topology_view, sync_period=2.0, debugging=True):
     self.dpid2switch = {}
@@ -124,10 +121,8 @@ class STSSyncer:
     self.debugging = not self.debugging
 
   def synced_with_sts(self):
-    '''
-    Return True if STSSyncer shares the same map of nodes and links with STS topology
-    '''
-    self.debug("\n================== STS Sync Check ==================" +
+    ''' Return True if GUI and STS share the same map of nodes and links '''
+    self.debug("\n================== GUI Sync Check ==================" +
                "\n\tSwitches: \tSTS = %s, Gui = %s" %
                     (len(self.sts_topology.switches), len(self.switches)) +
                "\n\tHosts:    \tSTS = %s, Gui = %s" %
@@ -149,12 +144,16 @@ class STSSyncer:
     for dpid in self.sts_topology.dpid2switch.keys():
       if dpid not in self.dpids:
         return False
+    for hid in self.hids:
+      if hid not in self.sts_topology.hid2host.keys():
+        return False
+    for dpid in self.dpids:
+      if dpid not in self.sts_topology.dpid2switch.keys():
+        return False
     return True
 
   def sync_with_sts(self):
-    '''
-    Resync all network elements if STS and GUI are desynchronized
-    '''
+    ''' Resync all network elements if STS and GUI are persistently desynchronized '''
     if self.sts_topology is None or self.synced_with_sts():
       Timer(self.sync_period, self.sync_with_sts).start()
       self.mismatch_count = 0
@@ -165,7 +164,11 @@ class STSSyncer:
     # If inconsistency between STS and GUI is persistent, resync
     if self.mismatch_count >= 2:
       self.mismatch_count = 0
+      
+      # Remove all links in GUI
       for link in self.links:
+        link.source.linkList.remove(link)
+        link.dest.linkList.remove(link)
         if link in self.topology_scene.items():
           self.topology_scene.removeItem(link)
       self.access_links = []
@@ -215,9 +218,7 @@ class STSSyncer:
     Timer(self.sync_period, self.sync_with_sts).start()
 
   def reset(self):
-    '''
-    Reset GUI topology
-    '''
+    ''' Reset GUI topology '''
     for item in self.hosts + self.switches + self.links:
       if item in self.topology_scene.items():
         self.topology_scene.removeItem(item)
@@ -227,89 +228,158 @@ class STSSyncer:
     self.network_links = []
 
   def add_host(self, hid, position=None):
-    '''
-    Add and register a host in GUI with the given hid and position
-    '''
-    if hid is None:
+    ''' Add and register a host in GUI with the given hid and position '''
+    if hid is None or hid in self.hids:
       return
-    if hid not in self.hids:
-      host = GuiHost(self.topology_view, hid)
-      self.hid2host[hid] = host
-      self.topology_scene.addItem(host)
-      if position is None:
-        position = (randint(self.topology_view.minX, self.topology_view.maxX),
-                    randint(self.topology_view.minY, self.topology_view.maxY))
-      host.setPos(position[0], position[1])
+    host = GuiHost(self.topology_view, hid)
+    self.hid2host[hid] = host
+    self.topology_scene.addItem(host)
+    if position is None:
+      position = (randint(self.topology_view.minX, self.topology_view.maxX),
+                  randint(self.topology_view.minY, self.topology_view.maxY))
+    host.setPos(position[0], position[1])
 
   def add_switch(self, dpid, position=None):
-    '''
-    Add and register a switch in GUI with the given hid and position
-    '''
-    if dpid is None:
-      return
-    if dpid not in self.dpids:
-      switch = GuiSwitch(self.topology_view, dpid)
-      self.dpid2switch[dpid] = switch
-      self.topology_scene.addItem(switch)
-      if position is None:
-        position = (randint(self.topology_view.minX, self.topology_view.maxX),
-                    randint(self.topology_view.minY, self.topology_view.maxY))
-      switch.setPos(position[0], position[1])
+    ''' Add and register a switch in GUI with the given dpid and position '''
+    if dpid is None or dpid in self.dpids:
+      return    
+    switch = GuiSwitch(self.topology_view, dpid)
+    self.dpid2switch[dpid] = switch
+    self.topology_scene.addItem(switch)
+    if position is None:
+      position = (randint(self.topology_view.minX, self.topology_view.maxX),
+                  randint(self.topology_view.minY, self.topology_view.maxY))
+    switch.setPos(position[0], position[1])
 
   def add_access_link(self, hid, dpid):
-    '''
-    Add and register an access link in GUI
-    '''
-    if hid is None or dpid is None:
+    ''' Add and register an access link in GUI '''
+    if hid is None or\
+       dpid is None or\
+       hid not in self.hids or\
+       dpid not in self.dpids:
       return
-    if hid in self.hids and dpid in self.dpids:
-      link = GuiLink(self.topology_view, self.hid2host[hid], self.dpid2switch[dpid])
-      self.access_links.append(link)
-      self.topology_scene.addItem(link)
+    link = GuiLink(self.topology_view, self.hid2host[hid], self.dpid2switch[dpid])
+    self.access_links.append(link)
+    self.topology_scene.addItem(link)
 
   def add_network_link(self, from_dpid, to_dpid):
-    '''
-    Add and register a unidirectional network link in GUI
-    '''
-    if from_dpid is None or to_dpid is None:
+    ''' Add and register a unidirectional network link in GUI '''
+    if from_dpid is None or\
+       to_dpid is None or\
+       from_dpid not in self.dpids or\
+       to_dpid not in self.dpids:
       return
-    if from_dpid in self.dpids and to_dpid in self.dpids:
-      link = GuiLink(self.topology_view, self.dpid2switch[from_dpid], self.dpid2switch[to_dpid])
-      self.network_links.append(link)
-      self.topology_scene.addItem(link)
+    link = GuiLink(self.topology_view, self.dpid2switch[from_dpid], self.dpid2switch[to_dpid])
+    self.network_links.append(link)
+    self.topology_scene.addItem(link)
 
   def get_sts_host(self, gui_host):
-    '''
-    Given a host in GUI, return the corresponding host in STS by hid
-    '''
-    if gui_host.id not in self.sts_topology.hid2host.keys():
-      self.debug("Error: Host does not exist in STS!")
-      return None
-    return self.sts_topology.hid2host[gui_host.id]
+    ''' Given a host in GUI, return the corresponding host in STS by hid '''
+    if gui_host.id in self.sts_topology.hid2host.keys():
+      return self.sts_topology.hid2host[gui_host.id]
+    return None
 
   def get_sts_switch(self, gui_switch):
-    '''
-    Given a switch in GUI, return the corresponding switch in STS by dpid
-    '''
-    if gui_switch.id not in self.sts_topology.dpid2switch.keys():
-      self.debug("Error: Switch does not exist in STS!")
-      return None
-    return self.sts_topology.dpid2switch[gui_switch.id]
+    ''' Given a switch in GUI, return the corresponding switch in STS by dpid '''
+    if gui_switch.id in self.sts_topology.dpid2switch.keys():
+      return self.sts_topology.dpid2switch[gui_switch.id]
+    return None
 
   def create_switch(self, dpid=None):
-    '''
-    Create a switch with the given dpid in both STS and GUI
-    '''
+    ''' Create a switch with the given dpid in both STS and GUI '''
     if dpid is None:
-      dpid = max(self.sts_topology.dpid2switch.keys()) + 1
+      dpid = max(self.dpid2switch.keys()) + 1
     num_ports = 2
     switch = self.sts_topology.create_switch(dpid, num_ports)
     self.add_switch(dpid)
 
+  def remove_switch(self, dpid):
+    '''
+    Remove a switch in both STS and GUI, along with all associated links and any
+    dangling hosts previously attached
+    '''
+    if dpid is None or dpid not in self.dpids:
+      return
+    gui_switch = self.dpid2switch[dpid]
+    sts_switch = self.sts_topology.dpid2switch[dpid]
+    self.sts_topology.remove_switch(sts_switch)
+    # Remove associated network links in GUI
+    network_links_to_remove = []
+    for network_link in self.network_links:
+      if network_link.source is gui_switch or\
+         network_link.dest is gui_switch:
+        network_links_to_remove.append(network_link)
+    for network_link in network_links_to_remove:
+      network_link.source.linkList.remove(network_link)
+      network_link.dest.linkList.remove(network_link)
+      if network_link in self.topology_scene.items():
+        self.topology_scene.removeItem(network_link)
+      self.network_links.remove(network_link)
+    # Remove associated access links in GUI
+    access_links_to_remove = []
+    for access_link in self.access_links:
+      if access_link.dest is gui_switch:
+        access_links_to_remove.append(access_link)
+    for access_link in access_links_to_remove:
+      gui_host = access_link.source
+      gui_host.linkList.remove(access_link)
+      if access_link in self.topology_scene.items():
+        self.topology_scene.removeItem(access_link)
+      self.access_links.remove(access_link)
+      # Remove dangling hosts in GUI, if any
+      if len(gui_host.linkList) == 0:
+        if gui_host in self.topology_scene.items():
+          self.topology_scene.removeItem(gui_host)
+        del self.hid2host[gui_host.id]
+    # Remove switch in GUI
+    if gui_switch in self.topology_scene.items():
+      self.topology_scene.removeItem(gui_switch)
+    del self.dpid2switch[dpid]
+    
+  def attach_host_to_switch(self, dpid):
+    ''' Create a host and attach it to the switch with the given dpid in both STS and GUI '''
+    if dpid is None or dpid not in self.dpids:
+      return
+    sts_switch = self.sts_topology.dpid2switch[dpid]
+    sts_host = self.sts_topology.create_host(sts_switch, get_switch_port=
+             lambda switch: self.sts_topology.link_tracker.find_unused_port(switch))
+    hid = sts_host.hid
+    # Situate the new host near the switch
+    gui_switch = self.dpid2switch[dpid]
+    host_x = randint(int(gui_switch.x())-100, int(gui_switch.x())+100)
+    host_y = randint(int(gui_switch.y())-100, int(gui_switch.y())+100)
+    if host_x < self.topology_view.minX:
+      host_x = self.topology_view.minX
+    if host_x > self.topology_view.maxX:
+      host_x = self.topology_view.maxX
+    if host_y < self.topology_view.minY:
+      host_y = self.topology_view.minY
+    if host_y > self.topology_view.maxY:
+      host_y = self.topology_view.maxY
+    self.add_host(hid, (host_x, host_y))
+    self.add_access_link(hid, dpid)
+
+  def remove_host(self, hid):
+    ''' Remove a host and all associated access links in both STS and GUI '''
+    if hid is None or hid not in self.hids:
+      return
+    gui_host = self.hid2host[hid]
+    sts_host = self.sts_topology.hid2host[hid]
+    self.sts_topology.remove_host(sts_host)
+    # Remove access links in GUI
+    for access_link in self.access_links:
+      if access_link.source is gui_host:
+        access_link.dest.linkList.remove(access_link)
+        if access_link in self.topology_scene.items():
+          self.topology_scene.removeItem(access_link)
+        self.access_links.remove(access_link)
+    # Remove host in GUI
+    if gui_host in self.topology_scene.items():
+      self.topology_scene.removeItem(gui_host)
+    del self.hid2host[hid]
+
   def create_network_link(self, from_dpid, to_dpid):
-    '''
-    Create a unidirectional network link in both STS and GUI
-    '''
+    ''' Create a unidirectional network link in both STS and GUI '''
     if from_dpid is None or\
        to_dpid is None or\
        from_dpid not in self.dpids or\
@@ -320,6 +390,25 @@ class STSSyncer:
     self.sts_topology.create_network_link(sts_from_switch, None, sts_to_switch, None)
     self.add_network_link(from_dpid, to_dpid)
 
+  def remove_network_link(self, from_dpid, to_dpid):
+    ''' Remove a unidirectional network link in both STS and GUI '''
+    if from_dpid is None or\
+       to_dpid is None or\
+       from_dpid not in self.dpids or\
+       to_dpid not in self.dpids:
+      return
+    sts_from_switch = self.sts_topology.dpid2switch[from_dpid]
+    sts_to_switch = self.sts_topology.dpid2switch[to_dpid]
+    self.sts_topology.remove_network_link(sts_from_switch, sts_to_switch)
+    gui_from_switch = self.dpid2switch[from_dpid]
+    gui_to_switch = self.dpid2switch[to_dpid]
+    for link in self.network_links:
+      if link.source is gui_from_switch and link.dest is gui_to_switch:
+        gui_from_switch.linkList.remove(link)
+        gui_to_switch.linkList.remove(link)
+        self.network_links.remove(link)
+        self.topology_scene.removeItem(link)
+    
   def save_state(self):
     '''
     Save all JSON serialized entities of both the STS and GUI topologies to a file
@@ -328,7 +417,7 @@ class STSSyncer:
       "h" = host
       "l" = network link
     Access links need not be saved, because there is a one to one correspondence
-      between hosts and access links
+    between hosts and access links
     '''
     lines = []
     for gui_switch in self.switches:
@@ -478,4 +567,3 @@ class STSSyncer:
     sts_to_switch = self.sts_topology.dpid2switch[to_switch_dpid]
     sts_link = self.sts_topology.create_network_link(sts_from_switch, None, sts_to_switch, None)
     self.add_network_link(from_switch_dpid, to_switch_dpid)
-

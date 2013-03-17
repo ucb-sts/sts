@@ -111,7 +111,8 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
 def create_netns_host(create_io_worker, ingress_switch,
                       ip_addr_str="",
                       get_switch_port=get_switchs_host_port, cmd='xterm'):
-  ''' Create a host with a process running in a separate network namespace.
+  '''
+  Create a host with a process running in a separate network namespace.
   The netns can only communicate with a single interface (for now) because it must
   correspond to the physical interface in the network namespace guest.
 
@@ -128,9 +129,10 @@ def create_netns_host(create_io_worker, ingress_switch,
   return (host, [access_link]) # single item list to be consistent with create_host
 
 class PatchPanel(object):
-  """ A Patch panel. Contains a bunch of wires to forward packets between switches.
-      Listens to the SwitchDPPacketOut event on the switches.
-  """
+  '''
+  A Patch panel. Contains a bunch of wires to forward packets between switches.
+  Listens to the SwitchDPPacketOut event on the switches.
+  '''
   def __init__(self, switches, hosts, connected_port_mapping):
     '''
     Constructor
@@ -168,10 +170,10 @@ class PatchPanel(object):
     host.receive(host_interface, packet)
 
 def BufferedPatchPanelForTopology(topology):
-  """
+  '''
   Given a pox.lib.graph.graph object with hosts, switches, and other things,
   produce an appropriate BufferedPatchPanel
-  """
+  '''
   return BufferedPatchPanel(topology.find(is_a=SoftwareSwitch), topology.find(is_a=Host), \
                             lambda node, port:topology.port_for_node(node, port))
 
@@ -277,7 +279,11 @@ class LinkTracker(object):
     # notice that the link has come back up!
 
   def create_access_link(self, host, interface, switch, port):
-    ''' Create an access link between a host and a switch '''
+    '''
+    Create an access link between a host and a switch
+    If no interface is provided, an unused interface is used
+    If no port is provided, an unused port is used
+    '''
     if interface is None:
       interface = self.find_unused_interface(host)
     if port is None:
@@ -286,9 +292,25 @@ class LinkTracker(object):
     self.port2access_link[port] = new_access_link
     self.interface2access_link[interface] = new_access_link
     return link
-
+  
+  def remove_access_link(self, host, switch):
+    ''' Remove an access link between a host and a switch '''
+    for port in switch.ports.values():
+      if port in self.port2access_link.keys():
+        link = self.port2access_link[port]
+        if link.host is host and link.switch is switch:
+          del self.port2access_link[port]
+    for interface in host.interfaces:
+      if interface in self.interface2access_link.keys():
+        link = self.interface2access_link[interface]
+        if link.host is host and link.switch is switch:
+          del self.interface2access_link[interface]
+     
   def create_network_link(self, from_switch, from_port, to_switch, to_port):
-    ''' Create a unidirectional network (internal) link between two switches '''
+    '''
+    Create a unidirectional network (internal) link between two switches
+    If a port is not provided, an unused port in the corresponding switch is used
+    '''
     if from_port is None:
       from_port = self.find_unused_port(from_switch)
     if to_port is None:
@@ -296,7 +318,16 @@ class LinkTracker(object):
     link = Link(from_switch, from_port, to_switch, to_port)
     self.port2internal_link[from_port] = link
     return link
-
+  
+  def remove_network_link(self, from_switch, to_switch):
+    ''' Remove a unidirectional network (internal) link between two switches '''
+    for port in from_switch.ports.values():
+      if port in self.port2internal_link.keys():
+        link = self.port2internal_link[port]
+        if link.start_software_switch is from_switch and\
+           link.end_software_switch is to_switch:
+          del self.port2internal_link[port]
+    
   def find_unused_port(self, switch):
     ''' Find a switch's unused port; if no such port exists, create a new one '''
     for port_number, port in switch.ports.items():
@@ -330,12 +361,14 @@ class LinkTracker(object):
             port in self.port2internal_link)
 
   def __call__(self, node, port):
-    ''' Given a node and a port, return a tuple (node, port) that is directly
+    '''
+    Given a node and a port, return a tuple (node, port) that is directly
     connected to the port.
 
     This can be used in 2 ways
     - node is a Host type and port is a HostInterface type
-    - node is a Switch type and port is a ofp_phy_port type.'''
+    - node is a Switch type and port is a ofp_phy_port type.
+    '''
     if port in self.port2access_link:
       access_link = self.port2access_link[port]
       return (access_link.host, access_link.interface)
@@ -356,11 +389,13 @@ class LinkTracker(object):
 
   def migrate_host(self, old_ingress_dpid, old_ingress_portno,
                    new_ingress_dpid, new_ingress_portno):
-    '''Migrate the host from the old (ingress switch, port) to the new
+    '''
+    Migrate the host from the old (ingress switch, port) to the new
     (ingress switch, port). Note that the new port must not already be
     present, otherwise an exception will be thrown (we treat all switches as
     configurable software switches for convenience, rather than hardware switches
-    with a fixed number of ports)'''
+    with a fixed number of ports)
+    '''
     old_ingress_switch = self._get_switch_by_dpid(old_ingress_dpid)
 
     if old_ingress_portno not in old_ingress_switch.ports:
@@ -459,6 +494,38 @@ class Topology(object):
     self.link_tracker.dpid2switch[switch_id] = switch
     return switch
 
+  def remove_switch(self, switch):
+    '''
+    Remove a switch, along with all associated links and any dangling
+    hosts previously attached
+    '''
+    if switch not in self.dpid2switch.values():
+      return
+    # Remove associated network links
+    for network_link in self.network_links:
+      if network_link.start_software_switch is switch or\
+         network_link.end_software_switch is switch:
+        port = network_link.start_port
+        if port in self.link_tracker.port2internal_link.keys():
+          del self.link_tracker.port2internal_link[port]
+    # Remove associated access links
+    for access_link in self.access_links:
+      if access_link.switch is switch:
+        port = access_link.switch_port
+        interface = access_link.interface
+        host = access_link.host
+        if port in self.link_tracker.port2access_link.keys():
+          del self.link_tracker.port2access_link[port]
+        if interface in self.link_tracker.interface2access_link.keys():
+          del self.link_tracker.interface2access_link[interface]
+        # Remove dangling hosts, if any
+        for i in host.interfaces:
+          if i in self.link_tracker.interface2access_link.keys():
+            break
+        else:
+          del self.hid2host[host.hid]
+    del self.dpid2switch[switch.dpid]
+
   def create_host(self, ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
                 get_switch_port=get_switchs_host_port):
     ''' Create a host, register it in the topology, and wire it to the given switch(es) '''
@@ -472,6 +539,21 @@ class Topology(object):
       self.link_tracker.interface2access_link[interface] = access_link
     return host
 
+  def remove_host(self, host):
+    ''' Remove a host and all associated access links '''
+    if host not in self.hid2host.values():
+      return
+    # Remove associated access links
+    for access_link in self.access_links:
+      if access_link.host is host:
+        port = access_link.switch_port
+        interface = access_link.interface
+        if port in self.link_tracker.port2access_link.keys():
+          del self.link_tracker.port2access_link[port]
+        if interface in self.link_tracker.interface2access_link.keys():
+          del self.link_tracker.interface2access_link[interface]
+    del self.hid2host[host.hid]
+    
   def get_switch(self, dpid):
     if dpid not in self.dpid2switch:
       raise RuntimeError("unknown dpid %d" % dpid)
@@ -484,20 +566,20 @@ class Topology(object):
 
   @property
   def live_switches(self):
-    """ Return the software_switchs which are currently up """
+    ''' Return the software_switchs which are currently up '''
     return set(self.switches) - self.failed_switches
 
   @property
   def live_edge_switches(self):
-    """
+    '''
     Return the software_switchs which are currently up and can connect to
     hosts
-    """
+    '''
     edge_switches = set(filter(lambda sw: sw.can_connect_to_endhosts, self.switches))
     return edge_switches - self.failed_switches
 
   def ok_to_send(self, dp_event):
-    """Return True if it is ok to send the dp_event arg."""
+    ''' Return True if it is ok to send the dp_event arg '''
     if not self.link_tracker.port_connected(dp_event.port):
       return False
 
@@ -543,9 +625,15 @@ class Topology(object):
   def create_access_link(self, host, interface, switch, port):
     return self.link_tracker.create_access_link(host, interface, switch, port)
 
+  def remove_access_link(self, host, switch):
+    return self.link_tracker.remove_access_link(host, switch)
+
   def create_network_link(self, from_switch, from_port, to_switch, to_port):
     return self.link_tracker.create_network_link(from_switch, from_port, to_switch, to_port)
 
+  def remove_network_link(self, from_switch, to_switch):
+    return self.link_tracker.remove_network_link(from_switch, to_switch)
+  
   @property
   def blocked_controller_connections(self):
     for switch in self.switches:
@@ -610,10 +698,10 @@ class Topology(object):
 
   @staticmethod
   def populate_from_topology(graph):
-    """
+    '''
     Take a pox.lib.graph.graph.Graph and generate arguments needed for the
     simulator
-    """
+    '''
     topology = Topology()
     topology.hosts = graph.find(is_a=Host)
     # TODO(cs): broken: can't set attribute
@@ -626,9 +714,7 @@ class Topology(object):
     return topology
 
   def reset(self):
-    '''
-    Reset topology without new controllers
-    '''
+    ''' Reset topology without new controllers '''
     self.dpid2switch = {}
     self.hid2host = {}
     self.failed_switches = set()
@@ -680,14 +766,14 @@ class MeshTopology(Topology):
       self.gui.launch()
 
   class FullyMeshedLinks(LinkTracker):
-    """
+    '''
     A factory method (inner class) for creating a fully meshed network.
     Connects every pair of switches. Ports are in ascending order of
     the dpid of connected switch, while skipping the self-connections.
     I.e., for (dpid, portno):
         (0, 0) <-> (1,0)
         (2, 1) <-> (1,1)
-    """
+    '''
     def __init__(self, dpid2switch, access_links=[]):
       port2access_link = { access_link.switch_port: access_link
                            for access_link in access_links }
