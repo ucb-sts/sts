@@ -12,9 +12,26 @@ def check_for_loops_or_connectivity(simulation):
     sys.exit(0)
   return []
 
+def check_stale_entries(simulation):
+  '''Check wether a (hardcoded) migrated host's old switch has stale routing entries'''
+  dpid = 1 # hardcoding host 1
+  port_no = 4
+
+  switch = simulation.topology.get_switch(dpid)
+
+  port_down = port_no in switch.down_port_nos
+  old_entries = switch.table.entries_for_port(port_no)
+
+  if port_down and len(old_entries) > 0:
+    # we have a violation!
+    return old_entries
+
+  return []
+
 # Note: make sure to add new custom invariant checks to this dictionary!
 name_to_invariant_check = {
   "check_for_loops_or_connectivity" : check_for_loops_or_connectivity,
+  "check_stale_entries" : check_stale_entries,
   "InvariantChecker.check_liveness" :  InvariantChecker.check_liveness,
   "InvariantChecker.check_loops" :  InvariantChecker.check_loops,
   "InvariantChecker.python_check_connectivity" :  InvariantChecker.python_check_connectivity,
