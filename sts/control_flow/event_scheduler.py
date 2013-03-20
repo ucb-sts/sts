@@ -123,7 +123,7 @@ class EventScheduler(object):
 
   def __init__(self, simulation, speedup=1.0,
                delay_input_events=True, initial_wait=0.5,
-               epsilon_seconds=0.15,
+               epsilon_seconds=0.35,
                sleep_interval_seconds=0.05):
     self.simulation = simulation
     self.speedup = speedup
