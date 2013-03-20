@@ -98,7 +98,7 @@ class SyncProtocolSpeaker(object):
   def __init__(self, handlers, io_delegate, collect_stats=True):
     self.xid_generator = itertools.count(1)
     self.io = io_delegate
-    self.sent_xids = set()
+    #self.sent_xids = set()
     self.listener = SyncProtocolListener(handlers, io_delegate,
                                          collect_stats=collect_stats)
 
@@ -111,9 +111,9 @@ class SyncProtocolSpeaker(object):
   def send(self, message):
     ''' Send a message you don't expect a response from '''
     message = self.message_with_xid(message)
-    if((message.type, message.xid) in self.sent_xids):
-      raise RuntimeError("Error sending message %s: XID %d already sent" % (str(message), message.xid))
-    self.sent_xids.add( (message.type, message.xid) )
+    #if((message.type, message.xid) in self.sent_xids):
+    #  raise RuntimeError("Error sending message %s: XID %d already sent" % (str(message), message.xid))
+    #self.sent_xids.add( (message.type, message.xid) )
     self.io.send(message._asdict())
 
     return message
