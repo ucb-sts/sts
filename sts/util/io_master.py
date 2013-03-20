@@ -145,7 +145,8 @@ class IOMaster(object):
 
     if (self.pinger):
       self.pinger.ping()
-      self.pinger.close()
+      if hasattr(self.pinger, "close"):
+        self.pinger.close()
       self.pinger = None
 
     self.closed = True
