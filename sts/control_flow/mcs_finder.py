@@ -412,7 +412,13 @@ class MCSFinder(ControlFlow):
       self._intermcs.min_size = len(dag.events)
       self._intermcs.count += 1
       dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self._intermcs.count, label.replace("/", ".")))
-      os.makedirs(dst)
+      try:
+        os.makedirs(path)
+      except OSError as exc:
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+          pass
+        else:
+          raise
       self._dump_mcs_trace(dag, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
       self._dump_runtime_stats(os.path.join(dst,
           os.path.basename(self._runtime_stats.runtime_stats_file)))
