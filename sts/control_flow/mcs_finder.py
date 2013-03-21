@@ -413,7 +413,7 @@ class MCSFinder(ControlFlow):
       self._intermcs.count += 1
       dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self._intermcs.count, label.replace("/", ".")))
       try:
-        os.makedirs(path)
+        os.makedirs(dst)
       except OSError as exc:
         if exc.errno == errno.EEXIST and os.path.isdir(path):
           pass
