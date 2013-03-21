@@ -352,13 +352,13 @@ class MCSFinder(ControlFlow):
     replayer = Replayer(self.simulation_cfg, new_dag,
                         wait_on_deterministic_values=self.wait_on_deterministic_values,
                         **self.kwargs)
-    simulation = replayer.simulate()
-    self._track_new_internal_events(simulation, replayer)
+    self.simulation = replayer.simulate()
+    self._track_new_internal_events(self.simulation, replayer)
     # Wait a bit in case the bug takes awhile to happen
     self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
     time.sleep(self.end_wait_seconds)
-    violations = self.invariant_check(simulation)
-    simulation.clean_up()
+    violations = self.invariant_check(self.simulation)
+    self.simulation.clean_up()
     return violations
 
   def _optimize_event_dag(self):
