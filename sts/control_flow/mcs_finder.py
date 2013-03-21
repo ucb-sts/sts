@@ -21,7 +21,7 @@ find the minimal causal set (MCS) of a failure.
 '''
 
 from sts.util.console import msg, color
-from sts.util.convenience import timestamp_string
+from sts.util.convenience import timestamp_string, mkdir_p
 from sts.util.precompute_cache import PrecomputeCache, PrecomputePowerSetCache
 from sts.replay_event import *
 from sts.event_dag import EventDag, split_list
@@ -412,13 +412,7 @@ class MCSFinder(ControlFlow):
       self._intermcs.min_size = len(dag.events)
       self._intermcs.count += 1
       dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self._intermcs.count, label.replace("/", ".")))
-      try:
-        os.makedirs(dst)
-      except OSError as exc:
-        if exc.errno == errno.EEXIST and os.path.isdir(path):
-          pass
-        else:
-          raise
+      mkdir_p(dst)
       self._dump_mcs_trace(dag, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
       self._dump_runtime_stats(os.path.join(dst,
           os.path.basename(self._runtime_stats.runtime_stats_file)))
