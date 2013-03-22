@@ -35,7 +35,8 @@ def find_index(f, seq):
     if f(item):
       return index
 
-def check_heap(max_kB=1.8*10**6):
+
+def check_heap(max_kB=3.0*10**6):
   ''' If we're using more than max kB of RAM, pop into an interactive
   shell. Note: assumes linux.
 
