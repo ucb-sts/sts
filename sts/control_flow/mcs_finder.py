@@ -21,7 +21,7 @@ find the minimal causal set (MCS) of a failure.
 '''
 
 from sts.util.console import msg, color
-from sts.util.convenience import timestamp_string
+from sts.util.convenience import timestamp_string, check_heap
 from sts.util.precompute_cache import PrecomputeCache, PrecomputePowerSetCache
 from sts.replay_event import *
 from sts.event_dag import EventDag, split_list
@@ -344,6 +344,8 @@ class MCSFinder(ControlFlow):
     return False
 
   def replay(self, new_dag):
+    check_heap()
+
     # Run the simulation forward
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)

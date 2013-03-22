@@ -35,3 +35,22 @@ def find_index(f, seq):
     if f(item):
       return index
 
+def check_heap(max_kB=1.8*10**6):
+  ''' If we're using more than max kB of RAM, pop into an interactive
+  shell. Note: assumes linux.
+
+  Great for tracking down memory leaks. See:
+      http://www.smira.ru/wp-content/uploads/2011/08/heapy.html'''
+  mem_usage = 0
+  with open("/proc/self/status") as proc:
+    for line in proc.readlines():
+      if line.startswith("VmHWM"):
+        mem_usage = int(line.split()[1])
+
+  if mem_usage > max_kB:
+    print "Entering Console..."
+    from guppy import hpy
+    hp = hpy()
+    h = hp.heap()
+    import code
+    code.interact(local=locals())
