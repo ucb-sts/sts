@@ -349,6 +349,7 @@ class MCSFinder(ControlFlow):
       new_dag = self.transform_dag(new_dag)
 
     # Temporary hack to deal with memory leak: fork replayer
+    # TODO(cs): replayer runtime stats need to be communicated via IPC!
     # TODO(cs): learn how to use subprocess to fork python children
     pid = os.fork()
     if pid == 0: # Child
