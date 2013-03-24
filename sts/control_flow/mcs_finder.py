@@ -370,7 +370,7 @@ class MCSFinder(ControlFlow):
       sys.exit(exit_code)
     else: # Parent
       (_, exit_code) = os.waitpid(pid, 0)
-      exit_code = os.WEXITSTATUS(status)
+      exit_code = os.WEXITSTATUS(exit_code)
       if exit_code != 0:
         violations = [exit_code]
       else:
