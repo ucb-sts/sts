@@ -348,17 +348,33 @@ class MCSFinder(ControlFlow):
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
 
-    # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
-    replayer = Replayer(self.simulation_cfg, new_dag,
-                        wait_on_deterministic_values=self.wait_on_deterministic_values,
-                        **self.kwargs)
-    simulation = replayer.simulate()
-    self._track_new_internal_events(simulation, replayer)
-    # Wait a bit in case the bug takes awhile to happen
-    self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
-    time.sleep(self.end_wait_seconds)
-    violations = self.invariant_check(simulation)
-    simulation.clean_up()
+    # Temporary hack to deal with memory leak: fork replayer
+    # TODO(cs): learn how to use subprocess to fork python children
+    pid = os.fork()
+    if pid == 0: # Child
+      # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
+      replayer = Replayer(self.simulation_cfg, new_dag,
+                          wait_on_deterministic_values=self.wait_on_deterministic_values,
+                          **self.kwargs)
+      simulation = replayer.simulate()
+      self._track_new_internal_events(simulation, replayer)
+      # Wait a bit in case the bug takes awhile to happen
+      self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
+      time.sleep(self.end_wait_seconds)
+      violations = self.invariant_check(simulation)
+      simulation.clean_up()
+      if violations == []:
+        exit_code = 0
+      else:
+        exit_code = 1
+      sys.exit(exit_code)
+    else: # Parent
+      (_, exit_code) = os.waitpid(pid, 0)
+      exit_code = os.WEXITSTATUS(status)
+      if exit_code != 0:
+        violations = [exit_code]
+      else:
+        violations = []
     return violations
 
   def _optimize_event_dag(self):
