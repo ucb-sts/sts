@@ -21,7 +21,7 @@ find the minimal causal set (MCS) of a failure.
 '''
 
 from sts.util.console import msg, color
-from sts.util.convenience import timestamp_string, check_heap
+from sts.util.convenience import timestamp_string, check_heap, mkdir_p
 from sts.util.precompute_cache import PrecomputeCache, PrecomputePowerSetCache
 from sts.replay_event import *
 from sts.event_dag import EventDag, split_list
@@ -350,17 +350,33 @@ class MCSFinder(ControlFlow):
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
 
-    # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
-    replayer = Replayer(self.simulation_cfg, new_dag,
-                        wait_on_deterministic_values=self.wait_on_deterministic_values,
-                        **self.kwargs)
-    simulation = replayer.simulate()
-    self._track_new_internal_events(simulation, replayer)
-    # Wait a bit in case the bug takes awhile to happen
-    self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
-    time.sleep(self.end_wait_seconds)
-    violations = self.invariant_check(simulation)
-    simulation.clean_up()
+    # Temporary hack to deal with memory leak: fork replayer
+    # TODO(cs): learn how to use subprocess to fork python children
+    pid = os.fork()
+    if pid == 0: # Child
+      # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
+      replayer = Replayer(self.simulation_cfg, new_dag,
+                          wait_on_deterministic_values=self.wait_on_deterministic_values,
+                          **self.kwargs)
+      simulation = replayer.simulate()
+      self._track_new_internal_events(simulation, replayer)
+      # Wait a bit in case the bug takes awhile to happen
+      self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
+      time.sleep(self.end_wait_seconds)
+      violations = self.invariant_check(simulation)
+      simulation.clean_up()
+      if violations == []:
+        exit_code = 0
+      else:
+        exit_code = 1
+      sys.exit(exit_code)
+    else: # Parent
+      (_, exit_code) = os.waitpid(pid, 0)
+      exit_code = os.WEXITSTATUS(status)
+      if exit_code != 0:
+        violations = [exit_code]
+      else:
+        violations = []
     return violations
 
   def _optimize_event_dag(self):
@@ -414,7 +430,7 @@ class MCSFinder(ControlFlow):
       self._intermcs.min_size = len(dag.events)
       self._intermcs.count += 1
       dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self._intermcs.count, label.replace("/", ".")))
-      os.makedirs(dst)
+      mkdir_p(dst)
       self._dump_mcs_trace(dag, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
       self._dump_runtime_stats(os.path.join(dst,
           os.path.basename(self._runtime_stats.runtime_stats_file)))

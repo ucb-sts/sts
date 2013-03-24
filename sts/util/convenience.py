@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import time
+import os
+import errno
 
 def is_sorted(l):
   return all(l[i] <= l[i+1] for i in xrange(len(l)-1))
@@ -35,7 +37,6 @@ def find_index(f, seq):
     if f(item):
       return index
 
-
 def check_heap(max_kB=3.0*10**6):
   ''' If we're using more than max kB of RAM, pop into an interactive
   shell. Note: assumes linux.
@@ -55,3 +56,12 @@ def check_heap(max_kB=3.0*10**6):
     h = hp.heap()
     import code
     code.interact(local=locals())
+
+def mkdir_p(dst):
+  try:
+    os.makedirs(dst)
+  except OSError as exc:
+    if exc.errno == errno.EEXIST and os.path.isdir(path):
+      pass
+    else:
+      raise
