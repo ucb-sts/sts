@@ -278,6 +278,12 @@ class Interactive(ControlFlow):
       c.cmd(self.list_switches, "list_switches", alias="lss", help_msg="List switches")
       c.cmd(self.kill_switch,  "kill_switch", alias="ks", help_msg="Kill a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
       c.cmd(self.start_switch,  "start_switch", alias="ss", help_msg="Restart a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.cut_link,  "cut_link", alias="cl", help_msg="Cut a link")\
+           .arg("dpid1", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))\
+           .arg("dpid2", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.repair_link,  "repair_link", alias="rl", help_msg="Repair a link")\
+           .arg("dpid1", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))\
+           .arg("dpid2", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
       c.cmd(self.show_flow_table,  "show_flows", alias="sf", help_msg="Show flowtable of a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
       c.cmd(self.list_hosts, "list_hosts", alias="lhs", help_msg="List hosts")
       c.cmd(self.migrate_host, "migrate_host", alias="mh", help_msg="Migrate a host to switch dpid")\
@@ -374,6 +380,26 @@ class Interactive(ControlFlow):
     down_controller_ids = map(lambda c: c.cid, self.simulation.controller_manager.down_controllers)
     topology.recover_switch(switch, down_controller_ids=down_controller_ids)
     self._log_input_event(SwitchRecovery(switch.dpid))
+
+  def cut_link(self, dpid1, dpid2):
+    topology = self.simulation.topology
+    link = topology.get_link(dpid1, dpid2)
+    topology.sever_link(link)
+    self._log_input_event(LinkFailure(
+                          link.start_software_switch.dpid,
+                          link.start_port.port_no,
+                          link.end_software_switch.dpid,
+                          link.end_port.port_no))
+
+  def repair_link(self, dpid1, dpid2):
+    topology = self.simulation.topology
+    link = topology.get_link(dpid1, dpid2)
+    topology.repair_link(link)
+    self._log_input_event(LinkRecovery(
+                          link.start_software_switch.dpid,
+                          link.start_port.port_no,
+                          link.end_software_switch.dpid,
+                          link.end_port.port_no))
 
   def migrate_host(self, hid, dpid):
     topology = self.simulation.topology
