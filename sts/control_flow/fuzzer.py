@@ -56,7 +56,8 @@ class Fuzzer(ControlFlow):
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
-               mock_link_discovery=False, initialization_rounds=0):
+               mock_link_discovery=False, initialization_rounds=0,
+               link_cut_fraction=0.05):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger,
                            record_deterministic_values=record_deterministic_values)
@@ -100,6 +101,12 @@ class Fuzzer(ControlFlow):
     # How often (in terms of logical rounds) to inject all-to-all packets
     self._all_to_all_interval = 5
 
+    # What fraction of links to cut (for scalability experiments)
+    self.link_cut_fraction = link_cut_fraction
+    self.handshake_start = None
+    self.handshake_end = None
+    self.link_recovery_end = None
+
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
 
@@ -141,6 +148,7 @@ class Fuzzer(ControlFlow):
 
   def simulate(self):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
+    self.simulation_start = time.time() * 1000
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.traffic_generator.set_hosts(self.simulation.topology.hosts)
@@ -176,6 +184,48 @@ class Fuzzer(ControlFlow):
         log.info("Waiting until first OpenfFlow message received..")
         while self.simulation.god_scheduler.pending_receives() == []:
           self.simulation.io_master.select(self.delay)
+        self.handshake_start = time.time() * 1000
+
+      # Wait for handshakes to complete
+      log.info("Waiting for handshakes to complete")
+      while [ s for s in self.simulation.topology.switches if not s.seen_barrier ] != []:
+        self.check_pending_messages(pass_through=True)
+        self.simulation.io_master.select(self.delay)
+      self.handshake_end = time.time() * 1000
+
+      # Cut link_cut_fraction of our links
+      log.info("Cutting links")
+      links = self.simulation.topology.network_links
+      link_cut_index = max(1, int(len(links) * self.link_cut_fraction))
+      cut_links = links[0:link_cut_index]
+      for link in cut_links:
+        self.simulation.topology.sever_link(link)
+        self._log_input_event(LinkFailure(
+                              link.start_software_switch.dpid,
+                              link.start_port.port_no,
+                              link.end_software_switch.dpid,
+                              link.end_port.port_no))
+
+      # Wait for messages to be sent
+      log.info("Letting message through")
+      sent_port_stats = 0
+      while sent_port_stats < len(cut_links):
+        for pending_send in self.simulation.god_scheduler.pending_sends():
+          log.info("+=1")
+          sent_port_stats += 1
+          self.simulation.god_scheduler.schedule(pending_send)
+      # Wait for message to be flushed
+      log.info("Waiting for send() flush")
+      while self.simulation.mux_select.true_io_workers[0].send_buf != "":
+        self.simulation.io_master.select(self.delay)
+      self.link_recovery_end = time.time() * 1000
+      num_switches = len(self.simulation.topology.switches)
+      with open("benchmark/%d" % num_switches, "w") as output:
+        output.write("%d %d %d %d" % (num_switches,
+                                   self.handshake_end - self.handshake_start,
+                                   self.link_recovery_end - self.handshake_start,
+                                   self.link_recovery_end - self.simulation_start))
+      sys.exit(0)
 
       sent_self_packets = False
 

@@ -104,6 +104,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
            self.log.debug("Table entry removed %s" % str(table_mod.removed))
        self.table.addListener(FlowTableModification, _print_entry_remove)
 
+    self.seen_barrier = False
+
     def error_handler(e):
       self.log.exception(e)
       raise e
