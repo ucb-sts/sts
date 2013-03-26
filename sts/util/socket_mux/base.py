@@ -74,8 +74,11 @@ class MockSocket(object):
     # TODO(cs): this is hacky. Should really define our own IOWorker class
     buf = self.json_worker.io_worker.send_buf
     l = self.json_worker.io_worker.socket.send(buf)
-    if l != len(buf):
-      raise RuntimeError("FIXME: data didn't fit in one send()")
+    # Note that if l != len(buf), the rest of the data will be sent on the
+    # next select() [since true_io_worker._ready_to_send will still be True.
+    # In this case our return value will be a lie, but there won't be any
+    # negative consequences of this, since the client is a MockSocket, and we
+    # filter them out of the select call anyway.
     self.json_worker.io_worker._consume_send_buf(l)
     return len(data)
 
