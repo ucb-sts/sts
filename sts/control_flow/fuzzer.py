@@ -220,8 +220,8 @@ class Fuzzer(ControlFlow):
         self.simulation.io_master.select(self.delay)
       self.link_recovery_end = time.time() * 1000
       num_switches = len(self.simulation.topology.switches)
-      with open("benchmark/%d" % num_switches, "w") as output:
-        output.write("%d %d %d %d" % (num_switches,
+      with open("experiments/scaling_benchmark/%d" % num_switches, "w") as output:
+        output.write("%d %d %d %d\n" % (num_switches,
                                    self.handshake_end - self.handshake_start,
                                    self.link_recovery_end - self.handshake_start,
                                    self.link_recovery_end - self.simulation_start))
