@@ -11,6 +11,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import sts.replay_event as replay_events
+from sts.dataplane_traces.trace import Trace
 from sts.log_processing.superlog_parser import parse
 
 parser = argparse.ArgumentParser()
@@ -22,6 +23,9 @@ parser.add_argument('-f', '--format-file',
 parser.add_argument('-N', '--no-stats', action="store_false", dest="stats",
                     help="Don't print statistics",
                     default=True)
+parser.add_argument('-d', '--dp-trace-path', dest="dp_trace_path",
+                    help="For older traces, specify path to the TrafficInjection packets",
+                    default=None)
 args = parser.parse_args()
 
 # ------------------------------- Config file format: --------------------------------------
@@ -142,6 +146,10 @@ def main(args):
   else:
     format_def = object()
 
+  dp_trace = None
+  if args.dp_trace_path is not None:
+    dp_trace = Trace(args.dp_trace_path).dataplane_trace
+
   if hasattr(format_def, "fields"):
     fields = format_def.fields
   else:
@@ -169,6 +177,8 @@ def main(args):
     trace = parse(input_file)
     for event in trace:
       if type(event) not in filtered_classes:
+        if dp_trace is not None and type(event) == replay_events.TrafficInjection:
+          event.dp_event = dp_trace.pop(0)
         for field in fields:
           field_formatters[field](event)
         stats.update(event)
