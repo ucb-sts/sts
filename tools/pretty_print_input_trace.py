@@ -164,10 +164,6 @@ def main(args):
   else:
     filtered_classes = default_filtered_classes
 
-  name_to_class = {
-    klass.__name__ : klass
-    for klass in replay_events.all_events
-  }
   stats = Stats()
 
   # All events are printed with a fixed number of lines, and (optionally)
