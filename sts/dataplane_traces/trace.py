@@ -50,18 +50,19 @@ class DataplaneEvent (object):
 class Trace(object):
   '''Encapsulates a sequence of dataplane events to inject into a simulated network.'''
 
-  def __init__(self, tracefile_path, topology):
+  def __init__(self, tracefile_path, topology=None):
     with file(tracefile_path, 'r') as tracefile:
       self.dataplane_trace = pickle.load(tracefile)
 
-    # Hashmap used to inject packets from the dataplane_trace
-    self.interface2host = {
-      interface: host
-      for host in topology.hosts
-      for interface in host.interfaces
-    }
+    if topology is not None:
+      # Hashmap used to inject packets from the dataplane_trace
+      self.interface2host = {
+        interface: host
+        for host in topology.hosts
+        for interface in host.interfaces
+      }
 
-    self._type_check_dataplane_trace()
+      self._type_check_dataplane_trace()
 
   def _type_check_dataplane_trace(self):
     for dp_event in self.dataplane_trace:
