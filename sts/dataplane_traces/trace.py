@@ -43,6 +43,10 @@ class DataplaneEvent (object):
     packet = ethernet(raw=raw)
     return DataplaneEvent(interface, packet)
 
+  def __repr__(self):
+    return "Interface:%s Packet:%s" % (str(self.interface),
+                                       str(self.packet))
+
 class Trace(object):
   '''Encapsulates a sequence of dataplane events to inject into a simulated network.'''
 
