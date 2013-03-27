@@ -17,6 +17,7 @@ from pox.lib.util import assert_type
 from pox.lib.packet.ethernet import *
 from sts.entities import HostInterface
 
+import base64
 import logging
 log = logging.getLogger("dataplane_trace")
 
@@ -30,6 +31,17 @@ class DataplaneEvent (object):
     assert_type("packet", packet, ethernet, none_ok=False)
     self.interface = interface
     self.packet = packet
+
+  def to_json(self):
+    json_safe_packet = base64.b64encode(self.packet.pack()).replace("\n", "")
+    return {'interface' : self.interface.to_json(), 'packet' : json_safe_packet}
+
+  @staticmethod
+  def from_json(json_hash):
+    interface = HostInterface.from_json(json_hash['interface'])
+    raw = base64.b64decode(json_hash['packet'])
+    packet = ethernet(raw=raw)
+    return DataplaneEvent(interface, packet)
 
 class Trace(object):
   '''Encapsulates a sequence of dataplane events to inject into a simulated network.'''

@@ -170,11 +170,9 @@ class SimulationConfig(object):
             '''                 topology_class=%s,\n'''
             '''                 topology_params="%s",\n'''
             '''                 patch_panel_class=%s,\n'''
-            '''                 dataplane_trace="%s",\n'''
             '''                 multiplex_sockets=%s)''' %
             (str(self.controller_configs),self._topology_class.__name__,
              self._topology_params, self._patch_panel_class.__name__,
-             self._dataplane_trace_path,
              str(self.multiplex_sockets)))
 
 class Simulation(object):
