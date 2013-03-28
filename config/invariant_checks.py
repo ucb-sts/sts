@@ -15,7 +15,7 @@ def check_for_loops_or_connectivity(simulation):
 def check_stale_entries(simulation):
   '''Check wether a (hardcoded) migrated host's old switch has stale routing entries'''
   dpid = 1 # hardcoding host 1
-  port_no = 4
+  port_no = 1
 
   switch = simulation.topology.get_switch(dpid)
 

@@ -210,13 +210,11 @@ class Fuzzer(ControlFlow):
                # All-to-all mode
                if (self.logical_time % self._all_to_all_interval) == 0:
                   self._send_initialization_packets(self_pkts=False)
-                  self._all_to_all_iterations += 1
-                  if self._all_to_all_iterations > len(self.simulation.topology.hosts):
-                     log.info("Done initializing")
-                     self._pending_all_to_all = False
-                     # XXX
-                     if self.single_hm_wait_rounds: # none if not set
-                       self.single_hm_wait_rounds += 1
+                  log.info("Done initializing")
+                  self._pending_all_to_all = False
+                  # XXX
+                  if self.single_hm_wait_rounds: # none if not set
+                    self.single_hm_wait_rounds += 1
             self.check_dataplane(pass_through=True)
 
           msg.event("Round %d completed." % self.logical_time)
