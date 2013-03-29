@@ -57,6 +57,21 @@ class RuntimeStats(object):
     self.timed_out_events = {}
     # { replay iteration -> { event type -> successful matches } }
     self.matched_events = {}
+    self.total_inputs = 0
+    self.total_events = 0
+    self.original_duration_seconds = 0
+    self.replay_start_epoch = 0
+    self.replay_end_epoch = 0
+    self.replay_duration_seconds = 0
+    self.prune_start_epoch = 0
+    self.prune_duration_seconds = 0
+    self.initial_verification_runs_needed  = 0
+    self.peeker = ""
+    self.config = ""
+    self.total_replays = 0
+    self.total_inputs_replayed = 0
+    self.ambiguous_counts = {}
+    self.ambiguous_events = {}
 
   def write_runtime_stats(self):
     # Now write contents to a file
@@ -127,6 +142,27 @@ class RuntimeStats(object):
 
   def clone(self):
     return copy.deepcopy(self)
+
+  def client_dict(self):
+    ''' Return a serializable dict '''
+    # Only include relevent fields for parent
+    v = {}
+    self.record_global_stats()
+    for field in ['new_internal_events', 'early_internal_events',
+                  'timed_out_events', 'matched_events', 'total_replays',
+                  'total_inputs_replayed', 'ambiguous_counts',
+                  'ambiguous_events']:
+      v[field] = getattr(self, field)
+    return v
+
+  def merge_client_dict(self, client_dict):
+    for field, value in client_dict.iteritems():
+      if type(value) == dict:
+        setattr(self, field, dict(getattr(self, field).items() + value.items()))
+      elif type(value) == int:
+        setattr(self, field, getattr(self, field) + value)
+      else:
+        raise ValueError("Unknown field %s: %s" % (str(field),str(value)))
 
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
@@ -362,9 +398,10 @@ class MCSFinder(ControlFlow):
       time.sleep(self.end_wait_seconds)
       violations = self.invariant_check(simulation)
       simulation.clean_up()
-      return violations
+      return (violations, self._runtime_stats.client_dict())
 
-    violations = self.forker.fork(run_forward)
+    (violations, client_runtime_stats) = self.forker.fork(run_forward)
+    self._runtime_stats.merge_client_dict(client_runtime_stats)
     return violations
 
   def _optimize_event_dag(self):
