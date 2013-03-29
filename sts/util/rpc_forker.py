@@ -31,7 +31,6 @@ class Forker(object):
 
   def return_to_parent(self, client_return):
     ''' Invoked by child process to return a value '''
-    print "client_return!:" % client_return
     self.client_return = client_return
     return None
 
