@@ -22,6 +22,7 @@ find the minimal causal set (MCS) of a failure.
 
 from sts.util.console import msg, color
 from sts.util.convenience import timestamp_string, mkdir_p
+from sts.util.rpc_forker import LocalForker
 from sts.util.precompute_cache import PrecomputeCache, PrecomputePowerSetCache
 from sts.replay_event import *
 from sts.event_dag import EventDag, split_list
@@ -134,7 +135,7 @@ class MCSFinder(ControlFlow):
                mcs_trace_path=None, extra_log=None, runtime_stats_file=None,
                wait_on_deterministic_values=False,
                no_violation_verification_runs=1,
-               optimized_filtering=False,
+               optimized_filtering=False, forker=LocalForker(),
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.sync_callback = None
@@ -166,6 +167,7 @@ class MCSFinder(ControlFlow):
     self.no_violation_verification_runs = no_violation_verification_runs
     self._runtime_stats = RuntimeStats(runtime_stats_file)
     self.optimized_filtering = optimized_filtering
+    self.forker = forker
 
   def log(self, s):
     ''' Output a message to both self._log and self._extra_log '''
@@ -348,11 +350,7 @@ class MCSFinder(ControlFlow):
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
 
-    # Temporary hack to deal with memory leak: fork replayer
-    # TODO(cs): replayer runtime stats need to be communicated via IPC!
-    # TODO(cs): learn how to use subprocess to fork python children
-    pid = os.fork()
-    if pid == 0: # Child
+    def run_forward():
       # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
       replayer = Replayer(self.simulation_cfg, new_dag,
                           wait_on_deterministic_values=self.wait_on_deterministic_values,
@@ -364,18 +362,9 @@ class MCSFinder(ControlFlow):
       time.sleep(self.end_wait_seconds)
       violations = self.invariant_check(simulation)
       simulation.clean_up()
-      if violations == []:
-        exit_code = 0
-      else:
-        exit_code = 1
-      sys.exit(exit_code)
-    else: # Parent
-      (_, exit_code) = os.waitpid(pid, 0)
-      exit_code = os.WEXITSTATUS(exit_code)
-      if exit_code != 0:
-        violations = [exit_code]
-      else:
-        violations = []
+      return violations
+
+    violations = self.forker.fork(run_forward)
     return violations
 
   def _optimize_event_dag(self):
