@@ -43,127 +43,6 @@ import logging
 import json
 import os
 
-class RuntimeStats(object):
-  def __init__(self, runtime_stats_file):
-    self.runtime_stats_file = runtime_stats_file
-    self.iteration_size = {}
-    self.violation_found_in_run = Counter()
-    # { replay iteration -> [string representations new internal events] }
-    self.new_internal_events = {}
-    # { replay iteration -> [string representations internal events that
-    #                        violated causality] }
-    self.early_internal_events = {}
-    # { replay iteration -> { event type -> timeouts } }
-    self.timed_out_events = {}
-    # { replay iteration -> { event type -> successful matches } }
-    self.matched_events = {}
-    self.total_inputs = 0
-    self.total_events = 0
-    self.original_duration_seconds = 0
-    self.replay_start_epoch = 0
-    self.replay_end_epoch = 0
-    self.replay_duration_seconds = 0
-    self.prune_start_epoch = 0
-    self.prune_duration_seconds = 0
-    self.initial_verification_runs_needed  = 0
-    self.peeker = ""
-    self.config = ""
-    self.total_replays = 0
-    self.total_inputs_replayed = 0
-    self.ambiguous_counts = {}
-    self.ambiguous_events = {}
-
-  def write_runtime_stats(self):
-    # Now write contents to a file
-    now = timestamp_string()
-
-    if self.runtime_stats_file is None:
-      self.runtime_stats_file = "runtime_stats/" + now + ".json"
-
-    with file(self.runtime_stats_file, "w") as output:
-      json_string = json.dumps(self.__dict__, sort_keys=True, indent=2,
-                               separators=(',', ': '))
-      output.write(json_string)
-
-  def set_dag_stats(self, dag):
-    self.total_inputs = len(dag.input_events)
-    self.total_events = len(dag)
-    self.original_duration_seconds = \
-      (dag.events[-1].time.as_float() -
-       dag.events[0].time.as_float())
-
-  def record_replay_start(self):
-    self.replay_start_epoch = time.time()
-
-  def record_replay_end(self):
-    self.replay_end_epoch = time.time()
-    self.replay_duration_seconds = self.replay_end_epoch - self.replay_start_epoch
-
-  def record_prune_start(self):
-    self.prune_start_epoch = time.time()
-
-  def record_prune_end(self):
-    self.prune_end_epoch = time.time()
-    self.prune_duration_seconds = self.prune_end_epoch - self.prune_start_epoch
-
-  def set_initial_verification_runs_needed(self, verification_runs):
-    self.initial_verification_runs_needed = verification_runs
-
-  def set_peeker(self, peeker):
-    self.peeker = peeker
-
-  def set_config(self, config):
-    self.config = config
-
-  def record_iteration_size(self, iteration_size):
-    self.iteration_size[Replayer.total_replays] = iteration_size
-
-  def record_violation_found(self, verification_iteration):
-    self.violation_found_in_run[verification_iteration] += 1
-
-  def record_new_internal_events(self, new_internal_events):
-    self.new_internal_events[Replayer.total_replays] = new_internal_events
-
-  def record_early_internal_events(self, early_internal_events):
-    self.early_internal_events[Replayer.total_replays] = early_internal_events
-
-  def record_timed_out_events(self, timed_out_events):
-    self.timed_out_events[Replayer.total_replays] = timed_out_events
-
-  def record_matched_events(self, matched_events):
-    self.matched_events[Replayer.total_replays] = matched_events
-
-  def record_global_stats(self):
-    self.total_replays = Replayer.total_replays
-    self.total_inputs_replayed = Replayer.total_inputs_replayed
-    # TODO(cs): assumes that Peeker is the dag transformer
-    self.ambiguous_counts = dict(Peeker.ambiguous_counts)
-    self.ambiguous_events = dict(Peeker.ambiguous_events)
-
-  def clone(self):
-    return copy.deepcopy(self)
-
-  def client_dict(self):
-    ''' Return a serializable dict '''
-    # Only include relevent fields for parent
-    v = {}
-    self.record_global_stats()
-    for field in ['new_internal_events', 'early_internal_events',
-                  'timed_out_events', 'matched_events', 'total_replays',
-                  'total_inputs_replayed', 'ambiguous_counts',
-                  'ambiguous_events']:
-      v[field] = getattr(self, field)
-    return v
-
-  def merge_client_dict(self, client_dict):
-    for field, value in client_dict.iteritems():
-      if type(value) == dict:
-        setattr(self, field, dict(getattr(self, field).items() + value.items()))
-      elif type(value) == int:
-        setattr(self, field, getattr(self, field) + value)
-      else:
-        raise ValueError("Unknown field %s: %s" % (str(field),str(value)))
-
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
                invariant_check_name=None,
@@ -554,4 +433,125 @@ class EfficientMCSFinder(MCSFinder):
 
     return (left_result.insert_atomic_inputs(right_result.atomic_input_events),
             total_inputs_pruned)
+
+class RuntimeStats(object):
+  def __init__(self, runtime_stats_file):
+    self.runtime_stats_file = runtime_stats_file
+    self.iteration_size = {}
+    self.violation_found_in_run = Counter()
+    # { replay iteration -> [string representations new internal events] }
+    self.new_internal_events = {}
+    # { replay iteration -> [string representations internal events that
+    #                        violated causality] }
+    self.early_internal_events = {}
+    # { replay iteration -> { event type -> timeouts } }
+    self.timed_out_events = {}
+    # { replay iteration -> { event type -> successful matches } }
+    self.matched_events = {}
+    self.total_inputs = 0
+    self.total_events = 0
+    self.original_duration_seconds = 0
+    self.replay_start_epoch = 0
+    self.replay_end_epoch = 0
+    self.replay_duration_seconds = 0
+    self.prune_start_epoch = 0
+    self.prune_duration_seconds = 0
+    self.initial_verification_runs_needed  = 0
+    self.peeker = ""
+    self.config = ""
+    self.total_replays = 0
+    self.total_inputs_replayed = 0
+    self.ambiguous_counts = {}
+    self.ambiguous_events = {}
+
+  def write_runtime_stats(self):
+    # Now write contents to a file
+    now = timestamp_string()
+
+    if self.runtime_stats_file is None:
+      self.runtime_stats_file = "runtime_stats/" + now + ".json"
+
+    with file(self.runtime_stats_file, "w") as output:
+      json_string = json.dumps(self.__dict__, sort_keys=True, indent=2,
+                               separators=(',', ': '))
+      output.write(json_string)
+
+  def set_dag_stats(self, dag):
+    self.total_inputs = len(dag.input_events)
+    self.total_events = len(dag)
+    self.original_duration_seconds = \
+      (dag.events[-1].time.as_float() -
+       dag.events[0].time.as_float())
+
+  def record_replay_start(self):
+    self.replay_start_epoch = time.time()
+
+  def record_replay_end(self):
+    self.replay_end_epoch = time.time()
+    self.replay_duration_seconds = self.replay_end_epoch - self.replay_start_epoch
+
+  def record_prune_start(self):
+    self.prune_start_epoch = time.time()
+
+  def record_prune_end(self):
+    self.prune_end_epoch = time.time()
+    self.prune_duration_seconds = self.prune_end_epoch - self.prune_start_epoch
+
+  def set_initial_verification_runs_needed(self, verification_runs):
+    self.initial_verification_runs_needed = verification_runs
+
+  def set_peeker(self, peeker):
+    self.peeker = peeker
+
+  def set_config(self, config):
+    self.config = config
+
+  def record_iteration_size(self, iteration_size):
+    self.iteration_size[Replayer.total_replays] = iteration_size
+
+  def record_violation_found(self, verification_iteration):
+    self.violation_found_in_run[verification_iteration] += 1
+
+  def record_new_internal_events(self, new_internal_events):
+    self.new_internal_events[Replayer.total_replays] = new_internal_events
+
+  def record_early_internal_events(self, early_internal_events):
+    self.early_internal_events[Replayer.total_replays] = early_internal_events
+
+  def record_timed_out_events(self, timed_out_events):
+    self.timed_out_events[Replayer.total_replays] = timed_out_events
+
+  def record_matched_events(self, matched_events):
+    self.matched_events[Replayer.total_replays] = matched_events
+
+  def record_global_stats(self):
+    self.total_replays = Replayer.total_replays
+    self.total_inputs_replayed = Replayer.total_inputs_replayed
+    # TODO(cs): assumes that Peeker is the dag transformer
+    self.ambiguous_counts = dict(Peeker.ambiguous_counts)
+    self.ambiguous_events = dict(Peeker.ambiguous_events)
+
+  def clone(self):
+    return copy.deepcopy(self)
+
+  def client_dict(self):
+    ''' Return a serializable dict '''
+    # Only include relevent fields for parent
+    v = {}
+    self.record_global_stats()
+    for field in ['new_internal_events', 'early_internal_events',
+                  'timed_out_events', 'matched_events', 'total_replays',
+                  'total_inputs_replayed', 'ambiguous_counts',
+                  'ambiguous_events']:
+      v[field] = getattr(self, field)
+    return v
+
+  def merge_client_dict(self, client_dict):
+    for field, value in client_dict.iteritems():
+      if type(value) == dict:
+        setattr(self, field, dict(getattr(self, field).items() + value.items()))
+      elif type(value) == int:
+        setattr(self, field, getattr(self, field) + value)
+      else:
+        raise ValueError("Unknown field %s: %s" % (str(field),str(value)))
 
