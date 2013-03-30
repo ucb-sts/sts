@@ -293,6 +293,20 @@ class HostInterface (object):
   def __repr__(self, *args, **kwargs):
     return self.__str__()
 
+  def to_json(self):
+    return {'name' : self.name,
+            'ips' : [ ip.toStr() for ip in self.ips ],
+            'hw_addr' : self.hw_addr.toStr()}
+
+  @staticmethod
+  def from_json(json_hash):
+    name = json_hash['name']
+    ips = []
+    for ip in json_hash['ips']:
+      ips.append(IPAddr(str(ip)))
+    hw_addr = EthAddr(json_hash['hw_addr'])
+    return HostInterface(hw_addr, ip_or_ips=ips, name=name)
+
 #                Host
 #          /      |       \
 #  interface   interface  interface

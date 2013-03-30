@@ -152,8 +152,6 @@ class Fuzzer(ControlFlow):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.traffic_generator.set_hosts(self.simulation.topology.hosts)
-    if self._input_logger is not None:
-      self.simulation_cfg.set_dataplane_trace_path(self._input_logger.dp_trace_path)
     return self.loop()
 
   def loop(self):
@@ -280,7 +278,7 @@ class Fuzzer(ControlFlow):
   def _send_initialization_packet(self, host, self_pkt=False):
     traffic_type = "icmp_ping"
     dp_event = self.traffic_generator.generate(traffic_type, host, self_pkt=self_pkt)
-    self._log_input_event(TrafficInjection(), dp_event=dp_event)
+    self._log_input_event(TrafficInjection(dp_event=dp_event))
 
   def _send_initialization_packets(self, self_pkts=False):
     for host in self.simulation.topology.hosts:
@@ -326,7 +324,7 @@ class Fuzzer(ControlFlow):
     if (self.simulation.dataplane_trace and
         (self.logical_time % self.traffic_inject_interval) == 0):
       dp_event = self.simulation.dataplane_trace.inject_trace_event()
-      self._log_input_event(TrafficInjection(), dp_event=dp_event)
+      self._log_input_event(TrafficInjection(dp_event=dp_event))
 
   def trigger_events(self):
     self.check_dataplane()
@@ -472,7 +470,7 @@ class Fuzzer(ControlFlow):
             traffic_type = "icmp_ping"
             # Generates a packet, and feeds it to the software_switch
             dp_event = self.traffic_generator.generate(traffic_type, host)
-            self._log_input_event(TrafficInjection(), dp_event=dp_event)
+            self._log_input_event(TrafficInjection(dp_event=dp_event))
 
   def check_controllers(self):
     def crash_controllers():

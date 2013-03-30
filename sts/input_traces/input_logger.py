@@ -62,7 +62,6 @@ class InputLogger(object):
     if one is not provided.
     '''
     self.output_path = output_path
-    self.dp_events = []
     self.last_time = SyncTime.now()
     self._disallow_timeouts = False
     self._events_after_close = []
@@ -71,7 +70,6 @@ class InputLogger(object):
   def open(self, results_dir=None):
     if results_dir != None:
       self.output_path = results_dir + "/events.trace"
-      self.dp_trace_path = results_dir + "/dataplane.trace"
       self.replay_cfg_path = results_dir + "/replay_config.py"
       self.mcs_cfg_path = results_dir + "/mcs_config.py"
     else:
@@ -80,7 +78,6 @@ class InputLogger(object):
         self.output_path = "input_traces/" + now + ".trace"
       basename = os.path.basename(self.output_path)
 
-      self.dp_trace_path = "./dataplane_traces/" + basename
       self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
       self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
 
@@ -100,7 +97,7 @@ class InputLogger(object):
     log.debug("logging event %r" % event)
     output.write(json_hash + '\n')
 
-  def log_input_event(self, event, dp_event=None):
+  def log_input_event(self, event):
     '''
     Log the event as a json hash. Note that we log dataplane events in a
     separate pickle log, so we optionally allow a packet parameter to be
@@ -110,8 +107,6 @@ class InputLogger(object):
       raise Exception("Not opened -- call InputLogger.open")
     if not self.output.closed:
       self._serialize_event(event, self.output)
-      if dp_event is not None:
-        self.dp_events.append(dp_event)
     else:
       self._events_after_close.append(event)
 
@@ -127,12 +122,6 @@ class InputLogger(object):
     self.log_input_event(WaitTime(1.0, time=self.last_time))
     # Flush the json input log
     self.output.close()
-
-    # Grab the dataplane trace path (might be pre-defined, or Fuzzed)
-    if self.dp_events != []:
-      # If the Fuzzer was injecting random traffic, write the dataplane trace
-      tg.write_trace_log(self.dp_events, self.dp_trace_path)
-      simulation_cfg.dataplane_trace_path = self.dp_trace_path
 
     # Write the config files
     path_templates = [(self.replay_cfg_path, replay_config_template)]
