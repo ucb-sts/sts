@@ -292,7 +292,5 @@ class Simulation(object):
 
     (self.mux_select, self.demuxers) = monkeypatch_select()
 
-    # TODO(cs): this should block until all switches have finished
-    # initializing with the controller
     self.topology.connect_to_controllers(self.controller_manager.controller_configs,
                                          create_connection=create_connection)
