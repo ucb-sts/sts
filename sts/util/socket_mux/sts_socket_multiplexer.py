@@ -69,16 +69,14 @@ class STSMockSocket(MockSocket):
     # the switch receives a HELLO message. But for that to occur, we need the
     # controller to initiate the HELLO message in reaction to our connection
     # attempt. Therefore, we need to explicitly
-    # cause the underlying socket to send here. connect() is a blocking call,
-    # so we're at liberty to block.
-    demuxer.true_io_worker.socket.setblocking(1)
+    # cause the underlying socket to send here.
     try:
       l = demuxer.true_io_worker.socket.send(demuxer.true_io_worker.send_buf)
       if l > 0:
         demuxer.true_io_worker._consume_send_buf(l)
     except socket.error as (s_errno, strerror):
       log.error("Socket error: " + strerror)
-    demuxer.true_io_worker.socket.setblocking(0)
+      raise
 
   def getpeername(self):
     return self.peer_address
