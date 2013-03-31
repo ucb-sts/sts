@@ -18,7 +18,7 @@ import select
 import socket
 
 # Note: Make sure that this module is loaded after all other modules except
-# of_01
+# of_01; the OpenFlow listen socket needs to be mocked.
 
 def launch():
   # Server side:
