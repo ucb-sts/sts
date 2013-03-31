@@ -1,14 +1,20 @@
 See http://ucb-sts.github.com/sts/ for an HTML version of this file.
 
-Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? sts seeks to eliminate this need, freeing you to debug the problematic code itself.
+Ever had to manually dig through logs to find the one or two inputs that lead
+your controller software to break? sts seeks to eliminate this need, freeing
+you to debug the problematic code itself.
 
-sts simulates the devices of your network, allowing you to easily generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.
+sts simulates the devices of your network, allowing you to easily generate
+tricky test cases, interactively examine the state of the network, and
+automatically find the exact inputs that are responsible for triggering a
+given bug.
 
 ![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/sts_arch.jpg)
 
 ### Installation
 
-sts depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install sts, you'll just need to clone both repositories:
+sts depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install sts,
+you'll just need to clone both repositories:
 
 ```
 $ git clone git://github.com/ucb-sts/sts.git
@@ -24,13 +30,8 @@ Take sts for a test drive with:
 $ ./simulator.py
 ```
 
-This will boot up pox, generate a 2-node mesh network, and begin feeding in random inputs.
-
-Or you could try a more complex FatTree topology:
-
-```
-$ ./simulator.py -c config/fuzz_pox_fattree.py
-```
+This will boot up pox, generate a 20-switch FatTree network, and begin feeding
+in random inputs.
 
 You can also run sts interactively:
 
@@ -44,29 +45,35 @@ sts can be used to replay previous executions:
 $ ./simulator.py -c config/pox_example_replay.py
 ```
 
-Finally, sts is able to identify the minimal set of inputs that trigger a given bug:
+Finally, sts is able to identify the minimal set of inputs that trigger a
+given bug:
 
 ```
 $ ./simulator.py -c config/pox_example_mcs.py
 ```
 
-You can turn up the verbosity of the simulator's console output by passing the '-v' flag to simulator.py.
+You can turn up the verbosity of the simulator's console output by passing the
+'-v' flag to simulator.py.
 
-The simulator automatically copies your configuration parameters and console output into the experiments/ directory for later examination.
+The simulator automatically copies your configuration parameters and console
+output into the experiments/ directory for later examination.
 
-The config/ directory contains sample configurations. You can specify your own config file by passing its path:
+The config/ directory contains sample configurations. You can specify your own
+config file by passing its path:
 
 ```
 $ ./simulator.py -c config/my_config.py
 ```
 
-See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README) for more information.
+See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README)
+for more information.
 
 ### Dependencies
 
 sts requires python 2.7+
 
-To use the advanced features of sts, you may need to install and make two dependencies:
+To use the advanced features of sts, you may need to install and make two
+dependencies:
 ```
 $ sudo pip install pytrie
 $ (cd sts/headerspace/hassel-c && make -j)
@@ -74,11 +81,14 @@ $ (cd sts/headerspace/hassel-c && make -j)
 
 ### Will I need to modify my controller to use sts?
 
-If your controller supports OpenFlow 1.0, sts works out of the box. You'll only need to change one line in the config file to instruct sts how to launch your controller process(es).
+If your controller supports OpenFlow 1.0, sts works out of the box. You'll
+only need to change one line in the config file to instruct sts how to launch
+your controller process(es).
 
 ### Research
 
-For more information about the research behind sts, see our paper [draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf).
+For more information about the research behind sts, see our paper
+[draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf).
 
 ### Questions?
 
