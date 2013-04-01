@@ -134,6 +134,7 @@ class SimulationConfig(object):
     def instantiate_topology(create_io_worker):
       '''construct a clean topology object from topology_class and
       topology_params'''
+      log.info("Creating topology...")
       # If you want to shoot yourself in the foot, feel free :)
       comma = "" if self._topology_params == "" else ","
       topology = eval("%s(%s%screate_io_worker=create_io_worker)" %
