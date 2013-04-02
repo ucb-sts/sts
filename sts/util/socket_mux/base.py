@@ -73,7 +73,12 @@ class MockSocket(object):
     # that just put it on a buffer. Now, actually send...
     # TODO(cs): this is hacky. Should really define our own IOWorker class
     buf = self.json_worker.io_worker.send_buf
-    l = self.json_worker.io_worker.socket.send(buf)
+    try:
+      l = self.json_worker.io_worker.socket.send(buf)
+    except socket.error as (s_errno, strerror):
+      if s_errno != errno.EAGAIN:
+        raise
+      l = 0
     # Note that if l != len(buf), the rest of the data will be sent on the
     # next select() [since true_io_worker._ready_to_send will still be True.
     # In this case our return value will be a lie, but there won't be any
@@ -175,7 +180,7 @@ class MultiplexedSelect(IOMaster):
     # If any of our mock sockets are ready to read, and our true_socket
     # doesn't have pending writes, return immediately
     ready_to_read_mock = [ s for s in mock_read_socks if self.ready_to_read(s) ]
-    if (ready_to_read_mock != [] or mock_write_workers != []) and our_wl != []:
+    if (ready_to_read_mock != [] or mock_write_workers != []) and our_wl == []:
       return sort_sockets(ready_to_read_mock, mock_write_workers, [])
 
     if hasattr(select, "_old_select"):
