@@ -73,7 +73,12 @@ class MockSocket(object):
     # that just put it on a buffer. Now, actually send...
     # TODO(cs): this is hacky. Should really define our own IOWorker class
     buf = self.json_worker.io_worker.send_buf
-    l = self.json_worker.io_worker.socket.send(buf)
+    try:
+      l = self.json_worker.io_worker.socket.send(buf)
+    except socket.error as (s_errno, strerror):
+      if s_errno != errno.EAGAIN:
+        raise
+      l = 0
     # Note that if l != len(buf), the rest of the data will be sent on the
     # next select() [since true_io_worker._ready_to_send will still be True.
     # In this case our return value will be a lie, but there won't be any
