@@ -180,7 +180,7 @@ class MultiplexedSelect(IOMaster):
     # If any of our mock sockets are ready to read, and our true_socket
     # doesn't have pending writes, return immediately
     ready_to_read_mock = [ s for s in mock_read_socks if self.ready_to_read(s) ]
-    if (ready_to_read_mock != [] or mock_write_workers != []) and our_wl != []:
+    if (ready_to_read_mock != [] or mock_write_workers != []) and our_wl == []:
       return sort_sockets(ready_to_read_mock, mock_write_workers, [])
 
     if hasattr(select, "_old_select"):
