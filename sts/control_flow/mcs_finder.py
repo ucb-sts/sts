@@ -17,7 +17,7 @@
 
 '''
 An orchestrating control flow that invokes replayer several times to
-find the minimal causal set (MCS) of a failure.
+find the minimal causal sequence (MCS) of a failure.
 '''
 
 from sts.util.console import msg, color
