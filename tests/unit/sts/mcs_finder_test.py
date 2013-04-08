@@ -76,6 +76,7 @@ class MockInputEvent(InputEvent):
   def __init__(self, fingerprint=None, **kws):
     super(MockInputEvent, self).__init__(**kws)
     self.fingerprint = fingerprint
+    self.timed_out = False
 
   def proceed(self, simulation):
     return True
