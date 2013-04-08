@@ -109,8 +109,10 @@ class DumbEventScheduler(object):
         break
       self.simulation.io_master.select(self.sleep_interval_seconds)
     if proceed:
+      event.timed_out = False
       self.stats.event_matches(event)
     else:
+      event.timed_out = True
       self.stats.event_timed_out(event)
     self.last_event = event
 
@@ -186,9 +188,11 @@ class EventScheduler(object):
         break
       self.simulation.io_master.select(self.sleep_interval_seconds)
     if proceed:
+      event.timed_out = False
       self.stats.event_matched(event)
       self.update_event_time(event)
     else:
+      event.timed_out = True
       self.stats.event_timed_out(event)
 
   def update_event_time(self, event):
