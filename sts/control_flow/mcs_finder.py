@@ -51,6 +51,7 @@ class MCSFinder(ControlFlow):
                wait_on_deterministic_values=False,
                no_violation_verification_runs=1,
                optimized_filtering=False, forker=LocalForker(),
+               replay_final_trace=False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.sync_callback = None
@@ -83,6 +84,7 @@ class MCSFinder(ControlFlow):
     self._runtime_stats = RuntimeStats(runtime_stats_file)
     self.optimized_filtering = optimized_filtering
     self.forker = forker
+    self.replay_final_trace = replay_final_trace
 
   def log(self, s):
     ''' Output a message to both self._log and self._extra_log '''
@@ -158,6 +160,16 @@ class MCSFinder(ControlFlow):
     self.log("Final MCS (%d elements):" % len(self.dag.input_events))
     for i in self.dag.input_events:
       self.log(" - %s" % str(i))
+
+    if self.replay_final_trace:
+      #  Replaying the final trace achieves two goals:
+      #  - verifies that the MCS indeed ends in the violation
+      #  - allows us to prune internal events that time out
+      violations = self.replay(self.dag)
+      if violations == []:
+        self.log('''Warning! Final MCS did not result in violation.'''
+                 ''' Try without timed out events?''')
+
     if self.mcs_trace_path is not None:
       self._dump_mcs_trace()
     self.log("=== Total replays: %d ===" % Replayer.total_replays)
