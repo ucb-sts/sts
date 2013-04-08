@@ -344,12 +344,15 @@ class MCSFinder(ControlFlow):
       dag = self.dag
     if mcs_trace_path is None:
       mcs_trace_path = self.mcs_trace_path
-    # Dump the mcs trace
-    input_logger = InputLogger(output_path=mcs_trace_path)
-    input_logger.open(os.path.dirname(mcs_trace_path))
-    for e in dag.events:
-      input_logger.log_input_event(e)
-    input_logger.close(self, self.simulation_cfg, skip_mcs_cfg=True)
+    for extension in ["", ".notimeouts"]:
+      output_path = mcs_trace_path + extension
+      input_logger = InputLogger(output_path=output_path)
+      input_logger.open(os.path.dirname(output_path))
+      for e in dag.events:
+        if extension == ".notimeouts" and e.timed_out:
+          continue
+        input_logger.log_input_event(e)
+      input_logger.close(self, self.simulation_cfg, skip_mcs_cfg=True)
 
   def _dump_runtime_stats(self, runtime_stats_file=None):
     runtime_stats = self._runtime_stats.clone()
