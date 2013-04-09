@@ -4,15 +4,22 @@ import os
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 import xmlrpclib
 import sys
+from sts.util.convenience import find_port
 
 class Forker(object):
   ''' Easily fork a job and retrieve the results '''
   __metaclass__ = ABCMeta
 
-  def __init__(self, ip='localhost', port=3370):
+  def __init__(self, ip='localhost', port=None):
     self.ip = ip
+    if port is None:
+      port = find_port(xrange(3000,6000))
     self.port = port
-    self.server = SimpleXMLRPCServer((ip, port), allow_none=True)
+    self.server = SimpleXMLRPCServer((ip, port), allow_none=True,
+                                     bind_and_activate=False)
+    self.server.allow_reuse_address = True
+    self.server.server_bind()
+    self.server.server_activate()
     self.server.register_function(self.return_to_parent, "return_to_parent")
     self.client_return = None
 
@@ -27,12 +34,16 @@ class Forker(object):
     proxy = xmlrpclib.ServerProxy(parent_url, allow_none=True)
     client_return = code_block()
     proxy.return_to_parent(client_return)
+    proxy.close()
     sys.exit(0)
 
   def return_to_parent(self, client_return):
     ''' Invoked by child process to return a value '''
     self.client_return = client_return
     return None
+
+  def close(self):
+    self.server.socket.close()
 
 class LocalForker(Forker):
   def fork(self, code_block):

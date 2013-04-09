@@ -173,8 +173,11 @@ class MCSFinder(ControlFlow):
     if self.mcs_trace_path is not None:
       self._dump_mcs_trace()
     self.log("=== Total replays: %d ===" % Replayer.total_replays)
-
+    self.close()
     return self.simulation
+
+  def close(self):
+    self.forker.close()
 
   def _ddmin(self, dag, split_ways, precompute_cache=None, label_prefix=(),
              total_inputs_pruned=0):
@@ -373,6 +376,7 @@ class MCSFinder(ControlFlow):
     runtime_stats.set_peeker(self.transform_dag is not None)
     runtime_stats.set_config(str(self.simulation_cfg))
     runtime_stats.write_runtime_stats()
+
 
 # TODO(cs): Hack alert. Shouldn't be a subclass
 class EfficientMCSFinder(MCSFinder):
