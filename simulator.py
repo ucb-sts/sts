@@ -19,7 +19,8 @@
 
 import sys
 if sys.version_info < (2, 7, 3):
-  raise RuntimeError("must use python 2.7.3 or greater")
+    raise RuntimeError('''Must use python 2.7.3 or greater. '''
+                       '''See http://www.python.org/download/releases/2.7.4/''')
 
 from sts.util.procutils import kill_procs
 from sts.control_flow import Fuzzer
@@ -28,7 +29,6 @@ import sts.experiments.setup as experiment_setup
 import sts.experiments.lifecycle as exp_lifecycle
 
 import signal
-import sys
 import argparse
 import logging
 import logging.config
