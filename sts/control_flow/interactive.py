@@ -38,8 +38,11 @@ import types
 import re
 from random import Random
 
-import readline
-readline.parse_and_bind('tab:complete')
+try:
+  import readline
+  readline.parse_and_bind('tab:complete')
+except:
+  log.critical("Need to install readline: $ sudo pip install readline")
 
 class STSCommandArg(object):
   def __init__(self, name, help_msg=None, values=None):
