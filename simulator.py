@@ -17,6 +17,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
+if sys.version_info < (2, 7, 3):
+  raise RuntimeError("must use python 2.7.3 or greater")
+
 from sts.util.procutils import kill_procs
 from sts.control_flow import Fuzzer
 from sts.simulation_state import SimulationConfig
