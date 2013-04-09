@@ -556,17 +556,25 @@ class RuntimeStats(object):
   def client_dict(self):
     ''' Return a serializable dict '''
     # Only include relevent fields for parent
-    v = {}
+    d = {}
     self.record_global_stats()
     for field in ['new_internal_events', 'early_internal_events',
                   'timed_out_events', 'matched_events', 'total_replays',
                   'total_inputs_replayed', 'ambiguous_counts',
                   'ambiguous_events']:
-      v[field] = getattr(self, field)
-    return v
+       v = getattr(self, field)
+       # xmlrpclib doesn't allow non-string keys
+       if type(v) == dict:
+         v = dict((str(key), value) for key, value in v.items())
+       d[field] = v
+    return d
 
   def merge_client_dict(self, client_dict):
     for field, value in client_dict.iteritems():
+      try:
+        field = int(field)
+      except:
+        pass
       if type(value) == dict:
         setattr(self, field, dict(getattr(self, field).items() + value.items()))
       elif type(value) == int:
