@@ -243,17 +243,21 @@ class Simulation(object):
 
   def connect_to_controllers(self):
     ''' Connect all switches to all controllers '''
+    def revert_socket_monkeypatch():
+      if hasattr(socket, "_old_socket"):
+        socket.socket = socket._old_socket
+
+    def revert_select_monkeypatch():
+      if hasattr(select, "_old_select"):
+        select.select = select._old_select
+
     def monkeypatch_select():
       log.debug("Monkeypatching STS select")
       mux_select = None
       demuxers = []
       if self.multiplex_sockets:
-        if hasattr(select, "_old_select"):
-          # Revert the previous monkeypatch to allow the new true_sockets to
-          # connect
-          select.select = select._old_select
-          socket.socket = socket._old_socket
-
+        revert_select_monkeypatch()
+        revert_socket_monkeypatch()
         # Monkey patch select to use our deterministic version
         mux_select = MultiplexedSelect()
         for c in self.controller_manager.controller_configs:
@@ -295,3 +299,7 @@ class Simulation(object):
 
     self.topology.connect_to_controllers(self.controller_manager.controller_configs,
                                          create_connection=create_connection)
+
+    # create_connection should not be called again --revert monkeypatch in
+    # case STS wants to open other sockets (e.g., xmlrplclib)
+    revert_socket_monkeypatch()
