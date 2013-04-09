@@ -1,3 +1,18 @@
+# Copyright 2011-2013 Colin Scott
+# Copyright 2011-2013 Andreas Wundsam
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at:
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from collections import namedtuple
 import itertools
 import os
@@ -6,48 +21,7 @@ import sys
 import re
 import socket
 import random
-
-# don't use the standard instance - we don't want to be seeded
-true_random = random.Random()
-
-def port_used(address='127.0.0.1', port=6633):
-  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-  try:
-    s.bind((address, port))
-    s.listen(1)
-    s.close()
-    return False
-  except Exception, e:
-    # TODO(cs): catch specific errors
-    return True
-
-# TODO(cs): this function don't appear to be invoked?
-def find_port(port_spec):
-  if isinstance(port_spec, int):
-    def port_gen():
-      yield port_spec
-      raise Exception("Fixed port %d is busy. Consider specifying a range or a lambda " % port_spec)
-  elif isinstance(port_spec, list):
-    def port_gen():
-      cands = list(port_spec)
-      true_random.shuffle(cands)
-      for c in cands:
-        yield c
-      raise Exception("Port list/range %s exhausted" % str(port_spec))
-  elif isinstance(port_spec, types.FunctionType) or isinstance(port_spec, types.LambdaType):
-    port_gen = port_spec
-
-  gen = port_gen()
-  for attempt in range(0,100):
-    candidate = gen.next()
-    if not port_used(port=candidate):
-      return candidate
-  raise Exception("Could not find a port in 100 tries")
-
-# TODO(cs): this function don't appear to be invoked?
-def find_ports(**kwargs):
-  return { k : find_port(v) for k, v in kwargs.iteritems() }
+from sts.util.convenience import find_port
 
 class ControllerConfig(object):
   _port_gen = itertools.count(6633)
@@ -82,9 +56,7 @@ class ControllerConfig(object):
       if not port:
         port = self._port_gen.next()
       if try_new_ports:
-        while port_used(port=port):
-          print "Port %d in use... trying next" % port
-          port += true_random.randint(0,50)
+        port = find_port(xrange(port, port+2000))
       self.port = port
       self._server_info = (self.address, port)
     else:

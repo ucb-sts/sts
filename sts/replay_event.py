@@ -29,6 +29,7 @@ Author: sw
 from sts.util.console import msg
 from sts.entities import Link
 from sts.god_scheduler import PendingReceive, PendingSend
+from sts.dataplane_traces.trace import DataplaneEvent
 from sts.fingerprints.messages import *
 from invariant_checker import InvariantChecker
 from config.invariant_checks import name_to_invariant_check
@@ -126,6 +127,8 @@ class InternalEvent(Event):
     super(InternalEvent, self).__init__(prefix='i', label=label, round=round, time=time,
                                         prunable=prunable)
     self.timeout_disallowed = timeout_disallowed
+    # Whether the event timed out in the most recent round
+    self.timed_out = False
 
   def proceed(self, simulation):
     # There might be nothing happening for certain internal events, so default
@@ -394,15 +397,33 @@ class PolicyChange(InputEvent):
     return PolicyChange(request_type, round=round, label=label, time=time)
 
 class TrafficInjection(InputEvent):
-  def __init__(self, label=None, round=-1, time=None, prunable=True):
+  def __init__(self, label=None, dp_event=None, round=-1, time=None, prunable=True):
     super(TrafficInjection, self).__init__(label=label, round=round, time=time,
                                            prunable=prunable)
+    self.dp_event = dp_event
 
   def proceed(self, simulation):
-    if simulation.dataplane_trace is None:
-      raise RuntimeError("No dataplane trace specified!")
-    simulation.dataplane_trace.inject_trace_event()
+    # If dp_event is None, backwards compatibility
+    if self.dp_event is None:
+      if simulation.dataplane_trace is None:
+        raise RuntimeError("No dataplane trace specified!")
+      simulation.dataplane_trace.inject_trace_event()
+    else:
+      host = simulation.topology.link_tracker\
+                       .interface2access_link[self.dp_event.interface].host
+      host.send(self.dp_event.interface, self.dp_event.packet)
     return True
+
+  @property
+  def fingerprint(self):
+    return (self.__class__.__name__, self.dp_event)
+
+  def to_json(self):
+    fields = {}
+    fields = dict(self.__dict__)
+    fields['class'] = self.__class__.__name__
+    fields['dp_event'] = self.dp_event.to_json()
+    return json.dumps(fields)
 
   @staticmethod
   def from_json(json_hash):
@@ -410,7 +431,10 @@ class TrafficInjection(InputEvent):
     prunable = True
     if 'prunable' in json_hash:
       prunable = json_hash['prunable']
-    return TrafficInjection(label=label, time=time, round=round, prunable=prunable)
+    dp_event = None
+    if 'dp_event' in json_hash:
+      dp_event = DataplaneEvent.from_json(json_hash['dp_event'])
+    return TrafficInjection(label=label, dp_event=dp_event, time=time, round=round, prunable=prunable)
 
 class WaitTime(InputEvent):
   def __init__(self, wait_time, label=None, round=-1, time=None):

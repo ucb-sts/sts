@@ -237,11 +237,17 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
     return None
 
 class LinkTracker(object):
-  def __init__(self, dpid2switch, port2access_link, interface2access_link):
+  def __init__(self, dpid2switch, port2access_link, interface2access_link,
+               port2internal_link):
     self.dpid2switch = dpid2switch
     self.port2access_link = port2access_link
     self.interface2access_link = interface2access_link
-    self.port2internal_link = {}
+    self.port2internal_link = port2internal_link
+    # { (start dpid, end dpid) -> link }
+    self.dpidpair2link = {
+      (link.start_software_switch.dpid, link.end_software_switch.dpid) : link
+      for link in self.network_links
+    }
     # Metatdata for simulated failures
     # sts.entities.Link objects
     self.cut_links = set()
@@ -292,7 +298,7 @@ class LinkTracker(object):
     self.port2access_link[port] = new_access_link
     self.interface2access_link[interface] = new_access_link
     return link
-  
+
   def remove_access_link(self, host, switch):
     ''' Remove an access link between a host and a switch '''
     for port in switch.ports.values():
@@ -305,7 +311,7 @@ class LinkTracker(object):
         link = self.interface2access_link[interface]
         if link.host is host and link.switch is switch:
           del self.interface2access_link[interface]
-     
+
   def create_network_link(self, from_switch, from_port, to_switch, to_port):
     '''
     Create a unidirectional network (internal) link between two switches
@@ -317,8 +323,9 @@ class LinkTracker(object):
       to_port = self.find_unused_port(to_switch)
     link = Link(from_switch, from_port, to_switch, to_port)
     self.port2internal_link[from_port] = link
+    self.dpidpair2link[(from_switch.dpid, to_switch.dpid)] = link
     return link
-  
+
   def remove_network_link(self, from_switch, to_switch):
     ''' Remove a unidirectional network (internal) link between two switches '''
     for port in from_switch.ports.values():
@@ -327,7 +334,9 @@ class LinkTracker(object):
         if link.start_software_switch is from_switch and\
            link.end_software_switch is to_switch:
           del self.port2internal_link[port]
-    
+          del self.dpid2pair2link[(link.start_software_switch.dpid,
+                                   link.end_software_switch.dpid)]
+
   def find_unused_port(self, switch):
     ''' Find a switch's unused port; if no such port exists, create a new one '''
     for port_number, port in switch.ports.items():
@@ -487,6 +496,11 @@ class Topology(object):
     hosts.sort(key=lambda h: h.hid)
     return hosts
 
+  def get_link(self, dpid1, dpid2):
+    if (dpid1, dpid2) not in self.link_tracker.dpidpair2link:
+      raise ValueError("Unknown link (%d -> %d)" % (dpid1, dpid2))
+    return self.link_tracker.dpidpair2link[(dpid1, dpid2)]
+
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
     ''' Create a switch and register it in the topology '''
     switch = create_switch(switch_id, num_ports, can_connect_to_endhosts)
@@ -553,7 +567,7 @@ class Topology(object):
         if interface in self.link_tracker.interface2access_link.keys():
           del self.link_tracker.interface2access_link[interface]
     del self.hid2host[host.hid]
-    
+
   def get_switch(self, dpid):
     if dpid not in self.dpid2switch:
       raise RuntimeError("unknown dpid %d" % dpid)
@@ -633,7 +647,7 @@ class Topology(object):
 
   def remove_network_link(self, from_switch, to_switch):
     return self.link_tracker.remove_network_link(from_switch, to_switch)
-  
+
   @property
   def blocked_controller_connections(self):
     for switch in self.switches:
@@ -675,8 +689,6 @@ class Topology(object):
               ''' conns per switch)...''' %
               (len(self.switches), len(controller_info_list), connections_per_switch))
 
-    time.sleep(0.25)
-
     for (idx, software_switch) in enumerate(self.switches):
       if len(self.switches) < 20 or not idx % 250:
         log.debug("Connecting switch %d / %d" % (idx, len(self.switches)))
@@ -686,7 +698,6 @@ class Topology(object):
         controller_info = controller_info_cycler.next()
         software_switch.add_controller_info(controller_info)
 
-      time.sleep(0.25)
       software_switch.connect(create_connection)
 
     log.debug("Controller connections done")
@@ -779,7 +790,6 @@ class MeshTopology(Topology):
                            for access_link in access_links }
       interface2access_link = { access_link.interface: access_link
                                 for access_link in access_links }
-      LinkTracker.__init__(self, dpid2switch, port2access_link, interface2access_link)
 
       switches = dpid2switch.values()
       # Access links to hosts are already claimed, all other internal links
@@ -797,6 +807,9 @@ class MeshTopology(Topology):
           port2internal_link[switch_i_port] = link_i2j
           port2internal_link[switch_j_port] = link_j2i
       self.port2internal_link = port2internal_link
+
+      LinkTracker.__init__(self, dpid2switch, port2access_link,
+                           interface2access_link, port2internal_link)
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
@@ -1037,5 +1050,5 @@ class FatTree (Topology):
     # essentially entirely trivial. Alternatively, we could just have an
     # overloaded constructor in the LinkTracker class?
     def __init__(self, port2access_link, interface2access_link, port2internal_link, dpid2switch):
-      LinkTracker.__init__(self, dpid2switch, port2access_link, interface2access_link)
-      self.port2internal_link = port2internal_link
+      LinkTracker.__init__(self, dpid2switch, port2access_link,
+                           interface2access_link, port2internal_link)

@@ -1,3 +1,4 @@
+# Copyright 2011-2013 Andreas Wundsam
 # Copyright 2011-2013 Colin Scott
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

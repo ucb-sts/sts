@@ -73,9 +73,17 @@ class MockSocket(object):
     # that just put it on a buffer. Now, actually send...
     # TODO(cs): this is hacky. Should really define our own IOWorker class
     buf = self.json_worker.io_worker.send_buf
-    l = self.json_worker.io_worker.socket.send(buf)
-    if l != len(buf):
-      raise RuntimeError("FIXME: data didn't fit in one send()")
+    try:
+      l = self.json_worker.io_worker.socket.send(buf)
+    except socket.error as (s_errno, strerror):
+      if s_errno != errno.EAGAIN:
+        raise
+      l = 0
+    # Note that if l != len(buf), the rest of the data will be sent on the
+    # next select() [since true_io_worker._ready_to_send will still be True.
+    # In this case our return value will be a lie, but there won't be any
+    # negative consequences of this, since the client is a MockSocket, and we
+    # filter them out of the select call anyway.
     self.json_worker.io_worker._consume_send_buf(l)
     return len(data)
 
@@ -162,17 +170,18 @@ class MultiplexedSelect(IOMaster):
     mock_read_socks = [ s for s in rl if is_mocked(s) ]
     mock_write_workers = [ w for w in wl if is_mocked(w) ]
 
-    # If any of our mock sockets are ready to read, return immediately
-    ready_to_read_mock = [ s for s in mock_read_socks if self.ready_to_read(s) ]
-    if ready_to_read_mock != [] or mock_write_workers != []:
-      return sort_sockets(ready_to_read_mock, mock_write_workers, [])
-
     (rl, wl, xl) = [ [s for s in l if not is_mocked(s) ]
                      for l in [rl, wl, xl] ]
 
     # Grab the sock lists for our internal socket. These lists will contain
     # our true_io_worker(s), along with our pinger.
     (our_rl, our_wl, our_xl) = self.grab_workers_rwe()
+
+    # If any of our mock sockets are ready to read, and our true_socket
+    # doesn't have pending writes, return immediately
+    ready_to_read_mock = [ s for s in mock_read_socks if self.ready_to_read(s) ]
+    if (ready_to_read_mock != [] or mock_write_workers != []) and our_wl == []:
+      return sort_sockets(ready_to_read_mock, mock_write_workers, [])
 
     if hasattr(select, "_old_select"):
       (rl, wl, xl) = select._old_select(rl+our_rl, wl+our_wl, xl+our_xl, timeout)

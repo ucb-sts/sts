@@ -17,6 +17,7 @@ from pox.lib.util import assert_type
 from pox.lib.packet.ethernet import *
 from sts.entities import HostInterface
 
+import base64
 import logging
 log = logging.getLogger("dataplane_trace")
 
@@ -31,21 +32,37 @@ class DataplaneEvent (object):
     self.interface = interface
     self.packet = packet
 
+  def to_json(self):
+    json_safe_packet = base64.b64encode(self.packet.pack()).replace("\n", "")
+    return {'interface' : self.interface.to_json(), 'packet' : json_safe_packet}
+
+  @staticmethod
+  def from_json(json_hash):
+    interface = HostInterface.from_json(json_hash['interface'])
+    raw = base64.b64decode(json_hash['packet'])
+    packet = ethernet(raw=raw)
+    return DataplaneEvent(interface, packet)
+
+  def __repr__(self):
+    return "Interface:%s Packet:%s" % (str(self.interface),
+                                       str(self.packet))
+
 class Trace(object):
   '''Encapsulates a sequence of dataplane events to inject into a simulated network.'''
 
-  def __init__(self, tracefile_path, topology):
+  def __init__(self, tracefile_path, topology=None):
     with file(tracefile_path, 'r') as tracefile:
       self.dataplane_trace = pickle.load(tracefile)
 
-    # Hashmap used to inject packets from the dataplane_trace
-    self.interface2host = {
-      interface: host
-      for host in topology.hosts
-      for interface in host.interfaces
-    }
+    if topology is not None:
+      # Hashmap used to inject packets from the dataplane_trace
+      self.interface2host = {
+        interface: host
+        for host in topology.hosts
+        for interface in host.interfaces
+      }
 
-    self._type_check_dataplane_trace()
+      self._type_check_dataplane_trace()
 
   def _type_check_dataplane_trace(self):
     for dp_event in self.dataplane_trace:

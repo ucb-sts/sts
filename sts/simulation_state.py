@@ -134,6 +134,7 @@ class SimulationConfig(object):
     def instantiate_topology(create_io_worker):
       '''construct a clean topology object from topology_class and
       topology_params'''
+      log.info("Creating topology...")
       # If you want to shoot yourself in the foot, feel free :)
       comma = "" if self._topology_params == "" else ","
       topology = eval("%s(%s%screate_io_worker=create_io_worker)" %
@@ -170,11 +171,9 @@ class SimulationConfig(object):
             '''                 topology_class=%s,\n'''
             '''                 topology_params="%s",\n'''
             '''                 patch_panel_class=%s,\n'''
-            '''                 dataplane_trace="%s",\n'''
             '''                 multiplex_sockets=%s)''' %
             (str(self.controller_configs),self._topology_class.__name__,
              self._topology_params, self._patch_panel_class.__name__,
-             self._dataplane_trace_path,
              str(self.multiplex_sockets)))
 
 class Simulation(object):
@@ -260,6 +259,7 @@ class Simulation(object):
         for c in self.controller_manager.controller_configs:
           # Connect the true sockets
           true_socket = connect_socket_with_backoff(address=c.address, port=c.port)
+          true_socket.setblocking(0)
           io_worker = mux_select.create_worker_for_socket(true_socket)
           mux_select.set_true_io_worker(io_worker)
           demux = STSSocketDemultiplexer(io_worker, c.server_info)
@@ -293,7 +293,5 @@ class Simulation(object):
 
     (self.mux_select, self.demuxers) = monkeypatch_select()
 
-    # TODO(cs): this should block until all switches have finished
-    # initializing with the controller
     self.topology.connect_to_controllers(self.controller_manager.controller_configs,
                                          create_connection=create_connection)
