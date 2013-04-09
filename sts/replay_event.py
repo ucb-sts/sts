@@ -74,6 +74,8 @@ class Event(object):
     # Whether this event should be prunable by MCSFinder. Initialization
     # inputs are not pruned.
     self.prunable = True
+    # Whether the (internal) event timed out in the most recent round
+    self.timed_out = False
 
   @abc.abstractmethod
   def proceed(self, simulation):
@@ -127,8 +129,6 @@ class InternalEvent(Event):
     super(InternalEvent, self).__init__(prefix='i', label=label, round=round, time=time,
                                         prunable=prunable)
     self.timeout_disallowed = timeout_disallowed
-    # Whether the event timed out in the most recent round
-    self.timed_out = False
 
   def proceed(self, simulation):
     # There might be nothing happening for certain internal events, so default
