@@ -33,7 +33,6 @@ def unpatched_time():
   else:
     return time.time()
 
-
 class SyncTime(collections.namedtuple('SyncTime', ('seconds', 'microSeconds'))):
   """ ValueObject that models the microsecond timestamps used in STS Sync Messages """
   def __new__(cls, seconds, microSeconds):
@@ -90,6 +89,9 @@ class SyncIODelegate(object):
 
   def set_on_message_received(self, f):
     self.io_worker.on_json_received = lambda io_worker, msg: f(msg)
+
+  def close(self):
+    self.io_worker.close()
 
   on_message_received = property(get_on_message_received, set_on_message_received)
 

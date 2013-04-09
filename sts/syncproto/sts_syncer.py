@@ -59,7 +59,7 @@ class STSSyncConnection(object):
       raise ValueError("state_master is null")
     self.state_master = state_master
     self._on_disconnect = []
-    self.io_worker = None
+    self.io_delegate = None
     self.speaker = None
 
   def on_disconnect(self, func):
@@ -75,8 +75,7 @@ class STSSyncConnection(object):
         state_master=self.state_master, io_delegate=self.io_delegate)
 
   def disconnect(self):
-    if(self.io_worker):
-      self.io_worker.close()
+    self.io_delegate.close()
     for handler in self._on_disconnect:
       handler(self)
 
