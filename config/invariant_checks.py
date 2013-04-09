@@ -1,20 +1,30 @@
 from sts.invariant_checker import InvariantChecker
+import sys
 
-def check_for_loops_or_connectivity(simulation):
-  from sts.invariant_checker import InvariantChecker
-  result = InvariantChecker.check_loops(simulation)
-  if result:
-    return result
+def bail_on_connectivity(simulation):
   result = InvariantChecker.python_check_connectivity(simulation)
   if not result:
     print "Connectivity established - bailing out"
-    import sys
     sys.exit(0)
   return []
+
+def check_for_loops_or_connectivity(simulation):
+  result = InvariantChecker.check_loops(simulation)
+  if result:
+    return result
+  return bail_on_connectivity(simulation)
+
+def check_for_loops_blackholes_or_connectivity(simulation):
+  for check in [InvariantChecker.check_loops, InvariantChecker.check_blackholes]:
+    result = check(simulation)
+    if result:
+      return result
+  return bail_on_connectivity(simulation)
 
 # Note: make sure to add new custom invariant checks to this dictionary!
 name_to_invariant_check = {
   "check_for_loops_or_connectivity" : check_for_loops_or_connectivity,
+  "check_for_loops_blackholes_or_connectivity" : check_for_loops_blackholes_or_connectivity,
   "InvariantChecker.check_liveness" :  InvariantChecker.check_liveness,
   "InvariantChecker.check_loops" :  InvariantChecker.check_loops,
   "InvariantChecker.python_check_connectivity" :  InvariantChecker.python_check_connectivity,
