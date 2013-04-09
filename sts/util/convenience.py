@@ -15,6 +15,12 @@
 import time
 import os
 import errno
+import socket
+import random
+import types
+
+# don't use the standard instance - we don't want to be seeded
+true_random = random.Random()
 
 def is_sorted(l):
   return all(l[i] <= l[i+1] for i in xrange(len(l)-1))
@@ -45,3 +51,45 @@ def mkdir_p(dst):
       pass
     else:
       raise
+
+def port_used(address='127.0.0.1', port=6633):
+  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+  try:
+    s.bind((address, port))
+    s.listen(1)
+    s.close()
+    return False
+  except Exception, e:
+    # TODO(cs): catch specific errors
+    return True
+
+def find_port(port_spec):
+  if isinstance(port_spec, xrange):
+    port_spec = list(port_spec)
+  port_gen = None
+  if isinstance(port_spec, int):
+    def port_gen():
+      yield port_spec
+      raise Exception("Fixed port %d is busy. Consider specifying a range or a lambda " % port_spec)
+  elif isinstance(port_spec, list):
+    def port_gen():
+      cands = list(port_spec)
+      true_random.shuffle(cands)
+      for c in cands:
+        yield c
+      raise Exception("Port list/range %s exhausted" % str(port_spec))
+  elif isinstance(port_spec, types.FunctionType) or isinstance(port_spec, types.LambdaType):
+    port_gen = port_spec
+
+  gen = port_gen()
+  for attempt in range(0,100):
+    candidate = gen.next()
+    if not port_used(port=candidate):
+      return candidate
+  raise Exception("Could not find a port in 100 tries")
+
+# TODO(cs): this function don't appear to be invoked?
+def find_ports(**kwargs):
+  return { k : find_port(v) for k, v in kwargs.iteritems() }
+
