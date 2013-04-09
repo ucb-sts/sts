@@ -34,7 +34,10 @@ class Forker(object):
     proxy = xmlrpclib.ServerProxy(parent_url, allow_none=True)
     client_return = code_block()
     proxy.return_to_parent(client_return)
-    proxy.close()
+    try:
+      proxy.close()
+    except:
+      pass
     sys.exit(0)
 
   def return_to_parent(self, client_return):
