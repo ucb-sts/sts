@@ -42,6 +42,7 @@ import logging
 import time
 import select
 import socket
+import os
 
 log = logging.getLogger("simulation")
 
