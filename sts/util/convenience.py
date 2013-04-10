@@ -93,3 +93,6 @@ def find_port(port_spec):
 def find_ports(**kwargs):
   return { k : find_port(v) for k, v in kwargs.iteritems() }
 
+class ExitCode(object):
+  def __init__(self, exit_code):
+    self.exit_code = exit_code

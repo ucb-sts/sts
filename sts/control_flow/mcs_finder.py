@@ -21,7 +21,7 @@ find the minimal causal sequence (MCS) of a failure.
 '''
 
 from sts.util.console import msg, color
-from sts.util.convenience import timestamp_string, mkdir_p
+from sts.util.convenience import timestamp_string, mkdir_p, ExitCode
 from sts.util.rpc_forker import LocalForker
 from sts.util.precompute_cache import PrecomputeCache, PrecomputePowerSetCache
 from sts.replay_event import *
@@ -174,7 +174,7 @@ class MCSFinder(ControlFlow):
       self._dump_mcs_trace()
     self.log("=== Total replays: %d ===" % Replayer.total_replays)
     self.close()
-    return self.simulation
+    return ExitCode(0)
 
   def close(self):
     self.forker.close()
