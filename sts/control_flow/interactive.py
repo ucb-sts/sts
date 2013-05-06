@@ -34,7 +34,6 @@ log = logging.getLogger("interactive")
 
 import code
 import sys
-import types
 import re
 from random import Random
 
@@ -546,104 +545,6 @@ class Interactive(ControlFlow):
     if not dp_event:
       return
     self.simulation.patch_panel.delay_dp_event(dp_event)
-
-  # TODO(cs): remove this code -- no longer used
-  def loop(self):
-    try:
-      while True:
-        # TODO(cs): print out the state of the network at each timestep? Take a
-        # verbose flag..
-        time.sleep(0.05)
-        self.logical_time += 1
-        self.invariant_check_prompt()
-        self.dataplane_trace_prompt()
-        self.check_dataplane()
-        self.check_pending_messages()
-        answer = msg.raw_input('Continue to next round? [Yn]').strip()
-        if answer != '' and answer.lower() != 'y':
-          break
-    finally:
-      if self._input_logger is not None:
-        self._input_logger.close(self.simulation_cfg)
-
-  def invariant_check_prompt(self):
-    answer = msg.raw_input('Check Invariants? [Ny]')
-    if answer != '' and answer.lower() != 'n':
-      msg.interactive("Which one?")
-      msg.interactive("  'o' - omega")
-      msg.interactive("  'c' - connectivity")
-      msg.interactive("  'lo' - loops")
-      msg.interactive("  'li' - controller liveness")
-      answer = msg.raw_input("> ")
-      result = None
-      message = ""
-      if answer.lower() == 'o':
-        self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_correspondence"))
-        result = InvariantChecker.check_correspondence(self.simulation)
-        message = "Controllers with miscorrepondence: "
-      elif answer.lower() == 'c':
-        self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_connectivity"))
-        result = self.invariant_checker.check_connectivity(self.simulation)
-        message = "Disconnected host pairs: "
-      elif answer.lower() == 'lo':
-        self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_loops"))
-        result = self.invariant_checker.check_loops(self.simulation)
-        message = "Loops: "
-      elif answer.lower() == 'li':
-        self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_liveness"))
-        result = self.invariant_checker.check_loops(self.simulation)
-        message = "Crashed controllers: "
-      else:
-        log.warn("Unknown input...")
-
-      if result is None:
-        return
-      else:
-        msg.interactive("%s: %s" % (message, str(result)))
-
-  def dataplane_trace_prompt(self):
-    if self.simulation.dataplane_trace:
-      while True:
-        answer = msg.raw_input('Feed in next dataplane event? [Ny]')
-        if answer != '' and answer.lower() != 'n':
-          dp_event = self.simulation.dataplane_trace.inject_trace_event()
-          self._log_input_event(TrafficInjection(dp_event=dp_event))
-        else:
-          break
-
-  def check_dataplane(self):
-    ''' Decide whether to delay, drop, or deliver packets '''
-    if type(self.simulation.patch_panel) == BufferedPatchPanel:
-      for dp_event in self.simulation.patch_panel.queued_dataplane_events:
-        done = False
-        while not done:
-          done = True
-          answer = msg.raw_input('Allow [a], or Drop [d] dataplane packet %s? [Ad]' %
-                                 dp_event)
-          if ((answer == '' or answer.lower() == 'a') and
-                  self.simulation.topology.ok_to_send(dp_event)):
-            self.simulation.patch_panel.permit_dp_event(dp_event)
-            self._log_input_event(DataplanePermit(dp_event.fingerprint))
-          elif answer.lower() == 'd':
-            self.simulation.patch_panel.drop_dp_event(dp_event)
-            self._log_input_event(DataplaneDrop(dp_event.fingerprint))
-          else:
-            log.warn("Unknown input...")
-            done = False
-
-  def check_pending_messages(self):
-    for pending_receipt in self.simulation.god_scheduler.pending_receives():
-      # For now, just schedule FIFO.
-      # TODO(cs): make this interactive
-      self.simulation.god_scheduler.schedule(pending_receipt)
-      self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
-                                                  pending_receipt.controller_id,
-                                                  pending_receipt.fingerprint))
-    for pending_send in self.simulation.god_scheduler.pending_sends():
-      self.simulation.god_scheduler.schedule(pending_send)
-      self._log_input_event(ControlMessageSend(pending_send.dpid,
-                                               pending_send.controller_id,
-                                               pending_send.fingerprint))
 
   # TODO(cs): add support for control channel blocking + link,
   # controller failures, god scheduling
