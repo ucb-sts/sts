@@ -98,7 +98,7 @@ def kill_procs(child_processes, kill=None, verbose=True, timeout=5):
 printlock = threading.Lock()
 def _prefix_thread(f, func):
   def run():
-    while True:
+    while not f.closed:
       line = f.readline()
       if not line:
         break
