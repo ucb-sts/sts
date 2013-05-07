@@ -40,7 +40,7 @@ from random import Random
 
 try:
   import readline
-  readline.parse_and_bind('tab:complete')
+  readline.parse_and_bind('tab: complete')
 except:
   log.critical("Need to install readline: $ sudo pip install readline")
 

@@ -106,7 +106,7 @@ def _prefix_thread(f, func):
         print func(line)
     try:
       sys.stderr.write("Closing fd %d\n" % f)
-      f.close()
+      f.close() # idempotent, in case the f.closed broke out of the while loop
     except:
       # well, we tried
       pass
