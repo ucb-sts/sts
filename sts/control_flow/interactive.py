@@ -315,7 +315,6 @@ class Interactive(ControlFlow):
     print "End console with CTRL-D"
 
   def next_step(self):
-    self.check_pending_messages()
     time.sleep(0.05)
     self.logical_time += 1
     self._forwarded_this_step = 0
