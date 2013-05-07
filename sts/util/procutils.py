@@ -102,9 +102,8 @@ def _prefix_thread(f, func):
       line = f.readline()
       if not line:
         break
-      printlock.acquire()
-      print func(line),
-      printlock.release()
+      with printlock:
+        print func(line)
     try:
       sys.stderr.write("Closing fd %d\n" % f)
       f.close()

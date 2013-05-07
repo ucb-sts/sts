@@ -20,6 +20,7 @@ control flow type for running the simulation forward.
 '''
 
 from sts.util.tabular import Tabular
+from sts.util.procutils import printlock
 from sts.topology import BufferedPatchPanel
 from sts.util.console import msg, color
 from sts.replay_event import *
@@ -204,7 +205,8 @@ class STSConsole(object):
         prompt = prompt + color.GRAY + "["+ self.default_command + "]" + color.WHITE + " >"
       else:
         prompt = prompt + "> "
-      x = msg.raw_input(prompt)
+      with printlock:
+        x = msg.raw_input(prompt)
       if x == "" and self.default_command:
         x = self.default_command
 
