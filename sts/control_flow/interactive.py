@@ -217,7 +217,16 @@ class STSConsole(object):
       return x
 
     sys.ps1 = color.GREEN + "STS " + color.WHITE
+    if hasattr(sys, "_orig_stdout"):
+      patched_stdout = sys.stdout
+      sys.stdout = sys._orig_stdout
+    else:
+      patched_stdout = None
+
     code.interact(color.GREEN + "STS Interactive console."+color.WHITE+"\nPython expressions and sts commands supported.\nType 'help' for an overview of available commands.\n", input, local=local)
+
+    if patched_stdout:
+      sys.stdout = patched_stdout
 
 class Interactive(ControlFlow):
   '''

@@ -98,7 +98,9 @@ class Tee(object):
     return DoubleIO()
 
   def tee_stdout(self):
-    self.orig_stderr = sys.stderr
+    self.orig_stdout = sys.stdout
+    if not hasattr(sys, "_orig_stdout"):
+      sys._orig_stdout = sys.stdout
     sys.stdout = self.tee_src(sys.stdout)
 
   def tee_stderr(self):
@@ -111,3 +113,4 @@ class Tee(object):
       sys.stdout = self.orig_stdout
     if self.orig_stderr:
       sys.stderr = self.orig_stderr
+
