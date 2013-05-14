@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import errno
+import sys
 import logging
 import select
 import socket
@@ -176,6 +177,10 @@ class IOMaster(object):
       read_sockets, write_sockets, exception_sockets = self.grab_workers_rwe()
       rlist, wlist, elist = select.select(read_sockets, write_sockets, exception_sockets, timeout)
       self.handle_workers_rwe(rlist, wlist, elist)
+    except select.error:
+      # TODO(cs): this is a hack: file descriptor is closed upon shut
+      # down, and select throws up.
+      sys.stderr.write("File Descriptor Closed\n")
     finally:
       self._in_select -= 1
     if self._in_select == 0 and self._close_requested and not self.closed:
