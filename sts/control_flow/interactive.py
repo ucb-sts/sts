@@ -514,6 +514,7 @@ class Interactive(ControlFlow):
       message = "Crashed controllers: "
     else:
       log.warn("Unknown invariant kind...")
+    msg.interactive(message + str(result))
 
   def dataplane_trace_feed(self):
     if self.simulation.dataplane_trace:
