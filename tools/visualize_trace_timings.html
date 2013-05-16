@@ -62,7 +62,8 @@
         }
       }
 
-      return [{"times": internal_times},{"times": input_times}];
+      return [{"label": "internal", "times": internal_times},
+              {"label": "input", "times": input_times}];
     }
     function initFileUpload() {
       var upload = document.getElementById('fileinput');
