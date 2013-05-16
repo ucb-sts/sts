@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head>
+  <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+  <script src="./d3-timeline/lib/d3.v3.min.js"></script>
+  <script src="./d3-timeline/src/d3-timeline.js"></script>
+
+  <style type="text/css">
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: black;
+      shape-rendering: crispEdges;
+    }
+
+    .axis text {
+      font-family: sans-serif;
+      font-size: 10px;
+    }
+
+    .timeline-label {
+      font-family: sans-serif;
+      font-size: 12px;
+    }
+
+    #timeline .axis {
+      transform: translate(0px,30px);
+      -ms-transform: translate(0px,30px); /* IE 9 */
+      -webkit-transform: translate(0px,30px); /* Safari and Chrome */
+      -o-transform: translate(0px,30px); /* Opera */
+      -moz-transform: translate(0px,30px); /* Firefox */
+    }
+
+    .coloredDiv {
+      height:20px; width:20px; float:left;
+    }
+  </style>
+  <script type="text/javascript">
+    var internalEvents = {"ControlMessageReceive":true,
+                          "ControlMessageSend":true,
+                          "ConnectToControllers":true,
+                          "ControllerStateChange":true,
+                          "DeterministicValue":true,
+                          "DataplanePermit":true};
+
+    function formatData(data) {
+      internal_times = [];
+      input_times = [];
+      // Split by \n
+      var split = data.split("\n");
+      for (i = 0; i < split.length-1; i++) {
+        var str = split[i];
+        var e = jQuery.parseJSON(str);
+        var epoch = (e["time"][0] * 1000) + (e["time"][1] / 1000);
+        var point = {"starting_time": epoch, "ending_time": epoch};
+        // Demultiplex by element["class"] for internal vs. input
+        var eventClass = e["class"];
+        if (eventClass in internalEvents) {
+          internal_times.push(point);
+        } else {
+          input_times.push(point);
+        }
+      }
+
+      return [{"times": internal_times},{"times": input_times}];
+    }
+    function initFileUpload() {
+      var upload = document.getElementById('fileinput');
+
+      if (typeof window.FileReader === 'undefined') {
+        alert("File API Not Supported");
+      }
+
+      upload.onchange = function (e) {
+        e.preventDefault();
+
+        var file = upload.files[0],
+            reader = new FileReader();
+
+        reader.onload = function (event) {
+          var data = event.target.result;
+          timelineCircle(formatData(data));
+        };
+        reader.readAsText(file);
+
+        return false;
+      };
+    }
+  </script>
+  <script type="text/javascript">
+    var nullData = [
+      {times: []}
+    ];
+
+    var width = 500;
+
+    var chart = d3.timeline()
+      .tickFormat( //
+        {format: d3.time.format("%I %p"),
+        tickTime: d3.time.hours,
+        tickNumber: 1,
+        tickSize: 30})
+      .rotateTicks(45)
+      .display("circle"); // toggle between rectangles and circles
+
+    var svg = {};
+
+    function timelineCircle(data) {
+      svg.datum(data).call(chart);
+    }
+
+    window.onload = function() {
+      svg = d3.select("#timeline").insert("svg").attr("width", width);
+      timelineCircle(nullData);
+      initFileUpload();
+    }
+  </script>
+</head>
+<body>
+  <p><input type=file id="fileinput"></p>
+  <div id="timeline"></div>
+</body>
+</html>
