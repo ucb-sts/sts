@@ -26,7 +26,7 @@
     #timeline .axis {
       transform: translate(0px,30px);
       -ms-transform: translate(0px,30px); /* IE 9 */
-      -webkit-transform: translate(0px,30px); /* Safari and Chrome */
+      -webkit-transform: translate(0px,44px); /* Safari and Chrome */
       -o-transform: translate(0px,30px); /* Opera */
       -moz-transform: translate(0px,30px); /* Firefox */
     }
@@ -93,13 +93,13 @@
       {times: []}
     ];
 
-    var width = 500;
+    var width = 2000;
 
     var chart = d3.timeline()
       .tickFormat( //
-        {format: d3.time.format("%I %p"),
-        tickTime: d3.time.hours,
-        tickNumber: 1,
+        {format: d3.time.format("%M:%S:%L"),
+        tickTime: d3.time.seconds,
+        tickNumber: 10,
         tickSize: 30})
       .rotateTicks(45)
       .display("circle"); // toggle between rectangles and circles
