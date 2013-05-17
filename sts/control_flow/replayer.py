@@ -23,7 +23,7 @@ from sts.control_flow.interactive import Interactive
 from sts.control_flow.event_scheduler import DumbEventScheduler, EventScheduler
 from sts.replay_event import *
 from sts.event_dag import EventDag
-import sts.log_processing.superlog_parser as superlog_parser
+import sts.input_traces.log_parser as log_parser
 from sts.util.console import color
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.util.convenience import find, find_index
@@ -64,7 +64,7 @@ class Replayer(ControlFlow):
       superlog_path = superlog_path_or_dag
       # The dag is codefied as a list, where each element has
       # a list of its dependents
-      self.dag = EventDag(superlog_parser.parse_path(superlog_path))
+      self.dag = EventDag(log_parser.parse_path(superlog_path))
     else:
       self.dag = superlog_path_or_dag
 

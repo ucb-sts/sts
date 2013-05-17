@@ -12,7 +12,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import sts.replay_event as replay_events
 from sts.dataplane_traces.trace import trace
-from sts.log_processing.superlog_parser import parse
+from sts.input_traces.log_parser import parse
 
 parser = argparse.argumentparser()
 parser.add_argument('input', metavar="input",

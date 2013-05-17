@@ -26,7 +26,7 @@ from sts.util.rpc_forker import LocalForker
 from sts.util.precompute_cache import PrecomputeCache, PrecomputePowerSetCache
 from sts.replay_event import *
 from sts.event_dag import EventDag, split_list
-import sts.log_processing.superlog_parser as superlog_parser
+import sts.input_traces.log_parser as log_parser
 from sts.input_traces.input_logger import InputLogger
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.control_flow.replayer import Replayer
@@ -69,7 +69,7 @@ class MCSFinder(ControlFlow):
       self.superlog_path = superlog_path_or_dag
       # The dag is codefied as a list, where each element has
       # a list of its dependents
-      self.dag = EventDag(superlog_parser.parse_path(self.superlog_path))
+      self.dag = EventDag(log_parser.parse_path(self.superlog_path))
     else:
       self.dag = superlog_path_or_dag
 
@@ -324,7 +324,7 @@ class MCSFinder(ControlFlow):
       log.warn("unacked internal events file from original run does not exist")
       return
     prev_buffered_receives = [ e.pending_receive for e in
-                               EventDag(superlog_parser.parse_path(path)).events ]
+                               EventDag(log_parser.parse_path(path)).events ]
     new_message_receipts = []
     for p in simulation.god_scheduler.pending_receives():
       if p not in prev_buffered_receives:

@@ -24,7 +24,7 @@ import tempfile
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
-import sts.log_processing.superlog_parser as superlog_parser
+import sts.input_traces.log_parser as log_parser
 from sts.replay_event import LinkFailure, LinkRecovery
 
 class superlog_parser_test(unittest.TestCase):
@@ -45,7 +45,7 @@ class superlog_parser_test(unittest.TestCase):
     name = None
     try:
       self.open_simple_superlog()
-      events = superlog_parser.parse_path(self.tmpfile)
+      events = log_parser.parse_path(self.tmpfile)
       self.assertEqual(2, len(events))
       self.assertEqual(LinkFailure,type(events[0]))
       self.assertEqual(LinkRecovery,type(events[1]))
