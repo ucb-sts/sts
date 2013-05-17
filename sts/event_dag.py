@@ -297,16 +297,16 @@ class EventDag(object):
                e.prunable)
 
   def input_subset(self, subset):
-    ''' Return a view of the dag with only the subset dependents
-    removed'''
+    ''' Return a view of the dag with only the subset and subset dependents
+    remaining'''
     ignored = self._events_set - set(subset)
     ignored = self._ignored_except_internals_and_recoveries(ignored)
     remaining_events = self.compute_remaining_input_events(ignored)
     return EventDagView(self, remaining_events)
 
   def atomic_input_subset(self, subset):
-    ''' Return a view of the dag with only the subset dependents
-    removed'''
+    ''' Return a view of the dag with only the subset remaining, where
+    dependent input pairs remain together'''
     # Relatively simple: expand atomic pairs into individual inputs, take
     # all input events in result, and compute_remaining_input_events as normal
     subset = self._expand_atomics(subset)
@@ -316,8 +316,8 @@ class EventDag(object):
     return EventDagView(self, remaining_events)
 
   def input_complement(self, subset, events_list=None):
-    ''' Return a view of the dag with only the subset dependents
-    removed'''
+    ''' Return a view of the dag with everything except the subset and
+    subset dependencies'''
     subset = self._ignored_except_internals_and_recoveries(subset)
     remaining_events = self.compute_remaining_input_events(subset, events_list)
     return EventDagView(self, remaining_events)
