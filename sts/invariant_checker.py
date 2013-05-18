@@ -16,7 +16,6 @@
 # limitations under the License.
 
 
-
 from pox.openflow.libopenflow_01 import *
 from entities import *
 import sts.headerspace.topology_loader.topology_loader as hsa_topo

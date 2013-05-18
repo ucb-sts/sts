@@ -6,16 +6,10 @@ Created on Mar 10, 2012
 
 import sts.headerspace.headerspace.tf as tf
 import sts.headerspace.config_parser.openflow_parser as of
+from sts.util.convenience import find
 
 import logging
 log = logging.getLogger("topology_loader")
-
-# Python, Y U NO HAVE FIND BUILT IN
-def find(f, seq):
-  """Return first item in sequence where f(item) == True."""
-  for item in seq:
-    if f(item):
-      return item
 
 def generate_TTF(all_links):
   ''' Takes a list of sts.debugger_entities.Link objects (directed) '''
