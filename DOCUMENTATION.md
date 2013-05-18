@@ -2,7 +2,9 @@ See https://github.com/ucb-sts/sts/blob/master/DOCUMENTATION.md for an HTML
 version of this file.
 
 This document provides an overview of the software architecture and
-development workflow for STS. In no particular order:
+development workflow for STS.
+
+## Architecture
 
 ### Simulation State
 
@@ -37,7 +39,7 @@ while True:
   sleep
 ```
 
-We refer to each iteration of this loop as a `logical round`
+We refer to each iteration of this loop as a 'logical round'
 
 By default Fuzzer generates its inputs based on the probabilities defined in
 config/fuzzer_params.py. That is, in a given round, the probability that an
@@ -99,7 +101,7 @@ The subsequences chosen by delta debugging may not always be sensical. For
 example, it does not make sense to replay a recovery event if the preceding
 failure event has been pruned.
 
-To cope with the possibility of invalid subsequences, we define `Atomic
+To cope with the possibility of invalid subsequences, we define 'Atomic
 Input' pairs that must be removed together by delta debugging. For example, we
 ensure that failure/recovery pairs are treated atomically, and we ensure that
 chains of host migration events for a given host are always consecutive in
@@ -110,11 +112,11 @@ locations) despite the possibility of delta debugging pruning intermediate host 
 
 STS is single threaded. All sockets are set to non-blocking, and all I/O
 operations or blocking calls such as `sleep()` are routed through a
-central (select)[http://en.wikipedia.org/wiki/Asynchronous_I/O] loop.
+central [select](http://en.wikipedia.org/wiki/Asynchronous_I/O) loop.
 
 The select loop is encapsulated in an IOMaster object, found at
 sts/util/io_master.py. The IOMaster creates IOWorker objects to wrap each
-socket, which perform maintain read/write buffers to enable `shoot-and-forget`
+socket, which perform maintain read/write buffers to enable 'fire-and-forget'
 I/O semantics so that clients do not have to wait around for blocking calls to
 complete.
 
@@ -133,8 +135,8 @@ loop explicitly gives permission.
 
 ### Invariant Checking
 
-STS primarily uses (headerspace analysis)[http://cseweb.ucsd.edu/~varghese/PAPERS/headerspace.pdf]
-((hassel)[https://bitbucket.org/peymank/hassel-public/]) to check network invariants. All
+STS primarily uses [headerspace analysis](http://cseweb.ucsd.edu/~varghese/PAPERS/headerspace.pdf)
+([hassel](https://bitbucket.org/peymank/hassel-public/)) to check network invariants. All
 hassel code can be found under sts/headerspace.
 
 We use two versions of hassel:
@@ -202,6 +204,8 @@ the controller software. It can:
 
 Sync proto requires there to be module written by us running within the controller
 software.
+
+## Development Workflow
 
 ### Console Output
 
