@@ -31,7 +31,7 @@ log = logging.getLogger("Snapshot")
 
 class Snapshot(object):
   """
-  A Snapshot object is a description of a real network in terms that are meaningful
+  A Snapshot object is a description of the controllers' view of the network in terms that are meaningful
   to the debugger. Any snaphsot grabbed from any controller should be transformed
   into a Snapshot object in order to be fed to HSA
   """

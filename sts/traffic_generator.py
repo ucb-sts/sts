@@ -36,7 +36,7 @@ class TrafficGenerator (object):
 
   def set_hosts(self, hosts):
     ''' Let us know how to set the destination addresses '''
-    for host in hosts: 
+    for host in hosts:
       others = [ h for h in hosts if h != host ]
       self.host2dests[host] = itertools.cycle(others)
 

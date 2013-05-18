@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+''' Convenience object for encapsulating and interacting with Controller processes '''
+
 from sts.util.console import msg
 
 class ControllerManager(object):

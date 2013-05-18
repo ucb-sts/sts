@@ -16,8 +16,7 @@
 # limitations under the License.
 
 """
-This module mocks out openflow switches, links, and hosts. These are all the
-'entities' that exist within our simulated environment.
+This module defines the simulated entities, such as openflow switches, links, and hosts.
 """
 
 from pox.openflow.software_switch import DpPacketOut, OFConnection
