@@ -57,6 +57,30 @@ class Fuzzer(ControlFlow):
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
                mock_link_discovery=False, initialization_rounds=0):
+    '''
+    Options:
+      - fuzzer_params: path to event probabilities
+      - check_interval: the period for checking invariants, in terms of
+        logical rounds
+      - traffic_inject_interval: how often to inject dataplane trace packets
+      - random_seed: optionally set the seed of the random number generator
+      - delay: how long to sleep between each logical round
+      - input_logger: None, or a InputLogger instance
+      - invariant_check_name: the name of the invariant check, from
+        config/invariant_checks.py
+      - halt_on_violation: whether to stop after a bug has been detected
+      - log_invariant_checks: whether to log InvariantCheck events
+      - delay_startup: whether to until the first OpenFlow message is received
+        before proceeding with fuzzing
+      - print_buffers: whether to print the remaining contents of the
+        dataplane/controplane buffers at the end of the execution
+      - record_deterministic_values: whether to record gettimeofday requests
+        for replay
+      - mock_link_discovery: optional module for POX to experiement with
+        better determinism -- tell POX exactly when links should be discovered
+      - initialization_rounds: if non-zero, will wait the specified rounds to
+        let the controller discover the topology before injecting inputs
+    '''
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger,
                            record_deterministic_values=record_deterministic_values)
