@@ -4,7 +4,7 @@ version of this file.
 This document provides an overview of the software architecture and
 development workflow for STS.
 
-## Architecture
+## Software Architecture
 
 ### Simulation State
 
@@ -205,6 +205,20 @@ the controller software. It can:
 Sync proto requires there to be module written by us running within the controller
 software.
 
+### Dependency on POX
+
+STS depends on POX for library functionality (that is, we do not use POX for
+its controller functionality). Here are the specific library functionality we
+make use of:
+  - Our software switches are instances of NXSoftwareSwitches from
+    pox/lib/openflow/nx_software_switch.py (also see software_switch.py)
+  - STSIOWorker subclasses the IOWorker from pox/lib/ioworker/io_worker.py
+  - We use the revent library for event handling
+  - POX's dataplane packet classes are used to encapsulate packets
+  - libopenflow1.0 is used to parse and encapsulate OpenFlow messages
+  - We use pox.util.connect_socket_with_backoff to create and connect
+    non-blocking sockets
+
 ## Development Workflow
 
 ### Console Output
@@ -231,16 +245,3 @@ This will find and run all files with '_test' in the name.
 
 There are many useful tools in the tools/ subdirectory.
 
-### Dependency on POX
-
-STS depends on POX for library functionality (that is, we do not use POX for
-its controller functionality). Here are the specific library functionality we
-make use of:
-  - Our software switches are instances of NXSoftwareSwitches from
-    pox/lib/openflow/nx_software_switch.py (also see software_switch.py)
-  - STSIOWorker subclasses the IOWorker from pox/lib/ioworker/io_worker.py
-  - We use the revent library for event handling
-  - POX's dataplane packet classes are used to encapsulate packets
-  - libopenflow1.0 is used to parse and encapsulate OpenFlow messages
-  - We use pox.util.connect_socket_with_backoff to create and connect
-    non-blocking sockets
