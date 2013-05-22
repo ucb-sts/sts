@@ -9,7 +9,7 @@ tricky test cases, interactively examine the state of the network, and
 automatically find the exact inputs that are responsible for triggering a
 given bug.
 
-![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/sts_arch.jpg)
+![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/Debugger_Architecture.jpg)
 
 ### Installation
 
