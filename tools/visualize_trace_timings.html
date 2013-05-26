@@ -41,8 +41,8 @@
       return [{"label": "internal", "times": internal_times},
               {"label": "input", "times": input_times}];
     }
-    function initFileUpload() {
-      var upload = document.getElementById('fileinput');
+    function initFileUpload(elementId, svg, chart) {
+      var upload = document.getElementById(elementId);
 
       if (typeof window.FileReader === 'undefined') {
         alert("File API Not Supported");
@@ -56,7 +56,7 @@
 
         reader.onload = function (event) {
           var data = event.target.result;
-          timelineCircle(formatData(data));
+          timelineCircle(svg, chart, formatData(data));
         };
         reader.readAsText(file);
 
@@ -87,7 +87,7 @@
 
     var width = 2000;
 
-    var chart = d3.timeline()
+    var chart1 = d3.timeline()
       .tickFormat( //
         {format: d3.time.format("%M:%S:%L"),
         tickTime: d3.time.seconds,
@@ -98,22 +98,39 @@
       .mouseover(showDetails)
       .mouseout(hideDetails); // toggle between rectangles and circles
 
-    var svg = {};
+    var chart2 = d3.timeline()
+      .tickFormat( //
+        {format: d3.time.format("%M:%S:%L"),
+        tickTime: d3.time.seconds,
+        tickNumber: 10,
+        tickSize: 30})
+      .rotateTicks(45)
+      .display("circle")
+      .mouseover(showDetails)
+      .mouseout(hideDetails); // toggle between rectangles and circles
 
-    function timelineCircle(data) {
+    var svg1 = {};
+    var svg2 = {};
+
+    function timelineCircle(svg, chart, data) {
       svg.datum(data).call(chart);
     }
 
     window.onload = function() {
       tooltip = Tooltip("vis-tooltip", 230);
-      svg = d3.select("#timeline").insert("svg").attr("width", width);
-      timelineCircle(nullData);
-      initFileUpload();
+      // TODO(cs): wrap into a for loop over [[svg1, chart1], [svg2, chart2]]
+      svg1 = d3.select("#timeline1").insert("svg").attr("width", width);
+      svg2 = d3.select("#timeline2").insert("svg").attr("width", width);
+      timelineCircle(svg1, chart1, nullData);
+      timelineCircle(svg2, chart2, nullData);
+      initFileUpload('fileinput1', svg1, chart1);
+      initFileUpload('fileinput2', svg2, chart2);
     }
   </script>
 </head>
 <body>
-  <p><input type=file id="fileinput"></p>
-  <div id="timeline"></div>
+  <p><input type=file id="fileinput1"><input type=file id="fileinput2"></p>
+  <div id="timeline1"></div>
+  <div id="timeline2"></div>
 </body>
 </html>
