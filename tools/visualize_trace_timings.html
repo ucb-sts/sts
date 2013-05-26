@@ -1,9 +1,12 @@
 <!doctype html>
 <html>
 <head>
-  <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+  <link rel="stylesheet" href="./d3-timeline/css/style.css">
+  <!--<script src="http://code.jquery.com/jquery-latest.min.js"></script>-->
+  <script src="./d3-timeline/lib/jquery-1.7.2.min.js"></script>
   <script src="./d3-timeline/lib/d3.v3.min.js"></script>
   <script src="./d3-timeline/src/d3-timeline.js"></script>
+  <script src="./d3-timeline/lib/Tooltip.js"></script>
 
   <style type="text/css">
     .axis path,
@@ -52,7 +55,10 @@
         var str = split[i];
         var e = jQuery.parseJSON(str);
         var epoch = (e["time"][0] * 1000) + (e["time"][1] / 1000);
-        var point = {"starting_time": epoch, "ending_time": epoch};
+        var point = {"starting_time": epoch,
+                     "ending_time": epoch,
+                     "label": e["label"],
+                     "class": e["class"]};
         // Demultiplex by element["class"] for internal vs. input
         var eventClass = e["class"];
         if (eventClass in internalEvents) {
@@ -89,6 +95,20 @@
     }
   </script>
   <script type="text/javascript">
+    tooltip = {};
+
+    // Mouseover callback
+    showDetails = function(d, i) {
+      var content;
+      content = '<p class="main">' + d.label + '</span></p>';
+      content += '<hr class="tooltip-hr">';
+      content += '<p class="main">' + d.class + '</span></p>';
+      tooltip.showTooltip(content, d3.event);
+    };
+    hideDetails = function(d, i) {
+      tooltip.hideTooltip();
+    };
+
     var nullData = [
       {times: []}
     ];
@@ -102,7 +122,8 @@
         tickNumber: 10,
         tickSize: 30})
       .rotateTicks(45)
-      .display("circle"); // toggle between rectangles and circles
+      .display("circle")
+      .hover(showDetails); // toggle between rectangles and circles
 
     var svg = {};
 
@@ -111,6 +132,7 @@
     }
 
     window.onload = function() {
+      tooltip = Tooltip("vis-tooltip", 230);
       svg = d3.select("#timeline").insert("svg").attr("width", width);
       timelineCircle(nullData);
       initFileUpload();
