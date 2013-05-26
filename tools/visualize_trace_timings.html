@@ -123,7 +123,8 @@
         tickSize: 30})
       .rotateTicks(45)
       .display("circle")
-      .hover(showDetails); // toggle between rectangles and circles
+      .mouseover(showDetails)
+      .mouseout(hideDetails); // toggle between rectangles and circles
 
     var svg = {};
 
