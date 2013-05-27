@@ -110,6 +110,7 @@
       content = '<p class="main">' + d.label + '</span></p>';
       content += '<hr class="tooltip-hr">';
       content += '<p class="main">' + d.class + '</span></p>';
+      content += '<p class="main">Time (ms): ' + d.starting_time + '</span></p>';
       tooltip.showTooltip(content, d3.event);
     };
 
