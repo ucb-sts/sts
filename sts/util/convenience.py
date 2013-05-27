@@ -22,9 +22,6 @@ import types
 # don't use the standard instance - we don't want to be seeded
 true_random = random.Random()
 
-def merge_hashes(h1, h2):
-  return dict(h1.items() + h2.items())
-
 def is_sorted(l):
   return all(l[i] <= l[i+1] for i in xrange(len(l)-1))
 
