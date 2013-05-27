@@ -125,7 +125,7 @@ class Replayer(ControlFlow):
     Replayer.total_inputs_replayed += len(self.dag.input_events)
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
-    ### TODO aw remove this hack
+    # TODO(aw): remove this hack
     self.simulation.fail_to_interactive = self.fail_to_interactive
     self.logical_time = 0
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
@@ -185,8 +185,8 @@ class Replayer(ControlFlow):
         msg.event(color.B_BLUE+"DataplaneDrop Stats: %s" % str(self.dp_checker.stats))
 
   def _check_early_state_changes(self, dag, current_index, input):
-    ''' Check whether the any pending state change were supposed to come
-    *after* the current input. If so, we have violated causality.'''
+    ''' Check whether any pending state change that were supposed to come
+    *after* the current input have occured. If so, we have violated causality.'''
     pending_state_changes = self.sync_callback.pending_state_changes()
     if len(pending_state_changes) > 0:
       # TODO(cs): currently assumes a single controller (-> single pending state
@@ -216,6 +216,8 @@ class Replayer(ControlFlow):
         self.unexpected_state_changes.append(repr(state_change))
         self.sync_callback.ack_pending_state_change(state_change)
 
+# --- Note: use DataplaneChecker at your own risk. I have observed it fail to
+#     reproduce a bug that was reproducible with dataplane timeouts.
 # TODO(cs): should this go in event_scheduler.py?
 class DataplaneChecker(object):
   ''' Dataplane permits are the default, *unless* they were explicitly dropped in the
