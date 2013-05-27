@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 
 from sts.replay_event import *
 
-import logging
-log = logging.getLogger("event_scheduler")
+import time
 from collections import Counter
 import operator
+import logging
+
+log = logging.getLogger("event_scheduler")
 
 def format_time(time):
   mins = int(time/60)
