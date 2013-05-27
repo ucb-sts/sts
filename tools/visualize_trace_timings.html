@@ -9,6 +9,7 @@
   <script src="./d3-timeline/lib/Tooltip.js"></script>
 
   <script type="text/javascript">
+    var primaryChartLoaded = false;
     var internalEvents = {"ControlMessageReceive":true,
                           "ControlMessageSend":true,
                           "ConnectToControllers":true,
@@ -24,9 +25,9 @@
       for (i = 0; i < split.length-1; i++) {
         var str = split[i];
         var e = jQuery.parseJSON(str);
-        var epoch = (e["time"][0] * 1000) + (e["time"][1] / 1000);
-        var point = {"starting_time": epoch,
-                     "ending_time": epoch,
+        var epochMillis = (e["time"][0] * 1000) + (e["time"][1] / 1000);
+        var point = {"starting_time": epochMillis,
+                     "ending_time": epochMillis,
                      "label": e["label"],
                      "class": e["class"]};
         // Demultiplex by element["class"] for internal vs. input
@@ -41,7 +42,7 @@
       return [{"label": "internal", "times": internal_times},
               {"label": "input", "times": input_times}];
     }
-    function initFileUpload(elementId, svg, chart) {
+    function initFileUpload(elementId, svg, chart, primaryChart) {
       var upload = document.getElementById(elementId);
 
       if (typeof window.FileReader === 'undefined') {
@@ -55,8 +56,16 @@
             reader = new FileReader();
 
         reader.onload = function (event) {
-          var data = event.target.result;
-          timelineCircle(svg, chart, formatData(data));
+          var data = formatData(event.target.result);
+
+          if (primaryChart) {
+            primaryChartLoaded = true;
+          }
+          if (!primaryChart && primaryChartLoaded) {
+            data = applyOffset(data);
+          }
+
+          timelineCircle(svg, chart, data);
         };
         reader.readAsText(file);
 
@@ -66,6 +75,34 @@
   </script>
   <script type="text/javascript">
     tooltip = {};
+
+    // When an auxiliary chart is loaded, compute an offset in milliseconds from
+    // the primary chart. Offsets should be subtracted (positive offsets mean
+    // that the secondary chart came after the primary chart)
+    // Precondition: primary chart must be loaded
+    computeOffset = function(auxiliaryData) {
+      // units are milliseconds
+      var primaryBegin = chart1.beginning();
+      var internalTimes = auxiliaryData[0]["times"];
+      if (internalTimes.length < 0) return 0;
+      var secondaryBegin = internalTimes[0]["starting_time"];
+      var offset = secondaryBegin - primaryBegin;
+      return offset;
+    }
+
+    applyOffset = function(data) {
+      var offsetMillis = computeOffset(data);
+      // Apply to both internal and input events
+      for (i = 0; i < 2; i++) {
+        var points = data[i]["times"];
+        for (j = 0; j < points.length; j++) {
+          points[j]["starting_time"] -= offsetMillis;
+          points[j]["ending_time"] -= offsetMillis;
+        }
+      }
+
+      return data;
+    }
 
     // Mouseover callback
     showDetails = function(d, i) {
@@ -123,8 +160,8 @@
       svg2 = d3.select("#timeline2").insert("svg").attr("width", width);
       timelineCircle(svg1, chart1, nullData);
       timelineCircle(svg2, chart2, nullData);
-      initFileUpload('fileinput1', svg1, chart1);
-      initFileUpload('fileinput2', svg2, chart2);
+      initFileUpload('fileinput1', svg1, chart1, true);
+      initFileUpload('fileinput2', svg2, chart2, false);
     }
   </script>
 </head>
