@@ -89,15 +89,15 @@ class InputLogger(object):
   def allow_timeouts(self):
     self._disallow_timeouts = False
 
-  def _serialize_event(self, event, output):
+  def _serialize_event(self, event, output, extra_fields=None):
     if self._disallow_timeouts and hasattr(event, "disallow_timeouts"):
       event.timeout_disallowed = True
     self.last_time = event.time
-    json_hash = event.to_json()
+    json_hash = event.to_json(extra_fields=extra_fields)
     log.debug("logging event %r" % event)
     output.write(json_hash + '\n')
 
-  def log_input_event(self, event):
+  def log_input_event(self, event, extra_fields=None):
     '''
     Log the event as a json hash. Note that we log dataplane events in a
     separate pickle log, so we optionally allow a packet parameter to be
@@ -106,7 +106,7 @@ class InputLogger(object):
     if not self.output:
       raise Exception("Not opened -- call InputLogger.open")
     if not self.output.closed:
-      self._serialize_event(event, self.output)
+      self._serialize_event(event, self.output, extra_fields=extra_fields)
     else:
       self._events_after_close.append(event)
 

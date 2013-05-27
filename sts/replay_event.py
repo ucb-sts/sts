@@ -41,9 +41,15 @@ import marshal
 import types
 import json
 from collections import namedtuple
+from sts.util.convenience import merge_hashes
 from sts.syncproto.base import SyncTime
 from pox.lib.util import TimeoutError
 log = logging.getLogger("events")
+
+def merge_extra_fields(json_hash, extra_fields):
+  if extra_fields is not None:
+    json_hash = merge_hashes(json_hash, extra_fields)
+  return json_hash
 
 class Event(object):
   __metaclass__ = abc.ABCMeta
@@ -84,7 +90,7 @@ class Event(object):
     later.'''
     pass
 
-  def to_json(self):
+  def to_json(self, extra_fields=None):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     if ('fingerprint' in fields and
@@ -92,7 +98,7 @@ class Event(object):
       fingerprint = list(fields['fingerprint'])
       fingerprint[1] = fingerprint[1].to_dict()
       fields['fingerprint'] = tuple(fingerprint)
-    return json.dumps(fields)
+    return json.dumps(merge_extra_fields(fields, extra_fields))
 
   def __hash__(self):
     ''' Assumption: labels are unique '''
@@ -418,12 +424,12 @@ class TrafficInjection(InputEvent):
   def fingerprint(self):
     return (self.__class__.__name__, self.dp_event)
 
-  def to_json(self):
+  def to_json(self, extra_fields=None):
     fields = {}
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     fields['dp_event'] = self.dp_event.to_json()
-    return json.dumps(fields)
+    return json.dumps(merge_extra_fields(fields, extra_fields))
 
   @staticmethod
   def from_json(json_hash):
@@ -494,7 +500,7 @@ class CheckInvariants(InputEvent):
       msg.interactive("No correctness violations!")
     return True
 
-  def to_json(self):
+  def to_json(self, extra_fields=None):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     if self.legacy_invariant_check:
@@ -504,7 +510,7 @@ class CheckInvariants(InputEvent):
     else:
       fields['invariant_name'] = self.invariant_check_name
       fields['invariant_check'] = None
-    return json.dumps(fields)
+    return json.dumps(merge_extra_fields(fields, extra_fields))
 
   @staticmethod
   def from_json(json_hash):
@@ -613,12 +619,12 @@ class DataplaneDrop(InputEvent):
     fingerprint = json_hash['fingerprint']
     return DataplaneDrop(fingerprint, round=round, label=label, time=time)
 
-  def to_json(self):
+  def to_json(self, extra_fields=None):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
                              self.fingerprint[2], self.fingerprint[3])
-    return json.dumps(fields)
+    return json.dumps(merge_extra_fields(fields, extra_fields))
 
 # TODO(cs): Temporary hack until we figure out determinism
 class LinkDiscovery(InputEvent):
@@ -908,12 +914,12 @@ class DataplanePermit(InternalEvent):
     fingerprint = json_hash['fingerprint']
     return DataplanePermit(fingerprint, label=label, round=round, time=time)
 
-  def to_json(self):
+  def to_json(self, extra_fields=None):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
                              self.fingerprint[2], self.fingerprint[3])
-    return json.dumps(fields)
+    return json.dumps(merge_extra_fields(fields, extra_fields))
 
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
                        ConnectToControllers, ControllerStateChange,
