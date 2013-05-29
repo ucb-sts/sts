@@ -13,14 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import time
 
 from sts.replay_event import *
 
-import logging
-log = logging.getLogger("event_scheduler")
+import time
 from collections import Counter
 import operator
+import logging
+
+log = logging.getLogger("event_scheduler")
 
 def format_time(time):
   mins = int(time/60)
@@ -76,11 +77,23 @@ class EventSchedulerStats(object):
       s.append("  %s %d\n" % (e, count,))
     return "".join(s)
 
-class DumbEventScheduler(object):
+class EventSchedulerBase(object):
+  def __init__(self):
+    self._input_logger = None
+
+  def set_input_logger(self, input_logger):
+    self._input_logger = input_logger
+
+  def _log_event(self, event, **kws):
+    if self._input_logger is not None:
+      self._input_logger.log_input_event(event, **kws)
+
+class DumbEventScheduler(EventSchedulerBase):
 
   kwargs = set(['epsilon_seconds', 'sleep_interval_seconds'])
 
   def __init__(self, simulation, epsilon_seconds=0.0, sleep_interval_seconds=0.2):
+    super(DumbEventScheduler, self).__init__()
     self.simulation = simulation
     self.epsilon_seconds = epsilon_seconds
     self.sleep_interval_seconds = sleep_interval_seconds
@@ -116,7 +129,7 @@ class DumbEventScheduler(object):
       self.stats.event_timed_out(event)
     self.last_event = event
 
-class EventScheduler(object):
+class EventScheduler(EventSchedulerBase):
   '''an EventWatchers schedules events. It controls their admission, and
   any post-event delay '''
 
@@ -126,6 +139,7 @@ class EventScheduler(object):
   def __init__(self, simulation, speedup=1.0,
                delay_input_events=True, initial_wait=0.5, epsilon_seconds=0.5,
                sleep_interval_seconds=0.2):
+    super(EventScheduler, self).__init__()
     self.simulation = simulation
     self.speedup = speedup
     self.delay_input_events = delay_input_events
@@ -194,6 +208,8 @@ class EventScheduler(object):
     else:
       event.timed_out = True
       self.stats.event_timed_out(event)
+    event.time = SyncTime.now()
+    self._log_event(event)
 
   def update_event_time(self, event):
     """ update events """

@@ -1,41 +1,15 @@
 <!doctype html>
 <html>
 <head>
-  <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+  <link rel="stylesheet" href="./d3-timeline/css/style.css">
+  <!--<script src="http://code.jquery.com/jquery-latest.min.js"></script>-->
+  <script src="./d3-timeline/lib/jquery-1.7.2.min.js"></script>
   <script src="./d3-timeline/lib/d3.v3.min.js"></script>
   <script src="./d3-timeline/src/d3-timeline.js"></script>
+  <script src="./d3-timeline/lib/Tooltip.js"></script>
 
-  <style type="text/css">
-    .axis path,
-    .axis line {
-      fill: none;
-      stroke: black;
-      shape-rendering: crispEdges;
-    }
-
-    .axis text {
-      font-family: sans-serif;
-      font-size: 10px;
-    }
-
-    .timeline-label {
-      font-family: sans-serif;
-      font-size: 12px;
-    }
-
-    #timeline .axis {
-      transform: translate(0px,30px);
-      -ms-transform: translate(0px,30px); /* IE 9 */
-      -webkit-transform: translate(0px,44px); /* Safari and Chrome */
-      -o-transform: translate(0px,30px); /* Opera */
-      -moz-transform: translate(0px,30px); /* Firefox */
-    }
-
-    .coloredDiv {
-      height:20px; width:20px; float:left;
-    }
-  </style>
   <script type="text/javascript">
+    var primaryChartLoaded = false;
     var internalEvents = {"ControlMessageReceive":true,
                           "ControlMessageSend":true,
                           "ConnectToControllers":true,
@@ -51,8 +25,11 @@
       for (i = 0; i < split.length-1; i++) {
         var str = split[i];
         var e = jQuery.parseJSON(str);
-        var epoch = (e["time"][0] * 1000) + (e["time"][1] / 1000);
-        var point = {"starting_time": epoch, "ending_time": epoch};
+        var epochMillis = (e["time"][0] * 1000) + (e["time"][1] / 1000);
+        var point = {"starting_time": epochMillis,
+                     "ending_time": epochMillis,
+                     "label": e["label"],
+                     "class": e["class"]};
         // Demultiplex by element["class"] for internal vs. input
         var eventClass = e["class"];
         if (eventClass in internalEvents) {
@@ -65,8 +42,8 @@
       return [{"label": "internal", "times": internal_times},
               {"label": "input", "times": input_times}];
     }
-    function initFileUpload() {
-      var upload = document.getElementById('fileinput');
+    function initFileUpload(elementId, svg, chart, primaryChart) {
+      var upload = document.getElementById(elementId);
 
       if (typeof window.FileReader === 'undefined') {
         alert("File API Not Supported");
@@ -79,8 +56,16 @@
             reader = new FileReader();
 
         reader.onload = function (event) {
-          var data = event.target.result;
-          timelineCircle(formatData(data));
+          var data = formatData(event.target.result);
+
+          if (primaryChart) {
+            primaryChartLoaded = true;
+          }
+          if (!primaryChart && primaryChartLoaded) {
+            data = applyOffset(data);
+          }
+
+          timelineCircle(svg, chart, data);
         };
         reader.readAsText(file);
 
@@ -89,36 +74,101 @@
     }
   </script>
   <script type="text/javascript">
+    tooltip = {};
+
+    // When an auxiliary chart is loaded, compute an offset in milliseconds from
+    // the primary chart. Offsets should be subtracted (positive offsets mean
+    // that the secondary chart came after the primary chart)
+    // Precondition: primary chart must be loaded
+    computeOffset = function(auxiliaryData) {
+      // units are milliseconds
+      var primaryBegin = chart1.beginning();
+      var internalTimes = auxiliaryData[0]["times"];
+      if (internalTimes.length < 0) return 0;
+      var secondaryBegin = internalTimes[0]["starting_time"];
+      var offset = secondaryBegin - primaryBegin;
+      return offset;
+    }
+
+    applyOffset = function(data) {
+      var offsetMillis = computeOffset(data);
+      // Apply to both internal and input events
+      for (i = 0; i < 2; i++) {
+        var points = data[i]["times"];
+        for (j = 0; j < points.length; j++) {
+          points[j]["starting_time"] -= offsetMillis;
+          points[j]["ending_time"] -= offsetMillis;
+        }
+      }
+
+      return data;
+    }
+
+    // Mouseover callback
+    showDetails = function(d, i) {
+      var content;
+      content = '<p class="main">' + d.label + '</span></p>';
+      content += '<hr class="tooltip-hr">';
+      content += '<p class="main">' + d.class + '</span></p>';
+      content += '<p class="main">Time (ms): ' + d.starting_time + '</span></p>';
+      tooltip.showTooltip(content, d3.event);
+    };
+
+    // Mouseout callback
+    hideDetails = function(d, i) {
+      tooltip.hideTooltip();
+    };
+
     var nullData = [
       {times: []}
     ];
 
     var width = 2000;
 
-    var chart = d3.timeline()
+    var chart1 = d3.timeline()
       .tickFormat( //
         {format: d3.time.format("%M:%S:%L"),
         tickTime: d3.time.seconds,
         tickNumber: 10,
         tickSize: 30})
       .rotateTicks(45)
-      .display("circle"); // toggle between rectangles and circles
+      .display("circle")
+      .mouseover(showDetails)
+      .mouseout(hideDetails); // toggle between rectangles and circles
 
-    var svg = {};
+    var chart2 = d3.timeline()
+      .tickFormat( //
+        {format: d3.time.format("%M:%S:%L"),
+        tickTime: d3.time.seconds,
+        tickNumber: 10,
+        tickSize: 30})
+      .rotateTicks(45)
+      .display("circle")
+      .mouseover(showDetails)
+      .mouseout(hideDetails); // toggle between rectangles and circles
 
-    function timelineCircle(data) {
+    var svg1 = {};
+    var svg2 = {};
+
+    function timelineCircle(svg, chart, data) {
       svg.datum(data).call(chart);
     }
 
     window.onload = function() {
-      svg = d3.select("#timeline").insert("svg").attr("width", width);
-      timelineCircle(nullData);
-      initFileUpload();
+      tooltip = Tooltip("vis-tooltip", 230);
+      // TODO(cs): wrap into a for loop over [[svg1, chart1], [svg2, chart2]]
+      svg1 = d3.select("#timeline1").insert("svg").attr("width", width);
+      svg2 = d3.select("#timeline2").insert("svg").attr("width", width);
+      timelineCircle(svg1, chart1, nullData);
+      timelineCircle(svg2, chart2, nullData);
+      initFileUpload('fileinput1', svg1, chart1, true);
+      initFileUpload('fileinput2', svg2, chart2, false);
     }
   </script>
 </head>
 <body>
-  <p><input type=file id="fileinput"></p>
-  <div id="timeline"></div>
+  <p><input type=file id="fileinput1"><input type=file id="fileinput2"></p>
+  <div id="timeline1"></div>
+  <div id="timeline2"></div>
 </body>
 </html>

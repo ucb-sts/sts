@@ -53,7 +53,8 @@ class Replayer(ControlFlow):
 
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
                print_buffers=True, wait_on_deterministic_values=False,
-               default_dp_permit=False, fail_to_interactive=False, **kwargs):
+               default_dp_permit=False, fail_to_interactive=False,
+               input_logger=None, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -86,6 +87,7 @@ class Replayer(ControlFlow):
     self.early_state_changes = []
     self.event_scheduler_stats = None
     self.fail_to_interactive = fail_to_interactive
+    self._input_logger = input_logger
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -94,6 +96,10 @@ class Replayer(ControlFlow):
         lambda simulation: EventScheduler(simulation,
             **{ k: v for k,v in kwargs.items()
                 if k in EventScheduler.kwargs })
+
+  def _log_input_event(self, event, **kws):
+    if self._input_logger is not None:
+      self._input_logger.log_input_event(event, **kws)
 
   def get_interpolated_time(self):
     '''
@@ -125,7 +131,7 @@ class Replayer(ControlFlow):
     Replayer.total_inputs_replayed += len(self.dag.input_events)
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
-    ### TODO aw remove this hack
+    # TODO(aw): remove this hack
     self.simulation.fail_to_interactive = self.fail_to_interactive
     self.logical_time = 0
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
@@ -143,6 +149,7 @@ class Replayer(ControlFlow):
 
   def run_simulation_forward(self, dag, post_bootstrap_hook=None):
     event_scheduler = self.create_event_scheduler(self.simulation)
+    event_scheduler.set_input_logger(self._input_logger)
     self.event_scheduler_stats = event_scheduler.stats
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()
@@ -169,12 +176,16 @@ class Replayer(ControlFlow):
           # happens *while* we're waiting for event, we basically have a
           # deadlock (if controller logging is set to blocking) until the
           # timeout occurs
+          # TODO(cs): we don't actually allow new internal message events
+          # through.. we only let new state changes through. Should experiment
+          # with whether we would get better fidelity if we let them through.
           event_scheduler.schedule(event)
           if self.logical_time != event.round:
             self.logical_time = event.round
             self.increment_round()
         except KeyboardInterrupt as e:
-          interactive = Interactive(self.simulation_cfg)
+          interactive = Interactive(self.simulation_cfg,
+                                    input_logger=self._input_logger)
           interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
           self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
     finally:
@@ -185,8 +196,8 @@ class Replayer(ControlFlow):
         msg.event(color.B_BLUE+"DataplaneDrop Stats: %s" % str(self.dp_checker.stats))
 
   def _check_early_state_changes(self, dag, current_index, input):
-    ''' Check whether the any pending state change were supposed to come
-    *after* the current input. If so, we have violated causality.'''
+    ''' Check whether any pending state change that were supposed to come
+    *after* the current input have occured. If so, we have violated causality.'''
     pending_state_changes = self.sync_callback.pending_state_changes()
     if len(pending_state_changes) > 0:
       # TODO(cs): currently assumes a single controller (-> single pending state
@@ -213,9 +224,16 @@ class Replayer(ControlFlow):
       if (next_expected is None or
           state_change != next_expected.pending_state_change):
         log.info("Unexpected state change. Ack'ing")
+        # Monkeypatch a "new internal event" marker to be logged to the JSON trace
+        # (All fields picked up by event.to_json())
+        state_change.new_internal_event = True
+        # TODO(cs): I hope state_change is the right type
+        self._log_input_event(state_change)
         self.unexpected_state_changes.append(repr(state_change))
         self.sync_callback.ack_pending_state_change(state_change)
 
+# --- Note: use DataplaneChecker at your own risk. I have observed it fail to
+#     reproduce a bug that was reproducible with dataplane timeouts.
 # TODO(cs): should this go in event_scheduler.py?
 class DataplaneChecker(object):
   ''' Dataplane permits are the default, *unless* they were explicitly dropped in the
