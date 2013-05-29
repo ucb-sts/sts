@@ -177,7 +177,7 @@ class Fuzzer(ControlFlow):
       end_time = sys.maxint
 
     self.interrupted = False
-    old_interrupt = None
+    self.old_interrupt = None
 
     def interrupt(sgn, frame):
       msg.interactive("Interrupting fuzzer, dropping to console (press ^C again to terminate)")
