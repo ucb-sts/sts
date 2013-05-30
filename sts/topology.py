@@ -42,7 +42,6 @@ from pox.lib.revent import EventMixin
 from sts.util.console import msg
 import itertools
 import logging
-import time
 from collections import defaultdict
 
 log = logging.getLogger("sts.topology")
@@ -677,7 +676,7 @@ class Topology(object):
 
     Controller info list is a list of ControllerConfig tuples
         - create_io_worker is a factory method for creating IOWorker objects.
-          Takes a socket as a paramter
+          Takes a socket as a parameter
         - create_connection is a factory method for creating Connection objects
           which are connected to controllers. Takes a ControllerConfig object
           as a parameter

@@ -73,10 +73,10 @@ class Fuzzer(ControlFlow):
       - delay_startup: whether to until the first OpenFlow message is received
         before proceeding with fuzzing
       - print_buffers: whether to print the remaining contents of the
-        dataplane/controplane buffers at the end of the execution
+        dataplane/controlplane buffers at the end of the execution
       - record_deterministic_values: whether to record gettimeofday requests
         for replay
-      - mock_link_discovery: optional module for POX to experiement with
+      - mock_link_discovery: optional module for POX to experiment with
         better determinism -- tell POX exactly when links should be discovered
       - initialization_rounds: if non-zero, will wait the specified rounds to
         let the controller discover the topology before injecting inputs

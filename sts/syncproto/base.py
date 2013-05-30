@@ -142,7 +142,7 @@ class SyncProtocolSpeaker(object):
 
   def sync_request(self, messageClass, name, timeout=None):
     ''' Send a message you expect a response from.
-    Note: Blocks this thread until a response is recieved!'''
+    Note: Blocks this thread until a response is received!'''
     message = self.message_with_xid(SyncMessage(type="REQUEST", messageClass=messageClass, name=name))
     self.send(message)
     return self.listener.wait_for_xaction(message, timeout)
