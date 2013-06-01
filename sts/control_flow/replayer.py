@@ -41,7 +41,7 @@ class Replayer(ControlFlow):
   '''
   Replay events from a `superlog` with causal dependencies, pruning as we go
 
-  To set the event scheduling paramters, pass them as keyword args to the
+  To set the event scheduling parameters, pass them as keyword args to the
   constructor of this class, which will pass them on to the EventScheduler object it creates.
   '''
 
