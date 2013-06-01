@@ -75,6 +75,7 @@ class MCSFinder(ControlFlow):
 
     self.transform_dag = transform_dag
     self.mcs_trace_path = mcs_trace_path
+    # A second log with just our MCS progress log messages
     self._extra_log = extra_log
     self.kwargs = kwargs
     self.end_wait_seconds = end_wait_seconds
@@ -346,6 +347,7 @@ class MCSFinder(ControlFlow):
     if not hasattr(self, "_intermcs"):
       self._intermcs = InterMCS()
     if len(dag.events) < self._intermcs.min_size:
+      # Only dump if MCS decreases in size
       self._intermcs.min_size = len(dag.events)
       self._intermcs.count += 1
       dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self._intermcs.count, label.replace("/", ".")))
