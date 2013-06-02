@@ -61,7 +61,6 @@ class Forker(object):
     # Called within the parent process
     child_url = "http://" + str(ip) + ":" + str(port) + "/"
     proxy = xmlrpclib.ServerProxy(child_url, allow_none=True)
-    # XXX child_return = proxy.play_forward(*args)
     child_return = getattr(proxy, task_name)(*args)
     # Magic to close the underlying socket. I'm not sure if this is actually
     # needed? See ServerProxy.__call__ in:
@@ -114,6 +113,7 @@ class RemoteForker(Forker):
     # TODO(cs): Need to define a main() method for the child process, tell child what URL
     # to bind to via command line arguments, and have child boot
     # up an RPC server. Then send over the TaskRegistry's task code over the wire,
-    # and have the child register the tasks as RPC stubs.
+    # have the child deserialize the base64 encoded func object, and have the
+    # child register the tasks as RPC stubs.
     task = self._task_registry.get_task(task_name)
     pass
