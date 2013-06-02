@@ -179,11 +179,7 @@ class MCSFinder(ControlFlow):
     if self.mcs_trace_path is not None:
       self._dump_mcs_trace()
     self.log("=== Total replays: %d ===" % Replayer.total_replays)
-    self.close()
     return ExitCode(0)
-
-  def close(self):
-    self.forker.close()
 
   def _ddmin(self, dag, split_ways, precompute_cache=None, label_prefix=(),
              total_inputs_pruned=0):
@@ -287,7 +283,9 @@ class MCSFinder(ControlFlow):
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
 
-    def run_forward():
+    def play_forward():
+      # TODO(cs): need to serialize the parameters to Replayer rather than
+      # wrapping them in a closure... otherwise, can't use RemoteForker
       # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
       replayer = Replayer(self.simulation_cfg, new_dag,
                           wait_on_deterministic_values=self.wait_on_deterministic_values,
@@ -301,8 +299,11 @@ class MCSFinder(ControlFlow):
       simulation.clean_up()
       return (violations, self._runtime_stats.client_dict())
 
+    # TODO(cs): once play_forward() is no longer a closure, register it only once
+    self.forker.register_task("play_forward", play_forward)
+
     # TODO(cs): need a way to pass input_logger path to Replayer child process
-    (violations, client_runtime_stats) = self.forker.fork(run_forward)
+    (violations, client_runtime_stats) = self.forker.fork("play_forward")
     self._runtime_stats.merge_client_dict(client_runtime_stats)
     return violations
 
