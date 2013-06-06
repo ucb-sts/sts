@@ -58,6 +58,8 @@ class InvariantChecker(object):
       log.info("No live controllers left")
       dead_controllers = list(simulation.controller_manager.down_controllers)
 
+    # Make the return result serializable
+    dead_controllers = [ str(c.config.name) for c in dead_controllers ]
     return dead_controllers
 
   @staticmethod

@@ -75,6 +75,7 @@ class MCSFinder(ControlFlow):
 
     self.transform_dag = transform_dag
     self.mcs_trace_path = mcs_trace_path
+    # A second log with just our MCS progress log messages
     self._extra_log = extra_log
     self.kwargs = kwargs
     self.end_wait_seconds = end_wait_seconds
@@ -82,6 +83,7 @@ class MCSFinder(ControlFlow):
     # `no' means "number"
     self.no_violation_verification_runs = no_violation_verification_runs
     self._runtime_stats = RuntimeStats(runtime_stats_file)
+    # Whether to try alternate trace splitting techiques besides splitting by time.
     self.optimized_filtering = optimized_filtering
     self.forker = forker
     self.replay_final_trace = replay_final_trace
@@ -119,7 +121,9 @@ class MCSFinder(ControlFlow):
   def simulate(self, check_reproducability=True):
     self._runtime_stats.set_dag_stats(self.dag)
 
-    # inject domain knowledge into the dag
+    # apply domain knowledge: treat failure/recovery pairs atomically, and
+    # filter event types we don't want to include in the MCS
+    # (e.g. CheckInvariants)
     self.dag.mark_invalid_input_sequences()
     self.dag = self.dag.filter_unsupported_input_types()
 
@@ -150,6 +154,7 @@ class MCSFinder(ControlFlow):
     if self.optimized_filtering:
       self._optimize_event_dag()
     precompute_cache = PrecomputeCache()
+    # Invoke delta debugging
     (dag, total_inputs_pruned) = self._ddmin(self.dag, 2, precompute_cache=precompute_cache)
     # Make sure to track the final iteration size
     self._track_iteration_size(total_inputs_pruned)
@@ -168,16 +173,13 @@ class MCSFinder(ControlFlow):
       violations = self.replay(self.dag)
       if violations == []:
         self.log('''Warning! Final MCS did not result in violation.'''
-                 ''' Try without timed out events?''')
+                 ''' Try without timed out events? '''
+                 ''' See tools/visualize_event_trace.html for debugging''')
 
     if self.mcs_trace_path is not None:
       self._dump_mcs_trace()
     self.log("=== Total replays: %d ===" % Replayer.total_replays)
-    self.close()
     return ExitCode(0)
-
-  def close(self):
-    self.forker.close()
 
   def _ddmin(self, dag, split_ways, precompute_cache=None, label_prefix=(),
              total_inputs_pruned=0):
@@ -185,7 +187,8 @@ class MCSFinder(ControlFlow):
     #   http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf,
     # Section 3.2
     # TODO(cs): we could do much better if we leverage domain knowledge (e.g.,
-    # start by pruning all LinkFailures)
+    # start by pruning all LinkFailures, or splitting by nodes rather than
+    # time)
     if split_ways > len(dag.input_events):
       self.log("Done")
       return (dag, total_inputs_pruned)
@@ -280,7 +283,9 @@ class MCSFinder(ControlFlow):
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
 
-    def run_forward():
+    def play_forward():
+      # TODO(cs): need to serialize the parameters to Replayer rather than
+      # wrapping them in a closure... otherwise, can't use RemoteForker
       # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
       replayer = Replayer(self.simulation_cfg, new_dag,
                           wait_on_deterministic_values=self.wait_on_deterministic_values,
@@ -294,12 +299,18 @@ class MCSFinder(ControlFlow):
       simulation.clean_up()
       return (violations, self._runtime_stats.client_dict())
 
-    (violations, client_runtime_stats) = self.forker.fork(run_forward)
+    # TODO(cs): once play_forward() is no longer a closure, register it only once
+    self.forker.register_task("play_forward", play_forward)
+
+    # TODO(cs): need a way to pass input_logger path to Replayer child process
+    (violations, client_runtime_stats) = self.forker.fork("play_forward")
     self._runtime_stats.merge_client_dict(client_runtime_stats)
     return violations
 
   def _optimize_event_dag(self):
-    ''' Employs domain knowledge of event classes to reduce the size of event dag '''
+    ''' Employs domain knowledge of event classes to reduce the size of event
+    dag. Currently prunes event types.'''
+    # TODO(cs): Another approach for later: split by nodes
     event_types = [TrafficInjection, DataplaneDrop, SwitchFailure,
                    SwitchRecovery, LinkFailure, LinkRecovery, HostMigration,
                    ControllerFailure, ControllerRecovery, PolicyChange, ControlChannelBlock,
@@ -338,6 +349,9 @@ class MCSFinder(ControlFlow):
     self._runtime_stats.record_timed_out_events(dict(replayer.event_scheduler_stats.event2timeouts))
     self._runtime_stats.record_matched_events(dict(replayer.event_scheduler_stats.event2matched))
 
+  # TODO(cs): add a method to create replayer event trace subdirectories, in
+  # addition to MCS subdirectories
+
   def _maybe_dump_intermediate_mcs(self, dag, label):
     class InterMCS(object):
       def __init__(self):
@@ -346,6 +360,7 @@ class MCSFinder(ControlFlow):
     if not hasattr(self, "_intermcs"):
       self._intermcs = InterMCS()
     if len(dag.events) < self._intermcs.min_size:
+      # Only dump if MCS decreases in size
       self._intermcs.min_size = len(dag.events)
       self._intermcs.count += 1
       dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self._intermcs.count, label.replace("/", ".")))

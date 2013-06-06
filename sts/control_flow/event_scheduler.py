@@ -127,6 +127,8 @@ class DumbEventScheduler(EventSchedulerBase):
     else:
       event.timed_out = True
       self.stats.event_timed_out(event)
+    event.time = SyncTime.now()
+    self._log_event(event)
     self.last_event = event
 
 class EventScheduler(EventSchedulerBase):

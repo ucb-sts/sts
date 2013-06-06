@@ -26,27 +26,27 @@ from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
 
 def split_list(l, split_ways):
-    ''' Split our inputs into split_ways separate lists '''
-    if split_ways < 1:
-      raise ValueError("Split ways must be greater than 0")
+  ''' Split our inputs into split_ways separate lists '''
+  if split_ways < 1:
+    raise ValueError("Split ways must be greater than 0")
 
-    splits = []
-    split_interval = len(l) / split_ways # integer division = floor
-    remainder = len(l) % split_ways # remainder is guaranteed to be less than splitways
+  splits = []
+  split_interval = len(l) / split_ways # integer division = floor
+  remainder = len(l) % split_ways # remainder is guaranteed to be less than splitways
 
-    start_idx = 0
-    while len(splits) < split_ways:
-      split_idx = start_idx + split_interval
-      # the first 'remainder' chunks are made one element larger to chew
-      # up the remaining elements (remainder < splitways)
-      # note: len(l) = split_ways *  split_interval + remainder
-      if remainder > 0:
-        split_idx += 1
-        remainder -= 1
+  start_idx = 0
+  while len(splits) < split_ways:
+    split_idx = start_idx + split_interval
+    # the first 'remainder' chunks are made one element larger to chew
+    # up the remaining elements (remainder < splitways)
+    # note: len(l) = split_ways *  split_interval + remainder
+    if remainder > 0:
+      split_idx += 1
+      remainder -= 1
 
-      splits.append(l[start_idx:split_idx])
-      start_idx = split_idx
-    return splits
+    splits.append(l[start_idx:split_idx])
+    start_idx = split_idx
+  return splits
 
 class AtomicInput(object):
   def __init__(self, failure, recovery):
