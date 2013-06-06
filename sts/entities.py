@@ -98,10 +98,10 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.log = logging.getLogger("FuzzSoftwareSwitch(%d)" % dpid)
 
     if logging.getLogger().getEffectiveLevel() <= logging.DEBUG:
-       def _print_entry_remove(table_mod):
-         if table_mod.removed != []:
-           self.log.debug("Table entry removed %s" % str(table_mod.removed))
-       self.table.addListener(FlowTableModification, _print_entry_remove)
+      def _print_entry_remove(table_mod):
+        if table_mod.removed != []:
+          self.log.debug("Table entry removed %s" % str(table_mod.removed))
+      self.table.addListener(FlowTableModification, _print_entry_remove)
 
     def error_handler(e):
       self.log.exception(e)
