@@ -627,6 +627,7 @@ class Controller(object):
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_cmdline)))
     self.process = popen_filtered("[%s]"%self.label, self.config.expanded_cmdline, self.config.cwd, env=env)
     self._register_proc(self.process)
+    
 
     if self.config.sync:
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)

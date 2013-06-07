@@ -32,9 +32,9 @@ class ControllerManager(object):
 
   @property
   def controllers(self):
-     cs = self.cid2controller.values()
-     cs.sort(key=lambda c: c.cid)
-     return cs
+    cs = self.cid2controller.values()
+    cs.sort(key=lambda c: c.cid)
+    return cs
 
   @property
   def live_controllers(self):
