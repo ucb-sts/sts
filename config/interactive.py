@@ -5,8 +5,8 @@ from sts.input_traces.input_logger import InputLogger
 from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller
-command_line = "./pox.py --verbose openflow.of_01 --address=__address__ --port=__port__ openflow.discovery forwarding.l2_multi"
-controllers = [ControllerConfig(command_line, cwd="pox", address="127.0.0.1", port=8888)]
+start_cmd = "./pox.py --verbose openflow.of_01 --address=__address__ --port=__port__ openflow.discovery forwarding.l2_multi"
+controllers = [ControllerConfig(start_cmd, cwd="pox", address="127.0.0.1", port=8888)]
 topology_class = MeshTopology
 topology_params = "num_switches=4"
 

@@ -27,8 +27,7 @@ Encapsulates the state of the simulation, including:
 
 from sts.util.io_master import IOMaster
 from sts.dataplane_traces.trace import Trace
-from entities import Link, Controller, DeferredOFConnection
-from sts.topology import *
+from entities import DeferredOFConnection
 from sts.controller_manager import ControllerManager
 from sts.util.deferred_io import DeferredIOWorker
 from sts.god_scheduler import GodScheduler
@@ -38,11 +37,8 @@ from sts.util.socket_mux.base import MultiplexedSelect
 from sts.util.socket_mux.sts_socket_multiplexer import STSSocketDemultiplexer, STSMockSocket
 from pox.lib.util import connect_socket_with_backoff
 
-import logging
-import time
 import select
 import socket
-import os
 
 log = logging.getLogger("simulation")
 
@@ -62,21 +58,22 @@ class SimulationConfig(object):
                dataplane_trace=None,
                snapshot_service=None,
                multiplex_sockets=False):
-    ''' Constructor parameters:
-         topology_class    => a sts.topology.Topology class (not object!)
-                              defining the switches and links
-         topology_params   => Comma-delimited list of arguments to pass into the FatTree
-                              constructor, specified just as you would type them within
-                              the parens.
-         patch_panel_class => a sts.topology.PatchPanel class (not object!)
-         dataplane_trace   => a path to a dataplane trace file
-                              (e.g. dataplane_traces/ping_pong_same_subnet.trace)
-         switch_init_sleep_seconds => number of seconds to wait for switches to
-                                      connect to controllers before starting the
-                                      simulation. Defaults to False (no wait).
-         monkey_patch_select => whether to use STS's custom deterministic
-                                select. Requires that the controller is
-                                monkey-patched too
+    '''
+    Constructor parameters:
+      topology_class    => a sts.topology.Topology class (not object!)
+                           defining the switches and links
+      topology_params   => Comma-delimited list of arguments to pass into the FatTree
+                           constructor, specified just as you would type them within
+                           the parens.
+      patch_panel_class => a sts.topology.PatchPanel class (not object!)
+      dataplane_trace   => a path to a dataplane trace file
+                           (e.g. dataplane_traces/ping_pong_same_subnet.trace)
+      switch_init_sleep_seconds => number of seconds to wait for switches to
+                                   connect to controllers before starting the
+                                   simulation. Defaults to False (no wait).
+      monkey_patch_select => whether to use STS's custom deterministic
+                             select. Requires that the controller is
+                             monkey-patched too
     '''
     if controller_configs is None:
       controller_configs = []
@@ -124,11 +121,10 @@ class SimulationConfig(object):
       # Boot the controllers
       controllers = []
       for c in self.controller_configs:
-        controller = Controller(c, sync_connection_manager,
-                                self.snapshot_service)
+        controller = c.type(c, sync_connection_manager, self.snapshot_service)
         controller.start()
         log.info("Launched controller c%s: %s [PID %d]" %
-                 (str(c.cid), " ".join(c.expanded_cmdline), controller.pid))
+                 (str(c.cid), " ".join(c.expanded_start_cmd), controller.pid))
         controllers.append(controller)
       return ControllerManager(controllers)
 
