@@ -79,7 +79,7 @@ class ControllerConfig(object):
       self.type = controller_type
     else:
       if controller_type not in controller_type_map.keys():
-        raise RuntimeError("Unknown controller type: %s" % controller_type) 
+        raise RuntimeError("Unknown controller type: %s" % controller_type)
       self.type = controller_type_map[controller_type]
 
     self.cwd = cwd
