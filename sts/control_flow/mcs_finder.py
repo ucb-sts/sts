@@ -503,6 +503,7 @@ class MCSLogTracker(object):
 
 
 class RuntimeStats(object):
+  ''' Tracks statistics and configuration information of the delta debugging runs '''
   def __init__(self, runtime_stats_file):
     self.runtime_stats_file = runtime_stats_file
     self.iteration_size = {}
@@ -630,4 +631,3 @@ class RuntimeStats(object):
         setattr(self, field, getattr(self, field) + value)
       else:
         raise ValueError("Unknown field %s: %s" % (str(field),str(value)))
-
