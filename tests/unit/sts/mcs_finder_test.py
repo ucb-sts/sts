@@ -47,6 +47,7 @@ class MockMCSFinderBase(MCSFinder):
     self.new_dag = None
     self.mcs = mcs
     self.simulation = None
+    self.transform_dag = None
 
   def log(self, message):
     self._log.info(message)

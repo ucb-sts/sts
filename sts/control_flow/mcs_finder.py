@@ -54,6 +54,8 @@ class MCSFinder(ControlFlow):
                replay_final_trace=False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
+    self.mcs_log_tracker = None
+    self.mcs_trace_path = mcs_trace_path
     self.sync_callback = None
     self._log = logging.getLogger("mcs_finder")
 
@@ -74,7 +76,6 @@ class MCSFinder(ControlFlow):
       self.dag = superlog_path_or_dag
 
     self.transform_dag = transform_dag
-    self.mcs_trace_path = mcs_trace_path
     # A second log with just our MCS progress log messages
     self._extra_log = extra_log
     self.kwargs = kwargs
@@ -110,13 +111,18 @@ class MCSFinder(ControlFlow):
       self._extra_log.flush()
 
   def init_results(self, results_dir):
-    self.results_dir = results_dir
     if self._extra_log is None:
       self._extra_log = open("%s/mcs_finder.log" % results_dir, "w")
     if self._runtime_stats.runtime_stats_file is None:
       self._runtime_stats.runtime_stats_file = "%s/runtime_stats.json" % results_dir
     if self.mcs_trace_path is None:
       self.mcs_trace_path = "%s/mcs.trace" % results_dir
+    # TODO(cs): assumes that transform dag is a peeker, not some other
+    # transformer
+    peeker_exists = self.transform_dag is not None
+    self.mcs_log_tracker = MCSLogTracker(results_dir, self.mcs_trace_path,
+                                         self._runtime_stats,
+                                         self.simulation_cfg, peeker_exists)
 
   def simulate(self, check_reproducability=True):
     self._runtime_stats.set_dag_stats(self.dag)
@@ -161,7 +167,7 @@ class MCSFinder(ControlFlow):
     self.dag = dag
 
     self._runtime_stats.record_prune_end()
-    self._dump_runtime_stats()
+    self.mcs_log_tracker.dump_runtime_stats()
     self.log("Final MCS (%d elements):" % len(self.dag.input_events))
     for i in self.dag.input_events:
       self.log(" - %s" % str(i))
@@ -177,7 +183,7 @@ class MCSFinder(ControlFlow):
                  ''' See tools/visualize_event_trace.html for debugging''')
 
     if self.mcs_trace_path is not None:
-      self._dump_mcs_trace()
+      self.mcs_log_tracker.dump_mcs_trace(self.dag, self)
     self.log("=== Total replays: %d ===" % Replayer.total_replays)
     return ExitCode(0)
 
@@ -216,7 +222,8 @@ class MCSFinder(ControlFlow):
       violation = self._check_violation(new_dag, i)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
-        self._maybe_dump_intermediate_mcs(new_dag, subset_label(label))
+        self.mcs_log_tracker.maybe_dump_intermediate_mcs(new_dag,
+                                                         subset_label(label), self)
 
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         return self._ddmin(new_dag, 2, precompute_cache=precompute_cache,
@@ -243,7 +250,8 @@ class MCSFinder(ControlFlow):
       violation = self._check_violation(new_dag, i)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
-        self._maybe_dump_intermediate_mcs(new_dag, subset_label(label))
+        self.mcs_log_tracker.maybe_dump_intermediate_mcs(new_dag,
+                                                         subset_label(label), self)
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         return self._ddmin(new_dag, max(split_ways - 1, 2),
                            precompute_cache=precompute_cache,
@@ -349,49 +357,6 @@ class MCSFinder(ControlFlow):
     self._runtime_stats.record_timed_out_events(dict(replayer.event_scheduler_stats.event2timeouts))
     self._runtime_stats.record_matched_events(dict(replayer.event_scheduler_stats.event2matched))
 
-  # TODO(cs): add a method to create replayer event trace subdirectories, in
-  # addition to MCS subdirectories
-
-  def _maybe_dump_intermediate_mcs(self, dag, label):
-    class InterMCS(object):
-      def __init__(self):
-        self.min_size = sys.maxint
-        self.count = 0
-    if not hasattr(self, "_intermcs"):
-      self._intermcs = InterMCS()
-    if len(dag.events) < self._intermcs.min_size:
-      # Only dump if MCS decreases in size
-      self._intermcs.min_size = len(dag.events)
-      self._intermcs.count += 1
-      dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self._intermcs.count, label.replace("/", ".")))
-      mkdir_p(dst)
-      self._dump_mcs_trace(dag, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
-      self._dump_runtime_stats(os.path.join(dst,
-          os.path.basename(self._runtime_stats.runtime_stats_file)))
-
-  def _dump_mcs_trace(self, dag=None, mcs_trace_path=None):
-    if dag is None:
-      dag = self.dag
-    if mcs_trace_path is None:
-      mcs_trace_path = self.mcs_trace_path
-    for extension in ["", ".notimeouts"]:
-      output_path = mcs_trace_path + extension
-      input_logger = InputLogger(output_path=output_path)
-      input_logger.open(os.path.dirname(output_path))
-      for e in dag.events:
-        if extension == ".notimeouts" and e.timed_out:
-          continue
-        input_logger.log_input_event(e)
-      input_logger.close(self, self.simulation_cfg, skip_mcs_cfg=True)
-
-  def _dump_runtime_stats(self, runtime_stats_file=None):
-    runtime_stats = self._runtime_stats.clone()
-    if runtime_stats_file is not None:
-      runtime_stats.runtime_stats_file = runtime_stats_file
-    runtime_stats.set_peeker(self.transform_dag is not None)
-    runtime_stats.set_config(str(self.simulation_cfg))
-    runtime_stats.write_runtime_stats()
-
 
 # TODO(cs): Hack alert. Shouldn't be a subclass
 class EfficientMCSFinder(MCSFinder):
@@ -440,7 +405,7 @@ class EfficientMCSFinder(MCSFinder):
       if violation:
         self.log("Violation found in %dth half. Recursing" % i)
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
-        self._maybe_dump_intermediate_mcs(new_dag, "")
+        self.mcs_log_tracker.maybe_dump_intermediate_mcs(new_dag, "", self)
         return self._ddmin(new_dag, carryover_inputs,
                            recursion_level=recursion_level+1,
                            label_prefix=prefix,
@@ -467,6 +432,52 @@ class EfficientMCSFinder(MCSFinder):
 
     return (left_result.insert_atomic_inputs(right_result.atomic_input_events),
             total_inputs_pruned)
+
+class MCSLogTracker(object):
+  ''' Logs intermedate and final MCS results that are the outcome(s) of delta
+  debugging'''
+  def __init__(self, results_dir, mcs_trace_path, runtime_stats,
+               simulation_cfg, peeker_exists):
+    self.results_dir = results_dir
+    self.mcs_trace_path = mcs_trace_path
+    self.runtime_stats = runtime_stats
+    self.simulation_cfg = simulation_cfg
+    self.peeker_exists = peeker_exists
+    self.min_size = sys.maxint
+    self.count = 0
+
+  def dump_runtime_stats(self, runtime_stats_file=None):
+    runtime_stats = self.runtime_stats.clone()
+    if runtime_stats_file is not None:
+      runtime_stats.runtime_stats_file = runtime_stats_file
+    runtime_stats.set_peeker(self.peeker_exists)
+    runtime_stats.set_config(str(self.simulation_cfg))
+    runtime_stats.write_runtime_stats()
+
+  def maybe_dump_intermediate_mcs(self, dag, label, control_flow):
+    if len(dag.events) < self.min_size:
+      # Only dump if MCS decreases in size
+      self.min_size = len(dag.events)
+      self.count += 1
+      dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self.count, label.replace("/", ".")))
+      mkdir_p(dst)
+      self.dump_mcs_trace(dag, control_flow, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
+      self.dump_runtime_stats(os.path.join(dst,
+          os.path.basename(self.runtime_stats.runtime_stats_file)))
+
+  def dump_mcs_trace(self, dag, control_flow, mcs_trace_path=None):
+    if mcs_trace_path is None:
+      mcs_trace_path = self.mcs_trace_path
+    for extension in ["", ".notimeouts"]:
+      output_path = mcs_trace_path + extension
+      input_logger = InputLogger(output_path=output_path)
+      input_logger.open(os.path.dirname(output_path))
+      for e in dag.events:
+        if extension == ".notimeouts" and e.timed_out:
+          continue
+        input_logger.log_input_event(e)
+      input_logger.close(control_flow, self.simulation_cfg, skip_mcs_cfg=True)
+
 
 class RuntimeStats(object):
   def __init__(self, runtime_stats_file):
