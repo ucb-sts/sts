@@ -51,6 +51,7 @@ class ControllerConfig(object):
     if start_cmd == "":
       raise RuntimeError("Must specify boot parameters.")
     self.start_cmd = start_cmd
+    self.kill_cmd = kill_cmd
 
     self.address = address
     if (re.match("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", address) or

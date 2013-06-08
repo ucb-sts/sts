@@ -584,10 +584,12 @@ class Controller(object):
       return (True, "OK")
     else:
       if not self.process:
-        return (False, "Controller %s: Alive, but no controller process found" % self.config.name)
+        return (False, "Controller %s: Alive, but no controller process found" %
+                self.config.label)
       rc = self.process.poll()
       if rc is not None:
-        return (False, "Controller %s: Alive, but controller process terminated with return code %d" % ( self.config.name, rc))
+        return (False, "Controller %s: Alive, but controller process terminated with return code %d" %
+                (self.config.label, rc))
       return (True, "OK")
 
 class POXController(Controller):
