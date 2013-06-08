@@ -55,6 +55,7 @@ class MCSFinder(ControlFlow):
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.mcs_log_tracker = None
+    self.replay_log_tracker = None
     self.mcs_trace_path = mcs_trace_path
     self.sync_callback = None
     self._log = logging.getLogger("mcs_finder")
@@ -123,6 +124,7 @@ class MCSFinder(ControlFlow):
     self.mcs_log_tracker = MCSLogTracker(results_dir, self.mcs_trace_path,
                                          self._runtime_stats,
                                          self.simulation_cfg, peeker_exists)
+    self.replay_log_tracker = ReplayLogTracker(results_dir)
 
   def simulate(self, check_reproducability=True):
     self._runtime_stats.set_dag_stats(self.dag)
@@ -141,7 +143,7 @@ class MCSFinder(ControlFlow):
       self._runtime_stats.record_replay_start()
 
       for i in range(0, self.no_violation_verification_runs):
-        violations = self.replay(self.dag)
+        violations = self.replay(self.dag, "reproducibility")
         if violations != []:
           break
       self._runtime_stats.set_initial_verification_runs_needed(i)
@@ -176,7 +178,7 @@ class MCSFinder(ControlFlow):
       #  Replaying the final trace achieves two goals:
       #  - verifies that the MCS indeed ends in the violation
       #  - allows us to prune internal events that time out
-      violations = self.replay(self.dag)
+      violations = self.replay(self.dag, "final_mcs_trace")
       if violations == []:
         self.log('''Warning! Final MCS did not result in violation.'''
                  ''' Try without timed out events? '''
@@ -219,7 +221,7 @@ class MCSFinder(ControlFlow):
         continue
 
       self._track_iteration_size(total_inputs_pruned)
-      violation = self._check_violation(new_dag, i)
+      violation = self._check_violation(new_dag, i, label)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
         self.mcs_log_tracker.maybe_dump_intermediate_mcs(new_dag,
@@ -247,7 +249,7 @@ class MCSFinder(ControlFlow):
         continue
 
       self._track_iteration_size(total_inputs_pruned)
-      violation = self._check_violation(new_dag, i)
+      violation = self._check_violation(new_dag, i, label)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
         self.mcs_log_tracker.maybe_dump_intermediate_mcs(new_dag,
@@ -270,11 +272,11 @@ class MCSFinder(ControlFlow):
   def _track_iteration_size(self, total_inputs_pruned):
     self._runtime_stats.record_iteration_size(len(self.dag.input_events) - total_inputs_pruned)
 
-  def _check_violation(self, new_dag, subset_index):
+  def _check_violation(self, new_dag, subset_index, label):
     ''' Check if there were violations '''
     # Try no_violation_verification_runs times to see if the bug shows up
     for i in range(0, self.no_violation_verification_runs):
-      violations = self.replay(new_dag)
+      violations = self.replay(new_dag, label)
 
       if violations != []:
         # Violation in the subset
@@ -286,17 +288,21 @@ class MCSFinder(ControlFlow):
     self.log_no_violation("No violation in %d'th..." % subset_index)
     return False
 
-  def replay(self, new_dag):
+  def replay(self, new_dag, label):
     # Run the simulation forward
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
 
-    def play_forward():
+    def play_forward(results_dir):
       # TODO(cs): need to serialize the parameters to Replayer rather than
       # wrapping them in a closure... otherwise, can't use RemoteForker
       # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
+      ReplayLogTracker.create_replay_logger_dir(results_dir)
+      input_logger = InputLogger()
+      input_logger.open(results_dir)
       replayer = Replayer(self.simulation_cfg, new_dag,
                           wait_on_deterministic_values=self.wait_on_deterministic_values,
+                          input_logger=input_logger,
                           **self.kwargs)
       simulation = replayer.simulate()
       self._track_new_internal_events(simulation, replayer)
@@ -310,8 +316,9 @@ class MCSFinder(ControlFlow):
     # TODO(cs): once play_forward() is no longer a closure, register it only once
     self.forker.register_task("play_forward", play_forward)
 
-    # TODO(cs): need a way to pass input_logger path to Replayer child process
-    (violations, client_runtime_stats) = self.forker.fork("play_forward")
+    results_dir = self.replay_log_tracker.get_replay_logger_dir(label)
+    (violations, client_runtime_stats) = self.forker.fork("play_forward",
+                                                          results_dir)
     self._runtime_stats.merge_client_dict(client_runtime_stats)
     return violations
 
@@ -329,7 +336,7 @@ class MCSFinder(ControlFlow):
         self.log("\t** No events pruned for event type %s. Next!" % event_type)
         continue
       pruned_dag = self.dag.input_complement(pruned)
-      violations = self.replay(pruned_dag)
+      violations = self.replay(pruned_dag, "opt_%s" % event_type.__name__)
       if violations != []:
         self.log("\t** VIOLATION for pruning event type %s! Resizing original dag" % event_type)
         self.dag = pruned_dag
@@ -368,7 +375,6 @@ class EfficientMCSFinder(MCSFinder):
   '''
   def _ddmin(self, dag, carryover_inputs, precompute_cache=None,
              recursion_level=0, label_prefix=(), total_inputs_pruned=0):
-
     ''' carryover_inputs is the variable "r" from the paper. '''
     # Hack: superclass calls _ddmin with an integer, which doesn't match our
     # API. Translate that to an empty sequence. (we also don't use precompute_cache)
@@ -401,7 +407,7 @@ class EfficientMCSFinder(MCSFinder):
       # We test on subsequence U carryover_inputs
       test_dag = new_dag.insert_atomic_inputs(carryover_inputs)
       self._track_iteration_size(total_inputs_pruned)
-      violation = self._check_violation(test_dag, i)
+      violation = self._check_violation(test_dag, i, label)
       if violation:
         self.log("Violation found in %dth half. Recursing" % i)
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
@@ -432,6 +438,23 @@ class EfficientMCSFinder(MCSFinder):
 
     return (left_result.insert_atomic_inputs(right_result.atomic_input_events),
             total_inputs_pruned)
+
+
+class ReplayLogTracker(object):
+  ''' Logs intermediate and final replay traces chosen by delta debugging'''
+  def __init__(self, results_dir):
+    self.results_dir = results_dir
+    self.count = 0
+
+  def get_replay_logger_dir(self, label):
+    dst = os.path.join(self.results_dir, "interreplay_%d_%s" % (self.count, label.replace("/", ".")))
+    self.count += 1
+    return dst
+
+  @staticmethod
+  def create_replay_logger_dir(results_dir):
+    mkdir_p(results_dir)
+
 
 class MCSLogTracker(object):
   ''' Logs intermedate and final MCS results that are the outcome(s) of delta

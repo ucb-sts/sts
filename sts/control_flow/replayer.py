@@ -137,6 +137,8 @@ class Replayer(ControlFlow):
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
     if self.print_buffers_flag:
       self._print_buffers()
+    if self._input_logger is not None:
+      self._input_logger.close(self, self.simulation_cfg, skip_mcs_cfg=True)
     return self.simulation
 
   def _print_buffers(self):
