@@ -470,7 +470,7 @@ class MCSLogTracker(object):
       mcs_trace_path = self.mcs_trace_path
     for extension in ["", ".notimeouts"]:
       output_path = mcs_trace_path + extension
-      input_logger = InputLogger(output_path=output_path)
+      input_logger = InputLogger()
       input_logger.open(os.path.dirname(output_path))
       for e in dag.events:
         if extension == ".notimeouts" and e.timed_out:

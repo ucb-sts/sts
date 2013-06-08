@@ -24,8 +24,8 @@ def main(args):
 
   dp_trace = Trace(args.dp_trace_path).dataplane_trace
 
-  event_logger = InputLogger(output_path="/tmp/events.trace")
-  event_logger.open()
+  event_logger = InputLogger()
+  event_logger.open(results_dir="/tmp/events.trace")
 
   with open(args.input) as input_file:
     trace = parse(input_file)

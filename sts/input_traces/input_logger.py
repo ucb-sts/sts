@@ -56,26 +56,21 @@ log = logging.getLogger("input_logger")
 class InputLogger(object):
   '''Log input events injected by a control_flow.Fuzzer'''
 
-  def __init__(self, output_path=None):
-    '''
-    Automatically generate an output_path in input_traces/
-    if one is not provided.
-    '''
-    self.output_path = output_path
+  def __init__(self):
     self.last_time = SyncTime.now()
     self._disallow_timeouts = False
     self._events_after_close = []
     self.output = None
+    self.output_path = ""
 
   def open(self, results_dir=None):
-    if results_dir != None:
+    if results_dir is not None:
       self.output_path = results_dir + "/events.trace"
       self.replay_cfg_path = results_dir + "/replay_config.py"
       self.mcs_cfg_path = results_dir + "/mcs_config.py"
     else:
-      if self.output_path is None:
-        now = timestamp_string()
-        self.output_path = "input_traces/" + now + ".trace"
+      now = timestamp_string()
+      self.output_path = "input_traces/" + now + ".trace"
       basename = os.path.basename(self.output_path)
 
       self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
