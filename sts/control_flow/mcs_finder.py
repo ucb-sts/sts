@@ -577,11 +577,11 @@ class RuntimeStats(object):
                   'timed_out_events', 'matched_events', 'total_replays',
                   'total_inputs_replayed', 'ambiguous_counts',
                   'ambiguous_events']:
-       v = getattr(self, field)
-       # xmlrpclib doesn't allow non-string keys
-       if type(v) == dict:
-         v = dict((str(key), value) for key, value in v.items())
-       d[field] = v
+      v = getattr(self, field)
+      # xmlrpclib doesn't allow non-string keys
+      if type(v) == dict:
+        v = dict((str(key), value) for key, value in v.items())
+      d[field] = v
     return d
 
   def merge_client_dict(self, client_dict):
