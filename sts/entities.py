@@ -38,7 +38,6 @@ import fcntl
 import struct
 import re
 import pickle
-import sys
 
 from pox.lib.addresses import EthAddr
 from os import geteuid
@@ -591,11 +590,7 @@ class Controller(object):
         return (False, "Controller %s: Alive, but controller process terminated with return code %d" % ( self.config.name, rc))
       return (True, "OK")
 
-  def send_policy_request(self, controller, api_call):
-    pass
-
 class POXController(Controller):
-
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     super(POXController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self.log.info(" =====>> STARTING POX CONTROLLER <<===== ")
@@ -656,7 +651,6 @@ class POXController(Controller):
     self.alive = True
 
 class BigSwitchController(Controller):
-
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     super(BigSwitchController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self.log.info(" =====>> STARTING BIG SWITCH CONTROLLER <<===== ")

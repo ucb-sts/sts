@@ -31,6 +31,7 @@ from entities import DeferredOFConnection
 from sts.controller_manager import ControllerManager
 from sts.util.deferred_io import DeferredIOWorker
 from sts.god_scheduler import GodScheduler
+from sts.topology import *
 from sts.syncproto.sts_syncer import STSSyncConnectionManager
 import sts.snapshot as snapshot
 from sts.util.socket_mux.base import MultiplexedSelect
@@ -39,6 +40,7 @@ from pox.lib.util import connect_socket_with_backoff
 
 import select
 import socket
+import logging
 
 log = logging.getLogger("simulation")
 
