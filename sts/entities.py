@@ -591,6 +591,9 @@ class Controller(object):
       return (True, "OK")
 
 class POXController(Controller):
+  # N.B. controller-specific configuration is optional. The purpose of this
+  # class is to load POX's syncproto module, which helps us reduce
+  # non-determinism in POX.
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     super(POXController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self.log.info(" =====>> STARTING POX CONTROLLER <<===== ")
@@ -664,7 +667,7 @@ class BigSwitchController(Controller):
       self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
       popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd, self.config.cwd)
     self.alive = False
-    
+
   def start(self):
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
