@@ -38,7 +38,6 @@ import fcntl
 import struct
 import re
 import pickle
-import sys
 
 from pox.lib.addresses import EthAddr
 from os import geteuid
@@ -98,10 +97,10 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.log = logging.getLogger("FuzzSoftwareSwitch(%d)" % dpid)
 
     if logging.getLogger().getEffectiveLevel() <= logging.DEBUG:
-       def _print_entry_remove(table_mod):
-         if table_mod.removed != []:
-           self.log.debug("Table entry removed %s" % str(table_mod.removed))
-       self.table.addListener(FlowTableModification, _print_entry_remove)
+      def _print_entry_remove(table_mod):
+        if table_mod.removed != []:
+          self.log.debug("Table entry removed %s" % str(table_mod.removed))
+      self.table.addListener(FlowTableModification, _print_entry_remove)
 
     def error_handler(e):
       self.log.exception(e)
@@ -360,7 +359,6 @@ class Host (EventMixin):
 class NamespaceHost(Host):
   '''
   A host that launches a process in a separate namespace process.
-
   '''
   ETH_P_ALL = 3                     # from linux/if_ether.h
 
@@ -498,24 +496,16 @@ class NamespaceHost(Host):
   def receive(self, interface, packet):
     '''
     Process an incoming packet from a switch
-
     Called by PatchPanel
     '''
     self.log.info("received packet on interface %s: %s. Passing to netns" %
                   (interface.name, str(packet)))
     self.io_worker.send(packet.pack())
 
-
 class Controller(object):
   '''Encapsulates the state of a running controller.'''
 
   _active_processes = set() # set of processes that are currently running. These are all killed upon signal reception
-
-  @staticmethod
-  def kill_active_procs():
-    '''Kill the active processes. Used by the simulator module to shut down the
-    controllers because python can only have a single method to handle SIG* stuff.'''
-    kill_procs(Controller._active_processes)
 
   def _register_proc(self, proc):
     '''Register a Popen instance that a controller is running in for the cleanup
@@ -566,71 +556,23 @@ class Controller(object):
     msg.event("Killing controller %s" % (str(self.cid)))
     if self.sync_connection:
       self.sync_connection.close()
-
     kill_procs([self.process])
+    if self.config.kill_cmd != "":
+      self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
+      popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd, self.config.cwd)
     self._unregister_proc(self.process)
     self.alive = False
     self.process = None
 
   def start(self):
-    '''Start a new controller process based on the config's cmdline
+    '''Start a new controller process based on the config's start_cmd
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process.'''
-    msg.event("Starting controller %s" % (str(self.cid)))
-    env = None
-
-    if self.config.sync:
-      # if a sync connection has been configured in the controller conf
-      # launch the controller with environment variable 'sts_sync' set
-      # to the appropriate listening port. This is quite a hack.
-      env = os.environ.copy()
-      port_match = re.search(r':(\d+)$', self.config.sync)
-      if port_match is None:
-        raise ValueError("sync: cannot find port in %s" % self.config.sync)
-      port = port_match.group(1)
-      env['sts_sync'] = "ptcp:0.0.0.0:%d" % (int(port),)
-
-      if self.config.name == "pox":
-        src_dir = os.path.join(os.path.dirname(__file__), "..")
-        pox_ext_dir = os.path.join(self.config.cwd, "ext")
-        if os.path.exists(pox_ext_dir):
-          for f in ("sts/util/io_master.py", "sts/syncproto/base.py",
-                    "sts/syncproto/pox_syncer.py", "sts/__init__.py",
-                    "sts/util/socket_mux/__init__.py",
-                    "sts/util/socket_mux/pox_monkeypatcher.py",
-                    "sts/util/socket_mux/base.py",
-                    "sts/util/socket_mux/server_socket_multiplexer.py"):
-            src_path = os.path.join(src_dir, f)
-            if not os.path.exists(src_path):
-              raise ValueError("Integrity violation: sts sync source path %s (abs: %s) does not exist" %
-                  (src_path, os.path.abspath(src_path)))
-            dst_path = os.path.join(pox_ext_dir, f)
-            dst_dir = os.path.dirname(dst_path)
-            init_py = os.path.join(dst_dir, "__init__.py")
-            if not os.path.exists(dst_dir):
-              os.makedirs(dst_dir)
-
-            if not os.path.exists(init_py):
-              open(init_py, "a").close()
-
-            if os.path.islink(dst_path):
-              # remove symlink and recreate
-              os.remove(dst_path)
-
-            if not os.path.exists(dst_path):
-              rel_link = os.path.abspath(src_path)
-              self.log.debug("creating symlink %s -> %s", rel_link, dst_path)
-              os.symlink(rel_link, dst_path)
-        else:
-          self.log.warn("Could not find pox ext dir in %s. Cannot check/link in sync module" % pox_ext_dir)
-
-    self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_cmdline)))
-    self.process = popen_filtered("[%s]"%self.label, self.config.expanded_cmdline, self.config.cwd, env=env)
+    self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
+    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
-
     if self.config.sync:
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
-
     self.alive = True
 
   def restart(self):
@@ -648,6 +590,89 @@ class Controller(object):
         return (False, "Controller %s: Alive, but controller process terminated with return code %d" % ( self.config.name, rc))
       return (True, "OK")
 
-  def send_policy_request(self, controller, api_call):
-    pass
+class POXController(Controller):
+  def __init__(self, controller_config, sync_connection_manager, snapshot_service):
+    super(POXController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
+    self.log.info(" =====>> STARTING POX CONTROLLER <<===== ")
+
+  def start(self):
+    '''Start a new POX controller process based on the config's start_cmd
+    attribute. Registers the Popen member variable for deletion upon a SIG*
+    received in the simulator process.'''
+    msg.event("Starting POX controller %s" % (str(self.cid)))
+    env = None
+
+    if self.config.sync:
+      # If a sync connection has been configured in the controller conf
+      # launch the controller with environment variable 'sts_sync' set
+      # to the appropriate listening port. This is quite a hack.
+      env = os.environ.copy()
+      port_match = re.search(r':(\d+)$', self.config.sync)
+      if port_match is None:
+        raise ValueError("sync: cannot find port in %s" % self.config.sync)
+      port = port_match.group(1)
+      env['sts_sync'] = "ptcp:0.0.0.0:%d" % (int(port),)
+
+      src_dir = os.path.join(os.path.dirname(__file__), "..")
+      pox_ext_dir = os.path.join(self.config.cwd, "ext")
+      if os.path.exists(pox_ext_dir):
+        for f in ("sts/util/io_master.py", "sts/syncproto/base.py",
+                  "sts/syncproto/pox_syncer.py", "sts/__init__.py",
+                  "sts/util/socket_mux/__init__.py",
+                  "sts/util/socket_mux/pox_monkeypatcher.py",
+                  "sts/util/socket_mux/base.py",
+                  "sts/util/socket_mux/server_socket_multiplexer.py"):
+          src_path = os.path.join(src_dir, f)
+          if not os.path.exists(src_path):
+            raise ValueError("Integrity violation: sts sync source path %s (abs: %s) does not exist" %
+                (src_path, os.path.abspath(src_path)))
+          dst_path = os.path.join(pox_ext_dir, f)
+          dst_dir = os.path.dirname(dst_path)
+          init_py = os.path.join(dst_dir, "__init__.py")
+          if not os.path.exists(dst_dir):
+            os.makedirs(dst_dir)
+          if not os.path.exists(init_py):
+            open(init_py, "a").close()
+          if os.path.islink(dst_path):
+            # Remove symlink and recreate
+            os.remove(dst_path)
+          if not os.path.exists(dst_path):
+            rel_link = os.path.abspath(src_path)
+            self.log.debug("Creating symlink %s -> %s", rel_link, dst_path)
+            os.symlink(rel_link, dst_path)
+      else:
+        self.log.warn("Could not find pox ext dir in %s. Cannot check/link in sync module" % pox_ext_dir)
+
+    self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
+    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
+    self._register_proc(self.process)
+    if self.config.sync:
+      self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
+    self.alive = True
+
+class BigSwitchController(Controller):
+  def __init__(self, controller_config, sync_connection_manager, snapshot_service):
+    super(BigSwitchController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
+    self.log.info(" =====>> STARTING BIG SWITCH CONTROLLER <<===== ")
+
+  def kill(self):
+    '''Kill the process the controller is running in.'''
+    msg.event("Killing controller %s" % (str(self.cid)))
+    if self.sync_connection:
+      self.sync_connection.close()
+    if self.config.kill_cmd != "":
+      self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
+      popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd, self.config.cwd)
+    self.alive = False
+    
+  def start(self):
+    self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
+    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+    if self.config.sync:
+      self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
+    self.alive = True
+
+  # TODO(ao): Add correct check
+  def check_process_status(self):
+    return (True, "OK")
 

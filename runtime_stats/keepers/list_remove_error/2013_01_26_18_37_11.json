@@ -1,5 +1,5 @@
 {
-  "config": "SimulationConfig(controller_configs=[ControllerConfig(cmdline='./pox.py --verbose --no-cli openflow.of_01 --address=__address__ --port=__port__ sts.syncproto.pox_syncer samples.topo forwarding.l2_multi messenger.messenger samples.nommessenger', address='127.0.0.1', port=6633, cwd='pox', sync='tcp:localhost:18899')],\n                 topology_class=MeshTopology,\n                 topology_params=\"num_switches=4\",\n                 patch_panel_class=BufferedPatchPanel,\n                 dataplane_trace=\"dataplane_traces/ping_pong_same_subnet_4_switches.trace\",\n                 multiplex_sockets=False)",
+  "config": "SimulationConfig(controller_configs=[ControllerConfig(start_cmd='./pox.py --verbose --no-cli openflow.of_01 --address=__address__ --port=__port__ sts.syncproto.pox_syncer samples.topo forwarding.l2_multi messenger.messenger samples.nommessenger', address='127.0.0.1', port=6633, cwd='pox', sync='tcp:localhost:18899')],\n                 topology_class=MeshTopology,\n                 topology_params=\"num_switches=4\",\n                 patch_panel_class=BufferedPatchPanel,\n                 dataplane_trace=\"dataplane_traces/ping_pong_same_subnet_4_switches.trace\",\n                 multiplex_sockets=False)",
   "early_internal_events": {
     "1": [],
     "2": [],

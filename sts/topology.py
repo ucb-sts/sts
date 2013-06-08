@@ -50,7 +50,7 @@ def create_switch(switch_id, num_ports, can_connect_to_endhosts=True):
   ports = []
   for port_no in range(1, num_ports+1):
     eth_addr = EthAddr("00:00:00:00:%02x:%02x" % (switch_id, port_no))
-    port = ofp_phy_port( port_no=port_no, hw_addr=eth_addr )
+    port = ofp_phy_port( port_no=port_no, hw_addr=eth_addr, name="eth%d" % port_no )
     # monkey patch an IP address onto the port for anteater purposes
     port.ip_addr = "1.1.%d.%d" % (switch_id, port_no)
     ports.append(port)
@@ -434,7 +434,7 @@ class LinkTracker(object):
     #           new mac and IP addresses
     new_ingress_port = ofp_phy_port(port_no=new_ingress_portno,
                                     hw_addr=old_port.hw_addr,
-                                    name=old_port.name,
+                                    name="eth%d" % new_ingress_portno,
                                     config=old_port.config,
                                     state=old_port.state,
                                     curr=old_port.curr,

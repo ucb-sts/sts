@@ -15,7 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import urllib2
 import logging
 import json
@@ -25,7 +24,7 @@ from pox.lib.graph.util import NOMDecoder
 from pox.openflow.topology import OpenFlowSwitch
 from pox.openflow.flow_table import FlowTable, TableEntry
 from pox.openflow.libopenflow_01 import ofp_match, ofp_action_output
-
+from sts.entities import POXController, BigSwitchController
 
 log = logging.getLogger("Snapshot")
 
@@ -35,7 +34,6 @@ class Snapshot(object):
   to the debugger. Any snaphsot grabbed from any controller should be transformed
   into a Snapshot object in order to be fed to HSA
   """
-
   def __int__(self):
     self.time = None
     self.switches = []
@@ -52,7 +50,6 @@ class SnapshotService(object):
   their controller in whatever format the controller exports it, and translating
   it into a Snaphot object that is meaningful to the debbuger
   """
-
   def __init__(self):
     self.snapshot = Snapshot()
 
@@ -147,7 +144,7 @@ class PoxSnapshotService(SnapshotService):
 
     return self.snapshot
 
-class FloodlightSnapshotService(SnapshotService):
+class BigSwitchSnapshotService(SnapshotService):
   def __init__(self):
     SnapshotService.__init__(self)
 
@@ -163,8 +160,6 @@ class FloodlightSnapshotService(SnapshotService):
 
     # Create local Snapshot object
     snapshot = Snapshot()
-    # ...
-    # ...
     self.snapshot = snapshot
     return self.snapshot
 
@@ -177,10 +172,10 @@ def get_snapshotservice(controller_configs):
   # TODO(cs): allow for heterogenous controllers?
   if controller_configs != [] and controller_configs[0].sync:
     snapshotService = SyncProtoSnapshotService()
-  elif controller_configs != [] and controller_configs[0].name == "pox":
+  elif controller_configs != [] and controller_configs[0].type == POXController:
     snapshotService = PoxSnapshotService()
-  elif controller_configs != [] and controller_configs[0].name == "floodlight":
-    snapshotService = FloodlightSnapshotService()
+  elif controller_configs != [] and controller_configs[0].type == BigSwitchController:
+    snapshotService = BigSwitchSnapshotService()
   else:
     # We default snapshotService to POX
     snapshotService = PoxSnapshotService()

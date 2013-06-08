@@ -522,16 +522,16 @@ class Interactive(ControlFlow):
       self._log_input_event(TrafficInjection(dp_event=dp_event))
 
   def _select_dataplane_event(self, sel=None):
-     queued = self.simulation.patch_panel.queued_dataplane_events
-     if not sel:
-       if len(queued) == 1:
-         return queued[0]
-       else:
-         print "Multiple events queued -- please select one"
-         return None
-     else:
-       return queued[sel]
-
+    queued = self.simulation.patch_panel.queued_dataplane_events
+    if len(queued) == 0:
+      print "No dataplane events queued."
+      return None
+    if not sel:
+      return queued[0]
+    if sel >= len(queued):
+      print "Given index out of bounds. Try a value smaller than %d" % len(queued)
+    return queued[sel] 
+    
   def dataplane_forward(self, event=None):
     dp_event = self._select_dataplane_event(event)
     if not dp_event:

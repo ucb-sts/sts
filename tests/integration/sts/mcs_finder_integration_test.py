@@ -29,7 +29,7 @@ from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import MCSFinder, Peeker
 from sts.simulation_state import SimulationConfig
 
-controllers = [ControllerConfig(cmdline='./pox.py --verbose --no-cli openflow.of_01 --address=__address__ --port=__port__',
+controllers = [ControllerConfig(start_cmd='./pox.py --verbose --no-cli openflow.of_01 --address=__address__ --port=__port__',
                                 address='127.0.0.1', port=8888, cwd='pox')]
 simulation_config = SimulationConfig(controller_configs=controllers)
 

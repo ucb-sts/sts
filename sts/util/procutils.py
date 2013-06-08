@@ -125,3 +125,4 @@ def popen_filtered(name, args, cwd=None, env=None):
   cmd._stdout_thread = _prefix_thread(cmd.stdout, lambda l: "%s%s %s%s\n" % (color.YELLOW, name, l.rstrip(), color.NORMAL))
   cmd._stderr_thread = _prefix_thread(cmd.stderr, lambda l: "%s%s %s%s\n" % (color.B_RED + color.YELLOW, name, l.rstrip(), color.NORMAL))
   return cmd
+

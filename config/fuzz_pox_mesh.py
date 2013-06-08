@@ -6,13 +6,13 @@ from sts.input_traces.input_logger import InputLogger
 from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller
-command_line = ('''./pox.py --verbose '''
+start_cmd = ('''./pox.py --verbose '''
                 '''sts.syncproto.pox_syncer --blocking=False '''
                 '''openflow.discovery forwarding.l2_multi '''
                 '''sts.util.socket_mux.pox_monkeypatcher '''
                 '''openflow.of_01 --address=__address__ --port=__port__''')
 
-controllers = [ControllerConfig(command_line, cwd="pox", sync="tcp:localhost:18899")]
+controllers = [ControllerConfig(start_cmd, cwd="pox", sync="tcp:localhost:18899")]
 topology_class = MeshTopology
 topology_params = "num_switches=2"
 

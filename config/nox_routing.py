@@ -6,8 +6,8 @@ from sts.simulation_state import SimulationConfig
 from sts.topology import MeshTopology
 
 # Use NOX as our controller
-command_line = "./nox_core -v -i ptcp:6633 sample_routing"
-controllers = [ControllerConfig(command_line, cwd="nox_classic/build/src", address="127.0.0.1", port=6633)]
+start_cmd = "./nox_core -v -i ptcp:6633 sample_routing"
+controllers = [ControllerConfig(start_cmd, cwd="nox_classic/build/src", address="127.0.0.1", port=6633)]
 
 topology_class = MeshTopology
 topology_params = "num_switches=4"

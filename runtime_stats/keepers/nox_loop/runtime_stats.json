@@ -1,5 +1,5 @@
 {
-  "config": "SimulationConfig(controller_configs=[ControllerConfig(cmdline='./nox_core -v -i ptcp:6635 routing', address='127.0.0.1', port=6635, cwd='nox_classic/build/src')],\n                 topology_class=MeshTopology,\n                 topology_params=\"num_switches=4\",\n                 patch_panel_class=BufferedPatchPanel,\n                 dataplane_trace=\"exp/head_nox_4_mesh_loop/dataplane.trace\",\n                 multiplex_sockets=False)",
+  "config": "SimulationConfig(controller_configs=[ControllerConfig(start_cmd='./nox_core -v -i ptcp:6635 routing', address='127.0.0.1', port=6635, cwd='nox_classic/build/src')],\n                 topology_class=MeshTopology,\n                 topology_params=\"num_switches=4\",\n                 patch_panel_class=BufferedPatchPanel,\n                 dataplane_trace=\"exp/head_nox_4_mesh_loop/dataplane.trace\",\n                 multiplex_sockets=False)",
   "early_internal_events": {
     "1": [],
     "2": [],
