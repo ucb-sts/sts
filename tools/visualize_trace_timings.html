@@ -9,7 +9,9 @@
   <script src="./d3-timeline/lib/Tooltip.js"></script>
 
   <script type="text/javascript">
+    // TODO(cs): add legend
     var primaryChartLoaded = false;
+    var invariantViolations = {"InvariantViolation":true};
     var internalEvents = {"ControlMessageReceive":true,
                           "ControlMessageSend":true,
                           "ConnectToControllers":true,
@@ -19,7 +21,11 @@
 
     function formatData(data) {
       internal_times = [];
+      timed_out_times = [];
       input_times = [];
+      // TODO(cs): assign the color red to violation_times
+      violation_times = [];
+      new_event_times = [];
       // Split by \n
       var split = data.split("\n");
       for (i = 0; i < split.length-1; i++) {
@@ -32,15 +38,26 @@
                      "class": e["class"]};
         // Demultiplex by element["class"] for internal vs. input
         var eventClass = e["class"];
-        if (eventClass in internalEvents) {
-          internal_times.push(point);
+        if (eventClass === "InvariantViolation") {
+          violation_times.push(point);
+        } else if (eventClass in internalEvents)  {
+          if ("timed_out" in e && e["timed_out"]) {
+            timed_out_times.push(point);
+          } else if ("new_internal_event" in e && e["new_internal_event"]) {
+            new_event_times.push(point);
+          } else {
+            internal_times.push(point);
+          }
         } else {
           input_times.push(point);
         }
       }
 
       return [{"label": "internal", "times": internal_times},
-              {"label": "input", "times": input_times}];
+              {"label": "input", "times": input_times},
+              {"label": "timed_out", "times": timed_out_times},
+              {"label": "new_internal", "times": new_event_times},
+              {"label": "violation", "times": violation_times}];
     }
     function initFileUpload(elementId, svg, chart, primaryChart) {
       var upload = document.getElementById(elementId);
@@ -69,6 +86,9 @@
         };
         reader.readAsText(file);
 
+        // TODO(cs): append new file input box to DOM if this is the first
+        // time the button is clicked -- this way we support variable number of
+        // charts
         return false;
       };
     }
