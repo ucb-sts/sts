@@ -912,14 +912,15 @@ all_internal_events = [ControlMessageReceive, ControlMessageSend,
 
 # Special events:
 
-class InvariantViolation(Event):
+class SpecialEvent(Event):
+  def proceed(self, _):
+    raise RuntimeError("Should never be called!")
+
+class InvariantViolation(SpecialEvent):
   ''' Class for logging violations as json dicts '''
   def __init__(self, violations, label=None, round=-1, time=None):
     Event.__init__(self, label=label, round=round, time=time)
     self.violations = [ str(v) for v in violations ]
-
-  def proceed(self, simulation):
-    return True
 
   @staticmethod
   def from_json(json_hash):
