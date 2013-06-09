@@ -279,8 +279,7 @@ class Fuzzer(ControlFlow):
       # long
       def do_invariant_check():
         if self.log_invariant_checks:
-          self._log_input_event(CheckInvariants(invariant_check_name=self.invariant_check_name,
-                                                fail_on_error=self.halt_on_violation))
+          self._log_input_event(CheckInvariants(invariant_check_name=self.invariant_check_name))
 
         controllers_with_violations = self.invariant_check(self.simulation)
 

@@ -212,8 +212,6 @@ class EventDag(object):
     return inputs
 
   def filter_unsupported_input_types(self):
-    for e in [e for e in self._events_list if type(e) == CheckInvariants]:
-      e.fail_on_error = False
     return EventDagView(self, (e for e in self._events_list
                                if type(e) not in self._ignored_input_types))
 

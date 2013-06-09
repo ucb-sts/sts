@@ -455,10 +455,9 @@ class WaitTime(InputEvent):
     return WaitTime(wait_time, round=round, label=label, time=time)
 
 class CheckInvariants(InputEvent):
-  def __init__(self, fail_on_error=False, label=None, round=-1, time=None,
+  def __init__(self, label=None, round=-1, time=None,
                invariant_check_name="InvariantChecker.check_correspondence"):
     super(CheckInvariants, self).__init__(label=label, round=round, time=time)
-    self.fail_on_error = fail_on_error
     # For backwards compatibility.. (invariants used to be specified as
     # marshalled functions, not invariant check names)
     self.legacy_invariant_check = not isinstance(invariant_check_name, basestring)
@@ -483,14 +482,10 @@ class CheckInvariants(InputEvent):
                        '''locally.\n NameError: %s''' % str(e))
 
     if violations != []:
-      msg.fail("The following controllers had correctness violations!: %s"
+      msg.fail("The following correctness violations occurred!: %s"
                % str(violations))
       if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
         raise KeyboardInterrupt("fail to interactive")
-      if self.fail_on_error:
-        # TODO(cs): log InvariantViolation before exiting
-        msg.fail("Exiting: fail_on_error=True")
-        exit(5)
     else:
       msg.interactive("No correctness violations!")
     return True
@@ -510,10 +505,6 @@ class CheckInvariants(InputEvent):
   @staticmethod
   def from_json(json_hash):
     (label, time, round) = extract_label_time(json_hash)
-    fail_on_error = False
-    if 'fail_on_error' in json_hash:
-      fail_on_error = json_hash['fail_on_error']
-
     invariant_check_name = "InvariantChecker.check_connectivity"
     if 'invariant_name' in json_hash:
       invariant_check_name  = json_hash['invariant_name']
@@ -524,7 +515,6 @@ class CheckInvariants(InputEvent):
       invariant_check_name = types.FunctionType(code, globals())
 
     return CheckInvariants(label=label, time=time, round=round,
-                           fail_on_error=fail_on_error,
                            invariant_check_name=invariant_check_name)
 
 class ControlChannelBlock(InputEvent):
