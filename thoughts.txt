@@ -16,6 +16,8 @@
  - TODO: messages that end up sitting in replayer's buffer?
    [new/unexpected evens]. Should timestamp arrival time for all messages.
 
+ - need to make sure child replay process dieson ^C
+
 Questions:
  - Where to mark timed out / new / successful internal events? Replayer, or
    javascript?
