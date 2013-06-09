@@ -160,7 +160,7 @@ class EventScheduler(EventSchedulerBase):
 
     if isinstance(event, InputEvent):
       self.inject_input(event)
-    else:
+    elif isinstance(event, InternalEvent):
       self.wait_for_internal(event)
     self.update_event_time(event)
 
@@ -211,7 +211,6 @@ class EventScheduler(EventSchedulerBase):
       event.timed_out = True
       self.stats.event_timed_out(event)
     event.time = SyncTime.now()
-    self._log_event(event)
 
   def update_event_time(self, event):
     """ update our bearing on where we currently our in the timeline """
