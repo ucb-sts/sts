@@ -18,7 +18,14 @@ parser = argparse.ArgumentParser()
 parser.add_argument('input', metavar="INPUT",
                     help='The input json file to be printed')
 parser.add_argument('-f', '--format-file',
-                    help='the output format configuration file',
+                    help=str('''The output format configuration file.'''
+''' ----- config file format: ----'''
+''' config files are python modules that may define the following variables: '''
+'''   fields  => an array of field names to print. uses default_fields if undefined. '''
+'''   filtered_classes => a set of classes to ignore, from sts.replay_event'''
+'''   ... '''
+''' see example_pretty_print_config.py for an example. '''
+''' ---------------------------------'''),
                     default=None)
 parser.add_argument('-n', '--no-stats', action="store_false", dest="stats",
                     help="don't print statistics",
@@ -28,14 +35,6 @@ parser.add_argument('-d', '--dp-trace-path', dest="dp_trace_path",
                     default=None)
 args = parser.parse_args()
 
-# ------------------------------- config file format: --------------------------------------
-# config files are python modules that may define the following variables:
-#   fields  => an array of field names to print. uses default_fields if undefined.
-#   filtered_classes => a set of classes to ignore, from sts.replay_event
-#   ...
-#
-# see example_pretty_print_config.py for an example.
-# ------------------------------------------------------------------------------------------
 
 default_fields = ['class_with_label', 'fingerprint', 'event_delimiter']
 default_filtered_classes = set()

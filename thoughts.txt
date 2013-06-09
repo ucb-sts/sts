@@ -11,8 +11,6 @@
 
  - TODO: add input_logger= as a part of the config template
 
- - Add documentation on the tools/ directory
-
  - TODO: we don't actually check that bugs are unambiguous
 
  - TODO: Log messages that end up sitting in replayer's buffer?

@@ -243,5 +243,34 @@ This will find and run all files with '_test' in the name.
 
 ### Tools
 
-There are many useful tools in the tools/ subdirectory.
+There are many useful tools in the tools/ subdirectory:
 
+ - ```check_compile.sh```: Checks all python files for syntax or import
+   errors.
+
+ - ```clean.sh```: Removes all extraneous files, e.g. .pyc files.
+
+ - ```check_trace_for_violation.sh```: Given a path to an events.trace file,
+   checks whether an invariant violation occurred in the trace. 
+
+ - ```pretty_print_input_trace.py```: Print an events.trace file in human
+   readable format. This script's output is highly configurable.
+
+<pre>
+----- config file format: ----
+config files are python modules that may define the following variables:
+fields  => an array of field names to print. uses default_fields if undefined.
+filtered_classes => a set of classes to ignore, from sts.replay_event
+...
+see example_pretty_print_config.py for an example.
+</pre>
+
+ - ```reindent_pox.sh```: Canonicalize the whitespace formatting of all python
+   files.
+
+ - ```run.sh```: Run the simulator iteratively until an invariant violation
+   occurs. Pass command line arguments as an argument, e.g. `$ run.sh
+   ./simulator.py ...`
+
+ - ```visualize_event_trace.html```: A webpage for visualizing event traces.
+   Especially useful for debugging non-deterministic replays.
