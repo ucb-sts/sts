@@ -22,7 +22,7 @@ find the minimal causal sequence (MCS) of a failure.
 
 from sts.util.console import msg, color
 from sts.util.convenience import timestamp_string, mkdir_p, ExitCode
-from sts.util.rpc_forker import LocalForker
+from sts.util.rpc_forker import LocalForker, test_serialize_response
 from sts.util.precompute_cache import PrecomputeCache, PrecomputePowerSetCache
 from sts.replay_event import *
 from sts.event_dag import EventDag, split_list
@@ -314,6 +314,7 @@ class MCSFinder(ControlFlow):
         input_logger.log_input_event(InvariantViolation(violations))
       replayer.cleanup()
       simulation.clean_up()
+      test_serialize_response(violations, self._runtime_stats.client_dict())
       return (violations, self._runtime_stats.client_dict())
 
     # TODO(cs): once play_forward() is no longer a closure, register it only once

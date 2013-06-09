@@ -6,6 +6,24 @@ import xmlrpclib
 import sys
 import marshal
 from sts.util.convenience import find_port
+import logging
+log = logging.getLogger("rpc_forker")
+
+def test_serialize_response(*args):
+  for arg in args:
+    try:
+      xmlrpclib.dumps((arg,), methodresponse=True)
+    except Exception as e:
+      print "Could not serialize arg %s" % str(arg)
+      raise e
+
+def test_serialize_request(methodname, *args):
+  for arg in args:
+    try:
+      xmlrpclib.dumps((arg,), methodresponse=True, methodname=methodname)
+    except Exception as e:
+      print "Could not serialize arg %s" % str(arg)
+      raise e
 
 class TaskRegistry(object):
   ''' Maintains code for tasks to be Forked. '''
@@ -60,6 +78,8 @@ class Forker(object):
   def _invoke_child_rpc(self, ip, port, task_name, *args):
     # Called within the parent process
     child_url = "http://" + str(ip) + ":" + str(port) + "/"
+    log.debug("Invoking task %s on child %s" % (task_name, child_url,))
+    test_serialize_request(task_name, *args)
     proxy = xmlrpclib.ServerProxy(child_url, allow_none=True)
     child_return = getattr(proxy, task_name)(*args)
     # Magic to close the underlying socket. I'm not sure if this is actually
@@ -93,8 +113,15 @@ class LocalForker(Forker):
       self.server.handle_request()
       sys.exit(0)
     else: # Parent
-      child_return = self._invoke_child_rpc(ip, port,
-                                            task_name, *args, **kws)
+      try:
+        child_return = self._invoke_child_rpc(ip, port,
+                                              task_name, *args, **kws)
+      except xmlrpclib.Fault as err:
+        print "An RPC fault occurred"
+        print "Fault code: %d" % err.faultCode
+        print "Fault string: %s" % err.faultString
+        raise
+
       os.waitpid(pid, 0)
       return child_return
 
