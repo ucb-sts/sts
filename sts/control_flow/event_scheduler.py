@@ -214,7 +214,7 @@ class EventScheduler(EventSchedulerBase):
     self._log_event(event)
 
   def update_event_time(self, event):
-    """ update events """
+    """ update our bearing on where we currently our in the timeline """
     self.last_real_time = time.time()
     self.last_rec_time = event.time
 

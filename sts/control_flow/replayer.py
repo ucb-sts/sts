@@ -39,7 +39,7 @@ log = logging.getLogger("Replayer")
 
 class Replayer(ControlFlow):
   '''
-  Replay events from a `superlog` with causal dependencies, pruning as we go
+  Replay events from a trace
 
   To set the event scheduling parameters, pass them as keyword args to the
   constructor of this class, which will pass them on to the EventScheduler object it creates.
@@ -123,7 +123,7 @@ class Replayer(ControlFlow):
     self.interpolated_time = SyncTime(next_time.seconds, just_before_micro)
 
   def increment_round(self):
-    msg.event(color.CYAN + ( "Round %d" % self.logical_time) + color.WHITE)
+    msg.event(color.CYAN + ("Round %d" % self.logical_time) + color.WHITE)
 
   def simulate(self, post_bootstrap_hook=None):
     ''' Caller *must* call simulation.clean_up() '''

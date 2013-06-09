@@ -126,7 +126,7 @@
     var width = 2000;
 
     var chart1 = d3.timeline()
-      .tickFormat( //
+      .tickFormat(
         {format: d3.time.format("%M:%S:%L"),
         tickTime: d3.time.seconds,
         tickNumber: 10,
@@ -137,7 +137,7 @@
       .mouseout(hideDetails); // toggle between rectangles and circles
 
     var chart2 = d3.timeline()
-      .tickFormat( //
+      .tickFormat(
         {format: d3.time.format("%M:%S:%L"),
         tickTime: d3.time.seconds,
         tickNumber: 10,
