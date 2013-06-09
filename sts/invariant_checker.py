@@ -77,6 +77,7 @@ class InvariantChecker(object):
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     loops = hsa.detect_loop(NTF, TTF, simulation.topology.live_switches)
+    loops = [ str(l) for l in loops ]
     return loops
 
   @staticmethod
@@ -121,7 +122,7 @@ class InvariantChecker(object):
       log.info("remaining_pairs: %s" % (str(remaining_pairs)))
     else:
       msg.success("Fully connected!")
-    return list(remaining_pairs)
+    return [ str(p) for p in list(remaining_pairs) ]
 
   @staticmethod
   def check_connectivity(simulation):
@@ -162,7 +163,7 @@ class InvariantChecker(object):
       log.info("remaining_pairs: %s" % (str(remaining_pairs)))
     else:
       msg.success("Fully connected!")
-    return list(remaining_pairs)
+    return [ str(p) for p in list(remaining_pairs) ]
 
   @staticmethod
   def check_blackholes(simulation):
@@ -190,7 +191,7 @@ class InvariantChecker(object):
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
-    return blackholes
+    return [ str(b) for b in blackholes ]
 
   @staticmethod
   def check_correspondence(simulation):
