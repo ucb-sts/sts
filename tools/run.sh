@@ -13,7 +13,7 @@ while [ true ]; do
         exit 0
     fi
     echo 'run.sh killing'
-    ps ax | grep pox | grep -v vi | grep -v grep | grep -v fuzz_pox_mesh | awk -F ' ' ' { print $1 }' | xargs --no-run-if-empty kill -9
+    ps ax | grep pox | grep -v vi | grep -v grep | grep -v fuzz_pox_mesh | awk -F ' ' ' { print $1 }' | xargs kill -9
     sleep 1
 done
 
