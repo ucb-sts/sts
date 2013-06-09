@@ -1,0 +1,27 @@
+ - timed out internal events won't ever overlap: make them red, and skinnier
+   than the other events
+
+ - It appears that we don't actually allow new internal messages through! Only
+   new internal state transitions
+
+ - Is it always the case that delta debugging will play the MCS at least once
+   in an intermediate test?
+
+ - TODO: is the event.time for new ControllerStateChange's correct?
+
+ - TODO: add input_logger= as a part of the config template
+
+ - Add documentation on the tools/ directory
+
+ - TODO: we don't actually check that bugs are unambiguous
+
+ - TODO: Log messages that end up sitting in replayer's buffer?
+   [new/unexpected evens]. Should timestamp arrival time for all messages.
+
+Questions:
+ - Where to mark timed out / new / successful internal events? Replayer, or
+   javascript?
+     - Do we plan on replaying intermediate replays? -> No, that doesn't
+       really make sense [waiting for new internal events?]
+
+ - If we're virtualizing time, does the (javascript) time offset make sense?

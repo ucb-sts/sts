@@ -459,7 +459,7 @@ class CheckInvariants(InputEvent):
                invariant_check_name="InvariantChecker.check_correspondence"):
     super(CheckInvariants, self).__init__(label=label, round=round, time=time)
     self.fail_on_error = fail_on_error
-    # For backwards compatbility.. (invariants used to be specified as
+    # For backwards compatibility.. (invariants used to be specified as
     # marshalled functions, not invariant check names)
     self.legacy_invariant_check = not isinstance(invariant_check_name, basestring)
     if self.legacy_invariant_check:
@@ -488,6 +488,7 @@ class CheckInvariants(InputEvent):
       if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
         raise KeyboardInterrupt("fail to interactive")
       if self.fail_on_error:
+        # TODO(cs): log InvariantViolation before exiting
         msg.fail("Exiting: fail_on_error=True")
         exit(5)
     else:
