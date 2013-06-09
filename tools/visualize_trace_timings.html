@@ -7,7 +7,6 @@
   <script src="./d3-timeline/lib/d3.v3.min.js"></script>
   <script src="./d3-timeline/src/d3-timeline.js"></script>
   <script src="./d3-timeline/lib/Tooltip.js"></script>
-
   <script type="text/javascript">
     // TODO(cs): add legend
     var primaryChartLoaded = false;
@@ -83,18 +82,24 @@
           }
 
           timelineCircle(svg, chart, data);
+          // Add another chart element for the user to compare any number of
+          // charts
+          appendChart(nullData);
         };
         reader.readAsText(file);
 
-        // TODO(cs): append new file input box to DOM if this is the first
-        // time the button is clicked -- this way we support variable number of
-        // charts
         return false;
       };
     }
   </script>
   <script type="text/javascript">
-    tooltip = {};
+    var tooltip = {};
+    var nullData = [
+      {times: []}
+    ];
+    var width = 2000;
+    var charts = [];
+    var svgs = [];
 
     // When an auxiliary chart is loaded, compute an offset in milliseconds from
     // the primary chart. Offsets should be subtracted (positive offsets mean
@@ -139,56 +144,42 @@
       tooltip.hideTooltip();
     };
 
-    var nullData = [
-      {times: []}
-    ];
-
-    var width = 2000;
-
-    var chart1 = d3.timeline()
-      .tickFormat(
-        {format: d3.time.format("%M:%S:%L"),
-        tickTime: d3.time.seconds,
-        tickNumber: 10,
-        tickSize: 30})
-      .rotateTicks(45)
-      .display("circle")
-      .mouseover(showDetails)
-      .mouseout(hideDetails); // toggle between rectangles and circles
-
-    var chart2 = d3.timeline()
-      .tickFormat(
-        {format: d3.time.format("%M:%S:%L"),
-        tickTime: d3.time.seconds,
-        tickNumber: 10,
-        tickSize: 30})
-      .rotateTicks(45)
-      .display("circle")
-      .mouseover(showDetails)
-      .mouseout(hideDetails); // toggle between rectangles and circles
-
-    var svg1 = {};
-    var svg2 = {};
-
     function timelineCircle(svg, chart, data) {
       svg.datum(data).call(chart);
     }
 
+    function appendToDOM(chartElement, fileElement) {
+      document.body.innerHTML += "<p><input type=file id=" + fileElement + "></p>";
+      document.body.innerHTML += "<div id=" + chartElement + "></div>";
+    }
+
+    function appendChart(data) {
+      var index = charts.length;
+      var chartElement = "timeline" + index;
+      var fileElement = "fileinput" + index;
+      appendToDOM(chartElement, fileElement);
+
+      charts.push(d3.timeline()
+        .tickFormat(
+          {format: d3.time.format("%M:%S:%L"),
+          tickTime: d3.time.seconds,
+          tickNumber: 10,
+          tickSize: 30})
+        .rotateTicks(45)
+        .display("circle") // toggle between rectangles and circles
+        .mouseover(showDetails)
+        .mouseout(hideDetails));
+      svgs.push(d3.select("#" + chartElement).insert("svg").attr("width", width));
+      timelineCircle(svgs[index], charts[index], data);
+      initFileUpload(fileElement, svgs[index], charts[index], true);
+    }
+
     window.onload = function() {
       tooltip = Tooltip("vis-tooltip", 230);
-      // TODO(cs): wrap into a for loop over [[svg1, chart1], [svg2, chart2]]
-      svg1 = d3.select("#timeline1").insert("svg").attr("width", width);
-      svg2 = d3.select("#timeline2").insert("svg").attr("width", width);
-      timelineCircle(svg1, chart1, nullData);
-      timelineCircle(svg2, chart2, nullData);
-      initFileUpload('fileinput1', svg1, chart1, true);
-      initFileUpload('fileinput2', svg2, chart2, false);
+      appendChart(nullData);
     }
   </script>
 </head>
 <body>
-  <p><input type=file id="fileinput1"><input type=file id="fileinput2"></p>
-  <div id="timeline1"></div>
-  <div id="timeline2"></div>
 </body>
 </html>
