@@ -6,6 +6,7 @@ import xmlrpclib
 import sys
 import marshal
 from sts.util.convenience import find_port
+from pox.lib.util import connect_with_backoff
 import logging
 log = logging.getLogger("rpc_forker")
 
@@ -81,7 +82,9 @@ class Forker(object):
     log.debug("Invoking task %s on child %s" % (task_name, child_url,))
     test_serialize_request(task_name, *args)
     proxy = xmlrpclib.ServerProxy(child_url, allow_none=True)
-    child_return = getattr(proxy, task_name)(*args)
+    def invoke_child():
+      return getattr(proxy, task_name)(*args)
+    child_return = connect_with_backoff(invoke_child)
     # Magic to close the underlying socket. I'm not sure if this is actually
     # needed? See ServerProxy.__call__ in:
     # http://hg.python.org/cpython/file/2.7/Lib/xmlrpclib.py
