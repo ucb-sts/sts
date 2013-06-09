@@ -805,6 +805,12 @@ class ControllerStateChange(InternalEvent):
     return tuple(list(self._fingerprint) + [self.controller_id])
 
   @staticmethod
+  def from_pending_state_change(state_change):
+    return ControllerStateChange(state_change.controller_id,
+            state_change.fingerprint, state_change.name, state_change.value,
+            time=state_change.time)
+
+  @staticmethod
   def from_json(json_hash):
     (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
     assert_fields_exist(json_hash, 'controller_id', '_fingerprint',

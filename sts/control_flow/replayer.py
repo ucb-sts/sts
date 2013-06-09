@@ -228,12 +228,12 @@ class Replayer(ControlFlow):
       if (next_expected is None or
           state_change != next_expected.pending_state_change):
         log.info("Unexpected state change. Ack'ing")
+        log_event = ControllerStateChange.from_pending_state_change(state_change)
         # Monkeypatch a "new internal event" marker to be logged to the JSON trace
         # (All fields picked up by event.to_json())
-        state_change.new_internal_event = True
-        state_change.time = SyncTime.now()
-        # TODO(cs): I hope state_change is the right type
-        self._log_input_event(state_change)
+        log_event.new_internal_event = True
+        log_event.time = SyncTime.now()
+        self._log_input_event(log_event)
         self.unexpected_state_changes.append(repr(state_change))
         self.sync_callback.ack_pending_state_change(state_change)
 
