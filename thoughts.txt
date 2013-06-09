@@ -13,7 +13,7 @@
 
  - TODO: we don't actually check that bugs are unambiguous
 
- - TODO: Log messages that end up sitting in replayer's buffer?
+ - TODO: messages that end up sitting in replayer's buffer?
    [new/unexpected evens]. Should timestamp arrival time for all messages.
 
 Questions:
