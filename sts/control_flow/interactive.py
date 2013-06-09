@@ -515,6 +515,8 @@ class Interactive(ControlFlow):
     else:
       log.warn("Unknown invariant kind...")
     msg.interactive(message + str(result))
+    if result != []:
+      self._log_input_event(InvariantViolation(result))
 
   def dataplane_trace_feed(self):
     if self.simulation.dataplane_trace:
