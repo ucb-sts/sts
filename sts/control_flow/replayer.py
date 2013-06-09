@@ -231,6 +231,7 @@ class Replayer(ControlFlow):
         # Monkeypatch a "new internal event" marker to be logged to the JSON trace
         # (All fields picked up by event.to_json())
         state_change.new_internal_event = True
+        state_change.time = SyncTime.now()
         # TODO(cs): I hope state_change is the right type
         self._log_input_event(state_change)
         self.unexpected_state_changes.append(repr(state_change))
