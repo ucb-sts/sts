@@ -310,6 +310,9 @@ class MCSFinder(ControlFlow):
       self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
       time.sleep(self.end_wait_seconds)
       violations = self.invariant_check(simulation)
+      if violations != []:
+        input_logger.log_input_event(InvariantViolation(violations))
+      replayer.cleanup()
       simulation.clean_up()
       return (violations, self._runtime_stats.client_dict())
 
