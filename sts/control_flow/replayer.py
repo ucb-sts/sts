@@ -101,10 +101,6 @@ class Replayer(ControlFlow):
     if self._input_logger is not None:
       self._input_logger.log_input_event(event, **kws)
 
-  def cleanup(self):
-    if self._input_logger is not None:
-      self._input_logger.close(self, self.simulation_cfg, skip_mcs_cfg=True)
-
   def get_interpolated_time(self):
     '''
     During divergence, the controller may ask for the current time more or
