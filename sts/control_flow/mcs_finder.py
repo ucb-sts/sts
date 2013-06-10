@@ -315,7 +315,10 @@ class MCSFinder(ControlFlow):
         if violations != []:
           input_logger.log_input_event(InvariantViolation(violations))
       except SystemExit:
-        # One of the invariant checks bailed early
+        # One of the invariant checks bailed early. Oddly, this is not an
+        # error for us, it just means that there were no violations...
+        # [this logic is arguably broken]
+        # Return no violations, and let Forker handle system exit for us.
         violations = []
       finally:
         input_logger.close(replayer, self.simulation_cfg, skip_mcs_cfg=True)
