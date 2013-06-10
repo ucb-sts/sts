@@ -305,7 +305,6 @@ class MCSFinder(ControlFlow):
                           input_logger=input_logger,
                           **self.kwargs)
       violations = []
-      simulation = None
       try:
         simulation = replayer.simulate()
         self._track_new_internal_events(simulation, replayer)
@@ -313,14 +312,17 @@ class MCSFinder(ControlFlow):
         self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
         time.sleep(self.end_wait_seconds)
         violations = self.invariant_check(simulation)
-      finally:
         if violations != []:
           input_logger.log_input_event(InvariantViolation(violations))
+      except SystemExit:
+        # One of the invariant checks bailed early
+        violations = []
+      finally:
         input_logger.close(replayer, self.simulation_cfg, skip_mcs_cfg=True)
         if simulation is not None:
           simulation.clean_up()
-        test_serialize_response(violations, self._runtime_stats.client_dict())
-        return (violations, self._runtime_stats.client_dict())
+      test_serialize_response(violations, self._runtime_stats.client_dict())
+      return (violations, self._runtime_stats.client_dict())
 
     # TODO(cs): once play_forward() is no longer a closure, register it only once
     self.forker.register_task("play_forward", play_forward)
