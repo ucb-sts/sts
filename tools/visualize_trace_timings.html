@@ -149,8 +149,15 @@
     }
 
     function appendToDOM(chartElement, fileElement) {
-      document.body.innerHTML += "<p><input type=file id=" + fileElement + "></p>";
-      document.body.innerHTML += "<div id=" + chartElement + "></div>";
+      var p = document.createElement('p');
+      var input = document.createElement('input');
+      input.setAttribute('type', 'file');
+      input.setAttribute('id', fileElement);
+      p.appendChild(input);
+      document.body.appendChild(p);
+      var div = document.createElement('div');
+      div.setAttribute('id', chartElement);
+      document.body.appendChild(div);
     }
 
     function appendChart(data) {
