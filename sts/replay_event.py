@@ -77,6 +77,11 @@ class Event(object):
     # Whether the (internal) event timed out in the most recent round
     self.timed_out = False
 
+  @property
+  def fingerprint(self):
+    # Default fingerprint
+    return (self.__class__.__name__,)
+
   @abc.abstractmethod
   def proceed(self, simulation):
     '''Executes a single `round'. Returns a boolean that is true if the
@@ -87,11 +92,15 @@ class Event(object):
   def to_json(self):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
-    if ('fingerprint' in fields and
-        isinstance(fields['fingerprint'][1], Fingerprint)):
+    # fingerprints are accessed through @property, not in __dict__:
+    fields['fingerprint'] = self.fingerprint
+
+    if len(fields['fingerprint']) > 1 and isinstance(fields['fingerprint'][1], Fingerprint):
+      # Hack: convert convert Fingerprint objects into Fingerprint.to_dict()
       fingerprint = list(fields['fingerprint'])
       fingerprint[1] = fingerprint[1].to_dict()
       fields['fingerprint'] = tuple(fingerprint)
+
     return json.dumps(fields)
 
   def __hash__(self):
@@ -111,9 +120,8 @@ class Event(object):
     return self.__class__.__name__ + ":" + self.label
 
   def __repr__(self):
-    s = self.__class__.__name__ + ":" + self.label
-    if hasattr(self, "fingerprint"):
-      s += ":" + str(self.fingerprint)
+    s = self.__class__.__name__ + ":" + self.label \
+            + ":" + str(self.fingerprint)
     return s
 
 # -------------------------------------------------------- #
@@ -423,6 +431,7 @@ class TrafficInjection(InputEvent):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     fields['dp_event'] = self.dp_event.to_json()
+    fields['fingerprint'] = self.fingerprint
     return json.dumps(fields)
 
   @staticmethod
@@ -500,6 +509,7 @@ class CheckInvariants(InputEvent):
     else:
       fields['invariant_name'] = self.invariant_check_name
       fields['invariant_check'] = None
+    fields['fingerprint'] = "N/A"
     return json.dumps(fields)
 
   @staticmethod
@@ -582,7 +592,7 @@ class DataplaneDrop(InputEvent):
     if type(fingerprint) == list:
       fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]),
                      fingerprint[2], fingerprint[3])
-    self.fingerprint = fingerprint
+    self._fingerprint = fingerprint
     # TODO(cs): passive is a bit of a hack, but this was easier.
     self.passive = passive
 
@@ -596,6 +606,10 @@ class DataplaneDrop(InputEvent):
        simulation.patch_panel.drop_dp_event(dp_event)
        return True
      return False
+
+  @property
+  def fingerprint(self):
+    return self._fingerprint
 
   @staticmethod
   def from_json(json_hash):
@@ -615,7 +629,7 @@ class DataplaneDrop(InputEvent):
 class LinkDiscovery(InputEvent):
   def __init__(self, controller_id, link_attrs, label=None, round=-1, time=None):
     super(LinkDiscovery, self).__init__(label=label, round=round, time=time)
-    self.fingerprint = (self.__class__.__name__,
+    self._fingerprint = (self.__class__.__name__,
                         controller_id, tuple(link_attrs))
     self.controller_id = controller_id
     self.link_attrs = link_attrs
@@ -624,6 +638,10 @@ class LinkDiscovery(InputEvent):
     controller = simulation.controller_manager.get_controller(self.controller_id)
     controller.sync_connection.send_link_notification(self.link_attrs)
     return True
+
+  @property
+  def fingerprint(self):
+    return self._fingerprint
 
   @staticmethod
   def from_json(json_hash):
@@ -668,7 +686,11 @@ class ControlMessageBase(InternalEvent):
       fingerprint = (self.__class__.__name__, OFFingerprint(fingerprint),
                      dpid, controller_id)
 
-    self.fingerprint = fingerprint
+    self._fingerprint = fingerprint
+
+  @property
+  def fingerprint(self):
+    return self._fingerprint
 
 class ControlMessageReceive(ControlMessageBase):
   def proceed(self, simulation):
@@ -884,7 +906,7 @@ class DataplanePermit(InternalEvent):
     if type(fingerprint) == list:
       fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]),
                      fingerprint[2], fingerprint[3])
-    self.fingerprint = fingerprint
+    self._fingerprint = fingerprint
     # TODO(cs): passive is a bit of a hack, but this was easier.
     self.passive = passive
 
@@ -897,6 +919,10 @@ class DataplanePermit(InternalEvent):
         simulation.patch_panel.permit_dp_event(dp_event)
         return True
       return False
+
+  @property
+  def fingerprint(self):
+    return self._fingerprint
 
   @staticmethod
   def from_json(json_hash):

@@ -32,8 +32,12 @@ class MockEvent(InputEvent):
 class MockInternalEvent(InternalEvent):
   def __init__(self, fingerprint, label=None):
     InternalEvent.__init__(self, label)
-    self.fingerprint = fingerprint
     self.timed_out = False
+    self._fingerprint = fingerprint
+
+  @property
+  def fingerprint(self):
+    return self._fingerprint
 
   def proceed(self, simulation):
     pass

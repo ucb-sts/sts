@@ -76,9 +76,13 @@ class MockEfficientMCSFinder(MockMCSFinderBase, EfficientMCSFinder):
 class MockInputEvent(InputEvent):
   def __init__(self, fingerprint=None, **kws):
     super(MockInputEvent, self).__init__(**kws)
-    self.fingerprint = fingerprint
+    self._fingerprint = fingerprint
     self.timed_out = False
 
+  @property
+  def fingerprint(self):
+    return self._fingerprint
+  
   def proceed(self, simulation):
     return True
 
