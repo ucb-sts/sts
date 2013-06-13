@@ -305,6 +305,7 @@ class MCSFinder(ControlFlow):
                           input_logger=input_logger,
                           **self.kwargs)
       violations = []
+      simulation = None
       try:
         simulation = replayer.simulate()
         self._track_new_internal_events(simulation, replayer)
