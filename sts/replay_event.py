@@ -45,6 +45,14 @@ from sts.syncproto.base import SyncTime
 from pox.lib.util import TimeoutError
 log = logging.getLogger("events")
 
+def dictify_fingerprint(fingerprint):
+  # Hack: convert Fingerprint objects into Fingerprint.to_dict()
+  mutable = list(fingerprint)
+  for i, e in enumerate(mutable):
+    if isinstance(mutable[i], Fingerprint):
+      mutable[i] = mutable[i].to_dict()
+  return tuple(mutable)
+
 class Event(object):
   __metaclass__ = abc.ABCMeta
 
@@ -93,15 +101,7 @@ class Event(object):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     # fingerprints are accessed through @property, not in __dict__:
-    fields['fingerprint'] = self.fingerprint
-
-    # Hack: convert convert Fingerprint objects into Fingerprint.to_dict()
-    mutable = list(fields['fingerprint'])
-    for i, e in enumerate(mutable):
-      if isinstance(mutable[i], Fingerprint):
-         mutable[i] = mutable[i].to_dict()
-    fields['fingerprint'] = tuple(mutable)
-
+    fields['fingerprint'] = dictify_fingerprint(self.fingerprint)
     return json.dumps(fields)
 
   def __hash__(self):
@@ -432,7 +432,7 @@ class TrafficInjection(InputEvent):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     fields['dp_event'] = self.dp_event.to_json()
-    fields['fingerprint'] = self.fingerprint
+    fields['fingerprint'] = dictify_fingerprint(self.fingerprint)
     return json.dumps(fields)
 
   @staticmethod
