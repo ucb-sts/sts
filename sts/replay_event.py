@@ -102,6 +102,8 @@ class Event(object):
     fields['class'] = self.__class__.__name__
     # fingerprints are accessed through @property, not in __dict__:
     fields['fingerprint'] = dictify_fingerprint(self.fingerprint)
+    if '_fingerprint' in fields:
+      del fields['_fingerprint']
     return json.dumps(fields)
 
   def __hash__(self):
@@ -432,7 +434,7 @@ class TrafficInjection(InputEvent):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     fields['dp_event'] = self.dp_event.to_json()
-    fields['fingerprint'] = dictify_fingerprint(self.fingerprint)
+    fields['fingerprint'] = (self.__class__.__name__, self.dp_event.to_json())
     return json.dumps(fields)
 
   @staticmethod
@@ -624,6 +626,7 @@ class DataplaneDrop(InputEvent):
     fields['class'] = self.__class__.__name__
     fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
                              self.fingerprint[2], self.fingerprint[3])
+    del fields['_fingerprint']
     return json.dumps(fields)
 
 # TODO(cs): Temporary hack until we figure out determinism
@@ -937,6 +940,7 @@ class DataplanePermit(InternalEvent):
     fields['class'] = self.__class__.__name__
     fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
                              self.fingerprint[2], self.fingerprint[3])
+    del fields['_fingerprint']
     return json.dumps(fields)
 
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
