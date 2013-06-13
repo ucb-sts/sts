@@ -95,11 +95,12 @@ class Event(object):
     # fingerprints are accessed through @property, not in __dict__:
     fields['fingerprint'] = self.fingerprint
 
-    if len(fields['fingerprint']) > 1 and isinstance(fields['fingerprint'][1], Fingerprint):
-      # Hack: convert convert Fingerprint objects into Fingerprint.to_dict()
-      fingerprint = list(fields['fingerprint'])
-      fingerprint[1] = fingerprint[1].to_dict()
-      fields['fingerprint'] = tuple(fingerprint)
+    # Hack: convert convert Fingerprint objects into Fingerprint.to_dict()
+    mutable = list(fields['fingerprint'])
+    for i, e in enumerate(mutable):
+      if isinstance(mutable[i], Fingerprint):
+         mutable[i] = mutable[i].to_dict()
+    fields['fingerprint'] = tuple(mutable)
 
     return json.dumps(fields)
 
