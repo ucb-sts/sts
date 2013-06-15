@@ -19,6 +19,14 @@ import sys, os
 sys.path.append("/Users/cs/Research/UCB/code/sts/")
 sys.path.append("/Users/cs/Research/UCB/code/sts/pox/")
 
+def skip(app, what, name, obj, skip, options):
+    if name == "__init__":
+        return False
+    return skip
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip)
+
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
