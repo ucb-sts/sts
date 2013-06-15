@@ -1,0 +1,176 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.controller_manager &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.controller_manager</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c"># Copyright 2012-2013 Sam Whitlock</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&#39;&#39;&#39; Convenience object for encapsulating and interacting with Controller processes &#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">sts.util.console</span> <span class="kn">import</span> <span class="n">msg</span>
+
+<div class="viewcode-block" id="ControllerManager"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager">[docs]</a><span class="k">class</span> <span class="nc">ControllerManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Encapsulate a list of controllers objects &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controllers</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cid2controller</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="n">controller</span><span class="o">.</span><span class="n">cid</span> <span class="p">:</span> <span class="n">controller</span>
+      <span class="k">for</span> <span class="n">controller</span> <span class="ow">in</span> <span class="n">controllers</span>
+    <span class="p">}</span>
+
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="ControllerManager.controller_configs"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.controller_configs">[docs]</a>  <span class="k">def</span> <span class="nf">controller_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span> <span class="n">c</span><span class="o">.</span><span class="n">config</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">controllers</span> <span class="p">]</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="ControllerManager.controllers"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.controllers">[docs]</a>  <span class="k">def</span> <span class="nf">controllers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">cs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2controller</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="n">cs</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">cid</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cs</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="ControllerManager.live_controllers"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.live_controllers">[docs]</a>  <span class="k">def</span> <span class="nf">live_controllers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">alive</span> <span class="o">=</span> <span class="p">[</span><span class="n">controller</span> <span class="k">for</span> <span class="n">controller</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">controllers</span> <span class="k">if</span> <span class="n">controller</span><span class="o">.</span><span class="n">alive</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">alive</span><span class="p">)</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="ControllerManager.down_controllers"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.down_controllers">[docs]</a>  <span class="k">def</span> <span class="nf">down_controllers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">down</span> <span class="o">=</span> <span class="p">[</span><span class="n">controller</span> <span class="k">for</span> <span class="n">controller</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">controllers</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">controller</span><span class="o">.</span><span class="n">alive</span><span class="p">]</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="n">down</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ControllerManager.get_controller_by_label"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.get_controller_by_label">[docs]</a>  <span class="k">def</span> <span class="nf">get_controller_by_label</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2controller</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">label</span> <span class="o">==</span> <span class="n">label</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">c</span>
+    <span class="k">return</span> <span class="bp">None</span>
+</div>
+<div class="viewcode-block" id="ControllerManager.get_controller"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.get_controller">[docs]</a>  <span class="k">def</span> <span class="nf">get_controller</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cid</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">cid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2controller</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;unknown cid </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">cid</span><span class="p">))</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2controller</span><span class="p">[</span><span class="n">cid</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="ControllerManager.kill_all"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.kill_all">[docs]</a>  <span class="k">def</span> <span class="nf">kill_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">live_controllers</span><span class="p">:</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cid2controller</span> <span class="o">=</span> <span class="p">{}</span>
+</div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="ControllerManager.kill_controller"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.kill_controller">[docs]</a>  <span class="k">def</span> <span class="nf">kill_controller</span><span class="p">(</span><span class="n">controller</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Killing controller </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">controller</span><span class="p">))</span>
+    <span class="n">controller</span><span class="o">.</span><span class="n">kill</span><span class="p">()</span>
+</div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="ControllerManager.reboot_controller"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.reboot_controller">[docs]</a>  <span class="k">def</span> <span class="nf">reboot_controller</span><span class="p">(</span><span class="n">controller</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Restarting controller </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">controller</span><span class="p">))</span>
+    <span class="n">controller</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ControllerManager.check_controller_processes_alive"><a class="viewcode-back" href="../../sts.html#sts.controller_manager.ControllerManager.check_controller_processes_alive">[docs]</a>  <span class="k">def</span> <span class="nf">check_controller_processes_alive</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">controllers_with_problems</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">live</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">live_controllers</span><span class="p">)</span>
+    <span class="n">live</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">cid</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">live</span><span class="p">:</span>
+      <span class="p">(</span><span class="n">rc</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">check_process_status</span><span class="p">()</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">rc</span><span class="p">:</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">alive</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">controllers_with_problems</span><span class="o">.</span><span class="n">append</span> <span class="p">(</span> <span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span> <span class="p">)</span>
+    <span class="k">return</span> <span class="n">controllers_with_problems</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

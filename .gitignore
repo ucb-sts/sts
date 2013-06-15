@@ -39,6 +39,7 @@ runtime_stats/*json
 runtime_stats/*pdf
 runtime_stats/*gpi
 runtime_stats/*dat
+docs/_build/doctrees/*
 
 # Controllers
 nox/

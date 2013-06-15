@@ -1,0 +1,298 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.syncproto.base &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.syncproto.base</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="c"># Base class for all (python) controller-specific syncer modules, as well as</span>
+<span class="c"># the STS syncer. (Runs in both the STS process and the controller</span>
+<span class="c"># process(es))</span>
+
+<span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+
+<span class="c"># TODO(cs): specific to POX!</span>
+<span class="kn">from</span> <span class="nn">pox.lib.ioworker.io_worker</span> <span class="kn">import</span> <span class="n">JSONIOWorker</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;sync_connection&quot;</span><span class="p">)</span>
+<div class="viewcode-block" id="unpatched_time"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.unpatched_time">[docs]</a><span class="k">def</span> <span class="nf">unpatched_time</span><span class="p">():</span>
+  <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="s">&quot;_orig_time&quot;</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">time</span><span class="o">.</span><span class="n">_orig_time</span><span class="p">()</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="SyncTime"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncTime">[docs]</a><span class="k">class</span> <span class="nc">SyncTime</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s">&#39;SyncTime&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s">&#39;seconds&#39;</span><span class="p">,</span> <span class="s">&#39;microSeconds&#39;</span><span class="p">))):</span>
+  <span class="sd">&quot;&quot;&quot; ValueObject that models the microsecond timestamps used in STS Sync Messages &quot;&quot;&quot;</span>
+  <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">seconds</span><span class="p">,</span> <span class="n">microSeconds</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">SyncTime</span><span class="p">)</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">seconds</span><span class="p">,</span> <span class="n">microSeconds</span><span class="p">)</span>
+
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="SyncTime.now"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncTime.now">[docs]</a>  <span class="k">def</span> <span class="nf">now</span><span class="p">():</span>
+    <span class="c"># if time.time has been patched by sts then we don&#39;t want to fall into this</span>
+    <span class="c"># trap ourselves</span>
+    <span class="k">if</span><span class="p">(</span><span class="nb">hasattr</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="s">&quot;_orig_time&quot;</span><span class="p">)):</span>
+      <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">_orig_time</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">SyncTime</span><span class="p">(</span> <span class="nb">int</span><span class="p">(</span><span class="n">now</span><span class="p">),</span> <span class="nb">int</span><span class="p">((</span><span class="n">now</span> <span class="o">*</span> <span class="mi">1000000</span><span class="p">)</span> <span class="o">%</span> <span class="mi">1000000</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="SyncTime.as_float"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncTime.as_float">[docs]</a>  <span class="k">def</span> <span class="nf">as_float</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">seconds</span><span class="p">)</span> <span class="o">+</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">microSeconds</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1e6</span>
+</div></div>
+<div class="viewcode-block" id="SyncMessage"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncMessage">[docs]</a><span class="k">class</span> <span class="nc">SyncMessage</span><span class="p">(</span><span class="n">collections</span><span class="o">.</span><span class="n">namedtuple</span><span class="p">(</span><span class="s">&#39;SyncMessage&#39;</span><span class="p">,</span> <span class="p">(</span><span class="s">&#39;type&#39;</span><span class="p">,</span> <span class="s">&#39;messageClass&#39;</span><span class="p">,</span> <span class="s">&#39;time&#39;</span><span class="p">,</span> <span class="s">&#39;xid&#39;</span><span class="p">,</span> <span class="s">&#39;name&#39;</span><span class="p">,</span> <span class="s">&#39;value&#39;</span><span class="p">,</span> <span class="s">&#39;fingerPrint&#39;</span><span class="p">))):</span>
+  <span class="sd">&quot;&quot;&quot; value object that models a message in the STS sync protocol &quot;&quot;&quot;</span>
+  <span class="k">def</span> <span class="nf">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="n">messageClass</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">xid</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">fingerPrint</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s">&quot;ASYNC&quot;</span><span class="p">,</span> <span class="s">&quot;SYNC&quot;</span><span class="p">,</span> <span class="s">&quot;ACK&quot;</span><span class="p">,</span> <span class="s">&quot;REQUEST&quot;</span><span class="p">,</span> <span class="s">&quot;RESPONSE&quot;</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;SyncMessage: type must one of (ASYNC, SYNC, ACK, REQUEST, RESPONSE)&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="nb">type</span> <span class="o">==</span> <span class="s">&quot;RESPONSE&quot;</span> <span class="ow">or</span> <span class="nb">type</span> <span class="o">==</span> <span class="s">&quot;ACK&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">xid</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;SyncMessage: xid must be given for messages of type </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">type</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">time</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">time</span> <span class="o">=</span> <span class="n">SyncTime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="n">SyncTime</span><span class="p">):</span>
+      <span class="k">pass</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+      <span class="n">time</span> <span class="o">=</span> <span class="n">SyncTime</span><span class="p">(</span><span class="o">*</span><span class="n">time</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+      <span class="n">time</span> <span class="o">=</span> <span class="n">SyncTime</span><span class="p">(</span><span class="o">**</span><span class="n">time</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown type </span><span class="si">%s</span><span class="s"> (repr </span><span class="si">%s</span><span class="s">) for time&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">__class__</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">time</span><span class="p">)))</span>
+
+    <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="n">SyncMessage</span><span class="p">)</span><span class="o">.</span><span class="n">__new__</span><span class="p">(</span><span class="n">cls</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">,</span> <span class="n">messageClass</span><span class="o">=</span><span class="n">messageClass</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">,</span> <span class="n">xid</span><span class="o">=</span><span class="n">xid</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">,</span> <span class="n">fingerPrint</span><span class="o">=</span><span class="n">fingerPrint</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SyncIODelegate"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncIODelegate">[docs]</a><span class="k">class</span> <span class="nc">SyncIODelegate</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">io_master</span><span class="p">,</span> <span class="n">socket</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io_master</span> <span class="o">=</span> <span class="n">io_master</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io_worker</span> <span class="o">=</span> <span class="n">JSONIOWorker</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_master</span><span class="o">.</span><span class="n">create_worker_for_socket</span><span class="p">(</span><span class="n">socket</span><span class="p">))</span>
+
+<div class="viewcode-block" id="SyncIODelegate.wait_for_message"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncIODelegate.wait_for_message">[docs]</a>  <span class="k">def</span> <span class="nf">wait_for_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io_master</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SyncIODelegate.send"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncIODelegate.send">[docs]</a>  <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io_worker</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SyncIODelegate.get_on_message_received"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncIODelegate.get_on_message_received">[docs]</a>  <span class="k">def</span> <span class="nf">get_on_message_received</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">io_worker</span><span class="o">.</span><span class="n">on_json_received</span>
+</div>
+<div class="viewcode-block" id="SyncIODelegate.set_on_message_received"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncIODelegate.set_on_message_received">[docs]</a>  <span class="k">def</span> <span class="nf">set_on_message_received</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io_worker</span><span class="o">.</span><span class="n">on_json_received</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">io_worker</span><span class="p">,</span> <span class="n">msg</span><span class="p">:</span> <span class="n">f</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SyncIODelegate.close"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncIODelegate.close">[docs]</a>  <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io_worker</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+  <span class="n">on_message_received</span> <span class="o">=</span> <span class="nb">property</span><span class="p">(</span><span class="n">get_on_message_received</span><span class="p">,</span> <span class="n">set_on_message_received</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SyncProtocolSpeaker"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolSpeaker">[docs]</a><span class="k">class</span> <span class="nc">SyncProtocolSpeaker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot; speaks the sts sync protocol &quot;&quot;&quot;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handlers</span><span class="p">,</span> <span class="n">io_delegate</span><span class="p">,</span> <span class="n">collect_stats</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">xid_generator</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">io_delegate</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sent_xids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">listener</span> <span class="o">=</span> <span class="n">SyncProtocolListener</span><span class="p">(</span><span class="n">handlers</span><span class="p">,</span> <span class="n">io_delegate</span><span class="p">,</span>
+                                         <span class="n">collect_stats</span><span class="o">=</span><span class="n">collect_stats</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SyncProtocolSpeaker.message_with_xid"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolSpeaker.message_with_xid">[docs]</a>  <span class="k">def</span> <span class="nf">message_with_xid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">xid</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">message</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">message</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span><span class="n">xid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">xid_generator</span><span class="o">.</span><span class="n">next</span><span class="p">())</span>
+</div>
+<div class="viewcode-block" id="SyncProtocolSpeaker.send"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolSpeaker.send">[docs]</a>  <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Send a message you don&#39;t expect a response from &#39;&#39;&#39;</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">message_with_xid</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="k">if</span><span class="p">((</span><span class="n">message</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">xid</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sent_xids</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;Error sending message </span><span class="si">%s</span><span class="s">: XID </span><span class="si">%d</span><span class="s"> already sent&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">),</span> <span class="n">message</span><span class="o">.</span><span class="n">xid</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sent_xids</span><span class="o">.</span><span class="n">add</span><span class="p">(</span> <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">xid</span><span class="p">)</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">_asdict</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">message</span>
+</div>
+<div class="viewcode-block" id="SyncProtocolSpeaker.async_notification"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolSpeaker.async_notification">[docs]</a>  <span class="k">def</span> <span class="nf">async_notification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messageClass</span><span class="p">,</span> <span class="n">fingerPrint</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="c"># Don&#39;t really need an xid..</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">message_with_xid</span><span class="p">(</span><span class="n">SyncMessage</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s">&quot;ASYNC&quot;</span><span class="p">,</span>
+                                    <span class="n">messageClass</span><span class="o">=</span><span class="n">messageClass</span><span class="p">,</span>
+                                    <span class="n">fingerPrint</span><span class="o">=</span><span class="n">fingerPrint</span><span class="p">,</span>
+                                    <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SyncProtocolSpeaker.sync_notification"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolSpeaker.sync_notification">[docs]</a>  <span class="k">def</span> <span class="nf">sync_notification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messageClass</span><span class="p">,</span> <span class="n">fingerPrint</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">message_with_xid</span><span class="p">(</span><span class="n">SyncMessage</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s">&quot;SYNC&quot;</span><span class="p">,</span>
+                                    <span class="n">messageClass</span><span class="o">=</span><span class="n">messageClass</span><span class="p">,</span>
+                                    <span class="n">fingerPrint</span><span class="o">=</span><span class="n">fingerPrint</span><span class="p">,</span>
+                                    <span class="n">value</span><span class="o">=</span><span class="n">value</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">listener</span><span class="o">.</span><span class="n">wait_for_xaction</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SyncProtocolSpeaker.ack_sync_notification"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolSpeaker.ack_sync_notification">[docs]</a>  <span class="k">def</span> <span class="nf">ack_sync_notification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messageClass</span><span class="p">,</span> <span class="n">xid</span><span class="p">):</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">SyncMessage</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s">&quot;ACK&quot;</span><span class="p">,</span> <span class="n">messageClass</span><span class="o">=</span><span class="n">messageClass</span><span class="p">,</span> <span class="n">xid</span><span class="o">=</span><span class="n">xid</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SyncProtocolSpeaker.sync_request"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolSpeaker.sync_request">[docs]</a>  <span class="k">def</span> <span class="nf">sync_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messageClass</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Send a message you expect a response from.</span>
+<span class="sd">    Note: Blocks this thread until a response is received!&#39;&#39;&#39;</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">message_with_xid</span><span class="p">(</span><span class="n">SyncMessage</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s">&quot;REQUEST&quot;</span><span class="p">,</span> <span class="n">messageClass</span><span class="o">=</span><span class="n">messageClass</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">listener</span><span class="o">.</span><span class="n">wait_for_xaction</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="SyncProtocolListener"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolListener">[docs]</a><span class="k">class</span> <span class="nc">SyncProtocolListener</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Speaker delegates to this class to wait on messages &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handlers</span><span class="p">,</span> <span class="n">io_delegate</span><span class="p">,</span> <span class="n">collect_stats</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+               <span class="n">delay_threshold_ms</span><span class="o">=</span><span class="mf">3.0</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span> <span class="o">=</span> <span class="n">handlers</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">collect_stats</span> <span class="o">=</span> <span class="n">collect_stats</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">delay_threshold_ms</span> <span class="o">=</span> <span class="n">delay_threshold_ms</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">waiting_xids</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">received_responses</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io</span> <span class="o">=</span> <span class="n">io_delegate</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">on_message_received</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_message_received</span>
+
+<div class="viewcode-block" id="SyncProtocolListener.on_message_received"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolListener.on_message_received">[docs]</a>  <span class="k">def</span> <span class="nf">on_message_received</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg_hash</span><span class="p">):</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">SyncMessage</span><span class="p">(</span><span class="o">**</span><span class="n">msg_hash</span><span class="p">)</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">type</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">messageClass</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s">&quot;RESPONSE&quot;</span> <span class="ow">or</span> <span class="n">message</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s">&quot;ACK&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">message</span><span class="o">.</span><span class="n">xid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiting_xids</span><span class="p">:</span>
+      <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">waiting_xids</span><span class="p">[</span><span class="n">message</span><span class="o">.</span><span class="n">xid</span><span class="p">]</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">received_responses</span><span class="p">[</span><span class="n">message</span><span class="o">.</span><span class="n">xid</span><span class="p">]</span> <span class="o">=</span> <span class="n">message</span>
+      <span class="k">return</span>
+
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">: No message handler for: </span><span class="si">%s</span><span class="se">\n</span><span class="s">Known handlers are: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">h</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span><span class="p">))))</span>
+    <span class="c"># dispatch message</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">handlers</span><span class="p">[</span><span class="n">key</span><span class="p">](</span><span class="n">message</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SyncProtocolListener.wait_for_xaction"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.base.SyncProtocolListener.wait_for_xaction">[docs]</a>  <span class="k">def</span> <span class="nf">wait_for_xaction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">xid</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">xid</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">waiting_xids</span><span class="p">[</span><span class="n">xid</span><span class="p">]</span> <span class="o">=</span> <span class="n">message</span>
+
+    <span class="n">start</span> <span class="o">=</span> <span class="n">unpatched_time</span><span class="p">()</span>
+
+    <span class="c"># Blocks this thread!</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="n">xid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">received_responses</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">timeout</span><span class="p">:</span>
+        <span class="n">now</span> <span class="o">=</span> <span class="n">unpatched_time</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">now</span> <span class="o">-</span> <span class="n">start</span> <span class="o">&gt;</span> <span class="n">timeout</span><span class="p">:</span>
+          <span class="k">raise</span> <span class="n">socket</span><span class="o">.</span><span class="n">timeout</span><span class="p">()</span>
+        <span class="n">to_wait</span> <span class="o">=</span> <span class="n">timeout</span> <span class="o">-</span> <span class="p">(</span><span class="n">now</span><span class="o">-</span><span class="n">start</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">to_wait</span> <span class="o">=</span> <span class="bp">None</span>
+
+      <span class="bp">self</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">wait_for_message</span><span class="p">(</span><span class="n">to_wait</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">collect_stats</span><span class="p">:</span>
+      <span class="n">end</span> <span class="o">=</span> <span class="n">unpatched_time</span><span class="p">()</span>
+      <span class="n">ms_elapsed</span> <span class="o">=</span> <span class="p">(</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span>
+      <span class="k">if</span> <span class="n">ms_elapsed</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">delay_threshold_ms</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">log</span><span class="p">,</span> <span class="s">&quot;_orig_log&quot;</span><span class="p">):</span>
+          <span class="n">log</span><span class="o">.</span><span class="n">_orig_log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="s">&quot;Spent </span><span class="si">%.02f</span><span class="s"> milliseconds waiting on </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>
+                      <span class="p">(</span><span class="n">ms_elapsed</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">)),</span> <span class="p">[])</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">log</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="s">&quot;Spent </span><span class="si">%.02f</span><span class="s"> milliseconds waiting on </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>
+                      <span class="p">(</span><span class="n">ms_elapsed</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">message</span><span class="p">)),</span> <span class="p">[])</span>
+
+    <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">received_responses</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">xid</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">value</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

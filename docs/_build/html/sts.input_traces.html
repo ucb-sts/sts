@@ -1,0 +1,246 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>input_traces Package &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="index.html" />
+    <link rel="up" title="sts Package" href="sts.html" />
+    <link rel="next" title="syncproto Package" href="sts.syncproto.html" />
+    <link rel="prev" title="topology_loader Package" href="sts.headerspace.topology_loader.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sts.syncproto.html" title="syncproto Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="sts.headerspace.topology_loader.html" title="topology_loader Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" accesskey="U">sts Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="input-traces-package">
+<h1>input_traces Package<a class="headerlink" href="#input-traces-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">input_traces</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-sts.input_traces"></span></div>
+<div class="section" id="module-sts.input_traces.input_logger">
+<span id="input-logger-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">input_logger</span></tt> Module<a class="headerlink" href="#module-sts.input_traces.input_logger" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="sts.input_traces.input_logger.InputLogger">
+<em class="property">class </em><tt class="descclassname">sts.input_traces.input_logger.</tt><tt class="descname">InputLogger</tt><a class="reference internal" href="_modules/sts/input_traces/input_logger.html#InputLogger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.input_logger.InputLogger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Log input events injected by a control_flow.Fuzzer</p>
+<dl class="method">
+<dt id="sts.input_traces.input_logger.InputLogger.allow_timeouts">
+<tt class="descname">allow_timeouts</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/input_traces/input_logger.html#InputLogger.allow_timeouts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.input_logger.InputLogger.allow_timeouts" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.input_traces.input_logger.InputLogger.close">
+<tt class="descname">close</tt><big>(</big><em>control_flow</em>, <em>simulation_cfg</em>, <em>skip_mcs_cfg=False</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/input_logger.html#InputLogger.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.input_logger.InputLogger.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.input_traces.input_logger.InputLogger.disallow_timeouts">
+<tt class="descname">disallow_timeouts</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/input_traces/input_logger.html#InputLogger.disallow_timeouts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.input_logger.InputLogger.disallow_timeouts" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.input_traces.input_logger.InputLogger.dump_buffered_events">
+<tt class="descname">dump_buffered_events</tt><big>(</big><em>events</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/input_logger.html#InputLogger.dump_buffered_events"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.input_logger.InputLogger.dump_buffered_events" title="Permalink to this definition">¶</a></dt>
+<dd><p>If there were un-acknowledge message receives or state changes at the
+end of the run, dump them to a separate input trace &#8221;.unacked&#8221;</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.input_traces.input_logger.InputLogger.log_input_event">
+<tt class="descname">log_input_event</tt><big>(</big><em>event</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/input_logger.html#InputLogger.log_input_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.input_logger.InputLogger.log_input_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Log the event as a json hash. Note that we log dataplane events in a
+separate pickle log, so we optionally allow a packet parameter to be
+logged separately.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.input_traces.input_logger.InputLogger.open">
+<tt class="descname">open</tt><big>(</big><em>results_dir=None</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/input_logger.html#InputLogger.open"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.input_logger.InputLogger.open" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-sts.input_traces.log_parser">
+<span id="log-parser-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">log_parser</span></tt> Module<a class="headerlink" href="#module-sts.input_traces.log_parser" title="Permalink to this headline">¶</a></h2>
+<p>Parses <a href="#id2"><span class="problematic" id="id3">`</span></a>superlog&#8217;s and returns a list of sts.event.Event objects</p>
+<p><a href="#id4"><span class="problematic" id="id5">`</span></a>superlog&#8217; format: Each line is a json hash representing either an internal
+event or an external input event.</p>
+<dl class="docutils">
+<dt>Event hashes must have at least the following keys:</dt>
+<dd><p class="first">&#8216;label&#8217;:            any unique identifier
+&#8216;class&#8217;:            the name of the corresponding python class that</p>
+<blockquote class="last">
+<div>encapsulates this event type, e.g. &#8216;LinkFailure&#8217;.
+These classes can be found in sts/event.py</div></blockquote>
+</dd>
+</dl>
+<p>Hashes may have additional custom keys. For example, external input events
+must the following key:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>&#8216;dependent_labels&#8217;: list of dependent labels (internal events that will not occur if this</dt>
+<dd>event is pruned)</dd>
+</dl>
+</div></blockquote>
+<dl class="function">
+<dt id="sts.input_traces.log_parser.check_legacy_format">
+<tt class="descclassname">sts.input_traces.log_parser.</tt><tt class="descname">check_legacy_format</tt><big>(</big><em>json_hash</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/log_parser.html#check_legacy_format"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.log_parser.check_legacy_format" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.input_traces.log_parser.check_unique_label">
+<tt class="descclassname">sts.input_traces.log_parser.</tt><tt class="descname">check_unique_label</tt><big>(</big><em>event_label</em>, <em>existing_event_labels</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/log_parser.html#check_unique_label"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.log_parser.check_unique_label" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check to make sure that event_label is not in existing_event_labels.
+Throw an exception if this invariant does not hold.</p>
+<p>If the invariant does hold, add event_label to existing_event_labels.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.input_traces.log_parser.parse">
+<tt class="descclassname">sts.input_traces.log_parser.</tt><tt class="descname">parse</tt><big>(</big><em>logfile</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/log_parser.html#parse"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.log_parser.parse" title="Permalink to this definition">¶</a></dt>
+<dd><p>Input: logfile.</p>
+<p>Output: A list of all the internal and external events in the order in which
+they exist in the logfile. Each internal event is annotated with the set of
+source events that are necessary conditions for its occurence.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.input_traces.log_parser.parse_path">
+<tt class="descclassname">sts.input_traces.log_parser.</tt><tt class="descname">parse_path</tt><big>(</big><em>logfile_path</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/log_parser.html#parse_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.log_parser.parse_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Input: path to a logfile.</p>
+<p>Output: A list of all the internal and external events in the order in which
+they exist in the logfile. Each internal event is annotated with the set of
+source events that are necessary conditions for its occurence.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.input_traces.log_parser.sanity_check_external_input_event">
+<tt class="descclassname">sts.input_traces.log_parser.</tt><tt class="descname">sanity_check_external_input_event</tt><big>(</big><em>existing_event_labels</em>, <em>dependent_labels</em>, <em>json_hash</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/log_parser.html#sanity_check_external_input_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.log_parser.sanity_check_external_input_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes an external event json hash and checks that no dependents have
+already occured. Raises an exception if any have, otherwise populates
+dependent_labels</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.input_traces.log_parser.sanity_check_internal_event">
+<tt class="descclassname">sts.input_traces.log_parser.</tt><tt class="descname">sanity_check_internal_event</tt><big>(</big><em>existing_event_labels</em>, <em>dependent_labels</em>, <em>json_hash</em><big>)</big><a class="reference internal" href="_modules/sts/input_traces/log_parser.html#sanity_check_internal_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.input_traces.log_parser.sanity_check_internal_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Takes an internal event json hash and removes it from the set of
+dependent labels that must be present before the end of the log.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">input_traces Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">input_traces</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-sts.input_traces.input_logger"><tt class="docutils literal"><span class="pre">input_logger</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.input_traces.log_parser"><tt class="docutils literal"><span class="pre">log_parser</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="sts.headerspace.topology_loader.html"
+                        title="previous chapter">topology_loader Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="sts.syncproto.html"
+                        title="next chapter">syncproto Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/sts.input_traces.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sts.syncproto.html" title="syncproto Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="sts.headerspace.topology_loader.html" title="topology_loader Package"
+             >previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" >sts Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

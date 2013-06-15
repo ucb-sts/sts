@@ -1,0 +1,208 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>fingerprints Package &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="index.html" />
+    <link rel="up" title="sts Package" href="sts.html" />
+    <link rel="next" title="gui Package" href="sts.gui.html" />
+    <link rel="prev" title="experiments Package" href="sts.experiments.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sts.gui.html" title="gui Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="sts.experiments.html" title="experiments Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" accesskey="U">sts Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="fingerprints-package">
+<h1>fingerprints Package<a class="headerlink" href="#fingerprints-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">fingerprints</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-sts.fingerprints"></span></div>
+<div class="section" id="module-sts.fingerprints.base">
+<span id="base-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">base</span></tt> Module<a class="headerlink" href="#module-sts.fingerprints.base" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="sts.fingerprints.base.Fingerprint">
+<em class="property">class </em><tt class="descclassname">sts.fingerprints.base.</tt><tt class="descname">Fingerprint</tt><big>(</big><em>field2value</em><big>)</big><a class="reference internal" href="_modules/sts/fingerprints/base.html#Fingerprint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.fingerprints.base.Fingerprint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="method">
+<dt id="sts.fingerprints.base.Fingerprint.to_dict">
+<tt class="descname">to_dict</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/fingerprints/base.html#Fingerprint.to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.fingerprints.base.Fingerprint.to_dict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-sts.fingerprints.messages">
+<span id="messages-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">messages</span></tt> Module<a class="headerlink" href="#module-sts.fingerprints.messages" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="sts.fingerprints.messages.DPFingerprint">
+<em class="property">class </em><tt class="descclassname">sts.fingerprints.messages.</tt><tt class="descname">DPFingerprint</tt><big>(</big><em>field2value</em><big>)</big><a class="reference internal" href="_modules/sts/fingerprints/messages.html#DPFingerprint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.fingerprints.messages.DPFingerprint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sts.fingerprints.base.Fingerprint" title="sts.fingerprints.base.Fingerprint"><tt class="xref py py-class docutils literal"><span class="pre">sts.fingerprints.base.Fingerprint</span></tt></a></p>
+<p>Fingerprints for dataplane messages</p>
+<dl class="attribute">
+<dt id="sts.fingerprints.messages.DPFingerprint.fields">
+<tt class="descname">fields</tt><em class="property"> = ['dl_src', 'dl_dst', 'nw_src', 'nw_dst']</em><a class="headerlink" href="#sts.fingerprints.messages.DPFingerprint.fields" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="sts.fingerprints.messages.DPFingerprint.from_pkt">
+<em class="property">static </em><tt class="descname">from_pkt</tt><big>(</big><em>pkt</em><big>)</big><a class="reference internal" href="_modules/sts/fingerprints/messages.html#DPFingerprint.from_pkt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.fingerprints.messages.DPFingerprint.from_pkt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sts.fingerprints.messages.OFFingerprint">
+<em class="property">class </em><tt class="descclassname">sts.fingerprints.messages.</tt><tt class="descname">OFFingerprint</tt><big>(</big><em>field2value</em><big>)</big><a class="reference internal" href="_modules/sts/fingerprints/messages.html#OFFingerprint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.fingerprints.messages.OFFingerprint" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sts.fingerprints.base.Fingerprint" title="sts.fingerprints.base.Fingerprint"><tt class="xref py py-class docutils literal"><span class="pre">sts.fingerprints.base.Fingerprint</span></tt></a></p>
+<p>Fingerprints for openflow messages</p>
+<dl class="attribute">
+<dt id="sts.fingerprints.messages.OFFingerprint.flow_mod_commands">
+<tt class="descname">flow_mod_commands</tt><em class="property"> = {0: 'add', 1: 'modify', 2: 'modify_strict', 3: 'delete', 4: 'delete_strict'}</em><a class="headerlink" href="#sts.fingerprints.messages.OFFingerprint.flow_mod_commands" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="sts.fingerprints.messages.OFFingerprint.from_pkt">
+<em class="property">static </em><tt class="descname">from_pkt</tt><big>(</big><em>pkt</em><big>)</big><a class="reference internal" href="_modules/sts/fingerprints/messages.html#OFFingerprint.from_pkt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.fingerprints.messages.OFFingerprint.from_pkt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.fingerprints.messages.OFFingerprint.human_str">
+<tt class="descname">human_str</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/fingerprints/messages.html#OFFingerprint.human_str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.fingerprints.messages.OFFingerprint.human_str" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sts.fingerprints.messages.OFFingerprint.pkt_type_to_fields">
+<tt class="descname">pkt_type_to_fields</tt><em class="property"> = {'ofp_barrier_request': [], 'ofp_packet_in': ['in_port', 'data'], 'ofp_hello': [], 'ofp_flow_stats': [], 'ofp_get_config_reply': [], 'ofp_vendor_header': [], 'ofp_flow_removed': ['match', 'reason', 'priority'], 'ofp_queue_get_config_request': [], 'ofp_flow_stats_request': [], 'ofp_flow_mod': ['command', 'match', 'idle_timeout', 'hard_timeout', 'priority', 'out_port', 'flags', 'actions'], 'ofp_features_reply': ['datapath_id'], 'ofp_stats_reply': ['type', 'flags'], 'ofp_queue_stats_request': [], 'ofp_port_stats_request': [], 'ofp_stats_request': ['type', 'flags'], 'ofp_port_stats': [], 'ofp_vendor': [], 'ofp_get_config_request': [], 'ofp_error': ['type', 'code'], 'ofp_aggregate_stats': [], 'ofp_aggregate_stats_request': [], 'ofp_echo_request': [], 'ofp_port_status': ['reason', 'desc'], 'ofp_set_config': [], 'ofp_queue_stats': [], 'ofp_packet_out': ['data', 'in_port', 'actions'], 'ofp_port_mod': ['port_no', 'config', 'mask', 'advertise'], 'ofp_switch_config': ['flags'], 'ofp_barrier_reply': [], 'ofp_echo_reply': [], 'ofp_desc_stats': [], 'ofp_features_request': [], 'ofp_queue_get_config_reply': []}</em><a class="headerlink" href="#sts.fingerprints.messages.OFFingerprint.pkt_type_to_fields" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="sts.fingerprints.messages.OFFingerprint.special_fields">
+<tt class="descname">special_fields</tt><em class="property"> = {'command': &lt;function &lt;lambda&gt; at 0x2581f70&gt;, 'data': &lt;function process_data at 0x2581e30&gt;, 'match': &lt;function &lt;lambda&gt; at 0x2581f30&gt;, 'actions': &lt;function process_actions at 0x2581e70&gt;, 'desc': &lt;function &lt;lambda&gt; at 0x2581ef0&gt;}</em><a class="headerlink" href="#sts.fingerprints.messages.OFFingerprint.special_fields" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.fingerprints.messages.process_actions">
+<tt class="descclassname">sts.fingerprints.messages.</tt><tt class="descname">process_actions</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="_modules/sts/fingerprints/messages.html#process_actions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.fingerprints.messages.process_actions" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.fingerprints.messages.process_data">
+<tt class="descclassname">sts.fingerprints.messages.</tt><tt class="descname">process_data</tt><big>(</big><em>msg</em><big>)</big><a class="reference internal" href="_modules/sts/fingerprints/messages.html#process_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.fingerprints.messages.process_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">fingerprints Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">fingerprints</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-sts.fingerprints.base"><tt class="docutils literal"><span class="pre">base</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.fingerprints.messages"><tt class="docutils literal"><span class="pre">messages</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="sts.experiments.html"
+                        title="previous chapter">experiments Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="sts.gui.html"
+                        title="next chapter">gui Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/sts.fingerprints.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sts.gui.html" title="gui Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="sts.experiments.html" title="experiments Package"
+             >previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" >sts Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

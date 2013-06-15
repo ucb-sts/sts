@@ -1,0 +1,740 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.control_flow.mcs_finder &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.control_flow.mcs_finder</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c"># Copyright 2012-2013 Andrew Or</span>
+<span class="c"># Copyright 2012-2013 Sam Whitlock</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">An orchestrating control flow that invokes replayer several times to</span>
+<span class="sd">find the minimal causal sequence (MCS) of a failure.</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">sts.util.console</span> <span class="kn">import</span> <span class="n">msg</span><span class="p">,</span> <span class="n">color</span>
+<span class="kn">from</span> <span class="nn">sts.util.convenience</span> <span class="kn">import</span> <span class="n">timestamp_string</span><span class="p">,</span> <span class="n">mkdir_p</span><span class="p">,</span> <span class="n">ExitCode</span>
+<span class="kn">from</span> <span class="nn">sts.util.rpc_forker</span> <span class="kn">import</span> <span class="n">LocalForker</span><span class="p">,</span> <span class="n">test_serialize_response</span>
+<span class="kn">from</span> <span class="nn">sts.util.precompute_cache</span> <span class="kn">import</span> <span class="n">PrecomputeCache</span><span class="p">,</span> <span class="n">PrecomputePowerSetCache</span>
+<span class="kn">from</span> <span class="nn">sts.replay_event</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">sts.event_dag</span> <span class="kn">import</span> <span class="n">EventDag</span><span class="p">,</span> <span class="n">split_list</span>
+<span class="kn">import</span> <span class="nn">sts.input_traces.log_parser</span> <span class="kn">as</span> <span class="nn">log_parser</span>
+<span class="kn">from</span> <span class="nn">sts.input_traces.input_logger</span> <span class="kn">import</span> <span class="n">InputLogger</span>
+<span class="kn">from</span> <span class="nn">sts.control_flow.base</span> <span class="kn">import</span> <span class="n">ControlFlow</span><span class="p">,</span> <span class="n">ReplaySyncCallback</span>
+<span class="kn">from</span> <span class="nn">sts.control_flow.replayer</span> <span class="kn">import</span> <span class="n">Replayer</span>
+<span class="kn">from</span> <span class="nn">sts.control_flow.peeker</span> <span class="kn">import</span> <span class="n">Peeker</span>
+<span class="kn">from</span> <span class="nn">config.invariant_checks</span> <span class="kn">import</span> <span class="n">name_to_invariant_check</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span><span class="p">,</span> <span class="n">Counter</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<div class="viewcode-block" id="MCSFinder"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSFinder">[docs]</a><span class="k">class</span> <span class="nc">MCSFinder</span><span class="p">(</span><span class="n">ControlFlow</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_cfg</span><span class="p">,</span> <span class="n">superlog_path_or_dag</span><span class="p">,</span>
+               <span class="n">invariant_check_name</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+               <span class="n">transform_dag</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">end_wait_seconds</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+               <span class="n">mcs_trace_path</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">extra_log</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">runtime_stats_file</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+               <span class="n">wait_on_deterministic_values</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+               <span class="n">no_violation_verification_runs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+               <span class="n">optimized_filtering</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">forker</span><span class="o">=</span><span class="n">LocalForker</span><span class="p">(),</span>
+               <span class="n">replay_final_trace</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+               <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">MCSFinder</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">simulation_cfg</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">mcs_log_tracker</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_log_tracker</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">mcs_trace_path</span> <span class="o">=</span> <span class="n">mcs_trace_path</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sync_callback</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;mcs_finder&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">invariant_check_name</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Must specify invariant check&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">invariant_check_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">name_to_invariant_check</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&#39;&#39;&#39;Unknown invariant check </span><span class="si">%s</span><span class="s">.</span><span class="se">\n</span><span class="s">&#39;&#39;&#39;</span>
+                       <span class="sd">&#39;&#39;&#39;Invariant check name must be defined in config.invariant_checks&#39;&#39;&#39;</span><span class="p">,</span>
+                       <span class="n">invariant_check_name</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">invariant_check</span> <span class="o">=</span> <span class="n">name_to_invariant_check</span><span class="p">[</span><span class="n">invariant_check_name</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">superlog_path_or_dag</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">superlog_path</span> <span class="o">=</span> <span class="n">superlog_path_or_dag</span>
+      <span class="c"># The dag is codefied as a list, where each element has</span>
+      <span class="c"># a list of its dependents</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">dag</span> <span class="o">=</span> <span class="n">EventDag</span><span class="p">(</span><span class="n">log_parser</span><span class="o">.</span><span class="n">parse_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">superlog_path</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">dag</span> <span class="o">=</span> <span class="n">superlog_path_or_dag</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">transform_dag</span> <span class="o">=</span> <span class="n">transform_dag</span>
+    <span class="c"># A second log with just our MCS progress log messages</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span> <span class="o">=</span> <span class="n">extra_log</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span> <span class="o">=</span> <span class="n">kwargs</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">end_wait_seconds</span> <span class="o">=</span> <span class="n">end_wait_seconds</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">wait_on_deterministic_values</span> <span class="o">=</span> <span class="n">wait_on_deterministic_values</span>
+    <span class="c"># `no&#39; means &quot;number&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">no_violation_verification_runs</span> <span class="o">=</span> <span class="n">no_violation_verification_runs</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span> <span class="o">=</span> <span class="n">RuntimeStats</span><span class="p">(</span><span class="n">runtime_stats_file</span><span class="p">)</span>
+    <span class="c"># Whether to try alternate trace splitting techiques besides splitting by time.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">optimized_filtering</span> <span class="o">=</span> <span class="n">optimized_filtering</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">forker</span> <span class="o">=</span> <span class="n">forker</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_final_trace</span> <span class="o">=</span> <span class="n">replay_final_trace</span>
+
+<div class="viewcode-block" id="MCSFinder.log"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSFinder.log">[docs]</a>  <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Output a message to both self._log and self._extra_log &#39;&#39;&#39;</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">mcs_event</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="MCSFinder.log_violation"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSFinder.log_violation">[docs]</a>  <span class="k">def</span> <span class="nf">log_violation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Output a message to both self._log and self._extra_log &#39;&#39;&#39;</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">mcs_event</span><span class="p">(</span><span class="n">color</span><span class="o">.</span><span class="n">RED</span> <span class="o">+</span> <span class="n">s</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="MCSFinder.log_no_violation"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSFinder.log_no_violation">[docs]</a>  <span class="k">def</span> <span class="nf">log_no_violation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Output a message to both self._log and self._extra_log &#39;&#39;&#39;</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">mcs_event</span><span class="p">(</span><span class="n">color</span><span class="o">.</span><span class="n">GREEN</span> <span class="o">+</span> <span class="n">s</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">s</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="MCSFinder.init_results"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSFinder.init_results">[docs]</a>  <span class="k">def</span> <span class="nf">init_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results_dir</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_extra_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">/mcs_finder.log&quot;</span> <span class="o">%</span> <span class="n">results_dir</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">runtime_stats_file</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">runtime_stats_file</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/runtime_stats.json&quot;</span> <span class="o">%</span> <span class="n">results_dir</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcs_trace_path</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">mcs_trace_path</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/mcs.trace&quot;</span> <span class="o">%</span> <span class="n">results_dir</span>
+    <span class="c"># TODO(cs): assumes that transform dag is a peeker, not some other</span>
+    <span class="c"># transformer</span>
+    <span class="n">peeker_exists</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform_dag</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">mcs_log_tracker</span> <span class="o">=</span> <span class="n">MCSLogTracker</span><span class="p">(</span><span class="n">results_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcs_trace_path</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span><span class="p">,</span> <span class="n">peeker_exists</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_log_tracker</span> <span class="o">=</span> <span class="n">ReplayLogTracker</span><span class="p">(</span><span class="n">results_dir</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MCSFinder.simulate"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSFinder.simulate">[docs]</a>  <span class="k">def</span> <span class="nf">simulate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">check_reproducability</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">set_dag_stats</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="p">)</span>
+
+    <span class="c"># apply domain knowledge: treat failure/recovery pairs atomically, and</span>
+    <span class="c"># filter event types we don&#39;t want to include in the MCS</span>
+    <span class="c"># (e.g. CheckInvariants)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">mark_invalid_input_sequences</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">filter_unsupported_input_types</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;No supported input types?&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">check_reproducability</span><span class="p">:</span>
+      <span class="c"># First, run through without pruning to verify that the violation exists</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_replay_start</span><span class="p">()</span>
+
+      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">no_violation_verification_runs</span><span class="p">):</span>
+        <span class="n">violations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replay</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="p">,</span> <span class="s">&quot;reproducibility&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">violations</span> <span class="o">!=</span> <span class="p">[]:</span>
+          <span class="k">break</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">set_initial_verification_runs_needed</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_replay_end</span><span class="p">()</span>
+      <span class="k">if</span> <span class="n">violations</span> <span class="o">==</span> <span class="p">[]:</span>
+        <span class="n">msg</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;Unable to reproduce correctness violation!&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Violation reproduced successfully! Proceeding with pruning&quot;</span><span class="p">)</span>
+      <span class="n">Replayer</span><span class="o">.</span><span class="n">total_replays</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="n">Replayer</span><span class="o">.</span><span class="n">total_inputs_replayed</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_prune_start</span><span class="p">()</span>
+
+    <span class="c"># TODO(cs): Better than a boolean flag: check if</span>
+    <span class="c"># log(len(self.dag)) &gt; number of input types to try</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">optimized_filtering</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_optimize_event_dag</span><span class="p">()</span>
+    <span class="n">precompute_cache</span> <span class="o">=</span> <span class="n">PrecomputeCache</span><span class="p">()</span>
+    <span class="c"># Invoke delta debugging</span>
+    <span class="p">(</span><span class="n">dag</span><span class="p">,</span> <span class="n">total_inputs_pruned</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddmin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">precompute_cache</span><span class="o">=</span><span class="n">precompute_cache</span><span class="p">)</span>
+    <span class="c"># Make sure to track the final iteration size</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_track_iteration_size</span><span class="p">(</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dag</span> <span class="o">=</span> <span class="n">dag</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_prune_end</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">mcs_log_tracker</span><span class="o">.</span><span class="n">dump_runtime_stats</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Final MCS (</span><span class="si">%d</span><span class="s"> elements):&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot; - </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">replay_final_trace</span><span class="p">:</span>
+      <span class="c">#  Replaying the final trace achieves two goals:</span>
+      <span class="c">#  - verifies that the MCS indeed ends in the violation</span>
+      <span class="c">#  - allows us to prune internal events that time out</span>
+      <span class="n">violations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replay</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="p">,</span> <span class="s">&quot;final_mcs_trace&quot;</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">violations</span> <span class="o">==</span> <span class="p">[]:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&#39;&#39;&#39;Warning! Final MCS did not result in violation.&#39;&#39;&#39;</span>
+                 <span class="sd">&#39;&#39;&#39; Try without timed out events? &#39;&#39;&#39;</span>
+                 <span class="sd">&#39;&#39;&#39; See tools/visualize_event_trace.html for debugging&#39;&#39;&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcs_trace_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">mcs_log_tracker</span><span class="o">.</span><span class="n">dump_mcs_trace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;=== Total replays: </span><span class="si">%d</span><span class="s"> ===&quot;</span> <span class="o">%</span> <span class="n">Replayer</span><span class="o">.</span><span class="n">total_replays</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ExitCode</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</div>
+  <span class="k">def</span> <span class="nf">_ddmin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dag</span><span class="p">,</span> <span class="n">split_ways</span><span class="p">,</span> <span class="n">precompute_cache</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">label_prefix</span><span class="o">=</span><span class="p">(),</span>
+             <span class="n">total_inputs_pruned</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="c"># This is the delta-debugging algorithm from:</span>
+    <span class="c">#   http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf,</span>
+    <span class="c"># Section 3.2</span>
+    <span class="c"># TODO(cs): we could do much better if we leverage domain knowledge (e.g.,</span>
+    <span class="c"># start by pruning all LinkFailures, or splitting by nodes rather than</span>
+    <span class="c"># time)</span>
+    <span class="k">if</span> <span class="n">split_ways</span> <span class="o">&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Done&quot;</span><span class="p">)</span>
+      <span class="k">return</span> <span class="p">(</span><span class="n">dag</span><span class="p">,</span> <span class="n">total_inputs_pruned</span><span class="p">)</span>
+
+    <span class="n">local_label</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">i</span><span class="p">,</span> <span class="n">inv</span><span class="o">=</span><span class="bp">False</span><span class="p">:</span> <span class="s">&quot;</span><span class="si">%s%d</span><span class="s">/</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;~&quot;</span> <span class="k">if</span> <span class="n">inv</span> <span class="k">else</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">split_ways</span><span class="p">)</span>
+    <span class="n">subset_label</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">label</span><span class="p">:</span> <span class="s">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">label_prefix</span> <span class="o">+</span> <span class="p">(</span> <span class="n">label</span><span class="p">,</span> <span class="p">)))</span>
+    <span class="n">print_subset</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">label</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">subset_label</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;: &quot;</span><span class="o">+</span><span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span>
+
+    <span class="n">subsets</span> <span class="o">=</span> <span class="n">split_list</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">,</span> <span class="n">split_ways</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Subsets:</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">+</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">print_subset</span><span class="p">(</span><span class="n">local_label</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">subsets</span><span class="p">)))</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">subset</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">subsets</span><span class="p">):</span>
+      <span class="n">label</span> <span class="o">=</span> <span class="n">local_label</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+      <span class="n">new_dag</span> <span class="o">=</span> <span class="n">dag</span><span class="o">.</span><span class="n">input_subset</span><span class="p">(</span><span class="n">subset</span><span class="p">)</span>
+      <span class="n">input_sequence</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">new_dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Current subset: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">print_subset</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">input_sequence</span><span class="p">))</span>
+      <span class="k">if</span> <span class="n">precompute_cache</span><span class="o">.</span><span class="n">already_done</span><span class="p">(</span><span class="n">input_sequence</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Already computed. Skipping&quot;</span><span class="p">)</span>
+        <span class="k">continue</span>
+      <span class="n">precompute_cache</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">input_sequence</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">input_sequence</span> <span class="o">==</span> <span class="p">():</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Subset after pruning dependencies was empty. Skipping&quot;</span><span class="p">)</span>
+        <span class="k">continue</span>
+
+      <span class="bp">self</span><span class="o">.</span><span class="n">_track_iteration_size</span><span class="p">(</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+      <span class="n">violation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_violation</span><span class="p">(</span><span class="n">new_dag</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">violation</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_violation</span><span class="p">(</span><span class="s">&quot;Subset </span><span class="si">%s</span><span class="s"> reproduced violation. Subselecting.&quot;</span> <span class="o">%</span> <span class="n">subset_label</span><span class="p">(</span><span class="n">label</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mcs_log_tracker</span><span class="o">.</span><span class="n">maybe_dump_intermediate_mcs</span><span class="p">(</span><span class="n">new_dag</span><span class="p">,</span>
+                                                         <span class="n">subset_label</span><span class="p">(</span><span class="n">label</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">total_inputs_pruned</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddmin</span><span class="p">(</span><span class="n">new_dag</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">precompute_cache</span><span class="o">=</span><span class="n">precompute_cache</span><span class="p">,</span>
+                           <span class="n">label_prefix</span> <span class="o">=</span> <span class="n">label_prefix</span> <span class="o">+</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="p">),</span>
+                           <span class="n">total_inputs_pruned</span><span class="o">=</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">log_no_violation</span><span class="p">(</span><span class="s">&quot;No subsets with violations. Checking complements&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">subset</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">subsets</span><span class="p">):</span>
+      <span class="n">label</span> <span class="o">=</span> <span class="n">local_label</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">True</span><span class="p">)</span>
+      <span class="n">prefix</span> <span class="o">=</span> <span class="n">label_prefix</span> <span class="o">+</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="p">)</span>
+      <span class="n">new_dag</span> <span class="o">=</span> <span class="n">dag</span><span class="o">.</span><span class="n">input_complement</span><span class="p">(</span><span class="n">subset</span><span class="p">)</span>
+      <span class="n">input_sequence</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">new_dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Current complement: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">print_subset</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">input_sequence</span><span class="p">))</span>
+      <span class="k">if</span> <span class="n">precompute_cache</span><span class="o">.</span><span class="n">already_done</span><span class="p">(</span><span class="n">input_sequence</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Already computed. Skipping&quot;</span><span class="p">)</span>
+        <span class="k">continue</span>
+      <span class="n">precompute_cache</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">input_sequence</span><span class="p">)</span>
+
+      <span class="k">if</span> <span class="n">input_sequence</span> <span class="o">==</span> <span class="p">():</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Subset </span><span class="si">%s</span><span class="s"> after pruning dependencies was empty. Skipping&quot;</span><span class="p">,</span> <span class="n">subset_label</span><span class="p">(</span><span class="n">label</span><span class="p">))</span>
+        <span class="k">continue</span>
+
+      <span class="bp">self</span><span class="o">.</span><span class="n">_track_iteration_size</span><span class="p">(</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+      <span class="n">violation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_violation</span><span class="p">(</span><span class="n">new_dag</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">violation</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_violation</span><span class="p">(</span><span class="s">&quot;Subset </span><span class="si">%s</span><span class="s"> reproduced violation. Subselecting.&quot;</span> <span class="o">%</span> <span class="n">subset_label</span><span class="p">(</span><span class="n">label</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mcs_log_tracker</span><span class="o">.</span><span class="n">maybe_dump_intermediate_mcs</span><span class="p">(</span><span class="n">new_dag</span><span class="p">,</span>
+                                                         <span class="n">subset_label</span><span class="p">(</span><span class="n">label</span><span class="p">),</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="n">total_inputs_pruned</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddmin</span><span class="p">(</span><span class="n">new_dag</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span><span class="n">split_ways</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+                           <span class="n">precompute_cache</span><span class="o">=</span><span class="n">precompute_cache</span><span class="p">,</span>
+                           <span class="n">label_prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span>
+                           <span class="n">total_inputs_pruned</span><span class="o">=</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">log_no_violation</span><span class="p">(</span><span class="s">&quot;No complements with violations.&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">split_ways</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Increasing granularity.&quot;</span><span class="p">)</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddmin</span><span class="p">(</span><span class="n">dag</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">),</span> <span class="n">split_ways</span><span class="o">*</span><span class="mi">2</span><span class="p">),</span>
+                         <span class="n">precompute_cache</span><span class="o">=</span><span class="n">precompute_cache</span><span class="p">,</span>
+                         <span class="n">label_prefix</span><span class="o">=</span><span class="n">label_prefix</span><span class="p">,</span>
+                         <span class="n">total_inputs_pruned</span><span class="o">=</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">dag</span><span class="p">,</span> <span class="n">total_inputs_pruned</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_track_iteration_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_inputs_pruned</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_iteration_size</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span> <span class="o">-</span> <span class="n">total_inputs_pruned</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_check_violation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_dag</span><span class="p">,</span> <span class="n">subset_index</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Check if there were violations &#39;&#39;&#39;</span>
+    <span class="c"># Try no_violation_verification_runs times to see if the bug shows up</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">no_violation_verification_runs</span><span class="p">):</span>
+      <span class="n">violations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replay</span><span class="p">(</span><span class="n">new_dag</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+
+      <span class="k">if</span> <span class="n">violations</span> <span class="o">!=</span> <span class="p">[]:</span>
+        <span class="c"># Violation in the subset</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log_violation</span><span class="p">(</span><span class="s">&quot;Violation! Considering </span><span class="si">%d</span><span class="s">&#39;th&quot;</span> <span class="o">%</span> <span class="n">subset_index</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_violation_found</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">True</span>
+
+    <span class="c"># No violation!</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log_no_violation</span><span class="p">(</span><span class="s">&quot;No violation in </span><span class="si">%d</span><span class="s">&#39;th...&quot;</span> <span class="o">%</span> <span class="n">subset_index</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">False</span>
+
+<div class="viewcode-block" id="MCSFinder.replay"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSFinder.replay">[docs]</a>  <span class="k">def</span> <span class="nf">replay</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_dag</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+    <span class="c"># Run the simulation forward</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform_dag</span><span class="p">:</span>
+      <span class="n">new_dag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">transform_dag</span><span class="p">(</span><span class="n">new_dag</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">play_forward</span><span class="p">(</span><span class="n">results_dir</span><span class="p">):</span>
+      <span class="c"># TODO(cs): need to serialize the parameters to Replayer rather than</span>
+      <span class="c"># wrapping them in a closure... otherwise, can&#39;t use RemoteForker</span>
+      <span class="c"># TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through</span>
+      <span class="n">ReplayLogTracker</span><span class="o">.</span><span class="n">create_replay_logger_dir</span><span class="p">(</span><span class="n">results_dir</span><span class="p">)</span>
+      <span class="n">input_logger</span> <span class="o">=</span> <span class="n">InputLogger</span><span class="p">()</span>
+      <span class="n">input_logger</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">results_dir</span><span class="p">)</span>
+      <span class="n">replayer</span> <span class="o">=</span> <span class="n">Replayer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span><span class="p">,</span> <span class="n">new_dag</span><span class="p">,</span>
+                          <span class="n">wait_on_deterministic_values</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">wait_on_deterministic_values</span><span class="p">,</span>
+                          <span class="n">input_logger</span><span class="o">=</span><span class="n">input_logger</span><span class="p">,</span>
+                          <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">)</span>
+      <span class="n">violations</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="n">simulation</span> <span class="o">=</span> <span class="bp">None</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">simulation</span> <span class="o">=</span> <span class="n">replayer</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_track_new_internal_events</span><span class="p">(</span><span class="n">simulation</span><span class="p">,</span> <span class="n">replayer</span><span class="p">)</span>
+        <span class="c"># Wait a bit in case the bug takes awhile to happen</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Sleeping </span><span class="si">%d</span><span class="s"> seconds after run&quot;</span>  <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_wait_seconds</span><span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_wait_seconds</span><span class="p">)</span>
+        <span class="n">violations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">invariant_check</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">violations</span> <span class="o">!=</span> <span class="p">[]:</span>
+          <span class="n">input_logger</span><span class="o">.</span><span class="n">log_input_event</span><span class="p">(</span><span class="n">InvariantViolation</span><span class="p">(</span><span class="n">violations</span><span class="p">))</span>
+      <span class="k">except</span> <span class="ne">SystemExit</span><span class="p">:</span>
+        <span class="c"># One of the invariant checks bailed early. Oddly, this is not an</span>
+        <span class="c"># error for us, it just means that there were no violations...</span>
+        <span class="c"># [this logic is arguably broken]</span>
+        <span class="c"># Return no violations, and let Forker handle system exit for us.</span>
+        <span class="n">violations</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">finally</span><span class="p">:</span>
+        <span class="n">input_logger</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">replayer</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span><span class="p">,</span> <span class="n">skip_mcs_cfg</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">simulation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+          <span class="n">simulation</span><span class="o">.</span><span class="n">clean_up</span><span class="p">()</span>
+      <span class="n">test_serialize_response</span><span class="p">(</span><span class="n">violations</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">client_dict</span><span class="p">())</span>
+      <span class="k">return</span> <span class="p">(</span><span class="n">violations</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">client_dict</span><span class="p">())</span>
+
+    <span class="c"># TODO(cs): once play_forward() is no longer a closure, register it only once</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">forker</span><span class="o">.</span><span class="n">register_task</span><span class="p">(</span><span class="s">&quot;play_forward&quot;</span><span class="p">,</span> <span class="n">play_forward</span><span class="p">)</span>
+
+    <span class="n">results_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replay_log_tracker</span><span class="o">.</span><span class="n">get_replay_logger_dir</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">violations</span><span class="p">,</span> <span class="n">client_runtime_stats</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forker</span><span class="o">.</span><span class="n">fork</span><span class="p">(</span><span class="s">&quot;play_forward&quot;</span><span class="p">,</span>
+                                                          <span class="n">results_dir</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">merge_client_dict</span><span class="p">(</span><span class="n">client_runtime_stats</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">violations</span>
+</div>
+  <span class="k">def</span> <span class="nf">_optimize_event_dag</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Employs domain knowledge of event classes to reduce the size of event</span>
+<span class="sd">    dag. Currently prunes event types.&#39;&#39;&#39;</span>
+    <span class="c"># TODO(cs): Another approach for later: split by nodes</span>
+    <span class="n">event_types</span> <span class="o">=</span> <span class="p">[</span><span class="n">TrafficInjection</span><span class="p">,</span> <span class="n">DataplaneDrop</span><span class="p">,</span> <span class="n">SwitchFailure</span><span class="p">,</span>
+                   <span class="n">SwitchRecovery</span><span class="p">,</span> <span class="n">LinkFailure</span><span class="p">,</span> <span class="n">LinkRecovery</span><span class="p">,</span> <span class="n">HostMigration</span><span class="p">,</span>
+                   <span class="n">ControllerFailure</span><span class="p">,</span> <span class="n">ControllerRecovery</span><span class="p">,</span> <span class="n">PolicyChange</span><span class="p">,</span> <span class="n">ControlChannelBlock</span><span class="p">,</span>
+                   <span class="n">ControlChannelUnblock</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">event_type</span> <span class="ow">in</span> <span class="n">event_types</span><span class="p">:</span>
+      <span class="n">pruned</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">event_type</span><span class="p">)]</span>
+      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">pruned</span><span class="p">)</span><span class="o">==</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\t</span><span class="s">** No events pruned for event type </span><span class="si">%s</span><span class="s">. Next!&quot;</span> <span class="o">%</span> <span class="n">event_type</span><span class="p">)</span>
+        <span class="k">continue</span>
+      <span class="n">pruned_dag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">input_complement</span><span class="p">(</span><span class="n">pruned</span><span class="p">)</span>
+      <span class="n">violations</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replay</span><span class="p">(</span><span class="n">pruned_dag</span><span class="p">,</span> <span class="s">&quot;opt_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">event_type</span><span class="o">.</span><span class="n">__name__</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">violations</span> <span class="o">!=</span> <span class="p">[]:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\t</span><span class="s">** VIOLATION for pruning event type </span><span class="si">%s</span><span class="s">! Resizing original dag&quot;</span> <span class="o">%</span> <span class="n">event_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dag</span> <span class="o">=</span> <span class="n">pruned_dag</span>
+
+  <span class="k">def</span> <span class="nf">_track_new_internal_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">,</span> <span class="n">replayer</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Pre: simulation must have been run through a replay&#39;&#39;&#39;</span>
+    <span class="c"># We always check against internal events that were buffered at the end of</span>
+    <span class="c"># the original run (don&#39;t want to overcount)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">superlog_path</span> <span class="o">+</span> <span class="s">&quot;.unacked&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;unacked internal events file from original run does not exist&quot;</span><span class="p">)</span>
+      <span class="k">return</span>
+    <span class="n">prev_buffered_receives</span> <span class="o">=</span> <span class="p">[</span> <span class="n">e</span><span class="o">.</span><span class="n">pending_receive</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span>
+                               <span class="n">EventDag</span><span class="p">(</span><span class="n">log_parser</span><span class="o">.</span><span class="n">parse_path</span><span class="p">(</span><span class="n">path</span><span class="p">))</span><span class="o">.</span><span class="n">events</span> <span class="p">]</span>
+    <span class="n">new_message_receipts</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">simulation</span><span class="o">.</span><span class="n">god_scheduler</span><span class="o">.</span><span class="n">pending_receives</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">prev_buffered_receives</span><span class="p">:</span>
+        <span class="n">new_message_receipts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">prev_buffered_receives</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="n">new_state_changes</span> <span class="o">=</span> <span class="n">replayer</span><span class="o">.</span><span class="n">unexpected_state_changes</span>
+    <span class="n">new_internal_events</span> <span class="o">=</span> <span class="n">new_state_changes</span> <span class="o">+</span> <span class="n">new_message_receipts</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_new_internal_events</span><span class="p">(</span><span class="n">new_internal_events</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_early_internal_events</span><span class="p">(</span><span class="n">replayer</span><span class="o">.</span><span class="n">early_state_changes</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_timed_out_events</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">replayer</span><span class="o">.</span><span class="n">event_scheduler_stats</span><span class="o">.</span><span class="n">event2timeouts</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_runtime_stats</span><span class="o">.</span><span class="n">record_matched_events</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">replayer</span><span class="o">.</span><span class="n">event_scheduler_stats</span><span class="o">.</span><span class="n">event2matched</span><span class="p">))</span>
+
+
+<span class="c"># TODO(cs): Hack alert. Shouldn&#39;t be a subclass</span></div>
+<div class="viewcode-block" id="EfficientMCSFinder"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.EfficientMCSFinder">[docs]</a><span class="k">class</span> <span class="nc">EfficientMCSFinder</span><span class="p">(</span><span class="n">MCSFinder</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Exactly the same functionality as MCSFinder, but assumes that</span>
+<span class="sd">  indeterminate results cannot occur. Worst-case runtime of O(n) as opposed to</span>
+<span class="sd">  O(n^2) replays. Taken from the predecessor paper:</span>
+<span class="sd">     http://www.st.cs.uni-saarland.de/publications/files/zeller-esec-1999.pdf</span>
+<span class="sd">  Section 4</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">_ddmin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dag</span><span class="p">,</span> <span class="n">carryover_inputs</span><span class="p">,</span> <span class="n">precompute_cache</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+             <span class="n">recursion_level</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">label_prefix</span><span class="o">=</span><span class="p">(),</span> <span class="n">total_inputs_pruned</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; carryover_inputs is the variable &quot;r&quot; from the paper. &#39;&#39;&#39;</span>
+    <span class="c"># Hack: superclass calls _ddmin with an integer, which doesn&#39;t match our</span>
+    <span class="c"># API. Translate that to an empty sequence. (we also don&#39;t use precompute_cache)</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">carryover_inputs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+      <span class="n">carryover_inputs</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">local_label</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">/</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;l&quot;</span> <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="s">&quot;r&quot;</span><span class="p">,</span> <span class="n">recursion_level</span><span class="p">)</span>
+    <span class="n">subset_label</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">label</span><span class="p">:</span> <span class="s">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">label_prefix</span> <span class="o">+</span> <span class="p">(</span> <span class="n">label</span><span class="p">,</span> <span class="p">)))</span>
+    <span class="n">print_subset</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">label</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="n">subset_label</span><span class="p">(</span><span class="n">label</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;: &quot;</span><span class="o">+</span><span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">s</span><span class="p">))</span>
+
+    <span class="c"># Base case. Note that atomic_inputs are grouped-together failure/recovery</span>
+    <span class="c"># pairs, or normal inputs otherwise.</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">atomic_input_events</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Base case </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">))</span>
+      <span class="k">return</span> <span class="p">(</span><span class="n">dag</span><span class="p">,</span> <span class="n">total_inputs_pruned</span><span class="p">)</span>
+
+    <span class="p">(</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">)</span> <span class="o">=</span> <span class="n">split_list</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">atomic_input_events</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Subsets:</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">+</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">print_subset</span><span class="p">(</span><span class="n">local_label</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">s</span><span class="p">)</span>
+                                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="n">left</span><span class="p">,</span><span class="n">right</span><span class="p">])))</span>
+    <span class="c"># This is: [dag.input_subset(left), dag.input_subset(right)]</span>
+    <span class="n">left_right_dag</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">subsequence</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">]):</span>
+      <span class="n">label</span> <span class="o">=</span> <span class="n">local_label</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+      <span class="n">prefix</span> <span class="o">=</span> <span class="n">label_prefix</span> <span class="o">+</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="p">)</span>
+      <span class="n">new_dag</span> <span class="o">=</span> <span class="n">dag</span><span class="o">.</span><span class="n">atomic_input_subset</span><span class="p">(</span><span class="n">subsequence</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Current subset: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">print_subset</span><span class="p">(</span><span class="n">label</span><span class="p">,</span>
+                                                   <span class="n">new_dag</span><span class="o">.</span><span class="n">atomic_input_events</span><span class="p">))</span>
+      <span class="n">left_right_dag</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_dag</span><span class="p">)</span>
+      <span class="c"># We test on subsequence U carryover_inputs</span>
+      <span class="n">test_dag</span> <span class="o">=</span> <span class="n">new_dag</span><span class="o">.</span><span class="n">insert_atomic_inputs</span><span class="p">(</span><span class="n">carryover_inputs</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_track_iteration_size</span><span class="p">(</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+      <span class="n">violation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_check_violation</span><span class="p">(</span><span class="n">test_dag</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">label</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">violation</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Violation found in </span><span class="si">%d</span><span class="s">th half. Recursing&quot;</span> <span class="o">%</span> <span class="n">i</span><span class="p">)</span>
+        <span class="n">total_inputs_pruned</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mcs_log_tracker</span><span class="o">.</span><span class="n">maybe_dump_intermediate_mcs</span><span class="p">(</span><span class="n">new_dag</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddmin</span><span class="p">(</span><span class="n">new_dag</span><span class="p">,</span> <span class="n">carryover_inputs</span><span class="p">,</span>
+                           <span class="n">recursion_level</span><span class="o">=</span><span class="n">recursion_level</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                           <span class="n">label_prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span>
+                           <span class="n">total_inputs_pruned</span><span class="o">=</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Interference&quot;</span><span class="p">)</span>
+    <span class="p">(</span><span class="n">left_dag</span><span class="p">,</span> <span class="n">right_dag</span><span class="p">)</span> <span class="o">=</span> <span class="n">left_right_dag</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Recursing on left half&quot;</span><span class="p">)</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="n">label_prefix</span> <span class="o">+</span> <span class="p">(</span><span class="s">&quot;il/</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">recursion_level</span><span class="p">,)</span>
+    <span class="p">(</span><span class="n">left_result</span><span class="p">,</span>
+     <span class="n">total_inputs_pruned</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddmin</span><span class="p">(</span><span class="n">left_dag</span><span class="p">,</span>
+                                        <span class="n">right_dag</span><span class="o">.</span><span class="n">insert_atomic_inputs</span><span class="p">(</span><span class="n">carryover_inputs</span><span class="p">)</span><span class="o">.</span><span class="n">atomic_input_events</span><span class="p">,</span>
+                                        <span class="n">recursion_level</span><span class="o">=</span><span class="n">recursion_level</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                                        <span class="n">label_prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span>
+                                        <span class="n">total_inputs_pruned</span><span class="o">=</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s">&quot;Recursing on right half&quot;</span><span class="p">)</span>
+    <span class="n">prefix</span> <span class="o">=</span> <span class="n">label_prefix</span> <span class="o">+</span> <span class="p">(</span><span class="s">&quot;ir/</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">recursion_level</span><span class="p">,)</span>
+    <span class="p">(</span><span class="n">right_result</span><span class="p">,</span>
+     <span class="n">total_inputs_pruned</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ddmin</span><span class="p">(</span><span class="n">right_dag</span><span class="p">,</span>
+                                        <span class="n">left_dag</span><span class="o">.</span><span class="n">insert_atomic_inputs</span><span class="p">(</span><span class="n">carryover_inputs</span><span class="p">)</span><span class="o">.</span><span class="n">atomic_input_events</span><span class="p">,</span>
+                                        <span class="n">recursion_level</span><span class="o">=</span><span class="n">recursion_level</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span>
+                                        <span class="n">label_prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span>
+                                        <span class="n">total_inputs_pruned</span><span class="o">=</span><span class="n">total_inputs_pruned</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">left_result</span><span class="o">.</span><span class="n">insert_atomic_inputs</span><span class="p">(</span><span class="n">right_result</span><span class="o">.</span><span class="n">atomic_input_events</span><span class="p">),</span>
+            <span class="n">total_inputs_pruned</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="ReplayLogTracker"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.ReplayLogTracker">[docs]</a><span class="k">class</span> <span class="nc">ReplayLogTracker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Logs intermediate and final replay traces chosen by delta debugging&#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results_dir</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">results_dir</span> <span class="o">=</span> <span class="n">results_dir</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="ReplayLogTracker.get_replay_logger_dir"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.ReplayLogTracker.get_replay_logger_dir">[docs]</a>  <span class="k">def</span> <span class="nf">get_replay_logger_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+    <span class="n">dst</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results_dir</span><span class="p">,</span> <span class="s">&quot;interreplay_</span><span class="si">%d</span><span class="s">_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">label</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">)))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">dst</span>
+</div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="ReplayLogTracker.create_replay_logger_dir"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.ReplayLogTracker.create_replay_logger_dir">[docs]</a>  <span class="k">def</span> <span class="nf">create_replay_logger_dir</span><span class="p">(</span><span class="n">results_dir</span><span class="p">):</span>
+    <span class="n">mkdir_p</span><span class="p">(</span><span class="n">results_dir</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="MCSLogTracker"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSLogTracker">[docs]</a><span class="k">class</span> <span class="nc">MCSLogTracker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Logs intermedate and final MCS results that are the outcome(s) of delta</span>
+<span class="sd">  debugging&#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results_dir</span><span class="p">,</span> <span class="n">mcs_trace_path</span><span class="p">,</span> <span class="n">runtime_stats</span><span class="p">,</span>
+               <span class="n">simulation_cfg</span><span class="p">,</span> <span class="n">peeker_exists</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">results_dir</span> <span class="o">=</span> <span class="n">results_dir</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">mcs_trace_path</span> <span class="o">=</span> <span class="n">mcs_trace_path</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">runtime_stats</span> <span class="o">=</span> <span class="n">runtime_stats</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span> <span class="o">=</span> <span class="n">simulation_cfg</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">peeker_exists</span> <span class="o">=</span> <span class="n">peeker_exists</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">min_size</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">maxint</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="MCSLogTracker.dump_runtime_stats"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSLogTracker.dump_runtime_stats">[docs]</a>  <span class="k">def</span> <span class="nf">dump_runtime_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">runtime_stats_file</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">runtime_stats</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">runtime_stats</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">runtime_stats_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">runtime_stats</span><span class="o">.</span><span class="n">runtime_stats_file</span> <span class="o">=</span> <span class="n">runtime_stats_file</span>
+    <span class="n">runtime_stats</span><span class="o">.</span><span class="n">set_peeker</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">peeker_exists</span><span class="p">)</span>
+    <span class="n">runtime_stats</span><span class="o">.</span><span class="n">set_config</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span><span class="p">))</span>
+    <span class="n">runtime_stats</span><span class="o">.</span><span class="n">write_runtime_stats</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="MCSLogTracker.maybe_dump_intermediate_mcs"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSLogTracker.maybe_dump_intermediate_mcs">[docs]</a>  <span class="k">def</span> <span class="nf">maybe_dump_intermediate_mcs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dag</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">control_flow</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">events</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_size</span><span class="p">:</span>
+      <span class="c"># Only dump if MCS decreases in size</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">min_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">events</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="n">dst</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results_dir</span><span class="p">,</span> <span class="s">&quot;intermcs_</span><span class="si">%d</span><span class="s">_</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">count</span><span class="p">,</span> <span class="n">label</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;/&quot;</span><span class="p">,</span> <span class="s">&quot;.&quot;</span><span class="p">)))</span>
+      <span class="n">mkdir_p</span><span class="p">(</span><span class="n">dst</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">dump_mcs_trace</span><span class="p">(</span><span class="n">dag</span><span class="p">,</span> <span class="n">control_flow</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mcs_trace_path</span><span class="p">)))</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">dump_runtime_stats</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dst</span><span class="p">,</span>
+          <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">runtime_stats</span><span class="o">.</span><span class="n">runtime_stats_file</span><span class="p">)))</span>
+</div>
+<div class="viewcode-block" id="MCSLogTracker.dump_mcs_trace"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.MCSLogTracker.dump_mcs_trace">[docs]</a>  <span class="k">def</span> <span class="nf">dump_mcs_trace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dag</span><span class="p">,</span> <span class="n">control_flow</span><span class="p">,</span> <span class="n">mcs_trace_path</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">mcs_trace_path</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">mcs_trace_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mcs_trace_path</span>
+    <span class="k">for</span> <span class="n">extension</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;&quot;</span><span class="p">,</span> <span class="s">&quot;.notimeouts&quot;</span><span class="p">]:</span>
+      <span class="n">output_path</span> <span class="o">=</span> <span class="n">mcs_trace_path</span> <span class="o">+</span> <span class="n">extension</span>
+      <span class="n">input_logger</span> <span class="o">=</span> <span class="n">InputLogger</span><span class="p">()</span>
+      <span class="n">input_logger</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">output_path</span><span class="p">))</span>
+      <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">dag</span><span class="o">.</span><span class="n">events</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">extension</span> <span class="o">==</span> <span class="s">&quot;.notimeouts&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">timed_out</span><span class="p">:</span>
+          <span class="k">continue</span>
+        <span class="n">input_logger</span><span class="o">.</span><span class="n">log_input_event</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+      <span class="n">input_logger</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">control_flow</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span><span class="p">,</span> <span class="n">skip_mcs_cfg</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="RuntimeStats"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats">[docs]</a><span class="k">class</span> <span class="nc">RuntimeStats</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Tracks statistics and configuration information of the delta debugging runs &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">runtime_stats_file</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">runtime_stats_file</span> <span class="o">=</span> <span class="n">runtime_stats_file</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">iteration_size</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">violation_found_in_run</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+    <span class="c"># { replay iteration -&gt; [string representations new internal events] }</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">new_internal_events</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c"># { replay iteration -&gt; [string representations internal events that</span>
+    <span class="c">#                        violated causality] }</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">early_internal_events</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c"># { replay iteration -&gt; { event type -&gt; timeouts } }</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">timed_out_events</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c"># { replay iteration -&gt; { event type -&gt; successful matches } }</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">matched_events</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">total_inputs</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">total_events</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">original_duration_seconds</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_start_epoch</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_end_epoch</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_duration_seconds</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prune_start_epoch</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prune_duration_seconds</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">initial_verification_runs_needed</span>  <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">peeker</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">total_replays</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">total_inputs_replayed</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">ambiguous_counts</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">ambiguous_events</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="RuntimeStats.write_runtime_stats"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.write_runtime_stats">[docs]</a>  <span class="k">def</span> <span class="nf">write_runtime_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c"># Now write contents to a file</span>
+    <span class="n">now</span> <span class="o">=</span> <span class="n">timestamp_string</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">runtime_stats_file</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">runtime_stats_file</span> <span class="o">=</span> <span class="s">&quot;runtime_stats/&quot;</span> <span class="o">+</span> <span class="n">now</span> <span class="o">+</span> <span class="s">&quot;.json&quot;</span>
+
+    <span class="k">with</span> <span class="nb">file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">runtime_stats_file</span><span class="p">,</span> <span class="s">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">output</span><span class="p">:</span>
+      <span class="n">json_string</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                               <span class="n">separators</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">,</span> <span class="s">&#39;: &#39;</span><span class="p">))</span>
+      <span class="n">output</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json_string</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.set_dag_stats"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.set_dag_stats">[docs]</a>  <span class="k">def</span> <span class="nf">set_dag_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dag</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">total_inputs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">input_events</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">total_events</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dag</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">original_duration_seconds</span> <span class="o">=</span> \
+      <span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">events</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">()</span> <span class="o">-</span>
+       <span class="n">dag</span><span class="o">.</span><span class="n">events</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">())</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_replay_start"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_replay_start">[docs]</a>  <span class="k">def</span> <span class="nf">record_replay_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_start_epoch</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_replay_end"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_replay_end">[docs]</a>  <span class="k">def</span> <span class="nf">record_replay_end</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_end_epoch</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_duration_seconds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">replay_end_epoch</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">replay_start_epoch</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_prune_start"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_prune_start">[docs]</a>  <span class="k">def</span> <span class="nf">record_prune_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prune_start_epoch</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_prune_end"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_prune_end">[docs]</a>  <span class="k">def</span> <span class="nf">record_prune_end</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prune_end_epoch</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prune_duration_seconds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prune_end_epoch</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">prune_start_epoch</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.set_initial_verification_runs_needed"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.set_initial_verification_runs_needed">[docs]</a>  <span class="k">def</span> <span class="nf">set_initial_verification_runs_needed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verification_runs</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">initial_verification_runs_needed</span> <span class="o">=</span> <span class="n">verification_runs</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.set_peeker"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.set_peeker">[docs]</a>  <span class="k">def</span> <span class="nf">set_peeker</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">peeker</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">peeker</span> <span class="o">=</span> <span class="n">peeker</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.set_config"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.set_config">[docs]</a>  <span class="k">def</span> <span class="nf">set_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_iteration_size"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_iteration_size">[docs]</a>  <span class="k">def</span> <span class="nf">record_iteration_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">iteration_size</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">iteration_size</span><span class="p">[</span><span class="n">Replayer</span><span class="o">.</span><span class="n">total_replays</span><span class="p">]</span> <span class="o">=</span> <span class="n">iteration_size</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_violation_found"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_violation_found">[docs]</a>  <span class="k">def</span> <span class="nf">record_violation_found</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verification_iteration</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">violation_found_in_run</span><span class="p">[</span><span class="n">verification_iteration</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_new_internal_events"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_new_internal_events">[docs]</a>  <span class="k">def</span> <span class="nf">record_new_internal_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_internal_events</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">new_internal_events</span><span class="p">[</span><span class="n">Replayer</span><span class="o">.</span><span class="n">total_replays</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_internal_events</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_early_internal_events"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_early_internal_events">[docs]</a>  <span class="k">def</span> <span class="nf">record_early_internal_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">early_internal_events</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">early_internal_events</span><span class="p">[</span><span class="n">Replayer</span><span class="o">.</span><span class="n">total_replays</span><span class="p">]</span> <span class="o">=</span> <span class="n">early_internal_events</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_timed_out_events"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_timed_out_events">[docs]</a>  <span class="k">def</span> <span class="nf">record_timed_out_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timed_out_events</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">timed_out_events</span><span class="p">[</span><span class="n">Replayer</span><span class="o">.</span><span class="n">total_replays</span><span class="p">]</span> <span class="o">=</span> <span class="n">timed_out_events</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_matched_events"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_matched_events">[docs]</a>  <span class="k">def</span> <span class="nf">record_matched_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">matched_events</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">matched_events</span><span class="p">[</span><span class="n">Replayer</span><span class="o">.</span><span class="n">total_replays</span><span class="p">]</span> <span class="o">=</span> <span class="n">matched_events</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.record_global_stats"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.record_global_stats">[docs]</a>  <span class="k">def</span> <span class="nf">record_global_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">total_replays</span> <span class="o">=</span> <span class="n">Replayer</span><span class="o">.</span><span class="n">total_replays</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">total_inputs_replayed</span> <span class="o">=</span> <span class="n">Replayer</span><span class="o">.</span><span class="n">total_inputs_replayed</span>
+    <span class="c"># TODO(cs): assumes that Peeker is the dag transformer</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">ambiguous_counts</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Peeker</span><span class="o">.</span><span class="n">ambiguous_counts</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">ambiguous_events</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Peeker</span><span class="o">.</span><span class="n">ambiguous_events</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.clone"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.clone">[docs]</a>  <span class="k">def</span> <span class="nf">clone</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.client_dict"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.client_dict">[docs]</a>  <span class="k">def</span> <span class="nf">client_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return a serializable dict &#39;&#39;&#39;</span>
+    <span class="c"># Only include relevent fields for parent</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">record_global_stats</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&#39;new_internal_events&#39;</span><span class="p">,</span> <span class="s">&#39;early_internal_events&#39;</span><span class="p">,</span>
+                  <span class="s">&#39;timed_out_events&#39;</span><span class="p">,</span> <span class="s">&#39;matched_events&#39;</span><span class="p">,</span> <span class="s">&#39;total_replays&#39;</span><span class="p">,</span>
+                  <span class="s">&#39;total_inputs_replayed&#39;</span><span class="p">,</span> <span class="s">&#39;ambiguous_counts&#39;</span><span class="p">,</span>
+                  <span class="s">&#39;ambiguous_events&#39;</span><span class="p">]:</span>
+      <span class="n">v</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">)</span>
+      <span class="c"># xmlrpclib doesn&#39;t allow non-string keys</span>
+      <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">==</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="nb">str</span><span class="p">(</span><span class="n">key</span><span class="p">),</span> <span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">v</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+      <span class="n">d</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+    <span class="k">return</span> <span class="n">d</span>
+</div>
+<div class="viewcode-block" id="RuntimeStats.merge_client_dict"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.mcs_finder.RuntimeStats.merge_client_dict">[docs]</a>  <span class="k">def</span> <span class="nf">merge_client_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">client_dict</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">client_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">field</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">field</span><span class="p">)</span>
+      <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+      <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="o">+</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+      <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field</span><span class="p">)</span> <span class="o">+</span> <span class="n">value</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown field </span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">field</span><span class="p">),</span><span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)))</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

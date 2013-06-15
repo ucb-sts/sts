@@ -1,0 +1,290 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.syncproto.pox_syncer &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.syncproto.pox_syncer</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="c"># This  module runs inside a POX process. It&#39;s loaded into pox/ext before</span>
+<span class="c"># booting POX.</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+
+<span class="kn">from</span> <span class="nn">pox.core</span> <span class="kn">import</span> <span class="n">core</span><span class="p">,</span> <span class="n">UpEvent</span>
+<span class="kn">from</span> <span class="nn">pox.lib.graph.nom</span> <span class="kn">import</span> <span class="n">Switch</span><span class="p">,</span> <span class="n">Host</span><span class="p">,</span> <span class="n">Link</span>
+<span class="kn">from</span> <span class="nn">pox.lib.graph.util</span> <span class="kn">import</span> <span class="n">NOMEncoder</span>
+
+<span class="kn">from</span> <span class="nn">sts.util.io_master</span> <span class="kn">import</span> <span class="n">IOMaster</span>
+<span class="kn">from</span> <span class="nn">sts.syncproto.base</span> <span class="kn">import</span> <span class="n">SyncTime</span><span class="p">,</span> <span class="n">SyncMessage</span><span class="p">,</span> <span class="n">SyncProtocolSpeaker</span><span class="p">,</span> <span class="n">SyncIODelegate</span>
+<span class="kn">from</span> <span class="nn">pox.lib.util</span> <span class="kn">import</span> <span class="n">parse_openflow_uri</span>
+<span class="kn">from</span> <span class="nn">pox.lib.recoco</span> <span class="kn">import</span> <span class="n">Task</span><span class="p">,</span> <span class="n">Select</span>
+
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">Logger</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;pox_syncer&quot;</span><span class="p">)</span>
+
+<span class="c"># POX Module launch method</span>
+<div class="viewcode-block" id="launch"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.launch">[docs]</a><span class="k">def</span> <span class="nf">launch</span><span class="p">(</span><span class="n">blocking</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+  <span class="n">blocking</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">blocking</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s">&quot;true&quot;</span>
+  <span class="k">if</span> <span class="s">&quot;sts_sync&quot;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+    <span class="n">sts_sync</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s">&quot;sts_sync&quot;</span><span class="p">]</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;starting sts sync for spec: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sts_sync</span><span class="p">)</span>
+
+    <span class="n">io_master</span> <span class="o">=</span> <span class="n">POXIOMaster</span><span class="p">()</span>
+    <span class="n">io_master</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">core</span><span class="o">.</span><span class="n">scheduler</span><span class="p">)</span>
+
+    <span class="n">sync_master</span> <span class="o">=</span> <span class="n">POXSyncMaster</span><span class="p">(</span><span class="n">io_master</span><span class="p">,</span> <span class="n">blocking</span><span class="o">=</span><span class="n">blocking</span><span class="p">)</span>
+    <span class="n">sync_master</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">sts_sync</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;no sts_sync variable found in environment. Not starting pox_syncer&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="POXIOMaster"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXIOMaster">[docs]</a><span class="k">class</span> <span class="nc">POXIOMaster</span><span class="p">(</span><span class="n">IOMaster</span><span class="p">,</span> <span class="n">Task</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot; horrible clutch of a hack that is both a regular select loop and a POX task</span>
+<span class="sd">      yielding select (so it can be run by the recoco scheduler) &quot;&quot;&quot;</span>
+
+  <span class="n">_select_timeout</span> <span class="o">=</span> <span class="mi">5</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">IOMaster</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+    <span class="n">Task</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<div class="viewcode-block" id="POXIOMaster.run"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXIOMaster.run">[docs]</a>  <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+      <span class="n">read_sockets</span><span class="p">,</span> <span class="n">write_sockets</span><span class="p">,</span> <span class="n">exception_sockets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">grab_workers_rwe</span><span class="p">()</span>
+      <span class="n">rlist</span><span class="p">,</span> <span class="n">wlist</span><span class="p">,</span> <span class="n">elist</span> <span class="o">=</span> <span class="k">yield</span> <span class="n">Select</span><span class="p">(</span><span class="n">read_sockets</span><span class="p">,</span> <span class="n">write_sockets</span><span class="p">,</span> <span class="n">exception_sockets</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_select_timeout</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">handle_workers_rwe</span><span class="p">(</span><span class="n">rlist</span><span class="p">,</span> <span class="n">wlist</span><span class="p">,</span> <span class="n">elist</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="POXSyncMaster"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncMaster">[docs]</a><span class="k">class</span> <span class="nc">POXSyncMaster</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">io_master</span><span class="p">,</span> <span class="n">blocking</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io_master</span> <span class="o">=</span> <span class="n">io_master</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_in_get_time</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">blocking</span> <span class="o">=</span> <span class="n">blocking</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">core_up</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">core</span><span class="o">.</span><span class="n">addListener</span><span class="p">(</span><span class="n">UpEvent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_UpEvent</span><span class="p">)</span>
+
+<div class="viewcode-block" id="POXSyncMaster.handle_UpEvent"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncMaster.handle_UpEvent">[docs]</a>  <span class="k">def</span> <span class="nf">handle_UpEvent</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">core_up</span> <span class="o">=</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="POXSyncMaster.start"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncMaster.start">[docs]</a>  <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sync_uri</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">connection</span> <span class="o">=</span> <span class="n">POXSyncConnection</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_master</span><span class="p">,</span> <span class="n">sync_uri</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">listen</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">wait_for_connect</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">patch_functions</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="POXSyncMaster.patch_functions"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncMaster.patch_functions">[docs]</a>  <span class="k">def</span> <span class="nf">patch_functions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c"># Patch time.time()</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">time</span><span class="p">,</span> <span class="s">&quot;_orig_time&quot;</span><span class="p">):</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;Already patched&quot;</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">_orig_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_time</span>
+
+    <span class="c"># Patch Logger.* for state changes</span>
+    <span class="c"># All logging.Logger log methods go through a private method _log</span>
+    <span class="n">Logger</span><span class="o">.</span><span class="n">_orig_log</span> <span class="o">=</span> <span class="n">Logger</span><span class="o">.</span><span class="n">_log</span>
+    <span class="k">def</span> <span class="nf">new_log</span><span class="p">(</span><span class="n">log_self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+      <span class="n">Logger</span><span class="o">.</span><span class="n">_orig_log</span><span class="p">(</span><span class="n">log_self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocking</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">core_up</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Waiting on ACK..&quot;</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">state_change</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">)</span>
+    <span class="n">Logger</span><span class="o">.</span><span class="n">_log</span> <span class="o">=</span> <span class="n">new_log</span>
+</div>
+<div class="viewcode-block" id="POXSyncMaster.get_time"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncMaster.get_time">[docs]</a>  <span class="k">def</span> <span class="nf">get_time</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Hack alert: python logging use time.time(). That means that log statements in the determinism</span>
+<span class="sd">        protocols are going to invoke get_time again. Solve by returning the real time if we (get_time)</span>
+<span class="sd">        are in the stacktrace &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_in_get_time</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">time</span><span class="o">.</span><span class="n">_orig_time</span><span class="p">()</span>
+
+    <span class="k">try</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_in_get_time</span> <span class="o">=</span> <span class="bp">True</span>
+      <span class="n">time_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">request</span><span class="p">(</span><span class="s">&quot;DeterministicValue&quot;</span><span class="p">,</span> <span class="s">&quot;gettimeofday&quot;</span><span class="p">)</span>
+      <span class="n">sync_time</span> <span class="o">=</span>  <span class="n">SyncTime</span><span class="p">(</span><span class="o">*</span><span class="n">time_array</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">sync_time</span><span class="o">.</span><span class="n">as_float</span><span class="p">()</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_in_get_time</span> <span class="o">=</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="POXSyncMaster.state_change"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncMaster.state_change">[docs]</a>  <span class="k">def</span> <span class="nf">state_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Notify sts that we&#39;re about to make a state change (log msg) &#39;&#39;&#39;</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span> <span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">args</span> <span class="p">]</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">blocking</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">core_up</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">sync_notification</span><span class="p">(</span><span class="s">&quot;StateChange&quot;</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+      <span class="k">print</span> <span class="s">&quot;ACK received..&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">connection</span><span class="o">.</span><span class="n">async_notification</span><span class="p">(</span><span class="s">&quot;StateChange&quot;</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">args</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="POXSyncConnection"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncConnection">[docs]</a><span class="k">class</span> <span class="nc">POXSyncConnection</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">io_master</span><span class="p">,</span> <span class="n">sync_uri</span><span class="p">):</span>
+    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)</span> <span class="o">=</span> <span class="n">parse_openflow_uri</span><span class="p">(</span><span class="n">sync_uri</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">io_master</span> <span class="o">=</span> <span class="n">io_master</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="POXSyncConnection.listen"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncConnection.listen">[docs]</a>  <span class="k">def</span> <span class="nf">listen</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode</span> <span class="o">!=</span> <span class="s">&quot;ptcp&quot;</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;only ptcp (passive) mode supported for now&quot;</span><span class="p">)</span>
+    <span class="n">listen_socket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">()</span>
+    <span class="n">listen_socket</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">host</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="k">else</span> <span class="s">&quot;0.0.0.0&quot;</span>
+    <span class="n">listen_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)</span> <span class="p">)</span>
+    <span class="n">listen_socket</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">listen_socket</span> <span class="o">=</span> <span class="n">listen_socket</span>
+</div>
+<div class="viewcode-block" id="POXSyncConnection.wait_for_connect"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncConnection.wait_for_connect">[docs]</a>  <span class="k">def</span> <span class="nf">wait_for_connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;waiting for sts_sync connection on </span><span class="si">%s</span><span class="s">:</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">))</span>
+    <span class="p">(</span><span class="n">socket</span><span class="p">,</span> <span class="n">_</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">listen_socket</span><span class="o">.</span><span class="n">accept</span><span class="p">()</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;sts_sync connected&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span> <span class="o">=</span> <span class="n">POXSyncProtocolSpeaker</span><span class="p">(</span><span class="n">SyncIODelegate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_master</span><span class="p">,</span> <span class="n">socket</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="POXSyncConnection.request"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncConnection.request">[docs]</a>  <span class="k">def</span> <span class="nf">request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messageClass</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="o">.</span><span class="n">sync_request</span><span class="p">(</span><span class="n">messageClass</span><span class="o">=</span><span class="n">messageClass</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;POXSyncConnection: not connected. cannot handle requests&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="POXSyncConnection.async_notification"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncConnection.async_notification">[docs]</a>  <span class="k">def</span> <span class="nf">async_notification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messageClass</span><span class="p">,</span> <span class="n">fingerPrint</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="o">.</span><span class="n">async_notification</span><span class="p">(</span><span class="n">messageClass</span><span class="p">,</span> <span class="n">fingerPrint</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;POXSyncConnection: not connected. cannot handle requests&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="POXSyncConnection.sync_notification"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncConnection.sync_notification">[docs]</a>  <span class="k">def</span> <span class="nf">sync_notification</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">messageClass</span><span class="p">,</span> <span class="n">fingerPrint</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">speaker</span><span class="o">.</span><span class="n">sync_notification</span><span class="p">(</span><span class="n">messageClass</span><span class="p">,</span> <span class="n">fingerPrint</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;POXSyncConnection: not connected. cannot handle requests&quot;</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="POXSyncProtocolSpeaker"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXSyncProtocolSpeaker">[docs]</a><span class="k">class</span> <span class="nc">POXSyncProtocolSpeaker</span><span class="p">(</span><span class="n">SyncProtocolSpeaker</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">io_delegate</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">snapshotter</span> <span class="o">=</span> <span class="n">POXNomSnapshotter</span><span class="p">()</span>
+
+    <span class="n">handlers</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="p">(</span><span class="s">&quot;REQUEST&quot;</span><span class="p">,</span> <span class="s">&quot;NOMSnapshot&quot;</span><span class="p">):</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_nom_snapshot</span><span class="p">,</span>
+      <span class="p">(</span><span class="s">&quot;ASYNC&quot;</span><span class="p">,</span> <span class="s">&quot;LinkDiscovery&quot;</span><span class="p">):</span> <span class="bp">self</span><span class="o">.</span><span class="n">_link_discovery</span>
+    <span class="p">}</span>
+    <span class="n">SyncProtocolSpeaker</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handlers</span><span class="p">,</span> <span class="n">io_delegate</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_get_nom_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="n">snapshot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">snapshotter</span><span class="o">.</span><span class="n">get_snapshot</span><span class="p">()</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">SyncMessage</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s">&quot;RESPONSE&quot;</span><span class="p">,</span> <span class="n">messageClass</span><span class="o">=</span><span class="s">&quot;NOMSnapshot&quot;</span><span class="p">,</span> <span class="n">time</span><span class="o">=</span><span class="n">SyncTime</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span> <span class="n">xid</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">xid</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="n">snapshot</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">response</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_link_discovery</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+    <span class="n">link</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">value</span>
+    <span class="n">core</span><span class="o">.</span><span class="n">openflow_discovery</span><span class="o">.</span><span class="n">install_link</span><span class="p">(</span><span class="n">link</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">link</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">link</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">link</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="POXNomSnapshotter"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXNomSnapshotter">[docs]</a><span class="k">class</span> <span class="nc">POXNomSnapshotter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">NOMEncoder</span><span class="p">()</span>
+
+<div class="viewcode-block" id="POXNomSnapshotter.get_snapshot"><a class="viewcode-back" href="../../../sts.syncproto.html#sts.syncproto.pox_syncer.POXNomSnapshotter.get_snapshot">[docs]</a>  <span class="k">def</span> <span class="nf">get_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">nom</span> <span class="o">=</span> <span class="p">{</span><span class="s">&quot;switches&quot;</span><span class="p">:[],</span> <span class="s">&quot;hosts&quot;</span><span class="p">:[],</span> <span class="s">&quot;links&quot;</span><span class="p">:[]}</span>
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">core</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">getEntitiesOfType</span><span class="p">(</span><span class="n">Switch</span><span class="p">):</span>
+      <span class="n">nom</span><span class="p">[</span><span class="s">&quot;switches&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">s</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">core</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">getEntitiesOfType</span><span class="p">(</span><span class="n">Host</span><span class="p">):</span>
+      <span class="n">nom</span><span class="p">[</span><span class="s">&quot;hosts&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">h</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">core</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">getEntitiesOfType</span><span class="p">(</span><span class="n">Link</span><span class="p">):</span>
+      <span class="n">nom</span><span class="p">[</span><span class="s">&quot;links&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="n">l</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">nom</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

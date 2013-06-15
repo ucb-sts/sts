@@ -1,0 +1,326 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tests.unit.sts.topology_test &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for tests.unit.sts.topology_test</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c"># Copyright 2012-2013 Sam Whitlock</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os.path</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">import</span> <span class="nn">types</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;/../../..&quot;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">sts.topology</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">sts.traffic_generator</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pox.lib.ioworker.io_worker</span> <span class="kn">import</span> <span class="n">RecocoIOLoop</span>
+<span class="kn">from</span> <span class="nn">pox.openflow.software_switch</span> <span class="kn">import</span> <span class="n">SoftwareSwitch</span>
+<span class="kn">from</span> <span class="nn">pox.lib.graph.graph</span> <span class="kn">import</span> <span class="n">Graph</span>
+<span class="kn">from</span> <span class="nn">sts.entities</span> <span class="kn">import</span> <span class="n">Host</span><span class="p">,</span> <span class="n">HostInterface</span>
+
+<div class="viewcode-block" id="topology_test"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.topology_test">[docs]</a><span class="k">class</span> <span class="nc">topology_test</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+  <span class="n">_io_loop</span> <span class="o">=</span> <span class="n">RecocoIOLoop</span><span class="p">()</span>
+  <span class="n">_io_ctor</span> <span class="o">=</span> <span class="n">_io_loop</span><span class="o">.</span><span class="n">create_worker_for_socket</span>
+
+<div class="viewcode-block" id="topology_test.test_create_switch"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.topology_test.test_create_switch">[docs]</a>  <span class="k">def</span> <span class="nf">test_create_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">create_switch</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">ports</span><span class="p">),</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">s2</span> <span class="o">=</span> <span class="n">create_switch</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertNotEqual</span><span class="p">(</span><span class="n">s2</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">hw_addr</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">hw_addr</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="topology_test.test_create_meshes"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.topology_test.test_create_meshes">[docs]</a>  <span class="k">def</span> <span class="nf">test_create_meshes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Create meshes of several sizes and ensure they are fully connected &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">12</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_test_create_mesh</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+</div>
+  <span class="k">def</span> <span class="nf">_test_create_mesh</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+    <span class="n">mesh</span> <span class="o">=</span> <span class="n">MeshTopology</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">switches</span><span class="p">),</span> <span class="n">size</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">([</span><span class="n">sw</span> <span class="k">for</span> <span class="n">sw</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">switches</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sw</span><span class="o">.</span><span class="n">ports</span><span class="p">)</span> <span class="o">==</span> <span class="n">size</span> <span class="p">],</span>
+                     <span class="n">mesh</span><span class="o">.</span><span class="n">switches</span><span class="p">)</span>
+
+    <span class="c"># check that all pairs of switches are connected to each other</span>
+    <span class="n">non_connected_sw_pairs</span> <span class="o">=</span> <span class="p">[</span><span class="n">pair</span> <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">itertools</span><span class="o">.</span><span class="n">permutations</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">switches</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="p">]</span>
+    <span class="c"># create a list of all (switch, port) pairs</span>
+    <span class="n">sw_port_pairs</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span class="n">sw</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">sw</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">switches</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">sw</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="p">]</span>
+    <span class="c"># check the all hosts are connected once</span>
+    <span class="n">non_connected_hosts</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">hosts</span><span class="p">)</span>
+    <span class="c"># create a list of all (host, interface) pairs</span>
+    <span class="n">host_interface_pairs</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span> <span class="k">for</span> <span class="n">host</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">hosts</span> <span class="k">for</span> <span class="n">interface</span> <span class="ow">in</span> <span class="n">host</span><span class="o">.</span><span class="n">interfaces</span> <span class="p">]</span>
+    <span class="c"># collect the &#39;other&#39; (switch, port) pairs. This + (hosts, interface) pairs should</span>
+    <span class="c"># end up the same as sw_port_pairs + host_interface_pairs</span>
+    <span class="n">other_sw_port_pairs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c"># List of (host, interface) edge tail pairs</span>
+    <span class="n">other_host_interface_pairs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c"># list of (switch, port) access ports</span>
+    <span class="n">access_sw_port_pairs</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">switches</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">port_no</span><span class="p">,</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">switch</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+        <span class="c"># TODO: abuse of dynamic types... get_connected_port is a field</span>
+        <span class="p">(</span><span class="n">other_node</span><span class="p">,</span> <span class="n">other_port</span><span class="p">)</span> <span class="o">=</span> <span class="n">mesh</span><span class="o">.</span><span class="n">get_connected_port</span><span class="p">(</span><span class="n">switch</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">other_node</span><span class="p">)</span> <span class="o">==</span> <span class="n">Host</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span> <span class="n">other_node</span> <span class="ow">in</span> <span class="n">non_connected_hosts</span><span class="p">,</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">other_node</span><span class="p">)</span> <span class="p">)</span>
+          <span class="n">non_connected_hosts</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">other_node</span><span class="p">)</span>
+          <span class="n">access_sw_port_pairs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">(</span><span class="n">switch</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span> <span class="p">)</span>
+          <span class="n">other_host_interface_pairs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">(</span><span class="n">other_node</span><span class="p">,</span> <span class="n">other_port</span><span class="p">)</span> <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span> <span class="p">(</span><span class="n">switch</span><span class="p">,</span> <span class="n">other_node</span><span class="p">)</span> <span class="ow">in</span> <span class="n">non_connected_sw_pairs</span><span class="p">,</span> <span class="s">&quot;Switches </span><span class="si">%s</span><span class="s">, </span><span class="si">%s</span><span class="s"> connected twice&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">switch</span><span class="p">,</span> <span class="n">other_node</span><span class="p">))</span>
+          <span class="n">non_connected_sw_pairs</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span> <span class="p">(</span><span class="n">switch</span><span class="p">,</span> <span class="n">other_node</span><span class="p">)</span> <span class="p">)</span>
+          <span class="n">other_sw_port_pairs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span> <span class="p">(</span><span class="n">other_node</span><span class="p">,</span> <span class="n">other_port</span><span class="p">)</span> <span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">non_connected_sw_pairs</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;Non-connected switches: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">non_connected_sw_pairs</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">non_connected_hosts</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;Non-connected hosts: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">non_connected_hosts</span><span class="p">)</span>
+
+    <span class="c"># Ensure the list was already unique</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">sw_port_pairs</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">sw_port_pairs</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">other_sw_port_pairs</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">other_sw_port_pairs</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">access_sw_port_pairs</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">access_sw_port_pairs</span><span class="p">))</span>
+    <span class="c"># Test all switches connected</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">sw_port_pairs</span><span class="p">),</span> <span class="nb">set</span><span class="p">(</span><span class="n">other_sw_port_pairs</span><span class="p">)</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">access_sw_port_pairs</span><span class="p">)))</span>
+    <span class="c"># Ensure the list was already unique</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">host_interface_pairs</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">host_interface_pairs</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">other_host_interface_pairs</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="n">other_host_interface_pairs</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">host_interface_pairs</span><span class="p">),</span> <span class="nb">set</span><span class="p">(</span><span class="n">other_host_interface_pairs</span><span class="p">))</span>
+
+    <span class="c"># Make sure that all access links are accounted for</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">access_links</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">hosts</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">access_link</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">access_links</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">((</span><span class="n">access_link</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">access_link</span><span class="o">.</span><span class="n">interface</span><span class="p">)</span> <span class="ow">in</span> <span class="n">host_interface_pairs</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">((</span><span class="n">access_link</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch_port</span><span class="p">)</span> <span class="ow">in</span> <span class="n">access_sw_port_pairs</span><span class="p">)</span>
+
+    <span class="c"># Make sure that all network links are accounted for</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">network_links</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">switches</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mesh</span><span class="o">.</span><span class="n">switches</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="n">mesh</span><span class="o">.</span><span class="n">network_links</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">((</span><span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span><span class="p">,</span> <span class="n">link</span><span class="o">.</span><span class="n">start_port</span><span class="p">)</span> <span class="ow">in</span> <span class="n">sw_port_pairs</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">((</span><span class="n">link</span><span class="o">.</span><span class="n">end_software_switch</span><span class="p">,</span> <span class="n">link</span><span class="o">.</span><span class="n">end_port</span><span class="p">)</span> <span class="ow">in</span> <span class="n">sw_port_pairs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FullyMeshedLinkTest"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.FullyMeshedLinkTest">[docs]</a><span class="k">class</span> <span class="nc">FullyMeshedLinkTest</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+  <span class="n">_io_loop</span> <span class="o">=</span> <span class="n">RecocoIOLoop</span><span class="p">()</span>
+  <span class="n">_io_ctor</span> <span class="o">=</span> <span class="n">_io_loop</span><span class="o">.</span><span class="n">create_worker_for_socket</span>
+
+<div class="viewcode-block" id="FullyMeshedLinkTest.setUp"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.FullyMeshedLinkTest.setUp">[docs]</a>  <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span> <span class="o">=</span> <span class="p">{</span> <span class="n">switch_id</span><span class="p">:</span> <span class="n">create_switch</span><span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="k">for</span> <span class="n">switch_id</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span> <span class="p">}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">links</span> <span class="o">=</span> <span class="n">MeshTopology</span><span class="o">.</span><span class="n">FullyMeshedLinks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">get_connected_port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">links</span>
+</div>
+<div class="viewcode-block" id="FullyMeshedLinkTest.test_connected_ports"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.FullyMeshedLinkTest.test_connected_ports">[docs]</a>  <span class="k">def</span> <span class="nf">test_connected_ports</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c"># this is the sum of i from i=1 to i=n-1, *2 because links are unidirectional</span>
+    <span class="n">expected_link_length</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="nb">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">:</span> <span class="n">x</span><span class="o">+</span><span class="n">y</span><span class="p">,</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">)),</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="n">expected_link_length</span><span class="p">,</span>
+                     <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">links</span><span class="o">.</span><span class="n">network_links</span><span class="p">)))</span>
+</div></div>
+<div class="viewcode-block" id="TopologyUnitTest"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.TopologyUnitTest">[docs]</a><span class="k">class</span> <span class="nc">TopologyUnitTest</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+  <span class="n">_io_loop</span> <span class="o">=</span> <span class="n">RecocoIOLoop</span><span class="p">()</span>
+  <span class="n">_io_ctor</span> <span class="o">=</span> <span class="n">_io_loop</span><span class="o">.</span><span class="n">create_worker_for_socket</span>
+
+<div class="viewcode-block" id="TopologyUnitTest.setUp"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.TopologyUnitTest.setUp">[docs]</a>  <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">MockSwitch</span><span class="p">(</span><span class="n">SoftwareSwitch</span><span class="p">):</span>
+      <span class="n">_eventMixin_events</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">DpPacketOut</span><span class="p">])</span>
+
+      <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid</span><span class="p">,</span> <span class="n">ports</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_forwarded</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dpid</span> <span class="o">=</span> <span class="n">dpid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ports</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">port</span><span class="o">.</span><span class="n">port_no</span><span class="p">]</span> <span class="o">=</span> <span class="n">port</span>
+      <span class="k">def</span> <span class="nf">process_packet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packet</span><span class="p">,</span> <span class="n">in_port</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_forwarded</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="k">def</span> <span class="nf">create_mock_switch</span><span class="p">(</span><span class="n">num_ports</span><span class="p">,</span> <span class="n">switch_id</span><span class="p">):</span>
+      <span class="n">ports</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">for</span> <span class="n">port_no</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_ports</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">ofp_phy_port</span><span class="p">(</span> <span class="n">port_no</span><span class="o">=</span><span class="n">port_no</span><span class="p">,</span>
+                             <span class="n">hw_addr</span><span class="o">=</span><span class="n">EthAddr</span><span class="p">(</span><span class="s">&quot;00:00:00:00:</span><span class="si">%02x</span><span class="s">:</span><span class="si">%02x</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">port_no</span><span class="p">))</span> <span class="p">)</span>
+        <span class="c"># monkey patch an IP address onto the port for anteater purposes</span>
+        <span class="n">port</span><span class="o">.</span><span class="n">ip_addr</span> <span class="o">=</span> <span class="s">&quot;1.1.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">port_no</span><span class="p">)</span>
+        <span class="n">ports</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">port</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">MockSwitch</span><span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">ports</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">g</span> <span class="o">=</span> <span class="n">Graph</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switches</span> <span class="o">=</span> <span class="p">[</span><span class="n">create_mock_switch</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">create_mock_switch</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hosts</span> <span class="o">=</span> <span class="p">[</span><span class="n">Host</span><span class="p">([</span><span class="n">HostInterface</span><span class="p">(</span><span class="n">EthAddr</span><span class="p">(</span><span class="s">&quot;00:00:00:00:00:01&quot;</span><span class="p">))],</span> <span class="n">name</span><span class="o">=</span><span class="s">&quot;host1&quot;</span><span class="p">),</span>
+                  <span class="n">Host</span><span class="p">([</span><span class="n">HostInterface</span><span class="p">(</span><span class="n">EthAddr</span><span class="p">(</span><span class="s">&quot;00:00:00:00:00:02&quot;</span><span class="p">))],</span> <span class="n">name</span><span class="o">=</span><span class="s">&quot;host2&quot;</span><span class="p">)]</span>
+    <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">switch</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">host</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">host</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">link</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="mi">2</span><span class="p">]))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">link</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">interfaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="o">.</span><span class="n">link</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">interfaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="n">Topology</span><span class="o">.</span><span class="n">populate_from_topology</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">patch</span> <span class="o">=</span> <span class="n">BufferedPatchPanelForTopology</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">g</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switches_calc</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">switches</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hosts_calc</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">hosts</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">access_links</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">access_links</span>
+
+  <span class="c"># Line 152 is throwing an exception! See:</span>
+  <span class="c"># https://github.com/noxrepo/pox/issues/36 for more information.</span></div>
+<div class="viewcode-block" id="TopologyUnitTest.xxx_marked_as_broken_generakted_topology"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.TopologyUnitTest.xxx_marked_as_broken_generakted_topology">[docs]</a>  <span class="k">def</span> <span class="nf">xxx_marked_as_broken_generakted_topology</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">access_links</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts_calc</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches_calc</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>
+</div></div>
+<div class="viewcode-block" id="BufferedPanelTest"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.BufferedPanelTest">[docs]</a><span class="k">class</span> <span class="nc">BufferedPanelTest</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+  <span class="n">_io_loop</span> <span class="o">=</span> <span class="n">RecocoIOLoop</span><span class="p">()</span>
+  <span class="n">_io_ctor</span> <span class="o">=</span> <span class="n">_io_loop</span><span class="o">.</span><span class="n">create_worker_for_socket</span>
+
+<div class="viewcode-block" id="BufferedPanelTest.setUp"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.BufferedPanelTest.setUp">[docs]</a>  <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">class</span> <span class="nc">MockSwitch</span><span class="p">(</span><span class="n">SoftwareSwitch</span><span class="p">):</span>
+      <span class="n">_eventMixin_events</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">DpPacketOut</span><span class="p">])</span>
+
+      <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid</span><span class="p">,</span> <span class="n">ports</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_forwarded</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dpid</span> <span class="o">=</span> <span class="n">dpid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ports</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">port</span><span class="o">.</span><span class="n">port_no</span><span class="p">]</span> <span class="o">=</span> <span class="n">port</span>
+
+      <span class="k">def</span> <span class="nf">process_packet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">packet</span><span class="p">,</span> <span class="n">in_port</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">has_forwarded</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">def</span> <span class="nf">create_mock_switch</span><span class="p">(</span><span class="n">num_ports</span><span class="p">,</span> <span class="n">switch_id</span><span class="p">):</span>
+      <span class="n">ports</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">for</span> <span class="n">port_no</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_ports</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">ofp_phy_port</span><span class="p">(</span> <span class="n">port_no</span><span class="o">=</span><span class="n">port_no</span><span class="p">,</span>
+                             <span class="n">hw_addr</span><span class="o">=</span><span class="n">EthAddr</span><span class="p">(</span><span class="s">&quot;00:00:00:00:</span><span class="si">%02x</span><span class="s">:</span><span class="si">%02x</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">port_no</span><span class="p">))</span> <span class="p">)</span>
+        <span class="c"># monkey patch an IP address onto the port for anteater purposes</span>
+        <span class="n">port</span><span class="o">.</span><span class="n">ip_addr</span> <span class="o">=</span> <span class="s">&quot;1.1.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">port_no</span><span class="p">)</span>
+        <span class="n">ports</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">port</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">MockSwitch</span><span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">ports</span><span class="p">)</span>
+
+    <span class="n">num_ports</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span> <span class="o">=</span> <span class="p">{</span> <span class="n">dpid</span><span class="p">:</span> <span class="n">create_mock_switch</span><span class="p">(</span><span class="n">num_ports</span><span class="p">,</span> <span class="n">dpid</span><span class="p">)</span>
+                         <span class="k">for</span> <span class="n">dpid</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">3</span><span class="p">)</span> <span class="p">}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">BufferedPatchPanel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">,</span> <span class="p">[],</span> <span class="n">MeshTopology</span><span class="o">.</span><span class="n">FullyMeshedLinks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">traffic_generator</span> <span class="o">=</span> <span class="n">TrafficGenerator</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switch1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switch2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">switch1</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">values</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">icmp_packet</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">traffic_generator</span><span class="o">.</span><span class="n">icmp_ping</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dp_out_event</span> <span class="o">=</span> <span class="n">DpPacketOut</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switch1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">icmp_packet</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="BufferedPanelTest.test_buffering"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.BufferedPanelTest.test_buffering">[docs]</a>  <span class="k">def</span> <span class="nf">test_buffering</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switch1</span><span class="o">.</span><span class="n">raiseEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dp_out_event</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertFalse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switch2</span><span class="o">.</span><span class="n">has_forwarded</span><span class="p">,</span> <span class="s">&quot;should not have forwarded yet&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertFalse</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">queued_dataplane_events</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;should have buffered packet&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">permit_dp_event</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dp_out_event</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">queued_dataplane_events</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;should have cleared buffer&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switch2</span><span class="o">.</span><span class="n">has_forwarded</span><span class="p">,</span> <span class="s">&quot;should have forwarded&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="BufferedPanelTest.test_drop"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.topology_test.BufferedPanelTest.test_drop">[docs]</a>  <span class="k">def</span> <span class="nf">test_drop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c"># raise the event</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switch1</span><span class="o">.</span><span class="n">raiseEvent</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dp_out_event</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertFalse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switch2</span><span class="o">.</span><span class="n">has_forwarded</span><span class="p">,</span> <span class="s">&quot;should not have forwarded yet&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertFalse</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">queued_dataplane_events</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;should have buffered packet&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">drop_dp_event</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dp_out_event</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">m</span><span class="o">.</span><span class="n">queued_dataplane_events</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s">&quot;should have cleared buffer&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertFalse</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switch2</span><span class="o">.</span><span class="n">has_forwarded</span><span class="p">,</span> <span class="s">&quot;should not have forwarded&quot;</span><span class="p">)</span>
+</div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

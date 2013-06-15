@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>config.invariant_checks &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for config.invariant_checks</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">sts.invariant_checker</span> <span class="kn">import</span> <span class="n">InvariantChecker</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<div class="viewcode-block" id="bail_on_connectivity"><a class="viewcode-back" href="../../config.html#config.invariant_checks.bail_on_connectivity">[docs]</a><span class="k">def</span> <span class="nf">bail_on_connectivity</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">python_check_connectivity</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+  <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">:</span>
+    <span class="k">print</span> <span class="s">&quot;Connectivity established - bailing out&quot;</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+  <span class="k">return</span> <span class="p">[]</span>
+</div>
+<div class="viewcode-block" id="check_for_loops_or_connectivity"><a class="viewcode-back" href="../../config.html#config.invariant_checks.check_for_loops_or_connectivity">[docs]</a><span class="k">def</span> <span class="nf">check_for_loops_or_connectivity</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_loops</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">result</span>
+  <span class="k">return</span> <span class="n">bail_on_connectivity</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="check_for_loops_blackholes_or_connectivity"><a class="viewcode-back" href="../../config.html#config.invariant_checks.check_for_loops_blackholes_or_connectivity">[docs]</a><span class="k">def</span> <span class="nf">check_for_loops_blackholes_or_connectivity</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">check</span> <span class="ow">in</span> <span class="p">[</span><span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_loops</span><span class="p">,</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_blackholes</span><span class="p">]:</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">check</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">result</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">result</span>
+  <span class="k">return</span> <span class="n">bail_on_connectivity</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+
+<span class="c"># Note: make sure to add new custom invariant checks to this dictionary!</span></div>
+<span class="n">name_to_invariant_check</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s">&quot;check_for_loops_or_connectivity&quot;</span> <span class="p">:</span> <span class="n">check_for_loops_or_connectivity</span><span class="p">,</span>
+  <span class="s">&quot;check_for_loops_blackholes_or_connectivity&quot;</span> <span class="p">:</span> <span class="n">check_for_loops_blackholes_or_connectivity</span><span class="p">,</span>
+  <span class="s">&quot;InvariantChecker.check_liveness&quot;</span> <span class="p">:</span>  <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_liveness</span><span class="p">,</span>
+  <span class="s">&quot;InvariantChecker.check_loops&quot;</span> <span class="p">:</span>  <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_loops</span><span class="p">,</span>
+  <span class="s">&quot;InvariantChecker.python_check_connectivity&quot;</span> <span class="p">:</span>  <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">python_check_connectivity</span><span class="p">,</span>
+  <span class="s">&quot;InvariantChecker.check_connectivity&quot;</span> <span class="p">:</span>  <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_connectivity</span><span class="p">,</span>
+  <span class="s">&quot;InvariantChecker.check_blackholes&quot;</span> <span class="p">:</span>  <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_blackholes</span><span class="p">,</span>
+  <span class="s">&quot;InvariantChecker.check_correspondence&quot;</span> <span class="p">:</span>  <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_correspondence</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

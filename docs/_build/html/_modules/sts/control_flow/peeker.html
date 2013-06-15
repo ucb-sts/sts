@@ -1,0 +1,381 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.control_flow.peeker &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.control_flow.peeker</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+
+<span class="kn">from</span> <span class="nn">sts.event_dag</span> <span class="kn">import</span> <span class="n">EventDag</span>
+<span class="kn">from</span> <span class="nn">sts.control_flow.replayer</span> <span class="kn">import</span> <span class="n">Replayer</span>
+<span class="kn">from</span> <span class="nn">sts.replay_event</span> <span class="kn">import</span> <span class="n">Event</span><span class="p">,</span> <span class="n">InternalEvent</span><span class="p">,</span> <span class="n">InputEvent</span><span class="p">,</span> <span class="n">WaitTime</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;sts&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Peeker"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.peeker.Peeker">[docs]</a><span class="k">class</span> <span class="nc">Peeker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="c"># { % of inferred fingerprints that were ambiguous -&gt;</span>
+  <span class="c">#   # of replays where this % occurred }</span>
+  <span class="n">ambiguous_counts</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+  <span class="c"># { class of event -&gt; # occurences of ambiguity }</span>
+  <span class="n">ambiguous_events</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_cfg</span><span class="p">,</span> <span class="n">default_wait_time_seconds</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">epsilon_time</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="kn">import</span> <span class="nn">pytrie</span>
+    <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;Need to install pytrie: `sudo pip install pytrie`&quot;</span><span class="p">)</span>
+    <span class="c"># The prefix trie stores lists of input events as keys,</span>
+    <span class="c"># and lists of both input and internal events as values</span>
+    <span class="c"># Note that we pass the trie around between DAG views</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span> <span class="o">=</span> <span class="n">simulation_cfg</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_prefix_trie</span> <span class="o">=</span> <span class="n">pytrie</span><span class="o">.</span><span class="n">Trie</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">default_wait_time_seconds</span> <span class="o">=</span> <span class="n">default_wait_time_seconds</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_time</span> <span class="o">=</span> <span class="n">epsilon_time</span>
+
+<div class="viewcode-block" id="Peeker.peek"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.peeker.Peeker.peek">[docs]</a>  <span class="k">def</span> <span class="nf">peek</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dag</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Infer which internal events are/aren&#39;t going to occur, &#39;&#39;&#39;</span>
+    <span class="c"># TODO(cs): optimization: write the prefix trie to a file, in case we want to run</span>
+    <span class="c"># FindMCS again?</span>
+    <span class="n">input_events</span> <span class="o">=</span> <span class="n">dag</span><span class="o">.</span><span class="n">input_events</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_events</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="c"># Postcondition: input_events[-1] is not None</span>
+      <span class="c">#                and self._events_list[-1] is not None</span>
+      <span class="k">return</span> <span class="n">dag</span>
+
+    <span class="c"># Initilize current_input_prefix to the longest_match prefix we&#39;ve</span>
+    <span class="c"># inferred previously (or [] if this is an entirely new prefix)</span>
+    <span class="n">current_input_prefix</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefix_trie</span>\
+                                <span class="o">.</span><span class="n">longest_prefix</span><span class="p">(</span><span class="n">input_events</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">[]))</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Current input prefix: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">current_input_prefix</span><span class="p">))</span>
+
+    <span class="c"># The value is both internal events and input events (values of the trie)</span>
+    <span class="c"># leading up, but not including the next input following the tail of the</span>
+    <span class="c"># prefix.</span>
+    <span class="c"># Note that we assume that there are no internal events before the first</span>
+    <span class="c"># input event (i.e. we assume quiescence)</span>
+    <span class="n">inferred_events</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_prefix_trie</span>\
+                           <span class="o">.</span><span class="n">longest_prefix_value</span><span class="p">(</span><span class="n">input_events</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="p">[]))</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Current inferred_events: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">inferred_events</span><span class="p">))</span>
+    <span class="n">inject_input_idx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">current_input_prefix</span><span class="p">)</span>
+
+    <span class="c"># While we still have inputs to inject</span>
+    <span class="k">while</span> <span class="n">inject_input_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_events</span><span class="p">):</span>
+      <span class="c"># The input we&#39;re about to inject</span>
+      <span class="n">inject_input</span> <span class="o">=</span> <span class="n">input_events</span><span class="p">[</span><span class="n">inject_input_idx</span><span class="p">]</span>
+
+      <span class="k">if</span> <span class="n">inject_input_idx</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_events</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="c"># there is a following input_event</span>
+        <span class="n">following_input</span> <span class="o">=</span> <span class="n">input_events</span><span class="p">[</span><span class="n">inject_input_idx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">following_input</span> <span class="o">=</span> <span class="bp">None</span>
+
+      <span class="c"># The input following the one we&#39;re going to inject</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;peek()&#39;ing after input </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span>
+                <span class="p">(</span><span class="n">inject_input_idx</span><span class="p">))</span>
+
+      <span class="n">expected_internal_events</span> <span class="o">=</span> \
+        <span class="n">get_expected_internal_events</span><span class="p">(</span><span class="n">inject_input</span><span class="p">,</span> <span class="n">following_input</span><span class="p">,</span> <span class="n">dag</span><span class="o">.</span><span class="n">events</span><span class="p">)</span>
+
+      <span class="c"># Optimization: if no internal events occured between this input and the</span>
+      <span class="c"># next, no need to peek()</span>
+      <span class="k">if</span> <span class="n">expected_internal_events</span> <span class="o">==</span> <span class="p">[]:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Optimization: no expected internal events&quot;</span><span class="p">)</span>
+        <span class="n">newly_inferred_events</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">Peeker</span><span class="o">.</span><span class="n">ambiguous_counts</span><span class="p">[</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">wait_time_seconds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_wait_time_seconds</span><span class="p">(</span><span class="n">inject_input</span><span class="p">,</span> <span class="n">following_input</span><span class="p">)</span>
+        <span class="n">replay_dag</span> <span class="o">=</span> <span class="n">EventDag</span><span class="p">(</span><span class="n">inferred_events</span> <span class="o">+</span> <span class="p">[</span> <span class="n">inject_input</span> <span class="p">])</span>
+        <span class="n">found_events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_internal_events</span><span class="p">(</span><span class="n">replay_dag</span><span class="p">,</span> <span class="n">wait_time_seconds</span><span class="p">)</span>
+        <span class="n">newly_inferred_events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">match_and_filter</span><span class="p">(</span><span class="n">found_events</span><span class="p">,</span> <span class="n">expected_internal_events</span><span class="p">)</span>
+
+      <span class="p">(</span><span class="n">current_input_prefix</span><span class="p">,</span>
+       <span class="n">inferred_events</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_trie</span><span class="p">(</span><span class="n">current_input_prefix</span><span class="p">,</span> <span class="n">inject_input</span><span class="p">,</span>
+                                            <span class="n">inferred_events</span><span class="p">,</span> <span class="n">newly_inferred_events</span><span class="p">)</span>
+      <span class="n">inject_input_idx</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">EventDag</span><span class="p">(</span><span class="n">inferred_events</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Peeker.get_wait_time_seconds"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.peeker.Peeker.get_wait_time_seconds">[docs]</a>  <span class="k">def</span> <span class="nf">get_wait_time_seconds</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">first_event</span><span class="p">,</span> <span class="n">second_event</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">first_event</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">second_event</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_wait_time_seconds</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">second_event</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">()</span> <span class="o">-</span> <span class="n">first_event</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">()</span> <span class="o">+</span> \
+          <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_time</span>
+</div>
+<div class="viewcode-block" id="Peeker.find_internal_events"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.peeker.Peeker.find_internal_events">[docs]</a>  <span class="k">def</span> <span class="nf">find_internal_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">replay_dag</span><span class="p">,</span> <span class="n">wait_time_seconds</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Replay the replay_dag, then wait for wait_time_seconds and collect internal</span>
+<span class="sd">        events that occur. Return the list of internal events. &#39;&#39;&#39;</span>
+    <span class="n">replayer</span> <span class="o">=</span> <span class="n">Replayer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span><span class="p">,</span> <span class="n">replay_dag</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Replaying prefix&quot;</span><span class="p">)</span>
+    <span class="n">simulation</span> <span class="o">=</span> <span class="n">replayer</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+
+    <span class="c"># Directly after the last input has been injected, flush the internal</span>
+    <span class="c"># event buffers in case there were unaccounted internal events</span>
+    <span class="c"># Note that there isn&#39;t a race condition between flush()&#39;ing and</span>
+    <span class="c"># incoming internal events, since sts is single-threaded</span>
+    <span class="c"># TODO(cs): flush() is not longer needed!</span>
+    <span class="n">simulation</span><span class="o">.</span><span class="n">god_scheduler</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+    <span class="n">simulation</span><span class="o">.</span><span class="n">controller_sync_callback</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+
+    <span class="c"># Now set all internal event buffers (GodScheduler for</span>
+    <span class="c"># ControlMessageReceives and ReplaySyncCallback for state changes)</span>
+    <span class="c"># to &quot;pass through + record&quot;</span>
+    <span class="n">simulation</span><span class="o">.</span><span class="n">set_pass_through</span><span class="p">()</span>
+
+    <span class="c"># Note that this is the monkey patched version of time.sleep</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;peek()&#39;ing for </span><span class="si">%f</span><span class="s"> seconds&quot;</span> <span class="o">%</span> <span class="n">wait_time_seconds</span><span class="p">)</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">wait_time_seconds</span><span class="p">)</span>
+
+    <span class="c"># Now turn off those pass-through and grab the inferred events</span>
+    <span class="n">newly_inferred_events</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">unset_pass_through</span><span class="p">()</span>
+    <span class="n">simulation</span><span class="o">.</span><span class="n">clean_up</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">newly_inferred_events</span>
+</div>
+<div class="viewcode-block" id="Peeker.match_and_filter"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.peeker.Peeker.match_and_filter">[docs]</a>  <span class="k">def</span> <span class="nf">match_and_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">newly_inferred_events</span><span class="p">,</span> <span class="n">expected_internal_events</span><span class="p">):</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Matching fingerprints&quot;</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Expected: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">expected_internal_events</span><span class="p">))</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Inferred: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">))</span>
+    <span class="c"># TODO(cs): currently not calling this, out of paranoia. May inadvertently</span>
+    <span class="c"># prune expected internal events -- largely serves as an optimization</span>
+    <span class="c">#newly_inferred_events = match_fingerprints(newly_inferred_events,</span>
+    <span class="c">#                                           expected_internal_events)</span>
+    <span class="c"># TODO(cs): need to prune any successors of e_i, in case we waited too</span>
+    <span class="c"># long</span>
+    <span class="n">count_overlapping_fingerprints</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">,</span>
+                                   <span class="n">expected_internal_events</span><span class="p">)</span>
+    <span class="n">newly_inferred_events</span> <span class="o">=</span> <span class="n">correct_timestamps</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">,</span>
+                                               <span class="n">expected_internal_events</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Matched events: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">newly_inferred_events</span>
+</div>
+  <span class="k">def</span> <span class="nf">_update_trie</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">current_input_prefix</span><span class="p">,</span> <span class="n">inject_input</span><span class="p">,</span> <span class="n">inferred_events</span><span class="p">,</span>
+                   <span class="n">newly_inferred_events</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Update the trie for this prefix &#39;&#39;&#39;</span>
+    <span class="n">current_input_prefix</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">current_input_prefix</span><span class="p">)</span>
+    <span class="n">current_input_prefix</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inject_input</span><span class="p">)</span>
+    <span class="c"># Make sure to prepend the input we just injected</span>
+    <span class="n">inferred_events</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">inferred_events</span><span class="p">)</span>
+    <span class="n">inferred_events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inject_input</span><span class="p">)</span>
+    <span class="n">inferred_events</span> <span class="o">+=</span> <span class="n">newly_inferred_events</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_prefix_trie</span><span class="p">[</span><span class="n">current_input_prefix</span><span class="p">]</span> <span class="o">=</span> <span class="n">inferred_events</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">current_input_prefix</span><span class="p">,</span> <span class="n">inferred_events</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="get_expected_internal_events"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.peeker.get_expected_internal_events">[docs]</a><span class="k">def</span> <span class="nf">get_expected_internal_events</span><span class="p">(</span><span class="n">left_input</span><span class="p">,</span> <span class="n">right_input</span><span class="p">,</span> <span class="n">events_list</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Return previously observed internal events between the left_input and</span>
+<span class="sd">  the right_input event</span>
+
+<span class="sd">  left_input may be None case we return events from the beginning of events_list</span>
+
+<span class="sd">  right_input may also be None, in which case we return all events following left_input</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">if</span> <span class="n">left_input</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="n">left_idx</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">left_idx</span> <span class="o">=</span> <span class="n">events_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">left_input</span><span class="p">)</span>
+
+  <span class="k">if</span> <span class="n">right_input</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="n">right_idx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">events_list</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">right_idx</span> <span class="o">=</span> <span class="n">events_list</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">right_input</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="p">[</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">events_list</span><span class="p">[</span><span class="n">left_idx</span><span class="p">:</span><span class="n">right_idx</span><span class="p">]</span>
+           <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">InternalEvent</span><span class="p">)</span> <span class="p">]</span>
+</div>
+<div class="viewcode-block" id="count_overlapping_fingerprints"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.peeker.count_overlapping_fingerprints">[docs]</a><span class="k">def</span> <span class="nf">count_overlapping_fingerprints</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">,</span>
+                                   <span class="n">expected_internal_events</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Track # of instances where an expected event matches 2 or more inferred</span>
+<span class="sd">  events. Mutates Peeker.ambiguous_counts and Peeker.ambiguous_events&#39;&#39;&#39;</span>
+  <span class="n">expected_counts</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">([</span><span class="n">e</span><span class="o">.</span><span class="n">fingerprint</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">expected_internal_events</span><span class="p">])</span>
+  <span class="n">inferred_counts</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">([</span><span class="n">e</span><span class="o">.</span><span class="n">fingerprint</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">newly_inferred_events</span><span class="p">])</span>
+  <span class="n">total_redundant</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">for</span> <span class="n">fingerprint</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="n">expected_counts</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">fingerprint</span> <span class="ow">in</span> <span class="n">inferred_counts</span> <span class="ow">and</span> <span class="n">inferred_counts</span><span class="p">[</span><span class="n">fingerprint</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">count</span><span class="p">:</span>
+      <span class="n">redundant</span> <span class="o">=</span> <span class="n">inferred_counts</span><span class="p">[</span><span class="n">fingerprint</span><span class="p">]</span> <span class="o">-</span> <span class="n">count</span>
+      <span class="n">total_redundant</span> <span class="o">+=</span> <span class="n">redundant</span>
+      <span class="c"># fingerprints[0] is the class name</span>
+      <span class="n">Peeker</span><span class="o">.</span><span class="n">ambiguous_events</span><span class="p">[</span><span class="n">fingerprint</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">+=</span> <span class="n">redundant</span>
+
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+    <span class="n">percent_redundant</span> <span class="o">=</span> <span class="n">total_redundant</span><span class="o">*</span><span class="mf">1.0</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">)</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">percent_redundant</span> <span class="o">=</span> <span class="mf">0.0</span>
+  <span class="n">Peeker</span><span class="o">.</span><span class="n">ambiguous_counts</span><span class="p">[</span><span class="n">percent_redundant</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+<span class="c"># Truncate the newly inferred events based on the expected</span>
+<span class="c"># predecessors of next_input+1</span>
+<span class="c"># inferred_events (and ignore internal events that come afterward)</span>
+<span class="c"># TODO(cs): perhaps these should be unordered</span></div>
+<div class="viewcode-block" id="match_fingerprints"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.peeker.match_fingerprints">[docs]</a><span class="k">def</span> <span class="nf">match_fingerprints</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">,</span> <span class="n">expected_internal_events</span><span class="p">):</span>
+  <span class="c"># Find the last internal event in expected_internal_events that</span>
+  <span class="c"># matches an event in newly_inferred_events. That is the new causal</span>
+  <span class="c"># parent of following_input</span>
+  <span class="n">expected_internal_events</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+  <span class="n">inferred_fingerprints</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">e</span><span class="o">.</span><span class="n">fingerprint</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span>
+                               <span class="n">newly_inferred_events</span><span class="p">])</span>
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">inferred_fingerprints</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">):</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Overlapping fingerprints in peek() (</span><span class="si">%d</span><span class="s"> unique, </span><span class="si">%d</span><span class="s"> total)&quot;</span> <span class="o">%</span>
+             <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">inferred_fingerprints</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">)))</span>
+
+  <span class="n">expected_fingerprints</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">e</span><span class="o">.</span><span class="n">fingerprint</span>
+                               <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">expected_internal_events</span><span class="p">])</span>
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">expected_fingerprints</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">expected_internal_events</span><span class="p">):</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Overlapping expected fingerprints (</span><span class="si">%d</span><span class="s"> unique, </span><span class="si">%d</span><span class="s"> total)&quot;</span> <span class="o">%</span>
+             <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">expected_fingerprints</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">expected_internal_events</span><span class="p">)))</span>
+
+  <span class="k">for</span> <span class="n">expected</span> <span class="ow">in</span> <span class="n">expected_internal_events</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">expected</span><span class="o">.</span><span class="n">fingerprint</span> <span class="ow">in</span> <span class="n">inferred_fingerprints</span><span class="p">:</span>
+      <span class="c"># We&#39;ve found our truncation point</span>
+      <span class="c"># following_input goes after the expected internal event</span>
+      <span class="c"># (we ignore all internal events that come after it)</span>
+      <span class="c"># TODO(cs): if the inferred events show up in a different order</span>
+      <span class="c"># than the expected events did originally, this algorithm might</span>
+      <span class="c"># inadvertently prune expected events (it assumes events are ordered)</span>
+
+      <span class="c"># If there are multiple matching fingerprints, find the instance of</span>
+      <span class="c"># the expected fingerprint (e.g., 2nd instance of the expected</span>
+      <span class="c"># fingerprint), and match it up with the same instance</span>
+      <span class="c"># of the inferred fingerprints</span>
+      <span class="n">expected_internal_events</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">expected_internal_events</span>
+                                  <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">fingerprint</span> <span class="o">==</span> <span class="n">expected</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">]</span>
+      <span class="c"># 1-based indexing of observed instances</span>
+      <span class="c"># Note that we are iterating through expected_internal_events in reverse</span>
+      <span class="c"># order</span>
+      <span class="n">instance_of_expected</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">expected_internal_events</span><span class="p">)</span>
+      <span class="n">observed_instance</span> <span class="o">=</span> <span class="mi">0</span>
+      <span class="n">idx_of_last_observed_instance</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+      <span class="n">parent_index</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+      <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">event</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">fingerprint</span> <span class="o">==</span> <span class="n">expected</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">:</span>
+          <span class="n">observed_instance</span> <span class="o">+=</span> <span class="mi">1</span>
+          <span class="n">idx_of_last_observed_instance</span> <span class="o">=</span> <span class="n">index</span>
+          <span class="k">if</span> <span class="n">observed_instance</span> <span class="o">==</span> <span class="n">instance_of_expected</span><span class="p">:</span>
+            <span class="n">parent_index</span> <span class="o">=</span> <span class="n">index</span>
+            <span class="k">break</span>
+
+      <span class="k">if</span> <span class="n">parent_index</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">((</span><span class="s">&#39;&#39;&#39;There were fewer instances of &#39;&#39;&#39;</span>
+                  <span class="sd">&#39;&#39;&#39;inferred %s fingerprint than expected %s &#39;&#39;&#39;</span> <span class="o">%</span>
+                  <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">newly_inferred_events</span><span class="p">),</span><span class="nb">str</span><span class="p">(</span><span class="n">expected_internal_events</span><span class="p">))))</span>
+        <span class="c"># Set parent_index to the index of the last occurrence</span>
+        <span class="n">parent_index</span> <span class="o">=</span> <span class="n">idx_of_last_observed_instance</span>
+      <span class="n">newly_inferred_events</span> <span class="o">=</span> <span class="n">newly_inferred_events</span><span class="p">[:</span><span class="n">parent_index</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+      <span class="k">return</span> <span class="n">newly_inferred_events</span>
+  <span class="c"># Else, no expected internal event was observed.</span>
+  <span class="k">return</span> <span class="p">[]</span>
+</div>
+<div class="viewcode-block" id="correct_timestamps"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.peeker.correct_timestamps">[docs]</a><span class="k">def</span> <span class="nf">correct_timestamps</span><span class="p">(</span><span class="n">new_events</span><span class="p">,</span> <span class="n">old_events</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Set new_events&#39; timestamps to approximately the same timestamp as</span>
+<span class="sd">  old_events.</span>
+
+<span class="sd">  Precondition: old_events != []</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="c"># Lazy strategy: assign all new timestamps to the last timestamp of</span>
+  <span class="c"># old_events</span>
+  <span class="n">latest_old_ts</span> <span class="o">=</span> <span class="n">old_events</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">time</span>
+  <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">new_events</span><span class="p">:</span>
+    <span class="n">e</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="n">latest_old_ts</span>
+  <span class="k">return</span> <span class="n">new_events</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

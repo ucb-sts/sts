@@ -1,0 +1,192 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>dataplane_traces Package &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="index.html" />
+    <link rel="up" title="sts Package" href="sts.html" />
+    <link rel="next" title="experiments Package" href="sts.experiments.html" />
+    <link rel="prev" title="control_flow Package" href="sts.control_flow.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sts.experiments.html" title="experiments Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="sts.control_flow.html" title="control_flow Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" accesskey="U">sts Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="dataplane-traces-package">
+<h1>dataplane_traces Package<a class="headerlink" href="#dataplane-traces-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">dataplane_traces</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-sts.dataplane_traces"></span></div>
+<div class="section" id="module-sts.dataplane_traces.trace">
+<span id="trace-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">trace</span></tt> Module<a class="headerlink" href="#module-sts.dataplane_traces.trace" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="sts.dataplane_traces.trace.DataplaneEvent">
+<em class="property">class </em><tt class="descclassname">sts.dataplane_traces.trace.</tt><tt class="descname">DataplaneEvent</tt><big>(</big><em>interface</em>, <em>packet</em><big>)</big><a class="reference internal" href="_modules/sts/dataplane_traces/trace.html#DataplaneEvent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.dataplane_traces.trace.DataplaneEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Encapsulates a packet injected at a (switch.dpid, port) pair in the network
+Used for trace generation or replay debugging</p>
+<dl class="staticmethod">
+<dt id="sts.dataplane_traces.trace.DataplaneEvent.from_json">
+<em class="property">static </em><tt class="descname">from_json</tt><big>(</big><em>json_hash</em><big>)</big><a class="reference internal" href="_modules/sts/dataplane_traces/trace.html#DataplaneEvent.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.dataplane_traces.trace.DataplaneEvent.from_json" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.dataplane_traces.trace.DataplaneEvent.to_json">
+<tt class="descname">to_json</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/dataplane_traces/trace.html#DataplaneEvent.to_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.dataplane_traces.trace.DataplaneEvent.to_json" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sts.dataplane_traces.trace.Trace">
+<em class="property">class </em><tt class="descclassname">sts.dataplane_traces.trace.</tt><tt class="descname">Trace</tt><big>(</big><em>tracefile_path</em>, <em>topology=None</em><big>)</big><a class="reference internal" href="_modules/sts/dataplane_traces/trace.html#Trace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.dataplane_traces.trace.Trace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>Encapsulates a sequence of dataplane events to inject into a simulated network.</p>
+<dl class="method">
+<dt id="sts.dataplane_traces.trace.Trace.inject_trace_event">
+<tt class="descname">inject_trace_event</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/dataplane_traces/trace.html#Trace.inject_trace_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.dataplane_traces.trace.Trace.inject_trace_event" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-sts.dataplane_traces.trace_generator">
+<span id="trace-generator-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">trace_generator</span></tt> Module<a class="headerlink" href="#module-sts.dataplane_traces.trace_generator" title="Permalink to this headline">¶</a></h2>
+<p>Created on Mar 15, 2012</p>
+<p>&#64;author: cs</p>
+<dl class="function">
+<dt id="sts.dataplane_traces.trace_generator.generate_example_trace">
+<tt class="descclassname">sts.dataplane_traces.trace_generator.</tt><tt class="descname">generate_example_trace</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/dataplane_traces/trace_generator.html#generate_example_trace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.dataplane_traces.trace_generator.generate_example_trace" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.dataplane_traces.trace_generator.generate_example_trace_fat_tree">
+<tt class="descclassname">sts.dataplane_traces.trace_generator.</tt><tt class="descname">generate_example_trace_fat_tree</tt><big>(</big><em>num_pods=4</em><big>)</big><a class="reference internal" href="_modules/sts/dataplane_traces/trace_generator.html#generate_example_trace_fat_tree"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.dataplane_traces.trace_generator.generate_example_trace_fat_tree" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.dataplane_traces.trace_generator.generate_example_trace_same_subnet">
+<tt class="descclassname">sts.dataplane_traces.trace_generator.</tt><tt class="descname">generate_example_trace_same_subnet</tt><big>(</big><em>num_switches=2</em><big>)</big><a class="reference internal" href="_modules/sts/dataplane_traces/trace_generator.html#generate_example_trace_same_subnet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.dataplane_traces.trace_generator.generate_example_trace_same_subnet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.dataplane_traces.trace_generator.write_trace_log">
+<tt class="descclassname">sts.dataplane_traces.trace_generator.</tt><tt class="descname">write_trace_log</tt><big>(</big><em>dataplane_events</em>, <em>filename</em><big>)</big><a class="reference internal" href="_modules/sts/dataplane_traces/trace_generator.html#write_trace_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.dataplane_traces.trace_generator.write_trace_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a list of DataplaneEvents and a log filename, writes out a log.
+For manual trace generation rather than replay logging</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">dataplane_traces Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">dataplane_traces</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-sts.dataplane_traces.trace"><tt class="docutils literal"><span class="pre">trace</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.dataplane_traces.trace_generator"><tt class="docutils literal"><span class="pre">trace_generator</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="sts.control_flow.html"
+                        title="previous chapter">control_flow Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="sts.experiments.html"
+                        title="next chapter">experiments Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/sts.dataplane_traces.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sts.experiments.html" title="experiments Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="sts.control_flow.html" title="control_flow Package"
+             >previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" >sts Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

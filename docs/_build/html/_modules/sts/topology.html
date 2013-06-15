@@ -1,0 +1,1145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.topology &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.topology</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2012-2013 Andrew Or</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c"># Copyright 2012-2013 Sam Whitlock</span>
+<span class="c"># Copyright 2012-2012 Kyriakos Zarifis</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">If the user does not specify a topology to test on, use by default a full mesh</span>
+<span class="sd">of switches, with one host connected to each switch. For example, with N = 3:</span>
+
+<span class="sd">              controller</span>
+<span class="sd">     host1                         host2</span>
+<span class="sd">       |                            |</span>
+<span class="sd">     switch1-(1)------------(3)--switch2</span>
+<span class="sd">        \                       /</span>
+<span class="sd">        (2)                   (4)</span>
+<span class="sd">          \                   /</span>
+<span class="sd">           \                 /</span>
+<span class="sd">            \               /</span>
+<span class="sd">             (6)-switch3-(5)</span>
+<span class="sd">                    |</span>
+<span class="sd">                  host3</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">sts.fingerprints.messages</span> <span class="kn">import</span> <span class="n">DPFingerprint</span>
+<span class="kn">from</span> <span class="nn">entities</span> <span class="kn">import</span> <span class="n">FuzzSoftwareSwitch</span><span class="p">,</span> <span class="n">Link</span><span class="p">,</span> <span class="n">Host</span><span class="p">,</span> <span class="n">HostInterface</span><span class="p">,</span> <span class="n">AccessLink</span><span class="p">,</span> <span class="n">NamespaceHost</span>
+<span class="kn">from</span> <span class="nn">pox.openflow.software_switch</span> <span class="kn">import</span> <span class="n">DpPacketOut</span><span class="p">,</span> <span class="n">SoftwareSwitch</span>
+<span class="kn">from</span> <span class="nn">pox.openflow.libopenflow_01</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pox.lib.revent</span> <span class="kn">import</span> <span class="n">EventMixin</span>
+<span class="kn">from</span> <span class="nn">sts.util.console</span> <span class="kn">import</span> <span class="n">msg</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;sts.topology&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="create_switch"><a class="viewcode-back" href="../../sts.html#sts.topology.create_switch">[docs]</a><span class="k">def</span> <span class="nf">create_switch</span><span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">num_ports</span><span class="p">,</span> <span class="n">can_connect_to_endhosts</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+  <span class="n">ports</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">port_no</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_ports</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+    <span class="n">eth_addr</span> <span class="o">=</span> <span class="n">EthAddr</span><span class="p">(</span><span class="s">&quot;00:00:00:00:</span><span class="si">%02x</span><span class="s">:</span><span class="si">%02x</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">port_no</span><span class="p">))</span>
+    <span class="n">port</span> <span class="o">=</span> <span class="n">ofp_phy_port</span><span class="p">(</span> <span class="n">port_no</span><span class="o">=</span><span class="n">port_no</span><span class="p">,</span> <span class="n">hw_addr</span><span class="o">=</span><span class="n">eth_addr</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&quot;eth</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">port_no</span> <span class="p">)</span>
+    <span class="c"># monkey patch an IP address onto the port for anteater purposes</span>
+    <span class="n">port</span><span class="o">.</span><span class="n">ip_addr</span> <span class="o">=</span> <span class="s">&quot;1.1.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">port_no</span><span class="p">)</span>
+    <span class="n">ports</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">port</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">unitialized_io_worker</span><span class="p">(</span><span class="n">switch</span><span class="p">):</span>
+    <span class="k">raise</span> <span class="ne">SystemError</span><span class="p">(</span><span class="s">&quot;Not initialialized&quot;</span><span class="p">)</span>
+
+  <span class="k">return</span> <span class="n">FuzzSoftwareSwitch</span><span class="p">(</span><span class="n">dpid</span><span class="o">=</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">&quot;SoftSwitch(</span><span class="si">%d</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="n">switch_id</span><span class="p">,</span>
+                            <span class="n">ports</span><span class="o">=</span><span class="n">ports</span><span class="p">,</span>
+                            <span class="n">can_connect_to_endhosts</span><span class="o">=</span><span class="n">can_connect_to_endhosts</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="get_switchs_host_port"><a class="viewcode-back" href="../../sts.html#sts.topology.get_switchs_host_port">[docs]</a><span class="k">def</span> <span class="nf">get_switchs_host_port</span><span class="p">(</span><span class="n">switch</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Return the switch&#39;s ofp_phy_port connected to the host &#39;&#39;&#39;</span>
+  <span class="c"># We wire up the last port of the switch to the host</span>
+  <span class="c"># TODO(cs): this is arbitrary and hacky</span>
+  <span class="k">return</span> <span class="n">switch</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="nb">sorted</span><span class="p">(</span><span class="n">switch</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+</div>
+<div class="viewcode-block" id="create_host"><a class="viewcode-back" href="../../sts.html#sts.topology.create_host">[docs]</a><span class="k">def</span> <span class="nf">create_host</span><span class="p">(</span><span class="n">ingress_switch_or_switches</span><span class="p">,</span> <span class="n">mac_or_macs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">ip_or_ips</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                <span class="n">get_switch_port</span><span class="o">=</span><span class="n">get_switchs_host_port</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Create a Host, wired up to the given ingress switches &#39;&#39;&#39;</span>
+  <span class="n">switches</span> <span class="o">=</span> <span class="n">ingress_switch_or_switches</span>
+  <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">switches</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="n">switches</span> <span class="o">=</span> <span class="p">[</span><span class="n">ingress_switch_or_switches</span><span class="p">]</span>
+
+  <span class="n">macs</span> <span class="o">=</span> <span class="n">mac_or_macs</span>
+  <span class="k">if</span> <span class="n">mac_or_macs</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">mac_or_macs</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="n">macs</span> <span class="o">=</span> <span class="p">[</span><span class="n">mac_or_macs</span><span class="p">]</span>
+
+  <span class="n">ips</span> <span class="o">=</span> <span class="n">ip_or_ips</span>
+  <span class="k">if</span> <span class="n">ip_or_ips</span> <span class="ow">and</span> <span class="nb">type</span><span class="p">(</span><span class="n">ip_or_ips</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">list</span><span class="p">:</span>
+    <span class="n">ips</span> <span class="o">=</span> <span class="p">[</span><span class="n">ip_or_ips</span><span class="p">]</span>
+
+  <span class="n">interfaces</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">interface_switch_pairs</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="n">switches</span><span class="p">:</span>
+    <span class="n">port</span> <span class="o">=</span> <span class="n">get_switch_port</span><span class="p">(</span><span class="n">switch</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">macs</span><span class="p">:</span>
+      <span class="n">mac</span> <span class="o">=</span> <span class="n">macs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">mac</span> <span class="o">=</span> <span class="n">EthAddr</span><span class="p">(</span><span class="s">&quot;12:34:56:78:</span><span class="si">%02x</span><span class="s">:</span><span class="si">%02x</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="n">port</span><span class="o">.</span><span class="n">port_no</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">ips</span><span class="p">:</span>
+      <span class="n">ip_addr</span> <span class="o">=</span> <span class="n">ips</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">ip_addr</span> <span class="o">=</span> <span class="n">IPAddr</span><span class="p">(</span><span class="s">&quot;123.123.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="n">port</span><span class="o">.</span><span class="n">port_no</span><span class="p">))</span>
+
+    <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;eth</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">switch</span><span class="o">.</span><span class="n">dpid</span>
+    <span class="n">interface</span> <span class="o">=</span> <span class="n">HostInterface</span><span class="p">(</span><span class="n">mac</span><span class="p">,</span> <span class="n">ip_addr</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">interface_switch_pairs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">interface</span><span class="p">,</span> <span class="n">switch</span><span class="p">))</span>
+    <span class="n">interfaces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">interface</span><span class="p">)</span>
+
+  <span class="n">name</span> <span class="o">=</span> <span class="s">&quot;host:&quot;</span> <span class="o">+</span> <span class="s">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">interface</span><span class="p">:</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">interface</span><span class="o">.</span><span class="n">ips</span><span class="p">),</span> <span class="n">interfaces</span><span class="p">))</span>
+  <span class="n">host</span> <span class="o">=</span> <span class="n">Host</span><span class="p">(</span><span class="n">interfaces</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+  <span class="n">access_links</span> <span class="o">=</span> <span class="p">[</span> <span class="n">AccessLink</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">switch</span><span class="p">,</span> <span class="n">get_switch_port</span><span class="p">(</span><span class="n">switch</span><span class="p">))</span>
+                   <span class="k">for</span> <span class="n">interface</span><span class="p">,</span> <span class="n">switch</span> <span class="ow">in</span> <span class="n">interface_switch_pairs</span> <span class="p">]</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">access_links</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="create_netns_host"><a class="viewcode-back" href="../../sts.html#sts.topology.create_netns_host">[docs]</a><span class="k">def</span> <span class="nf">create_netns_host</span><span class="p">(</span><span class="n">create_io_worker</span><span class="p">,</span> <span class="n">ingress_switch</span><span class="p">,</span>
+                      <span class="n">ip_addr_str</span><span class="o">=</span><span class="s">&quot;&quot;</span><span class="p">,</span>
+                      <span class="n">get_switch_port</span><span class="o">=</span><span class="n">get_switchs_host_port</span><span class="p">,</span> <span class="n">cmd</span><span class="o">=</span><span class="s">&#39;xterm&#39;</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Create a host with a process running in a separate network namespace.</span>
+<span class="sd">  The netns can only communicate with a single interface (for now) because it must</span>
+<span class="sd">  correspond to the physical interface in the network namespace guest.</span>
+
+<span class="sd">  Because there is only 1 logical interface possible, this means that there can only be</span>
+<span class="sd">  1 switch as well.</span>
+
+<span class="sd">  - ip_addr_str must be a string! not a IpAddr object</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">if</span> <span class="n">ip_addr_str</span> <span class="o">==</span> <span class="s">&quot;&quot;</span><span class="p">:</span>
+    <span class="n">ip_addr_str</span> <span class="o">=</span> <span class="s">&quot;123.123.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ingress_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="n">get_switch_port</span><span class="p">(</span><span class="n">ingress_switch</span><span class="p">)</span><span class="o">.</span><span class="n">port_no</span><span class="p">)</span>
+  <span class="n">host</span> <span class="o">=</span> <span class="n">NamespaceHost</span><span class="p">(</span><span class="n">ip_addr_str</span><span class="p">,</span> <span class="n">create_io_worker</span><span class="p">,</span> <span class="n">cmd</span><span class="o">=</span><span class="n">cmd</span><span class="p">)</span>
+  <span class="n">interface</span> <span class="o">=</span> <span class="n">host</span><span class="o">.</span><span class="n">interfaces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+  <span class="n">access_link</span> <span class="o">=</span> <span class="n">AccessLink</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">ingress_switch</span><span class="p">,</span> <span class="n">get_switch_port</span><span class="p">(</span><span class="n">ingress_switch</span><span class="p">))</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="p">[</span><span class="n">access_link</span><span class="p">])</span> <span class="c"># single item list to be consistent with create_host</span>
+</div>
+<div class="viewcode-block" id="PatchPanel"><a class="viewcode-back" href="../../sts.html#sts.topology.PatchPanel">[docs]</a><span class="k">class</span> <span class="nc">PatchPanel</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  A Patch panel. Contains a bunch of wires to forward packets between switches.</span>
+<span class="sd">  Listens to the SwitchDPPacketOut event on the switches.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">switches</span><span class="p">,</span> <span class="n">hosts</span><span class="p">,</span> <span class="n">connected_port_mapping</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Constructor</span>
+<span class="sd">     - switches: a list of the switches in the network</span>
+<span class="sd">     - hosts: a list of hosts in the network</span>
+<span class="sd">     - connected_port_mapping: a function which takes (switch_no, port_no, dpid2switch),</span>
+<span class="sd">                               and returns the adjacent (node, port) or None</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switches</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">switches</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span><span class="p">(</span><span class="n">sw</span><span class="p">):</span> <span class="n">sw</span><span class="o">.</span><span class="n">dpid</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">get_connected_port</span> <span class="o">=</span> <span class="n">connected_port_mapping</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hosts</span> <span class="o">=</span> <span class="n">hosts</span>
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">:</span>
+      <span class="n">s</span><span class="o">.</span><span class="n">addListener</span><span class="p">(</span><span class="n">DpPacketOut</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_DpPacketOut</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">host</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">:</span>
+      <span class="n">host</span><span class="o">.</span><span class="n">addListener</span><span class="p">(</span><span class="n">DpPacketOut</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">handle_DpPacketOut</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PatchPanel.handle_DpPacketOut"><a class="viewcode-back" href="../../sts.html#sts.topology.PatchPanel.handle_DpPacketOut">[docs]</a>  <span class="k">def</span> <span class="nf">handle_DpPacketOut</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_connected_port</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">node</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">node</span><span class="p">)</span> <span class="o">==</span> <span class="n">Host</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">deliver_packet</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">packet</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">forward_packet</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">packet</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PatchPanel.get_connected_port"><a class="viewcode-back" href="../../sts.html#sts.topology.PatchPanel.get_connected_port">[docs]</a>  <span class="k">def</span> <span class="nf">get_connected_port</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span> <span class="c"># TODO(sw): is this actually necessary?</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_connected_port</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PatchPanel.forward_packet"><a class="viewcode-back" href="../../sts.html#sts.topology.PatchPanel.forward_packet">[docs]</a>  <span class="k">def</span> <span class="nf">forward_packet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">next_switch</span><span class="p">,</span> <span class="n">packet</span><span class="p">,</span> <span class="n">next_port</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Forward the packet to the given port &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">next_port</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">int</span><span class="p">:</span>
+      <span class="n">next_port</span> <span class="o">=</span> <span class="n">next_port</span><span class="o">.</span><span class="n">port_no</span>
+    <span class="n">next_switch</span><span class="o">.</span><span class="n">process_packet</span><span class="p">(</span><span class="n">packet</span><span class="p">,</span> <span class="n">next_port</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PatchPanel.deliver_packet"><a class="viewcode-back" href="../../sts.html#sts.topology.PatchPanel.deliver_packet">[docs]</a>  <span class="k">def</span> <span class="nf">deliver_packet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">packet</span><span class="p">,</span> <span class="n">host_interface</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Deliver the packet to its final destination &#39;&#39;&#39;</span>
+    <span class="n">host</span><span class="o">.</span><span class="n">receive</span><span class="p">(</span><span class="n">host_interface</span><span class="p">,</span> <span class="n">packet</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="BufferedPatchPanelForTopology"><a class="viewcode-back" href="../../sts.html#sts.topology.BufferedPatchPanelForTopology">[docs]</a><span class="k">def</span> <span class="nf">BufferedPatchPanelForTopology</span><span class="p">(</span><span class="n">topology</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Given a pox.lib.graph.graph object with hosts, switches, and other things,</span>
+<span class="sd">  produce an appropriate BufferedPatchPanel</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">return</span> <span class="n">BufferedPatchPanel</span><span class="p">(</span><span class="n">topology</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">is_a</span><span class="o">=</span><span class="n">SoftwareSwitch</span><span class="p">),</span> <span class="n">topology</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">is_a</span><span class="o">=</span><span class="n">Host</span><span class="p">),</span> \
+                            <span class="k">lambda</span> <span class="n">node</span><span class="p">,</span> <span class="n">port</span><span class="p">:</span><span class="n">topology</span><span class="o">.</span><span class="n">port_for_node</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="BufferedPatchPanel"><a class="viewcode-back" href="../../sts.html#sts.topology.BufferedPatchPanel">[docs]</a><span class="k">class</span> <span class="nc">BufferedPatchPanel</span><span class="p">(</span><span class="n">PatchPanel</span><span class="p">,</span> <span class="n">EventMixin</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  A Buffered Patch panel.Listens to SwitchDPPacketOut and HostDpPacketOut events,</span>
+<span class="sd">  and re-raises them to listeners of this object. Does not traffic until given</span>
+<span class="sd">  permission from a higher-level.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">_eventMixin_events</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">DpPacketOut</span><span class="p">])</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">switches</span><span class="p">,</span> <span class="n">hosts</span><span class="p">,</span> <span class="n">connected_port_mapping</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">get_connected_port</span> <span class="o">=</span> <span class="n">connected_port_mapping</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">switches</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">switches</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span><span class="p">(</span><span class="n">sw</span><span class="p">):</span> <span class="n">sw</span><span class="o">.</span><span class="n">dpid</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hosts</span> <span class="o">=</span> <span class="n">hosts</span>
+    <span class="c"># Buffered dp out events</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">fingerprint2dp_outs</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">handle_DpPacketOut</span><span class="p">(</span><span class="n">event</span><span class="p">):</span>
+      <span class="n">fingerprint</span> <span class="o">=</span> <span class="p">(</span><span class="n">DPFingerprint</span><span class="o">.</span><span class="n">from_pkt</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">packet</span><span class="p">),</span>
+                     <span class="n">event</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="n">event</span><span class="o">.</span><span class="n">port</span><span class="o">.</span><span class="n">port_no</span><span class="p">)</span>
+      <span class="c"># Monkey patch on a fingerprint for this event</span>
+      <span class="n">event</span><span class="o">.</span><span class="n">fingerprint</span> <span class="o">=</span> <span class="n">fingerprint</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">fingerprint2dp_outs</span><span class="p">[</span><span class="n">fingerprint</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">raiseEvent</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">s</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">):</span>
+      <span class="n">s</span><span class="o">.</span><span class="n">addListener</span><span class="p">(</span><span class="n">DpPacketOut</span><span class="p">,</span> <span class="n">handle_DpPacketOut</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">host</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">:</span>
+      <span class="n">host</span><span class="o">.</span><span class="n">addListener</span><span class="p">(</span><span class="n">DpPacketOut</span><span class="p">,</span> <span class="n">handle_DpPacketOut</span><span class="p">)</span>
+
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="BufferedPatchPanel.queued_dataplane_events"><a class="viewcode-back" href="../../sts.html#sts.topology.BufferedPatchPanel.queued_dataplane_events">[docs]</a>  <span class="k">def</span> <span class="nf">queued_dataplane_events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">list_of_lists</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fingerprint2dp_outs</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="o">*</span><span class="n">list_of_lists</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="BufferedPatchPanel.permit_dp_event"><a class="viewcode-back" href="../../sts.html#sts.topology.BufferedPatchPanel.permit_dp_event">[docs]</a>  <span class="k">def</span> <span class="nf">permit_dp_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dp_event</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Given a SwitchDpPacketOut event, permit it to be forwarded &#39;&#39;&#39;</span>
+    <span class="c"># TODO(cs): self.forward_packet should not be externally visible!</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Forwarding dataplane event&quot;</span><span class="p">)</span>
+    <span class="c"># Invoke superclass DpPacketOut handler</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">handle_DpPacketOut</span><span class="p">(</span><span class="n">dp_event</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_remove_dp_event</span><span class="p">(</span><span class="n">dp_event</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="BufferedPatchPanel.drop_dp_event"><a class="viewcode-back" href="../../sts.html#sts.topology.BufferedPatchPanel.drop_dp_event">[docs]</a>  <span class="k">def</span> <span class="nf">drop_dp_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dp_event</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Given a SwitchDpPacketOut event, remove it from our buffer, and do not forward.</span>
+<span class="sd">    Return the dropped event.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Dropping dataplane event&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_remove_dp_event</span><span class="p">(</span><span class="n">dp_event</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dp_event</span>
+</div>
+  <span class="k">def</span> <span class="nf">_remove_dp_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dp_event</span><span class="p">):</span>
+    <span class="c"># Pre: dp_event.fingerprint in self.fingerprint2dp_outs</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">fingerprint2dp_outs</span><span class="p">[</span><span class="n">dp_event</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">]</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">dp_event</span><span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fingerprint2dp_outs</span><span class="p">[</span><span class="n">dp_event</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">]</span> <span class="o">==</span> <span class="p">[]:</span>
+      <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">fingerprint2dp_outs</span><span class="p">[</span><span class="n">dp_event</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">]</span>
+
+<div class="viewcode-block" id="BufferedPatchPanel.get_buffered_dp_event"><a class="viewcode-back" href="../../sts.html#sts.topology.BufferedPatchPanel.get_buffered_dp_event">[docs]</a>  <span class="k">def</span> <span class="nf">get_buffered_dp_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fingerprint</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">fingerprint</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fingerprint2dp_outs</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fingerprint2dp_outs</span><span class="p">[</span><span class="n">fingerprint</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="bp">None</span>
+</div></div>
+<div class="viewcode-block" id="LinkTracker"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker">[docs]</a><span class="k">class</span> <span class="nc">LinkTracker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid2switch</span><span class="p">,</span> <span class="n">port2access_link</span><span class="p">,</span> <span class="n">interface2access_link</span><span class="p">,</span>
+               <span class="n">port2internal_link</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span> <span class="o">=</span> <span class="n">dpid2switch</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span> <span class="o">=</span> <span class="n">port2access_link</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span> <span class="o">=</span> <span class="n">interface2access_link</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span> <span class="o">=</span> <span class="n">port2internal_link</span>
+    <span class="c"># { (start dpid, end dpid) -&gt; link }</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpidpair2link</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="p">(</span><span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="n">link</span><span class="o">.</span><span class="n">end_software_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">)</span> <span class="p">:</span> <span class="n">link</span>
+      <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">network_links</span>
+    <span class="p">}</span>
+    <span class="c"># Metatdata for simulated failures</span>
+    <span class="c"># sts.entities.Link objects</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cut_links</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="LinkTracker.network_links"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.network_links">[docs]</a>  <span class="k">def</span> <span class="nf">network_links</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="LinkTracker.access_links"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.access_links">[docs]</a>  <span class="k">def</span> <span class="nf">access_links</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="LinkTracker.live_links"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.live_links">[docs]</a>  <span class="k">def</span> <span class="nf">live_links</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">network_links</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">cut_links</span>
+</div>
+<div class="viewcode-block" id="LinkTracker.sever_link"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.sever_link">[docs]</a>  <span class="k">def</span> <span class="nf">sever_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Cutting link </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">link</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">link</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">network_links</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;unknown link </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">link</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">link</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cut_links</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;link </span><span class="si">%s</span><span class="s"> already cut!&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">link</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cut_links</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+    <span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span><span class="o">.</span><span class="n">take_port_down</span><span class="p">(</span><span class="n">link</span><span class="o">.</span><span class="n">start_port</span><span class="p">)</span>
+    <span class="c"># TODO(cs): the switch on the other end of the link should eventually</span>
+    <span class="c"># notice that the link has gone down!</span>
+</div>
+<div class="viewcode-block" id="LinkTracker.repair_link"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.repair_link">[docs]</a>  <span class="k">def</span> <span class="nf">repair_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Restoring link </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">link</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">link</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">network_links</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown link </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">link</span><span class="p">))</span>
+    <span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span><span class="o">.</span><span class="n">bring_port_up</span><span class="p">(</span><span class="n">link</span><span class="o">.</span><span class="n">start_port</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cut_links</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+    <span class="c"># TODO(cs): the switch on the other end of the link should eventually</span>
+    <span class="c"># notice that the link has come back up!</span>
+</div>
+<div class="viewcode-block" id="LinkTracker.create_access_link"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.create_access_link">[docs]</a>  <span class="k">def</span> <span class="nf">create_access_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">switch</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Create an access link between a host and a switch</span>
+<span class="sd">    If no interface is provided, an unused interface is used</span>
+<span class="sd">    If no port is provided, an unused port is used</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">interface</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">interface</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_unused_interface</span><span class="p">(</span><span class="n">host</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_unused_port</span><span class="p">(</span><span class="n">switch</span><span class="p">)</span>
+    <span class="n">link</span> <span class="o">=</span> <span class="n">AccessLink</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">switch</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_access_link</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">[</span><span class="n">interface</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_access_link</span>
+    <span class="k">return</span> <span class="n">link</span>
+</div>
+<div class="viewcode-block" id="LinkTracker.remove_access_link"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.remove_access_link">[docs]</a>  <span class="k">def</span> <span class="nf">remove_access_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">switch</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Remove an access link between a host and a switch &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">switch</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">link</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">host</span> <span class="ow">is</span> <span class="n">host</span> <span class="ow">and</span> <span class="n">link</span><span class="o">.</span><span class="n">switch</span> <span class="ow">is</span> <span class="n">switch</span><span class="p">:</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">interface</span> <span class="ow">in</span> <span class="n">host</span><span class="o">.</span><span class="n">interfaces</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">interface</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">link</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">[</span><span class="n">interface</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">host</span> <span class="ow">is</span> <span class="n">host</span> <span class="ow">and</span> <span class="n">link</span><span class="o">.</span><span class="n">switch</span> <span class="ow">is</span> <span class="n">switch</span><span class="p">:</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">[</span><span class="n">interface</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="LinkTracker.create_network_link"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.create_network_link">[docs]</a>  <span class="k">def</span> <span class="nf">create_network_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_switch</span><span class="p">,</span> <span class="n">from_port</span><span class="p">,</span> <span class="n">to_switch</span><span class="p">,</span> <span class="n">to_port</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Create a unidirectional network (internal) link between two switches</span>
+<span class="sd">    If a port is not provided, an unused port in the corresponding switch is used</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">from_port</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">from_port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_unused_port</span><span class="p">(</span><span class="n">from_switch</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">to_port</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">to_port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">find_unused_port</span><span class="p">(</span><span class="n">to_switch</span><span class="p">)</span>
+    <span class="n">link</span> <span class="o">=</span> <span class="n">Link</span><span class="p">(</span><span class="n">from_switch</span><span class="p">,</span> <span class="n">from_port</span><span class="p">,</span> <span class="n">to_switch</span><span class="p">,</span> <span class="n">to_port</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span><span class="p">[</span><span class="n">from_port</span><span class="p">]</span> <span class="o">=</span> <span class="n">link</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpidpair2link</span><span class="p">[(</span><span class="n">from_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="n">to_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">)]</span> <span class="o">=</span> <span class="n">link</span>
+    <span class="k">return</span> <span class="n">link</span>
+</div>
+<div class="viewcode-block" id="LinkTracker.remove_network_link"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.remove_network_link">[docs]</a>  <span class="k">def</span> <span class="nf">remove_network_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_switch</span><span class="p">,</span> <span class="n">to_switch</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Remove a unidirectional network (internal) link between two switches &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">from_switch</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">link</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span> <span class="ow">is</span> <span class="n">from_switch</span> <span class="ow">and</span>\
+           <span class="n">link</span><span class="o">.</span><span class="n">end_software_switch</span> <span class="ow">is</span> <span class="n">to_switch</span><span class="p">:</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2pair2link</span><span class="p">[(</span><span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span>
+                                   <span class="n">link</span><span class="o">.</span><span class="n">end_software_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">)]</span>
+</div>
+<div class="viewcode-block" id="LinkTracker.find_unused_port"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.find_unused_port">[docs]</a>  <span class="k">def</span> <span class="nf">find_unused_port</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">switch</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Find a switch&#39;s unused port; if no such port exists, create a new one &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">port_number</span><span class="p">,</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">switch</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+      <span class="k">if</span> <span class="n">port</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="ow">and</span> \
+        <span class="n">port</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">port</span>
+    <span class="n">new_port_number</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">port_number</span> <span class="k">for</span> <span class="n">port_number</span> <span class="ow">in</span> <span class="n">switch</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">keys</span><span class="p">()])</span><span class="o">+</span><span class="mi">1</span>
+    <span class="n">new_port</span> <span class="o">=</span> <span class="n">ofp_phy_port</span><span class="p">(</span><span class="n">port_no</span><span class="o">=</span><span class="n">new_port_number</span><span class="p">)</span>
+    <span class="n">switch</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">new_port_number</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_port</span>
+    <span class="k">return</span> <span class="n">new_port</span>
+</div>
+<div class="viewcode-block" id="LinkTracker.find_unused_interface"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.find_unused_interface">[docs]</a>  <span class="k">def</span> <span class="nf">find_unused_interface</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Find a host&#39;s unused interface; if no such interface exists, create a new one &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">interface</span> <span class="ow">in</span> <span class="n">host</span><span class="o">.</span><span class="n">interfaces</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">interface</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">interface</span>
+    <span class="n">new_interface_addr</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="n">interface</span><span class="o">.</span><span class="n">hw_addr</span><span class="o">.</span><span class="n">toInt</span><span class="p">()</span> <span class="k">for</span> <span class="n">interface</span> <span class="ow">in</span> <span class="n">host</span><span class="o">.</span><span class="n">interfaces</span><span class="p">])</span><span class="o">+</span><span class="mi">1</span>
+    <span class="n">new_interface_addr</span> <span class="o">=</span> <span class="nb">hex</span><span class="p">(</span><span class="n">new_interface_addr</span><span class="p">)[</span><span class="mi">2</span><span class="p">:]</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">12</span><span class="p">)</span>
+    <span class="n">new_interface_addr</span> <span class="o">=</span> <span class="n">new_interface_addr</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;:&quot;</span><span class="o">+</span><span class="n">new_interface_addr</span><span class="p">[</span><span class="mi">2</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;:&quot;</span><span class="o">+</span>\
+                            <span class="n">new_interface_addr</span><span class="p">[</span><span class="mi">4</span><span class="p">:</span><span class="mi">6</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;:&quot;</span><span class="o">+</span><span class="n">new_interface_addr</span><span class="p">[</span><span class="mi">6</span><span class="p">:</span><span class="mi">8</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;:&quot;</span><span class="o">+</span>\
+                            <span class="n">new_interface_addr</span><span class="p">[</span><span class="mi">8</span><span class="p">:</span><span class="mi">10</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;:&quot;</span><span class="o">+</span><span class="n">new_interface_addr</span><span class="p">[</span><span class="mi">10</span><span class="p">:</span><span class="mi">12</span><span class="p">]</span>
+    <span class="n">new_interface_addr</span> <span class="o">=</span> <span class="n">EthAddr</span><span class="p">(</span><span class="n">new_interface_addr</span><span class="p">)</span>
+    <span class="n">new_interface</span> <span class="o">=</span> <span class="n">HostInterface</span><span class="p">(</span><span class="n">new_interface_addr</span><span class="p">)</span>
+    <span class="n">host</span><span class="o">.</span><span class="n">interfaces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_interface</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">new_interface</span>
+</div>
+<div class="viewcode-block" id="LinkTracker.port_connected"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.port_connected">[docs]</a>  <span class="k">def</span> <span class="nf">port_connected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return whether the port is currently connected to anything &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span> <span class="ow">or</span>
+            <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span> <span class="ow">or</span>
+            <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span><span class="p">)</span>
+</div>
+  <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Given a node and a port, return a tuple (node, port) that is directly</span>
+<span class="sd">    connected to the port.</span>
+
+<span class="sd">    This can be used in 2 ways</span>
+<span class="sd">    - node is a Host type and port is a HostInterface type</span>
+<span class="sd">    - node is a Switch type and port is a ofp_phy_port type.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">:</span>
+      <span class="n">access_link</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+      <span class="k">return</span> <span class="p">(</span><span class="n">access_link</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">access_link</span><span class="o">.</span><span class="n">interface</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">:</span>
+      <span class="n">access_link</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+      <span class="k">return</span> <span class="p">(</span><span class="n">access_link</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch_port</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span><span class="p">:</span>
+      <span class="n">network_link</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+      <span class="k">return</span> <span class="p">(</span><span class="n">network_link</span><span class="o">.</span><span class="n">end_software_switch</span><span class="p">,</span> <span class="n">network_link</span><span class="o">.</span><span class="n">end_port</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown port: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">port</span><span class="p">))</span>
+
+  <span class="k">def</span> <span class="nf">_get_switch_by_dpid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">dpid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown switch dpid: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">dpid</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">[</span><span class="n">dpid</span><span class="p">]</span>
+
+<div class="viewcode-block" id="LinkTracker.migrate_host"><a class="viewcode-back" href="../../sts.html#sts.topology.LinkTracker.migrate_host">[docs]</a>  <span class="k">def</span> <span class="nf">migrate_host</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old_ingress_dpid</span><span class="p">,</span> <span class="n">old_ingress_portno</span><span class="p">,</span>
+                   <span class="n">new_ingress_dpid</span><span class="p">,</span> <span class="n">new_ingress_portno</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Migrate the host from the old (ingress switch, port) to the new</span>
+<span class="sd">    (ingress switch, port). Note that the new port must not already be</span>
+<span class="sd">    present, otherwise an exception will be thrown (we treat all switches as</span>
+<span class="sd">    configurable software switches for convenience, rather than hardware switches</span>
+<span class="sd">    with a fixed number of ports)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">old_ingress_switch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_switch_by_dpid</span><span class="p">(</span><span class="n">old_ingress_dpid</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">old_ingress_portno</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">old_ingress_switch</span><span class="o">.</span><span class="n">ports</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;unknown old_ingress_portno </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">old_ingress_portno</span><span class="p">)</span>
+
+    <span class="n">old_port</span> <span class="o">=</span> <span class="n">old_ingress_switch</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">old_ingress_portno</span><span class="p">]</span>
+
+    <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="p">(</span><span class="n">old_ingress_switch</span><span class="p">,</span> <span class="n">old_port</span><span class="p">)</span> <span class="c"># using __call__</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">Host</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">interface</span><span class="p">,</span> <span class="n">HostInterface</span><span class="p">)):</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;(</span><span class="si">%s</span><span class="s">,</span><span class="si">%s</span><span class="s">) does not connect to a host!&quot;</span> <span class="o">%</span>
+                       <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">old_ingress_switch</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">old_port</span><span class="p">)))</span>
+
+    <span class="n">new_ingress_switch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_switch_by_dpid</span><span class="p">(</span><span class="n">new_ingress_dpid</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">new_ingress_portno</span> <span class="ow">in</span> <span class="n">new_ingress_switch</span><span class="o">.</span><span class="n">ports</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;new ingress port </span><span class="si">%d</span><span class="s"> already exists!&quot;</span> <span class="o">%</span> <span class="n">new_ingress_portno</span><span class="p">)</span>
+
+    <span class="c"># now that we&#39;ve verified everything, actually make the change!</span>
+    <span class="c"># first, drop the old mappings</span>
+    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">[</span><span class="n">old_port</span><span class="p">]</span>
+    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">[</span><span class="n">interface</span><span class="p">]</span>
+    <span class="n">old_ingress_switch</span><span class="o">.</span><span class="n">take_port_down</span><span class="p">(</span><span class="n">old_port</span><span class="p">)</span>
+
+    <span class="c"># now add new mappings</span>
+    <span class="c"># For now, make the new port have the same ip address as the old port.</span>
+    <span class="c"># TODO(cs): this would break PORTLAND routing! Need to specify the</span>
+    <span class="c">#           new mac and IP addresses</span>
+    <span class="n">new_ingress_port</span> <span class="o">=</span> <span class="n">ofp_phy_port</span><span class="p">(</span><span class="n">port_no</span><span class="o">=</span><span class="n">new_ingress_portno</span><span class="p">,</span>
+                                    <span class="n">hw_addr</span><span class="o">=</span><span class="n">old_port</span><span class="o">.</span><span class="n">hw_addr</span><span class="p">,</span>
+                                    <span class="n">name</span><span class="o">=</span><span class="s">&quot;eth</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">new_ingress_portno</span><span class="p">,</span>
+                                    <span class="n">config</span><span class="o">=</span><span class="n">old_port</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+                                    <span class="n">state</span><span class="o">=</span><span class="n">old_port</span><span class="o">.</span><span class="n">state</span><span class="p">,</span>
+                                    <span class="n">curr</span><span class="o">=</span><span class="n">old_port</span><span class="o">.</span><span class="n">curr</span><span class="p">,</span>
+                                    <span class="n">advertised</span><span class="o">=</span><span class="n">old_port</span><span class="o">.</span><span class="n">advertised</span><span class="p">,</span>
+                                    <span class="n">supported</span><span class="o">=</span><span class="n">old_port</span><span class="o">.</span><span class="n">supported</span><span class="p">,</span>
+                                    <span class="n">peer</span><span class="o">=</span><span class="n">old_port</span><span class="o">.</span><span class="n">peer</span><span class="p">)</span>
+    <span class="n">new_ingress_switch</span><span class="o">.</span><span class="n">bring_port_up</span><span class="p">(</span><span class="n">new_ingress_port</span><span class="p">)</span>
+    <span class="n">new_access_link</span> <span class="o">=</span> <span class="n">AccessLink</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">new_ingress_switch</span><span class="p">,</span> <span class="n">new_ingress_port</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">[</span><span class="n">new_ingress_port</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_access_link</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">[</span><span class="n">interface</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_access_link</span>
+</div></div>
+<div class="viewcode-block" id="Topology"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology">[docs]</a><span class="k">class</span> <span class="nc">Topology</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Abstract base class of all topology types. Wraps the edges and vertices of</span>
+<span class="sd">  the network.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">create_io_worker</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">gui</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">create_io_worker</span> <span class="o">=</span> <span class="n">create_io_worker</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c"># SoftwareSwitch objects</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">failed_switches</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">gui</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">gui</span><span class="p">:</span>
+      <span class="kn">from</span> <span class="nn">sts.gui.launcher</span> <span class="kn">import</span> <span class="n">TopologyGui</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">gui</span> <span class="o">=</span> <span class="n">TopologyGui</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_populate_dpid2switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">switches</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span> <span class="o">=</span> <span class="p">{</span>
+      <span class="n">switch</span><span class="o">.</span><span class="n">dpid</span> <span class="p">:</span> <span class="n">switch</span>
+      <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="n">switches</span>
+    <span class="p">}</span>
+
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.access_links"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.access_links">[docs]</a>  <span class="k">def</span> <span class="nf">access_links</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">access_links</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.network_links"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.network_links">[docs]</a>  <span class="k">def</span> <span class="nf">network_links</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">network_links</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.cut_links"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.cut_links">[docs]</a>  <span class="k">def</span> <span class="nf">cut_links</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">cut_links</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.switches"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.switches">[docs]</a>  <span class="k">def</span> <span class="nf">switches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">switches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="n">switches</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">sw</span><span class="p">:</span> <span class="n">sw</span><span class="o">.</span><span class="n">dpid</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">switches</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.hosts"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.hosts">[docs]</a>  <span class="k">def</span> <span class="nf">hosts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">hosts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="n">hosts</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">hid</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hosts</span>
+</div>
+<div class="viewcode-block" id="Topology.get_link"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.get_link">[docs]</a>  <span class="k">def</span> <span class="nf">get_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid1</span><span class="p">,</span> <span class="n">dpid2</span><span class="p">):</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">dpid1</span><span class="p">,</span> <span class="n">dpid2</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">dpidpair2link</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown link (</span><span class="si">%d</span><span class="s"> -&gt; </span><span class="si">%d</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">dpid1</span><span class="p">,</span> <span class="n">dpid2</span><span class="p">))</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">dpidpair2link</span><span class="p">[(</span><span class="n">dpid1</span><span class="p">,</span> <span class="n">dpid2</span><span class="p">)]</span>
+</div>
+<div class="viewcode-block" id="Topology.create_switch"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.create_switch">[docs]</a>  <span class="k">def</span> <span class="nf">create_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">switch_id</span><span class="p">,</span> <span class="n">num_ports</span><span class="p">,</span> <span class="n">can_connect_to_endhosts</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Create a switch and register it in the topology &#39;&#39;&#39;</span>
+    <span class="n">switch</span> <span class="o">=</span> <span class="n">create_switch</span><span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">num_ports</span><span class="p">,</span> <span class="n">can_connect_to_endhosts</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">[</span><span class="n">switch_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">switch</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">[</span><span class="n">switch_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">switch</span>
+    <span class="k">return</span> <span class="n">switch</span>
+</div>
+<div class="viewcode-block" id="Topology.remove_switch"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.remove_switch">[docs]</a>  <span class="k">def</span> <span class="nf">remove_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">switch</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Remove a switch, along with all associated links and any dangling</span>
+<span class="sd">    hosts previously attached</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">switch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="k">return</span>
+    <span class="c"># Remove associated network links</span>
+    <span class="k">for</span> <span class="n">network_link</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">network_links</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">network_link</span><span class="o">.</span><span class="n">start_software_switch</span> <span class="ow">is</span> <span class="n">switch</span> <span class="ow">or</span>\
+         <span class="n">network_link</span><span class="o">.</span><span class="n">end_software_switch</span> <span class="ow">is</span> <span class="n">switch</span><span class="p">:</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">network_link</span><span class="o">.</span><span class="n">start_port</span>
+        <span class="k">if</span> <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port2internal_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port2internal_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+    <span class="c"># Remove associated access links</span>
+    <span class="k">for</span> <span class="n">access_link</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">access_links</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch</span> <span class="ow">is</span> <span class="n">switch</span><span class="p">:</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch_port</span>
+        <span class="n">interface</span> <span class="o">=</span> <span class="n">access_link</span><span class="o">.</span><span class="n">interface</span>
+        <span class="n">host</span> <span class="o">=</span> <span class="n">access_link</span><span class="o">.</span><span class="n">host</span>
+        <span class="k">if</span> <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port2access_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">interface</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">interface2access_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">[</span><span class="n">interface</span><span class="p">]</span>
+        <span class="c"># Remove dangling hosts, if any</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">host</span><span class="o">.</span><span class="n">interfaces</span><span class="p">:</span>
+          <span class="k">if</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">interface2access_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="k">break</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span><span class="p">[</span><span class="n">host</span><span class="o">.</span><span class="n">hid</span><span class="p">]</span>
+    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">[</span><span class="n">switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Topology.create_host"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.create_host">[docs]</a>  <span class="k">def</span> <span class="nf">create_host</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ingress_switch_or_switches</span><span class="p">,</span> <span class="n">mac_or_macs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">ip_or_ips</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                <span class="n">get_switch_port</span><span class="o">=</span><span class="n">get_switchs_host_port</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Create a host, register it in the topology, and wire it to the given switch(es) &#39;&#39;&#39;</span>
+    <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">access_links</span><span class="p">)</span> <span class="o">=</span> <span class="n">create_host</span><span class="p">(</span><span class="n">ingress_switch_or_switches</span><span class="p">,</span> <span class="n">mac_or_macs</span><span class="p">,</span>
+                                      <span class="n">ip_or_ips</span><span class="p">,</span> <span class="n">get_switch_port</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span><span class="p">[</span><span class="n">host</span><span class="o">.</span><span class="n">hid</span><span class="p">]</span> <span class="o">=</span> <span class="n">host</span>
+    <span class="k">for</span> <span class="n">access_link</span> <span class="ow">in</span> <span class="n">access_links</span><span class="p">:</span>
+      <span class="n">interface</span> <span class="o">=</span> <span class="n">access_link</span><span class="o">.</span><span class="n">interface</span>
+      <span class="n">port</span> <span class="o">=</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch_port</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span> <span class="o">=</span> <span class="n">access_link</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">[</span><span class="n">interface</span><span class="p">]</span> <span class="o">=</span> <span class="n">access_link</span>
+    <span class="k">return</span> <span class="n">host</span>
+</div>
+<div class="viewcode-block" id="Topology.remove_host"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.remove_host">[docs]</a>  <span class="k">def</span> <span class="nf">remove_host</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Remove a host and all associated access links &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">host</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="k">return</span>
+    <span class="c"># Remove associated access links</span>
+    <span class="k">for</span> <span class="n">access_link</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">access_links</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">access_link</span><span class="o">.</span><span class="n">host</span> <span class="ow">is</span> <span class="n">host</span><span class="p">:</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch_port</span>
+        <span class="n">interface</span> <span class="o">=</span> <span class="n">access_link</span><span class="o">.</span><span class="n">interface</span>
+        <span class="k">if</span> <span class="n">port</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port2access_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port2access_link</span><span class="p">[</span><span class="n">port</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">interface</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">interface2access_link</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+          <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">interface2access_link</span><span class="p">[</span><span class="n">interface</span><span class="p">]</span>
+    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span><span class="p">[</span><span class="n">host</span><span class="o">.</span><span class="n">hid</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Topology.get_switch"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.get_switch">[docs]</a>  <span class="k">def</span> <span class="nf">get_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">dpid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;unknown dpid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">dpid</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">[</span><span class="n">dpid</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="Topology.get_host"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.get_host">[docs]</a>  <span class="k">def</span> <span class="nf">get_host</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hid</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">hid</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;unknown hid </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">hid</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span><span class="p">[</span><span class="n">hid</span><span class="p">]</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.live_switches"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.live_switches">[docs]</a>  <span class="k">def</span> <span class="nf">live_switches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return the software_switchs which are currently up &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">failed_switches</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.live_edge_switches"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.live_edge_switches">[docs]</a>  <span class="k">def</span> <span class="nf">live_edge_switches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Return the software_switchs which are currently up and can connect to</span>
+<span class="sd">    hosts</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">edge_switches</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">sw</span><span class="p">:</span> <span class="n">sw</span><span class="o">.</span><span class="n">can_connect_to_endhosts</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">edge_switches</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">failed_switches</span>
+</div>
+<div class="viewcode-block" id="Topology.ok_to_send"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.ok_to_send">[docs]</a>  <span class="k">def</span> <span class="nf">ok_to_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dp_event</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return True if it is ok to send the dp_event arg &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port_connected</span><span class="p">(</span><span class="n">dp_event</span><span class="o">.</span><span class="n">port</span><span class="p">):</span>
+      <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="p">(</span><span class="n">next_hop</span><span class="p">,</span> <span class="n">next_port</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_connected_port</span><span class="p">(</span><span class="n">dp_event</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span>
+                                                    <span class="n">dp_event</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">dp_event</span><span class="o">.</span><span class="n">node</span><span class="p">)</span> <span class="o">==</span> <span class="n">Host</span> <span class="ow">or</span> <span class="nb">type</span><span class="p">(</span><span class="n">next_hop</span><span class="p">)</span> <span class="o">==</span> <span class="n">Host</span><span class="p">:</span>
+      <span class="c"># TODO(cs): model access link failures</span>
+      <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">link</span> <span class="o">=</span> <span class="n">Link</span><span class="p">(</span><span class="n">dp_event</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="n">dp_event</span><span class="o">.</span><span class="n">port</span><span class="p">,</span> <span class="n">next_hop</span><span class="p">,</span> <span class="n">next_port</span><span class="p">)</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">link</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cut_links</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">True</span>
+      <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="Topology.crash_switch"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.crash_switch">[docs]</a>  <span class="k">def</span> <span class="nf">crash_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">software_switch</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Crashing software_switch </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">software_switch</span><span class="p">))</span>
+    <span class="n">software_switch</span><span class="o">.</span><span class="n">fail</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">failed_switches</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">software_switch</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Topology.recover_switch"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.recover_switch">[docs]</a>  <span class="k">def</span> <span class="nf">recover_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">software_switch</span><span class="p">,</span> <span class="n">down_controller_ids</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Rebooting software_switch </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">software_switch</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">down_controller_ids</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">down_controller_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">software_switch</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">failed_switches</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;Switch </span><span class="si">%s</span><span class="s"> not currently down. (Currently down: </span><span class="si">%s</span><span class="s">)&quot;</span> <span class="o">%</span>
+                         <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">software_switch</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">failed_switches</span><span class="p">)))</span>
+    <span class="n">connected_to_at_least_one</span> <span class="o">=</span> <span class="n">software_switch</span>\
+                                 <span class="o">.</span><span class="n">recover</span><span class="p">(</span><span class="n">down_controller_ids</span><span class="o">=</span><span class="n">down_controller_ids</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">connected_to_at_least_one</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">failed_switches</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">software_switch</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">connected_to_at_least_one</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.live_links"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.live_links">[docs]</a>  <span class="k">def</span> <span class="nf">live_links</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">live_links</span>
+</div>
+<div class="viewcode-block" id="Topology.sever_link"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.sever_link">[docs]</a>  <span class="k">def</span> <span class="nf">sever_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">sever_link</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Topology.repair_link"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.repair_link">[docs]</a>  <span class="k">def</span> <span class="nf">repair_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">repair_link</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Topology.create_access_link"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.create_access_link">[docs]</a>  <span class="k">def</span> <span class="nf">create_access_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">switch</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">create_access_link</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">,</span> <span class="n">switch</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Topology.remove_access_link"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.remove_access_link">[docs]</a>  <span class="k">def</span> <span class="nf">remove_access_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">switch</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">remove_access_link</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">switch</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Topology.create_network_link"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.create_network_link">[docs]</a>  <span class="k">def</span> <span class="nf">create_network_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_switch</span><span class="p">,</span> <span class="n">from_port</span><span class="p">,</span> <span class="n">to_switch</span><span class="p">,</span> <span class="n">to_port</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">create_network_link</span><span class="p">(</span><span class="n">from_switch</span><span class="p">,</span> <span class="n">from_port</span><span class="p">,</span> <span class="n">to_switch</span><span class="p">,</span> <span class="n">to_port</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Topology.remove_network_link"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.remove_network_link">[docs]</a>  <span class="k">def</span> <span class="nf">remove_network_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">from_switch</span><span class="p">,</span> <span class="n">to_switch</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">remove_network_link</span><span class="p">(</span><span class="n">from_switch</span><span class="p">,</span> <span class="n">to_switch</span><span class="p">)</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.blocked_controller_connections"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.blocked_controller_connections">[docs]</a>  <span class="k">def</span> <span class="nf">blocked_controller_connections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">connection</span> <span class="ow">in</span> <span class="n">switch</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">connection</span><span class="o">.</span><span class="n">io_worker</span><span class="o">.</span><span class="n">currently_blocked</span><span class="p">:</span>
+          <span class="k">yield</span> <span class="p">(</span><span class="n">switch</span><span class="p">,</span> <span class="n">connection</span><span class="p">)</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Topology.unblocked_controller_connections"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.unblocked_controller_connections">[docs]</a>  <span class="k">def</span> <span class="nf">unblocked_controller_connections</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">connection</span> <span class="ow">in</span> <span class="n">switch</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">connection</span><span class="o">.</span><span class="n">io_worker</span><span class="o">.</span><span class="n">currently_blocked</span><span class="p">:</span>
+          <span class="k">yield</span> <span class="p">(</span><span class="n">switch</span><span class="p">,</span> <span class="n">connection</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Topology.block_connection"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.block_connection">[docs]</a>  <span class="k">def</span> <span class="nf">block_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Blocking connection </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">connection</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">connection</span><span class="o">.</span><span class="n">io_worker</span><span class="o">.</span><span class="n">block</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Topology.unblock_connection"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.unblock_connection">[docs]</a>  <span class="k">def</span> <span class="nf">unblock_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">connection</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event</span><span class="p">(</span><span class="s">&quot;Unblocking connection </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">connection</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">connection</span><span class="o">.</span><span class="n">io_worker</span><span class="o">.</span><span class="n">unblock</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Topology.connect_to_controllers"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.connect_to_controllers">[docs]</a>  <span class="k">def</span> <span class="nf">connect_to_controllers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controller_info_list</span><span class="p">,</span> <span class="n">create_connection</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Bind sockets from the software_switchs to the controllers. For now, assign each</span>
+<span class="sd">    switch to the next controller in the list in a round robin fashion.</span>
+
+<span class="sd">    Controller info list is a list of ControllerConfig tuples</span>
+<span class="sd">        - create_io_worker is a factory method for creating IOWorker objects.</span>
+<span class="sd">          Takes a socket as a parameter</span>
+<span class="sd">        - create_connection is a factory method for creating Connection objects</span>
+<span class="sd">          which are connected to controllers. Takes a ControllerConfig object</span>
+<span class="sd">          as a parameter</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">controller_info_cycler</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="n">controller_info_list</span><span class="p">)</span>
+    <span class="n">connections_per_switch</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">controller_info_list</span><span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;&#39;&#39;Connecting </span><span class="si">%d</span><span class="s"> switches to </span><span class="si">%d</span><span class="s"> controllers (setting up </span><span class="si">%d</span><span class="s">&#39;&#39;&#39;</span>
+              <span class="sd">&#39;&#39;&#39; conns per switch)...&#39;&#39;&#39;</span> <span class="o">%</span>
+              <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">controller_info_list</span><span class="p">),</span> <span class="n">connections_per_switch</span><span class="p">))</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">software_switch</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">):</span>
+      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">20</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">idx</span> <span class="o">%</span> <span class="mi">250</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Connecting switch </span><span class="si">%d</span><span class="s"> / </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">switches</span><span class="p">)))</span>
+
+      <span class="c"># Socket from the software_switch to the controller</span>
+      <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">connections_per_switch</span><span class="p">):</span>
+        <span class="n">controller_info</span> <span class="o">=</span> <span class="n">controller_info_cycler</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="n">software_switch</span><span class="o">.</span><span class="n">add_controller_info</span><span class="p">(</span><span class="n">controller_info</span><span class="p">)</span>
+
+      <span class="n">software_switch</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">create_connection</span><span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Controller connections done&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Topology.migrate_host"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.migrate_host">[docs]</a>  <span class="k">def</span> <span class="nf">migrate_host</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old_ingress_dpid</span><span class="p">,</span> <span class="n">old_ingress_portno</span><span class="p">,</span>
+                   <span class="n">new_ingress_dpid</span><span class="p">,</span> <span class="n">new_ingress_portno</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">migrate_host</span><span class="p">(</span><span class="n">old_ingress_dpid</span><span class="p">,</span> <span class="n">old_ingress_portno</span><span class="p">,</span>
+                                   <span class="n">new_ingress_dpid</span><span class="p">,</span> <span class="n">new_ingress_portno</span><span class="p">)</span>
+</div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="Topology.populate_from_topology"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.populate_from_topology">[docs]</a>  <span class="k">def</span> <span class="nf">populate_from_topology</span><span class="p">(</span><span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Take a pox.lib.graph.graph.Graph and generate arguments needed for the</span>
+<span class="sd">    simulator</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="n">Topology</span><span class="p">()</span>
+    <span class="n">topology</span><span class="o">.</span><span class="n">hosts</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">is_a</span><span class="o">=</span><span class="n">Host</span><span class="p">)</span>
+    <span class="c"># TODO(cs): broken: can&#39;t set attribute</span>
+    <span class="n">topology</span><span class="o">.</span><span class="n">switches</span> <span class="o">=</span> <span class="n">graph</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">is_a</span><span class="o">=</span><span class="n">SoftwareSwitch</span><span class="p">)</span>
+    <span class="n">topology</span><span class="o">.</span><span class="n">access_links</span> <span class="o">=</span> <span class="p">[</span><span class="n">AccessLink</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">switch</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">switch</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">switch</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+                              <span class="k">for</span> <span class="n">host</span> <span class="ow">in</span> <span class="n">topology</span><span class="o">.</span><span class="n">hosts</span>
+                              <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="nb">filter</span><span class="p">(</span>
+                                  <span class="k">lambda</span> <span class="n">n</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">n</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">SoftwareSwitch</span><span class="p">),</span>
+                                  <span class="n">graph</span><span class="o">.</span><span class="n">ports_for_node</span><span class="p">(</span><span class="n">host</span><span class="p">)</span><span class="o">.</span><span class="n">iteritems</span><span class="p">())]</span>
+    <span class="k">return</span> <span class="n">topology</span>
+</div>
+<div class="viewcode-block" id="Topology.reset"><a class="viewcode-back" href="../../sts.html#sts.topology.Topology.reset">[docs]</a>  <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Reset topology without new controllers &#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">failed_switches</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">dpid2switch</span> <span class="o">=</span> <span class="p">{}</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port2access_link</span> <span class="o">=</span> <span class="p">{}</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">interface2access_link</span> <span class="o">=</span> <span class="p">{}</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span><span class="o">.</span><span class="n">port2internal_link</span> <span class="o">=</span> <span class="p">{}</span>
+</div></div>
+<div class="viewcode-block" id="MeshTopology"><a class="viewcode-back" href="../../sts.html#sts.topology.MeshTopology">[docs]</a><span class="k">class</span> <span class="nc">MeshTopology</span><span class="p">(</span><span class="n">Topology</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_switches</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">create_io_worker</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">netns_hosts</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">gui</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Populate the topology as a mesh of switches, connect the switches</span>
+<span class="sd">    to the controllers</span>
+
+<span class="sd">    Optional argument(s):</span>
+<span class="sd">      - num_switches. The total number of switches to include in the mesh</span>
+<span class="sd">      - netns_switches. Whether to create network namespace hosts instead of</span>
+<span class="sd">        normal hosts.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">Topology</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">create_io_worker</span><span class="o">=</span><span class="n">create_io_worker</span><span class="p">,</span> <span class="n">gui</span><span class="o">=</span><span class="n">gui</span><span class="p">)</span>
+
+    <span class="c"># Every switch has a link to every other switch + 1 host,</span>
+    <span class="c"># for N*(N-1)+N = N^2 total ports</span>
+    <span class="n">ports_per_switch</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_switches</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c"># Initialize switches</span>
+    <span class="n">switches</span> <span class="o">=</span> <span class="p">[</span> <span class="n">create_switch</span><span class="p">(</span><span class="n">switch_id</span><span class="p">,</span> <span class="n">ports_per_switch</span><span class="p">)</span>
+                  <span class="k">for</span> <span class="n">switch_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_switches</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_populate_dpid2switch</span><span class="p">(</span><span class="n">switches</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">netns_hosts</span><span class="p">:</span>
+      <span class="n">host_access_link_pairs</span> <span class="o">=</span> <span class="p">[</span> <span class="n">create_netns_host</span><span class="p">(</span><span class="n">create_io_worker</span><span class="p">,</span> <span class="n">switch</span><span class="p">)</span>
+                                 <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span> <span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">host_access_link_pairs</span> <span class="o">=</span> <span class="p">[</span> <span class="n">create_host</span><span class="p">(</span><span class="n">switch</span><span class="p">)</span> <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">switches</span> <span class="p">]</span>
+    <span class="n">access_link_list_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">host</span><span class="p">,</span> <span class="n">access_link_list</span> <span class="ow">in</span> <span class="n">host_access_link_pairs</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span><span class="p">[</span><span class="n">host</span><span class="o">.</span><span class="n">hid</span><span class="p">]</span> <span class="o">=</span> <span class="n">host</span>
+      <span class="n">access_link_list_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">access_link_list</span><span class="p">)</span>
+
+    <span class="c"># this is python&#39;s .flatten:</span>
+    <span class="n">access_links</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="o">.</span><span class="n">from_iterable</span><span class="p">(</span><span class="n">access_link_list_list</span><span class="p">))</span>
+
+    <span class="c"># grab a fully meshed patch panel to wire up these guys</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span> <span class="o">=</span> <span class="n">MeshTopology</span><span class="o">.</span><span class="n">FullyMeshedLinks</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">,</span> <span class="n">access_links</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">get_connected_port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gui</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">gui</span><span class="o">.</span><span class="n">launch</span><span class="p">()</span>
+
+<div class="viewcode-block" id="MeshTopology.FullyMeshedLinks"><a class="viewcode-back" href="../../sts.html#sts.topology.MeshTopology.FullyMeshedLinks">[docs]</a>  <span class="k">class</span> <span class="nc">FullyMeshedLinks</span><span class="p">(</span><span class="n">LinkTracker</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    A factory method (inner class) for creating a fully meshed network.</span>
+<span class="sd">    Connects every pair of switches. Ports are in ascending order of</span>
+<span class="sd">    the dpid of connected switch, while skipping the self-connections.</span>
+<span class="sd">    I.e., for (dpid, portno):</span>
+<span class="sd">        (0, 0) &lt;-&gt; (1,0)</span>
+<span class="sd">        (2, 1) &lt;-&gt; (1,1)</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid2switch</span><span class="p">,</span> <span class="n">access_links</span><span class="o">=</span><span class="p">[]):</span>
+      <span class="n">port2access_link</span> <span class="o">=</span> <span class="p">{</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch_port</span><span class="p">:</span> <span class="n">access_link</span>
+                           <span class="k">for</span> <span class="n">access_link</span> <span class="ow">in</span> <span class="n">access_links</span> <span class="p">}</span>
+      <span class="n">interface2access_link</span> <span class="o">=</span> <span class="p">{</span> <span class="n">access_link</span><span class="o">.</span><span class="n">interface</span><span class="p">:</span> <span class="n">access_link</span>
+                                <span class="k">for</span> <span class="n">access_link</span> <span class="ow">in</span> <span class="n">access_links</span> <span class="p">}</span>
+
+      <span class="n">switches</span> <span class="o">=</span> <span class="n">dpid2switch</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+      <span class="c"># Access links to hosts are already claimed, all other internal links</span>
+      <span class="c"># are not yet claimed</span>
+      <span class="n">switch2unclaimed_ports</span> <span class="o">=</span> <span class="p">{</span> <span class="n">switch</span> <span class="p">:</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">port2access_link</span><span class="p">,</span>
+                                                 <span class="n">switch</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+                                 <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="n">switches</span> <span class="p">}</span>
+      <span class="n">port2internal_link</span> <span class="o">=</span> <span class="p">{}</span>
+      <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">switch_i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">switches</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">switch_j</span> <span class="ow">in</span> <span class="n">switches</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">:]:</span>
+          <span class="n">switch_i_port</span> <span class="o">=</span> <span class="n">switch2unclaimed_ports</span><span class="p">[</span><span class="n">switch_i</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+          <span class="n">switch_j_port</span> <span class="o">=</span> <span class="n">switch2unclaimed_ports</span><span class="p">[</span><span class="n">switch_j</span><span class="p">]</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+          <span class="n">link_i2j</span> <span class="o">=</span> <span class="n">Link</span><span class="p">(</span><span class="n">switch_i</span><span class="p">,</span> <span class="n">switch_i_port</span><span class="p">,</span> <span class="n">switch_j</span><span class="p">,</span> <span class="n">switch_j_port</span><span class="p">)</span>
+          <span class="n">link_j2i</span> <span class="o">=</span> <span class="n">link_i2j</span><span class="o">.</span><span class="n">reversed_link</span><span class="p">()</span>
+          <span class="n">port2internal_link</span><span class="p">[</span><span class="n">switch_i_port</span><span class="p">]</span> <span class="o">=</span> <span class="n">link_i2j</span>
+          <span class="n">port2internal_link</span><span class="p">[</span><span class="n">switch_j_port</span><span class="p">]</span> <span class="o">=</span> <span class="n">link_j2i</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">port2internal_link</span> <span class="o">=</span> <span class="n">port2internal_link</span>
+
+      <span class="n">LinkTracker</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid2switch</span><span class="p">,</span> <span class="n">port2access_link</span><span class="p">,</span>
+                           <span class="n">interface2access_link</span><span class="p">,</span> <span class="n">port2internal_link</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="FatTree"><a class="viewcode-back" href="../../sts.html#sts.topology.FatTree">[docs]</a><span class="k">class</span> <span class="nc">FatTree</span> <span class="p">(</span><span class="n">Topology</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Construct a FatTree topology with a given number of pods &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_pods</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">create_io_worker</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">gui</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">num_pods</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="s">&quot;Can&#39;t handle Fat Trees with less than 2 pods&quot;</span>
+    <span class="n">Topology</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">create_io_worker</span><span class="o">=</span><span class="n">create_io_worker</span><span class="p">,</span> <span class="n">gui</span><span class="o">=</span><span class="n">gui</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cores</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">aggs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">edges</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">construct_tree</span><span class="p">(</span><span class="n">num_pods</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gui</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">gui</span><span class="o">.</span><span class="n">launch</span><span class="p">()</span>
+
+<div class="viewcode-block" id="FatTree.construct_tree"><a class="viewcode-back" href="../../sts.html#sts.topology.FatTree.construct_tree">[docs]</a>  <span class="k">def</span> <span class="nf">construct_tree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_pods</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    According to  &quot;A Scalable, Commodity Data Center Network Architecture&quot;,</span>
+<span class="sd">    k = number of ports per switch = number of pods</span>
+<span class="sd">    number core switches =  (k/2)^2</span>
+<span class="sd">    number of edge switches per pod = k / 2</span>
+<span class="sd">    number of agg switches per pod = k / 2</span>
+<span class="sd">    number of hosts attached to each edge switch = k / 2</span>
+<span class="sd">    number of hosts per pod = (k/2)^2</span>
+<span class="sd">    total number of hosts  = k^3 / 4</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Constructing fat tree with </span><span class="si">%d</span><span class="s"> pods&quot;</span> <span class="o">%</span> <span class="n">num_pods</span><span class="p">)</span>
+
+    <span class="c"># self == store these numbers for later</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ports_per_switch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_pods</span> <span class="o">=</span> <span class="n">num_pods</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hosts_per_pod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_core</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">edge_per_pod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">agg_per_pod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts_per_edge</span> <span class="o">=</span> <span class="n">k</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">total_hosts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts_per_pod</span> <span class="o">*</span> <span class="n">num_pods</span>
+
+    <span class="n">access_links</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">network_links</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="n">current_pod_id</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="c"># zero is not a valid dpid -- (first dpid is 0+1)</span>
+    <span class="n">current_dpid</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c"># We construct it from bottom up, starting at host &lt;-&gt; edge</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total_hosts</span><span class="p">):</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">1000</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Host </span><span class="si">%d</span><span class="s"> / </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_hosts</span><span class="p">))</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts_per_pod</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">current_pod_id</span> <span class="o">+=</span> <span class="mi">1</span>
+
+      <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts_per_edge</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">current_dpid</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">edge_switch</span> <span class="o">=</span> <span class="n">create_switch</span><span class="p">(</span><span class="n">current_dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ports_per_switch</span><span class="p">)</span>
+        <span class="n">edge_switch</span><span class="o">.</span><span class="n">pod_id</span> <span class="o">=</span> <span class="n">current_pod_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">edge_switch</span><span class="p">)</span>
+
+      <span class="n">edge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+      <span class="c"># edge ports 1 through (k/2) are dedicated to hosts, and (k/2)+1 through</span>
+      <span class="c"># k are for agg</span>
+      <span class="n">edge_port_no</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">hosts_per_edge</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+      <span class="c"># We give it a portland pseudo mac, just for giggles</span>
+      <span class="c"># Slightly modified from portland (no vmid, assume 8 bit pod id):</span>
+      <span class="c"># 00:00:00:&lt;pod&gt;:&lt;position&gt;:&lt;port&gt;</span>
+      <span class="c"># position and pod are 0-indexed, port is 1-indexed</span>
+      <span class="n">position</span> <span class="o">=</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_per_pod</span>
+      <span class="n">edge</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="n">position</span>
+      <span class="n">portland_mac</span> <span class="o">=</span> <span class="n">EthAddr</span><span class="p">(</span><span class="s">&quot;00:00:00:</span><span class="si">%02x</span><span class="s">:</span><span class="si">%02x</span><span class="s">:</span><span class="si">%02x</span><span class="s">&quot;</span> <span class="o">%</span>
+                             <span class="p">(</span><span class="n">current_pod_id</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">edge_port_no</span><span class="p">))</span>
+      <span class="c"># Uhh, unfortunately, OpenFlow 1.0 doesn&#39;t support prefix matching on MAC</span>
+      <span class="c"># addresses. So we do prefix matching on IP addresses, which yields</span>
+      <span class="c"># exactly the same # of flow entries for HSA, right?</span>
+      <span class="n">portland_ip_addr</span> <span class="o">=</span> <span class="n">IPAddr</span><span class="p">(</span><span class="s">&quot;123.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span>
+                                <span class="p">(</span><span class="n">current_pod_id</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">edge_port_no</span><span class="p">))</span>
+      <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">host_access_links</span><span class="p">)</span> <span class="o">=</span> <span class="n">create_host</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">portland_mac</span><span class="p">,</span> <span class="n">portland_ip_addr</span><span class="p">,</span>
+                                              <span class="k">lambda</span> <span class="n">switch</span><span class="p">:</span> <span class="n">switch</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">edge_port_no</span><span class="p">])</span>
+      <span class="n">host</span><span class="o">.</span><span class="n">pod_id</span> <span class="o">=</span> <span class="n">current_pod_id</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hid2host</span><span class="p">[</span><span class="n">host</span><span class="o">.</span><span class="n">hid</span><span class="p">]</span> <span class="o">=</span> <span class="n">host</span>
+      <span class="n">access_links</span> <span class="o">=</span> <span class="n">access_links</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">host_access_links</span><span class="p">))</span>
+
+    <span class="c"># Now edge &lt;-&gt; agg</span>
+    <span class="k">for</span> <span class="n">pod_id</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_pods</span><span class="p">):</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">pod_id</span> <span class="o">%</span> <span class="mi">10</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;edge&lt;-&gt;agg for pod </span><span class="si">%d</span><span class="s"> / </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pod_id</span><span class="p">,</span> <span class="n">num_pods</span><span class="p">))</span>
+      <span class="n">current_aggs</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span>  <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">agg_per_pod</span><span class="p">):</span>
+        <span class="n">current_dpid</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">agg</span> <span class="o">=</span> <span class="n">create_switch</span><span class="p">(</span><span class="n">current_dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ports_per_switch</span><span class="p">,</span>
+                            <span class="n">can_connect_to_endhosts</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">agg</span><span class="o">.</span><span class="n">pod_id</span> <span class="o">=</span> <span class="n">pod_id</span>
+        <span class="n">current_aggs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">agg</span><span class="p">)</span>
+
+      <span class="n">current_edges</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">[</span><span class="n">pod_id</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_per_pod</span> <span class="p">:</span> \
+                                <span class="p">(</span><span class="n">pod_id</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_per_pod</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">edge_per_pod</span><span class="p">]</span>
+      <span class="c"># edge ports (k/2)+1 through k connect to aggs</span>
+      <span class="c"># agg port k+1 connects to edge switch k in the pod</span>
+      <span class="n">current_agg_port_no</span> <span class="o">=</span> <span class="mi">1</span>
+      <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="n">current_edges</span><span class="p">:</span>
+        <span class="n">current_edge_port_no</span> <span class="o">=</span> <span class="p">(</span><span class="n">k</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span>
+        <span class="k">for</span> <span class="n">agg</span> <span class="ow">in</span> <span class="n">current_aggs</span><span class="p">:</span>
+          <span class="n">network_links</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Link</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">current_edge_port_no</span><span class="p">],</span>
+                                      <span class="n">agg</span><span class="p">,</span> <span class="n">agg</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">current_agg_port_no</span><span class="p">]))</span>
+          <span class="n">network_links</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Link</span><span class="p">(</span><span class="n">agg</span><span class="p">,</span> <span class="n">agg</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">current_agg_port_no</span><span class="p">],</span>
+                                      <span class="n">edge</span><span class="p">,</span> <span class="n">edge</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">current_edge_port_no</span><span class="p">]))</span>
+          <span class="n">current_edge_port_no</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">current_agg_port_no</span> <span class="o">+=</span> <span class="mi">1</span>
+
+      <span class="bp">self</span><span class="o">.</span><span class="n">aggs</span> <span class="o">+=</span> <span class="n">current_aggs</span>
+
+    <span class="c"># Finally, agg &lt;-&gt; core</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total_core</span><span class="p">):</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">100</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;agg&lt;-&gt;core </span><span class="si">%d</span><span class="s"> / </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_core</span><span class="p">))</span>
+      <span class="n">current_dpid</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">create_switch</span><span class="p">(</span><span class="n">current_dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ports_per_switch</span><span class="p">,</span>
+                                      <span class="n">can_connect_to_endhosts</span><span class="o">=</span><span class="bp">False</span><span class="p">))</span>
+
+    <span class="n">core_cycler</span> <span class="o">=</span> <span class="n">itertools</span><span class="o">.</span><span class="n">cycle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">agg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">aggs</span><span class="p">:</span>
+      <span class="c"># agg ports (k/2)+1 through k connect to cores</span>
+      <span class="c"># core port i+1 connects to pod i</span>
+      <span class="k">for</span> <span class="n">agg_port_no</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">k</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">core</span> <span class="o">=</span> <span class="n">core_cycler</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+        <span class="n">core_port_no</span> <span class="o">=</span> <span class="n">agg</span><span class="o">.</span><span class="n">pod_id</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">network_links</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Link</span><span class="p">(</span><span class="n">agg</span><span class="p">,</span> <span class="n">agg</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">agg_port_no</span><span class="p">],</span> <span class="n">core</span><span class="p">,</span>
+                                    <span class="n">core</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">core_port_no</span><span class="p">]))</span>
+        <span class="n">network_links</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">Link</span><span class="p">(</span><span class="n">core</span><span class="p">,</span> <span class="n">core</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">core_port_no</span><span class="p">],</span> <span class="n">agg</span><span class="p">,</span>
+                                    <span class="n">agg</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="n">agg_port_no</span><span class="p">]))</span>
+
+    <span class="n">switches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">aggs</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_populate_dpid2switch</span><span class="p">(</span><span class="n">switches</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">wire_tree</span><span class="p">(</span><span class="n">access_links</span><span class="p">,</span> <span class="n">network_links</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_sanity_check_tree</span><span class="p">(</span><span class="n">access_links</span><span class="p">,</span> <span class="n">network_links</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&#39;&#39;&#39;Fat tree construction: done (</span><span class="si">%d</span><span class="s"> cores, </span><span class="si">%d</span><span class="s"> aggs,&#39;&#39;&#39;</span>
+              <span class="sd">&#39;&#39;&#39;%d edges, %d hosts)&#39;&#39;&#39;</span> <span class="o">%</span>
+              <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">aggs</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hosts</span><span class="p">)))</span>
+</div>
+<div class="viewcode-block" id="FatTree.wire_tree"><a class="viewcode-back" href="../../sts.html#sts.topology.FatTree.wire_tree">[docs]</a>  <span class="k">def</span> <span class="nf">wire_tree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">access_links</span><span class="p">,</span> <span class="n">network_links</span><span class="p">):</span>
+    <span class="c"># Auxiliary data to make get_connected_port efficient</span>
+    <span class="n">port2internal_link</span> <span class="o">=</span> <span class="p">{</span> <span class="n">link</span><span class="o">.</span><span class="n">start_port</span><span class="p">:</span> <span class="n">link</span>
+                           <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="n">network_links</span> <span class="p">}</span>
+    <span class="n">port2access_link</span> <span class="o">=</span> <span class="p">{</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch_port</span><span class="p">:</span> <span class="n">access_link</span>
+                         <span class="k">for</span> <span class="n">access_link</span> <span class="ow">in</span> <span class="n">access_links</span> <span class="p">}</span>
+    <span class="n">interface2access_link</span> <span class="o">=</span> <span class="p">{</span> <span class="n">access_link</span><span class="o">.</span><span class="n">interface</span><span class="p">:</span> <span class="n">access_link</span>
+                              <span class="k">for</span> <span class="n">access_link</span> <span class="ow">in</span> <span class="n">access_links</span> <span class="p">}</span>
+
+    <span class="n">link_tracker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">FatTreeLinks</span><span class="p">(</span><span class="n">port2access_link</span><span class="p">,</span> <span class="n">interface2access_link</span><span class="p">,</span>
+                                     <span class="n">port2internal_link</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dpid2switch</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">get_connected_port</span> <span class="o">=</span> <span class="n">link_tracker</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">link_tracker</span> <span class="o">=</span> <span class="n">link_tracker</span>
+</div>
+  <span class="k">def</span> <span class="nf">_sanity_check_tree</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">access_links</span><span class="p">,</span> <span class="n">network_links</span><span class="p">):</span>
+    <span class="c"># TODO(cs): this should be in a unit test, not here</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">access_links</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_hosts</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;incorrect # of access links (</span><span class="si">%d</span><span class="s">, s/b </span><span class="si">%d</span><span class="s">)&quot;</span> <span class="o">%</span> \
+                          <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">access_links</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">total_hosts</span><span class="p">)))</span>
+
+    <span class="c"># k = number of ports per switch = number of pods</span>
+    <span class="c"># number core switches =  (k/2)^2</span>
+    <span class="c"># number of edge switches per pod = k / 2</span>
+    <span class="c"># number of agg switches per pod = k / 2</span>
+    <span class="n">total_switches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_core</span> <span class="o">+</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">edge_per_pod</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">agg_per_pod</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">)</span>
+    <span class="c"># uni-directional links (on in both directions):</span>
+    <span class="n">total_network_links</span> <span class="o">=</span> <span class="p">(</span><span class="n">total_switches</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">total_hosts</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">network_links</span><span class="p">)</span> <span class="o">!=</span> <span class="n">total_network_links</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;incorrect # of internal links (</span><span class="si">%d</span><span class="s">, s/b </span><span class="si">%d</span><span class="s">)&quot;</span> <span class="o">%</span> \
+                          <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">network_links</span><span class="p">),</span><span class="n">total_network_links</span><span class="p">))</span>
+
+<div class="viewcode-block" id="FatTree.install_default_routes"><a class="viewcode-back" href="../../sts.html#sts.topology.FatTree.install_default_routes">[docs]</a>  <span class="k">def</span> <span class="nf">install_default_routes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Install static routes as proposed in Section 3 of</span>
+<span class="sd">    &quot;A Scalable, Commodity Data Center Network Architecture&quot;.</span>
+<span class="sd">    This is really a strawman routing scheme. PORTLAND, et. al. are much better</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="FatTree.install_portland_routes"><a class="viewcode-back" href="../../sts.html#sts.topology.FatTree.install_portland_routes">[docs]</a>  <span class="k">def</span> <span class="nf">install_portland_routes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    We use a modified version of PORTLAND. We make two changes: OpenFlow 1.0</span>
+<span class="sd">    doesn&#39;t support prefix matching on MAC addresses, so we use IP addresses</span>
+<span class="sd">    instead. (same # of flow entries, and we don&#39;t model flooding anyway)</span>
+<span class="sd">    Second, we ignore vmid and assume 8 bit pod ids. So, IPs are of the form:</span>
+<span class="sd">    123.pod.position.port</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">k</span>
+
+    <span class="k">for</span> <span class="n">core</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cores</span><span class="p">:</span>
+      <span class="c"># When forwarding a packet, the core switch simply inspects the bits</span>
+      <span class="c"># corresponding to the pod number in the PMAC destination address to</span>
+      <span class="c"># determine the appropriate output port.</span>
+      <span class="k">for</span> <span class="n">port_no</span> <span class="ow">in</span> <span class="n">core</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="c"># port_no i+1 corresponds to pod i</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">ofp_match</span><span class="p">(</span><span class="n">nw_dst</span><span class="o">=</span><span class="s">&quot;123.</span><span class="si">%d</span><span class="s">.0.0/16&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">port_no</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="n">flow_mod</span> <span class="o">=</span> <span class="n">ofp_flow_mod</span><span class="p">(</span><span class="n">match</span><span class="o">=</span><span class="n">match</span><span class="p">,</span> <span class="n">actions</span><span class="o">=</span><span class="p">[</span><span class="n">ofp_action_output</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">port_no</span><span class="p">)])</span>
+        <span class="n">core</span><span class="o">.</span><span class="n">_receive_flow_mod</span><span class="p">(</span><span class="n">flow_mod</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">agg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">aggs</span><span class="p">:</span>
+      <span class="c"># Aggregation switches must determine whether a packet is destined for a host</span>
+      <span class="c"># in the same or different pod by inspecting the PMAC. If in the same pod,</span>
+      <span class="c"># the packet must be forwarded to an output port corresponding to the position</span>
+      <span class="c"># entry in the PMAC. If in a different pod, the packet may be forwarded along</span>
+      <span class="c"># any of the aggregation switch&#39;s links to the core layer in the fault-free case.</span>
+      <span class="n">pod_id</span> <span class="o">=</span> <span class="n">agg</span><span class="o">.</span><span class="n">pod_id</span>
+      <span class="k">for</span> <span class="n">port_no</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">k</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c"># ports 1 through k/2 are connected to edge switches 0 through k/2-1</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="n">port_no</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">ofp_match</span><span class="p">(</span><span class="n">nw_dst</span><span class="o">=</span><span class="s">&quot;123.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">.0/24&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pod_id</span><span class="p">,</span> <span class="n">position</span><span class="p">))</span>
+        <span class="n">flow_mod</span> <span class="o">=</span> <span class="n">ofp_flow_mod</span><span class="p">(</span><span class="n">match</span><span class="o">=</span><span class="n">match</span><span class="p">,</span> <span class="n">actions</span><span class="o">=</span><span class="p">[</span><span class="n">ofp_action_output</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">port_no</span><span class="p">)])</span>
+        <span class="n">agg</span><span class="o">.</span><span class="n">_receive_flow_mod</span><span class="p">(</span><span class="n">flow_mod</span><span class="p">)</span>
+
+      <span class="c"># We model load balancing to uplinks as a single flow entry -- h/w supports</span>
+      <span class="c"># ecmp efficiently while only requiring a single TCAM entry</span>
+      <span class="n">match</span> <span class="o">=</span> <span class="n">ofp_match</span><span class="p">(</span><span class="n">nw_dst</span><span class="o">=</span><span class="s">&quot;123.0.0.0/8&quot;</span><span class="p">)</span>
+      <span class="c"># Forward to the right-most uplink</span>
+      <span class="n">flow_mod</span> <span class="o">=</span> <span class="n">ofp_flow_mod</span><span class="p">(</span><span class="n">match</span><span class="o">=</span><span class="n">match</span><span class="p">,</span> <span class="n">actions</span><span class="o">=</span><span class="p">[</span><span class="n">ofp_action_output</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">k</span><span class="p">)])</span>
+      <span class="n">agg</span><span class="o">.</span><span class="n">_receive_flow_mod</span><span class="p">(</span><span class="n">flow_mod</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">edge</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">edges</span><span class="p">:</span>
+      <span class="c"># if a connected host, deliver to host. Else, ECMP over uplinks</span>
+      <span class="n">pod_id</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">pod_id</span>
+      <span class="n">position</span> <span class="o">=</span> <span class="n">edge</span><span class="o">.</span><span class="n">position</span>
+      <span class="k">for</span> <span class="n">port_no</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">k</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+        <span class="c"># Route down to the host</span>
+        <span class="n">match</span> <span class="o">=</span> <span class="n">ofp_match</span><span class="p">(</span><span class="n">nw_dst</span><span class="o">=</span><span class="s">&quot;123.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">.</span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pod_id</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">port_no</span><span class="p">))</span>
+        <span class="n">flow_mod</span> <span class="o">=</span> <span class="n">ofp_flow_mod</span><span class="p">(</span><span class="n">match</span><span class="o">=</span><span class="n">match</span><span class="p">,</span> <span class="n">actions</span><span class="o">=</span><span class="p">[</span><span class="n">ofp_action_output</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">port_no</span><span class="p">)])</span>
+        <span class="n">edge</span><span class="o">.</span><span class="n">_receive_flow_mod</span><span class="p">(</span><span class="n">flow_mod</span><span class="p">)</span>
+
+      <span class="c"># We model load balancing to uplinks as a single flow entry --</span>
+      <span class="c"># h/w supports ecmp efficiently while only requiring a single TCAM entry</span>
+      <span class="n">match</span> <span class="o">=</span> <span class="n">ofp_match</span><span class="p">(</span><span class="n">nw_dst</span><span class="o">=</span><span class="s">&quot;123.0.0.0/8&quot;</span><span class="p">)</span>
+      <span class="c"># Forward to the right-most uplink</span>
+      <span class="n">flow_mod</span> <span class="o">=</span> <span class="n">ofp_flow_mod</span><span class="p">(</span><span class="n">match</span><span class="o">=</span><span class="n">match</span><span class="p">,</span> <span class="n">actions</span><span class="o">=</span><span class="p">[</span><span class="n">ofp_action_output</span><span class="p">(</span><span class="n">port</span><span class="o">=</span><span class="n">k</span><span class="p">)])</span>
+      <span class="n">edge</span><span class="o">.</span><span class="n">_receive_flow_mod</span><span class="p">(</span><span class="n">flow_mod</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="FatTree.FatTreeLinks"><a class="viewcode-back" href="../../sts.html#sts.topology.FatTree.FatTreeLinks">[docs]</a>  <span class="k">class</span> <span class="nc">FatTreeLinks</span><span class="p">(</span><span class="n">LinkTracker</span><span class="p">):</span>
+    <span class="c"># TODO(cs): perhaps we should not use inheritance here, since it is</span>
+    <span class="c"># essentially entirely trivial. Alternatively, we could just have an</span>
+    <span class="c"># overloaded constructor in the LinkTracker class?</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">port2access_link</span><span class="p">,</span> <span class="n">interface2access_link</span><span class="p">,</span> <span class="n">port2internal_link</span><span class="p">,</span> <span class="n">dpid2switch</span><span class="p">):</span>
+      <span class="n">LinkTracker</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid2switch</span><span class="p">,</span> <span class="n">port2access_link</span><span class="p">,</span>
+                           <span class="n">interface2access_link</span><span class="p">,</span> <span class="n">port2internal_link</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

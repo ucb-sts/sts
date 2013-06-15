@@ -1,0 +1,324 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.control_flow.event_scheduler &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.control_flow.event_scheduler</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+
+<span class="kn">from</span> <span class="nn">sts.replay_event</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+<span class="kn">import</span> <span class="nn">operator</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;event_scheduler&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="format_time"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.format_time">[docs]</a><span class="k">def</span> <span class="nf">format_time</span><span class="p">(</span><span class="n">time</span><span class="p">):</span>
+  <span class="n">mins</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">/</span><span class="mi">60</span><span class="p">)</span>
+  <span class="n">secs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span> <span class="o">%</span> <span class="mi">60</span><span class="p">)</span>
+  <span class="n">ms</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span> <span class="p">(</span><span class="n">time</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">%</span> <span class="mi">1000</span><span class="p">)</span>
+  <span class="k">return</span> <span class="s">&quot;</span><span class="si">%02d</span><span class="s">:</span><span class="si">%02d</span><span class="s">.</span><span class="si">%03d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">mins</span><span class="p">,</span> <span class="n">secs</span><span class="p">,</span> <span class="n">ms</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EventSchedulerStats"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventSchedulerStats">[docs]</a><span class="k">class</span> <span class="nc">EventSchedulerStats</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">event2matched</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">event2timeouts</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_start</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">record_start</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="EventSchedulerStats.start_replay"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventSchedulerStats.start_replay">[docs]</a>  <span class="k">def</span> <span class="nf">start_replay</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">replay_start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">record_start</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="EventSchedulerStats.time"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventSchedulerStats.time">[docs]</a>  <span class="k">def</span> <span class="nf">time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">format_time</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">replay_start</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; &quot;</span> <span class="o">+</span> \
+           <span class="n">format_time</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">record_start</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EventSchedulerStats.event_matched"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventSchedulerStats.event_matched">[docs]</a>  <span class="k">def</span> <span class="nf">event_matched</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event_success</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="n">event</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; Successfully matched event &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">event</span><span class="p">))</span>
+    <span class="c"># TODO(cs): maybe want more info than just class name? (e.g. fingerprint)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">event2matched</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="EventSchedulerStats.event_timed_out"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventSchedulerStats.event_timed_out">[docs]</a>  <span class="k">def</span> <span class="nf">event_timed_out</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">event_timeout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="n">event</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot; Event timed out &quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">event</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">event2timeouts</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+</div>
+<div class="viewcode-block" id="EventSchedulerStats.sorted_match_counts"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventSchedulerStats.sorted_match_counts">[docs]</a>  <span class="k">def</span> <span class="nf">sorted_match_counts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">event2matched</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
+                           <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">)):</span>
+      <span class="k">yield</span> <span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EventSchedulerStats.sorted_timeout_counts"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventSchedulerStats.sorted_timeout_counts">[docs]</a>  <span class="k">def</span> <span class="nf">sorted_timeout_counts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">event2timeouts</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
+                           <span class="n">key</span><span class="o">=</span><span class="n">operator</span><span class="o">.</span><span class="n">itemgetter</span><span class="p">(</span><span class="mi">1</span><span class="p">)):</span>
+      <span class="k">yield</span> <span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">count</span><span class="p">,)</span>
+</div>
+  <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">total_matched</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">event2matched</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">total_timeouts</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">event2timeouts</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Events matched: </span><span class="si">%d</span><span class="s">, timed out: </span><span class="si">%d</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">total_matched</span><span class="p">,</span>
+                                                      <span class="n">total_timeouts</span><span class="p">))</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Matches per event type:</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_match_counts</span><span class="p">():</span>
+      <span class="n">s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;  </span><span class="si">%s</span><span class="s"> </span><span class="si">%d</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">count</span><span class="p">,))</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;Timeouts per event type:</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">count</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">sorted_timeout_counts</span><span class="p">():</span>
+      <span class="n">s</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;  </span><span class="si">%s</span><span class="s"> </span><span class="si">%d</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">count</span><span class="p">,))</span>
+    <span class="k">return</span> <span class="s">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EventSchedulerBase"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventSchedulerBase">[docs]</a><span class="k">class</span> <span class="nc">EventSchedulerBase</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="EventSchedulerBase.set_input_logger"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventSchedulerBase.set_input_logger">[docs]</a>  <span class="k">def</span> <span class="nf">set_input_logger</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_logger</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span> <span class="o">=</span> <span class="n">input_logger</span>
+</div>
+  <span class="k">def</span> <span class="nf">_log_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span><span class="o">.</span><span class="n">log_input_event</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DumbEventScheduler"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.DumbEventScheduler">[docs]</a><span class="k">class</span> <span class="nc">DumbEventScheduler</span><span class="p">(</span><span class="n">EventSchedulerBase</span><span class="p">):</span>
+
+  <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s">&#39;epsilon_seconds&#39;</span><span class="p">,</span> <span class="s">&#39;sleep_interval_seconds&#39;</span><span class="p">])</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">,</span> <span class="n">epsilon_seconds</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">sleep_interval_seconds</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">DumbEventScheduler</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span> <span class="o">=</span> <span class="n">simulation</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_seconds</span> <span class="o">=</span> <span class="n">epsilon_seconds</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sleep_interval_seconds</span> <span class="o">=</span> <span class="n">sleep_interval_seconds</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">last_event</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">stats</span> <span class="o">=</span> <span class="n">EventSchedulerStats</span><span class="p">()</span>
+
+<div class="viewcode-block" id="DumbEventScheduler.schedule"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.DumbEventScheduler.schedule">[docs]</a>  <span class="k">def</span> <span class="nf">schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_event</span><span class="p">:</span>
+      <span class="n">rec_delta</span> <span class="o">=</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_event</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">())</span>
+      <span class="k">if</span> <span class="n">rec_delta</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Sleeping for </span><span class="si">%.0f</span><span class="s"> ms before next event&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">rec_delta</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">io_master</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">rec_delta</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">start_replay</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Waiting for </span><span class="si">%s</span><span class="s"> (maximum wait time: </span><span class="si">%.0f</span><span class="s"> ms)&quot;</span> <span class="o">%</span>
+          <span class="p">(</span> <span class="nb">str</span><span class="p">(</span><span class="n">event</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_seconds</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">)</span>
+
+    <span class="n">proceed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+      <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+      <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">proceed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="p">):</span>
+        <span class="n">proceed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">break</span>
+      <span class="k">elif</span> <span class="n">now</span> <span class="o">&gt;</span> <span class="n">end</span><span class="p">:</span>
+        <span class="k">break</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">io_master</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sleep_interval_seconds</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">proceed</span><span class="p">:</span>
+      <span class="n">event</span><span class="o">.</span><span class="n">timed_out</span> <span class="o">=</span> <span class="bp">False</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">event_matches</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">event</span><span class="o">.</span><span class="n">timed_out</span> <span class="o">=</span> <span class="bp">True</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">event_timed_out</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="n">event</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="n">SyncTime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">last_event</span> <span class="o">=</span> <span class="n">event</span>
+</div></div>
+<div class="viewcode-block" id="EventScheduler"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventScheduler">[docs]</a><span class="k">class</span> <span class="nc">EventScheduler</span><span class="p">(</span><span class="n">EventSchedulerBase</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;an EventWatchers schedules events. It controls their admission, and</span>
+<span class="sd">  any post-event delay &#39;&#39;&#39;</span>
+
+  <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s">&#39;speedup&#39;</span><span class="p">,</span> <span class="s">&#39;delay_input_events&#39;</span><span class="p">,</span> <span class="s">&#39;initial_wait&#39;</span><span class="p">,</span>
+                <span class="s">&#39;epsilon_seconds&#39;</span><span class="p">,</span> <span class="s">&#39;sleep_interval_seconds&#39;</span><span class="p">])</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">,</span> <span class="n">speedup</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+               <span class="n">delay_input_events</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">initial_wait</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">epsilon_seconds</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+               <span class="n">sleep_interval_seconds</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">EventScheduler</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span> <span class="o">=</span> <span class="n">simulation</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">speedup</span> <span class="o">=</span> <span class="n">speedup</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">delay_input_events</span> <span class="o">=</span> <span class="n">delay_input_events</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">last_real_time</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">last_rec_time</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">initial_wait</span> <span class="o">=</span> <span class="n">initial_wait</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_seconds</span> <span class="o">=</span> <span class="n">epsilon_seconds</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sleep_interval_seconds</span> <span class="o">=</span> <span class="n">sleep_interval_seconds</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">started</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">stats</span> <span class="o">=</span> <span class="n">EventSchedulerStats</span><span class="p">()</span>
+
+<div class="viewcode-block" id="EventScheduler.schedule"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventScheduler.schedule">[docs]</a>  <span class="k">def</span> <span class="nf">schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">started</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">start_replay</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">started</span> <span class="o">=</span> <span class="bp">True</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">InputEvent</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">inject_input</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">InternalEvent</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">wait_for_internal</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">update_event_time</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EventScheduler.inject_input"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventScheduler.inject_input">[docs]</a>  <span class="k">def</span> <span class="nf">inject_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">delay_input_events</span><span class="p">:</span>
+      <span class="n">wait_time_seconds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wait_time</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">wait_time_seconds</span> <span class="o">&gt;</span> <span class="mf">0.01</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Delaying input_event </span><span class="si">%s</span><span class="s"> for </span><span class="si">%.0f</span><span class="s"> ms&quot;</span> <span class="o">%</span>
+            <span class="p">(</span> <span class="nb">str</span><span class="p">(</span><span class="n">event</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)</span> <span class="p">,</span> <span class="p">(</span><span class="n">wait_time_seconds</span><span class="p">)</span> <span class="o">*</span> <span class="mi">1000</span> <span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">io_master</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">wait_time_seconds</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Injecting </span><span class="si">%r</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+    <span class="c"># TODO(cs): AFACT, this is essentially a dummy variable? Since event.time</span>
+    <span class="c"># is in the past... Andi, can you verify this?</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_poll_event</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="EventScheduler.wait_for_internal"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventScheduler.wait_for_internal">[docs]</a>  <span class="k">def</span> <span class="nf">wait_for_internal</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="n">wait_time_seconds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wait_time</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="c"># TODO(cs): why - 0.01?</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">wait_time_seconds</span> <span class="o">-</span> <span class="mf">0.01</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_seconds</span>
+    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">timeout_disallowed</span><span class="p">:</span>
+      <span class="c"># Reaallllly far in the future</span>
+      <span class="n">end</span> <span class="o">=</span> <span class="mi">30000000000</span> <span class="c"># Fri, 30 Aug 2920 05:20:00 GMT</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Waiting for </span><span class="si">%s</span><span class="s"> forever&quot;</span> <span class="o">%</span>
+                <span class="p">(</span> <span class="nb">repr</span><span class="p">(</span><span class="n">event</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Waiting for </span><span class="si">%s</span><span class="s"> (maximum wait time: </span><span class="si">%.0f</span><span class="s"> ms)&quot;</span> <span class="o">%</span>
+            <span class="p">(</span> <span class="nb">repr</span><span class="p">(</span><span class="n">event</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="s">&quot;&quot;</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon_seconds</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_poll_event</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+</div>
+  <span class="k">def</span> <span class="nf">_poll_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">end_time</span><span class="p">):</span>
+    <span class="n">proceed</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+      <span class="n">now</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+      <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">proceed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="p">):</span>
+        <span class="n">proceed</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">break</span>
+      <span class="k">elif</span> <span class="n">now</span> <span class="o">&gt;</span> <span class="n">end_time</span><span class="p">:</span>
+        <span class="k">break</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">io_master</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sleep_interval_seconds</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">proceed</span><span class="p">:</span>
+      <span class="n">event</span><span class="o">.</span><span class="n">timed_out</span> <span class="o">=</span> <span class="bp">False</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">event_matched</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">update_event_time</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">event</span><span class="o">.</span><span class="n">timed_out</span> <span class="o">=</span> <span class="bp">True</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">stats</span><span class="o">.</span><span class="n">event_timed_out</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="n">event</span><span class="o">.</span><span class="n">time</span> <span class="o">=</span> <span class="n">SyncTime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+
+<div class="viewcode-block" id="EventScheduler.update_event_time"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventScheduler.update_event_time">[docs]</a>  <span class="k">def</span> <span class="nf">update_event_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; update our bearing on where we currently our in the timeline &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">last_real_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">last_rec_time</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">time</span>
+</div>
+<div class="viewcode-block" id="EventScheduler.wait_time"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.event_scheduler.EventScheduler.wait_time">[docs]</a>  <span class="k">def</span> <span class="nf">wait_time</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; returns how long to wait in seconds for an event to occur or be injected. &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_real_time</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">initial_wait</span>
+
+    <span class="n">rec_delta</span> <span class="o">=</span> <span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">time</span><span class="o">.</span><span class="n">as_float</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_rec_time</span><span class="o">.</span><span class="n">as_float</span><span class="p">())</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">speedup</span>
+    <span class="n">real_delta</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_real_time</span>
+
+    <span class="n">to_wait</span> <span class="o">=</span> <span class="n">rec_delta</span> <span class="o">-</span> <span class="n">real_delta</span>
+    <span class="k">if</span> <span class="n">to_wait</span> <span class="o">&gt;</span> <span class="mi">10000</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;to_wait </span><span class="si">%d</span><span class="s"> ms is way too big for event </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>
+                         <span class="p">(</span><span class="n">to_wait</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">event</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">to_wait</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

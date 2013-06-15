@@ -1,0 +1,303 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tests.unit.sts.control_flow_test &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for tests.unit.sts.control_flow_test</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">import</span> <span class="nn">types</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+
+<span class="kn">from</span> <span class="nn">config.experiment_config_lib</span> <span class="kn">import</span> <span class="n">ControllerConfig</span>
+<span class="kn">from</span> <span class="nn">sts.control_flow</span> <span class="kn">import</span> <span class="n">Replayer</span><span class="p">,</span> <span class="n">MCSFinder</span><span class="p">,</span> <span class="n">EfficientMCSFinder</span>
+<span class="kn">from</span> <span class="nn">sts.topology</span> <span class="kn">import</span> <span class="n">FatTree</span><span class="p">,</span> <span class="n">BufferedPatchPanel</span><span class="p">,</span> <span class="n">MeshTopology</span>
+<span class="kn">from</span> <span class="nn">sts.simulation_state</span> <span class="kn">import</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">SimulationConfig</span>
+<span class="kn">from</span> <span class="nn">sts.replay_event</span> <span class="kn">import</span> <span class="n">Event</span><span class="p">,</span> <span class="n">InternalEvent</span><span class="p">,</span> <span class="n">InputEvent</span>
+<span class="kn">from</span> <span class="nn">sts.event_dag</span> <span class="kn">import</span> <span class="n">EventDag</span>
+<span class="kn">from</span> <span class="nn">sts.entities</span> <span class="kn">import</span> <span class="n">Host</span><span class="p">,</span> <span class="n">Controller</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;/../../..&quot;</span><span class="p">)</span>
+
+<span class="n">_running_simulation</span> <span class="o">=</span> <span class="bp">None</span>
+<div class="viewcode-block" id="handle_int"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.handle_int">[docs]</a><span class="k">def</span> <span class="nf">handle_int</span><span class="p">(</span><span class="n">sigspec</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+  <span class="k">print</span> <span class="o">&gt;&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Caught signal </span><span class="si">%d</span><span class="s">, stopping sdndebug&quot;</span> <span class="o">%</span> <span class="n">sigspec</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">_running_simulation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span>
+      <span class="n">_running_simulation</span><span class="o">.</span><span class="n">current_simulation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">):</span>
+    <span class="n">_running_simulation</span><span class="o">.</span><span class="n">current_simulation</span><span class="o">.</span><span class="n">clean_up</span><span class="p">()</span>
+  <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;terminating on signal </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sigspec</span><span class="p">)</span>
+</div>
+<span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">handle_int</span><span class="p">)</span>
+<span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">handle_int</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ReplayerTest"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest">[docs]</a><span class="k">class</span> <span class="nc">ReplayerTest</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+  <span class="n">tmp_basic_superlog</span> <span class="o">=</span> <span class="s">&#39;/tmp/superlog_basic.tmp&#39;</span>
+  <span class="n">tmp_controller_superlog</span> <span class="o">=</span> <span class="s">&#39;/tmp/superlog_controller.tmp&#39;</span>
+  <span class="n">tmp_dataplane_superlog</span> <span class="o">=</span> <span class="s">&#39;/tmp/superlog_dataplane.tmp&#39;</span>
+  <span class="n">tmp_migration_superlog</span> <span class="o">=</span> <span class="s">&#39;/tmp/superlog_migration.tmp&#39;</span>
+
+  <span class="c"># ------------------------------------------ #</span>
+  <span class="c">#        Basic Test                          #</span>
+  <span class="c"># ------------------------------------------ #</span>
+
+<div class="viewcode-block" id="ReplayerTest.write_simple_superlog"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.write_simple_superlog">[docs]</a>  <span class="k">def</span> <span class="nf">write_simple_superlog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Make sure to delete afterwards! &#39;&#39;&#39;</span>
+    <span class="n">superlog</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_basic_superlog</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">e1</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [&quot;e2&quot;], &quot;start_dpid&quot;: 8, &quot;class&quot;: &quot;LinkFailure&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;start_port_no&quot;: 3, &quot;end_dpid&quot;: 15, &quot;end_port_no&quot;: 2,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;label&quot;: &quot;e1&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e1</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">e2</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [], &quot;start_dpid&quot;: 8, &quot;class&quot;: &quot;LinkRecovery&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;start_port_no&quot;: 3, &quot;end_dpid&quot;: 15, &quot;end_port_no&quot;: 2, &quot;label&quot;: &quot;e2&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e2</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">e3</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [&quot;e4&quot;], &quot;dpid&quot;: 8, &quot;class&quot;: &quot;SwitchFailure&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;label&quot;: &quot;e3&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e3</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">e4</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [], &quot;dpid&quot;: 8, &quot;class&quot;: &quot;SwitchRecovery&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;label&quot;: &quot;e4&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e4</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.setup_simple_simulation"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.setup_simple_simulation">[docs]</a>  <span class="k">def</span> <span class="nf">setup_simple_simulation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">controllers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">topology_class</span> <span class="o">=</span> <span class="n">FatTree</span>
+    <span class="n">topology_params</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="n">patch_panel_class</span> <span class="o">=</span> <span class="n">BufferedPatchPanel</span>
+    <span class="n">sim</span> <span class="o">=</span> <span class="n">SimulationConfig</span><span class="p">(</span><span class="n">controllers</span><span class="p">,</span> <span class="n">topology_class</span><span class="p">,</span> <span class="n">topology_params</span><span class="p">,</span> <span class="n">patch_panel_class</span><span class="p">)</span>
+    <span class="k">global</span> <span class="n">_running_simulation</span>
+    <span class="n">_running_simulation</span> <span class="o">=</span> <span class="n">sim</span>
+    <span class="k">return</span> <span class="n">sim</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.test_basic"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.test_basic">[docs]</a>  <span class="k">def</span> <span class="nf">test_basic</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">simulation</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">write_simple_superlog</span><span class="p">()</span>
+      <span class="n">simulation_cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setup_simple_simulation</span><span class="p">()</span>
+      <span class="n">replayer</span> <span class="o">=</span> <span class="n">Replayer</span><span class="p">(</span><span class="n">simulation_cfg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmp_basic_superlog</span><span class="p">)</span>
+      <span class="n">simulation</span> <span class="o">=</span> <span class="n">replayer</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_basic_superlog</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">simulation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">simulation</span><span class="o">.</span><span class="n">clean_up</span><span class="p">()</span>
+
+  <span class="c"># ------------------------------------------ #</span>
+  <span class="c">#        Controller Crash Test               #</span>
+  <span class="c"># ------------------------------------------ #</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.write_controller_crash_superlog"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.write_controller_crash_superlog">[docs]</a>  <span class="k">def</span> <span class="nf">write_controller_crash_superlog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">superlog</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_controller_superlog</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">e1</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [&quot;e2&quot;], &quot;controller_id&quot;: &quot;c1&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;class&quot;: &quot;ControllerFailure&quot;, &quot;label&quot;: &quot;e1&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e1</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">e2</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [], &quot;controller_id&quot;: &quot;c1&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;class&quot;: &quot;ControllerRecovery&quot;, &quot;label&quot;: &quot;e2&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e2</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.setup_controller_simulation"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.setup_controller_simulation">[docs]</a>  <span class="k">def</span> <span class="nf">setup_controller_simulation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">start_cmd</span> <span class="o">=</span> <span class="s">&quot;./pox.py --verbose --no-cli sts.syncproto.pox_syncer --blocking=False openflow.of_01 --address=__address__ --port=__port__&quot;</span>
+    <span class="n">controllers</span> <span class="o">=</span> <span class="p">[</span><span class="n">ControllerConfig</span><span class="p">(</span><span class="n">cwd</span><span class="o">=</span><span class="s">&#39;pox&#39;</span><span class="p">,</span> <span class="n">start_cmd</span><span class="o">=</span><span class="n">start_cmd</span><span class="p">,</span> <span class="n">address</span><span class="o">=</span><span class="s">&quot;127.0.0.1&quot;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">8899</span><span class="p">,</span> <span class="n">sync</span><span class="o">=</span><span class="s">&quot;tcp:localhost:18899&quot;</span><span class="p">)]</span>
+    <span class="n">topology_class</span> <span class="o">=</span> <span class="n">MeshTopology</span>
+    <span class="n">topology_params</span> <span class="o">=</span> <span class="s">&quot;num_switches=2&quot;</span>
+    <span class="n">patch_panel_class</span> <span class="o">=</span> <span class="n">BufferedPatchPanel</span>
+    <span class="k">return</span> <span class="n">SimulationConfig</span><span class="p">(</span><span class="n">controllers</span><span class="p">,</span>
+                            <span class="n">topology_class</span><span class="p">,</span>
+                            <span class="n">topology_params</span><span class="p">,</span>
+                            <span class="n">patch_panel_class</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.test_controller_crash"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.test_controller_crash">[docs]</a>  <span class="k">def</span> <span class="nf">test_controller_crash</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">simulation</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">write_controller_crash_superlog</span><span class="p">()</span>
+      <span class="n">simulation_cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setup_controller_simulation</span><span class="p">()</span>
+      <span class="n">replayer</span> <span class="o">=</span> <span class="n">Replayer</span><span class="p">(</span><span class="n">simulation_cfg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmp_controller_superlog</span><span class="p">)</span>
+      <span class="n">simulation</span> <span class="o">=</span> <span class="n">replayer</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_controller_superlog</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">simulation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">simulation</span><span class="o">.</span><span class="n">clean_up</span><span class="p">()</span>
+
+  <span class="c"># ------------------------------------------ #</span>
+  <span class="c">#        Dataplane Trace Test                #</span>
+  <span class="c"># ------------------------------------------ #</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.write_dataplane_trace_superlog"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.write_dataplane_trace_superlog">[docs]</a>  <span class="k">def</span> <span class="nf">write_dataplane_trace_superlog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">superlog</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_dataplane_superlog</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">e1</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [],  &quot;class&quot;: &quot;TrafficInjection&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;label&quot;: &quot;e1&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e1</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">e2</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [],  &quot;class&quot;: &quot;TrafficInjection&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;label&quot;: &quot;e2&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e2</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.setup_dataplane_simulation"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.setup_dataplane_simulation">[docs]</a>  <span class="k">def</span> <span class="nf">setup_dataplane_simulation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">controllers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">topology_class</span> <span class="o">=</span> <span class="n">MeshTopology</span>
+    <span class="n">topology_params</span> <span class="o">=</span> <span class="s">&quot;num_switches=2&quot;</span>
+    <span class="n">patch_panel_class</span> <span class="o">=</span> <span class="n">BufferedPatchPanel</span>
+    <span class="n">dataplane_trace_path</span> <span class="o">=</span> <span class="s">&quot;./dataplane_traces/ping_pong_same_subnet.trace&quot;</span>
+    <span class="k">return</span> <span class="n">SimulationConfig</span><span class="p">(</span><span class="n">controllers</span><span class="p">,</span> <span class="n">topology_class</span><span class="p">,</span> <span class="n">topology_params</span><span class="p">,</span>
+                            <span class="n">patch_panel_class</span><span class="p">,</span> <span class="n">dataplane_trace</span><span class="o">=</span><span class="n">dataplane_trace_path</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.test_dataplane_injection"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.test_dataplane_injection">[docs]</a>  <span class="k">def</span> <span class="nf">test_dataplane_injection</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">simulation</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">write_dataplane_trace_superlog</span><span class="p">()</span>
+      <span class="n">simulation_cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setup_dataplane_simulation</span><span class="p">()</span>
+      <span class="n">replayer</span> <span class="o">=</span> <span class="n">Replayer</span><span class="p">(</span><span class="n">simulation_cfg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmp_dataplane_superlog</span><span class="p">)</span>
+      <span class="n">simulation</span> <span class="o">=</span> <span class="n">replayer</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_dataplane_superlog</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">simulation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">simulation</span><span class="o">.</span><span class="n">clean_up</span><span class="p">()</span>
+
+  <span class="c"># ------------------------------------------ #</span>
+  <span class="c">#        Host Migration Test                 #</span>
+  <span class="c"># ------------------------------------------ #</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.write_migration_superlog"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.write_migration_superlog">[docs]</a>  <span class="k">def</span> <span class="nf">write_migration_superlog</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">superlog</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_migration_superlog</span><span class="p">,</span> <span class="s">&#39;w&#39;</span><span class="p">)</span>
+    <span class="n">e1</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [&quot;e2&quot;], &quot;old_ingress_dpid&quot;: 7, &quot;class&quot;: &quot;HostMigration&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;old_ingress_port_no&quot;: 1, &quot;new_ingress_dpid&quot;: 8, &#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;new_ingress_port_no&quot;: 99, &quot;host_id&quot;: &quot;host1&quot;,&quot;label&quot;: &quot;e1&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e1</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">e2</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="s">&#39;&#39;&#39;{&quot;dependent_labels&quot;: [], &quot;old_ingress_dpid&quot;: 8, &quot;class&quot;: &quot;HostMigration&quot;,&#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;old_ingress_port_no&quot;: 99, &quot;new_ingress_dpid&quot;: 7, &#39;&#39;&#39;</span>
+             <span class="sd">&#39;&#39;&#39; &quot;new_ingress_port_no&quot;: 101, &quot;host_id&quot;: &quot;host1&quot;,&quot;label&quot;: &quot;e2&quot;, &quot;time&quot;: [0,0], &quot;round&quot;: 0}&#39;&#39;&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">e2</span> <span class="o">+</span> <span class="s">&#39;</span><span class="se">\n</span><span class="s">&#39;</span><span class="p">)</span>
+    <span class="n">superlog</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.setup_migration_simulation"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.setup_migration_simulation">[docs]</a>  <span class="k">def</span> <span class="nf">setup_migration_simulation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">controllers</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">topology_class</span> <span class="o">=</span> <span class="n">FatTree</span>
+    <span class="n">topology_params</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="n">patch_panel_class</span> <span class="o">=</span> <span class="n">BufferedPatchPanel</span>
+    <span class="k">return</span> <span class="n">SimulationConfig</span><span class="p">(</span><span class="n">controllers</span><span class="p">,</span> <span class="n">topology_class</span><span class="p">,</span> <span class="n">topology_params</span><span class="p">,</span>
+                            <span class="n">patch_panel_class</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ReplayerTest.test_migration"><a class="viewcode-back" href="../../../../tests.unit.sts.html#tests.unit.sts.control_flow_test.ReplayerTest.test_migration">[docs]</a>  <span class="k">def</span> <span class="nf">test_migration</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">simulation</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">write_migration_superlog</span><span class="p">()</span>
+      <span class="n">simulation_cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setup_migration_simulation</span><span class="p">()</span>
+      <span class="n">replayer</span> <span class="o">=</span> <span class="n">Replayer</span><span class="p">(</span><span class="n">simulation_cfg</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmp_migration_superlog</span><span class="p">)</span>
+      <span class="n">simulation</span> <span class="o">=</span> <span class="n">replayer</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+      <span class="n">latest_switch</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">get_switch</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span>
+      <span class="n">latest_port</span> <span class="o">=</span> <span class="n">latest_switch</span><span class="o">.</span><span class="n">ports</span><span class="p">[</span><span class="mi">101</span><span class="p">]</span>
+      <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">interface</span><span class="p">)</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">get_connected_port</span><span class="p">(</span><span class="n">latest_switch</span><span class="p">,</span>
+                                                                 <span class="n">latest_port</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">assertTrue</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">host</span><span class="p">)</span> <span class="o">==</span> <span class="n">Host</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmp_migration_superlog</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">simulation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">simulation</span><span class="o">.</span><span class="n">clean_up</span><span class="p">()</span>
+</div></div>
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s">&#39;__main__&#39;</span><span class="p">:</span>
+  <span class="n">unittest</span><span class="o">.</span><span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

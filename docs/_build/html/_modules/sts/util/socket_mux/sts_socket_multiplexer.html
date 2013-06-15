@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.util.socket_mux.sts_socket_multiplexer &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.util.socket_mux.sts_socket_multiplexer</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+
+<span class="kn">from</span> <span class="nn">base</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">count</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;sts_sock_mux&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="STSSocketDemultiplexer"><a class="viewcode-back" href="../../../../sts.util.socket_mux.html#sts.util.socket_mux.sts_socket_multiplexer.STSSocketDemultiplexer">[docs]</a><span class="k">class</span> <span class="nc">STSSocketDemultiplexer</span><span class="p">(</span><span class="n">SocketDemultiplexer</span><span class="p">):</span>
+  <span class="c"># All mock sockets have negative fileno()s, to differentiate them from</span>
+  <span class="c"># normal files</span>
+  <span class="c"># -1 is reserved for the listen socket</span>
+  <span class="n">_id_gen</span> <span class="o">=</span> <span class="n">count</span><span class="p">(</span><span class="n">start</span><span class="o">=-</span><span class="mi">2</span><span class="p">,</span> <span class="n">step</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">true_io_worker</span><span class="p">,</span> <span class="n">server_info</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">STSSocketDemultiplexer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">true_io_worker</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">server_info</span> <span class="o">=</span> <span class="n">server_info</span>
+    <span class="c"># let MockSockets know who their Demuxer is upon connect()</span>
+    <span class="n">STSMockSocket</span><span class="o">.</span><span class="n">address2demuxer</span><span class="p">[</span><span class="n">server_info</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+
+  <span class="k">def</span> <span class="nf">_on_receive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">worker</span><span class="p">,</span> <span class="n">json_hash</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">STSSocketDemultiplexer</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">_on_receive</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span> <span class="n">json_hash</span><span class="p">)</span>
+    <span class="k">assert</span><span class="p">(</span><span class="n">json_hash</span><span class="p">[</span><span class="s">&#39;type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;data&#39;</span> <span class="ow">and</span> <span class="s">&#39;data&#39;</span> <span class="ow">in</span> <span class="n">json_hash</span><span class="p">)</span>
+    <span class="n">sock_id</span> <span class="o">=</span> <span class="n">json_hash</span><span class="p">[</span><span class="s">&#39;id&#39;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">sock_id</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">id2socket</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown socket id </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sock_id</span><span class="p">)</span>
+    <span class="n">sock</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">id2socket</span><span class="p">[</span><span class="n">sock_id</span><span class="p">]</span>
+    <span class="n">raw_data</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">json_hash</span><span class="p">[</span><span class="s">&#39;data&#39;</span><span class="p">])</span>
+    <span class="n">sock</span><span class="o">.</span><span class="n">append_read</span><span class="p">(</span><span class="n">raw_data</span><span class="p">)</span>
+
+<div class="viewcode-block" id="STSSocketDemultiplexer.add_new_socket"><a class="viewcode-back" href="../../../../sts.util.socket_mux.html#sts.util.socket_mux.sts_socket_multiplexer.STSSocketDemultiplexer.add_new_socket">[docs]</a>  <span class="k">def</span> <span class="nf">add_new_socket</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_socket</span><span class="p">):</span>
+    <span class="n">sock_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_id_gen</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+    <span class="n">new_socket</span><span class="o">.</span><span class="n">sock_id</span> <span class="o">=</span> <span class="n">sock_id</span>
+    <span class="n">new_socket</span><span class="o">.</span><span class="n">json_worker</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">json_worker</span>
+    <span class="n">MultiplexedSelect</span><span class="o">.</span><span class="n">fileno2ready_to_read</span><span class="p">[</span><span class="n">sock_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_socket</span><span class="o">.</span><span class="n">ready_to_read</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">id2socket</span><span class="p">[</span><span class="n">sock_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_socket</span>
+</div></div>
+<div class="viewcode-block" id="STSMockSocket"><a class="viewcode-back" href="../../../../sts.util.socket_mux.html#sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket">[docs]</a><span class="k">class</span> <span class="nc">STSMockSocket</span><span class="p">(</span><span class="n">MockSocket</span><span class="p">):</span>
+  <span class="c"># Set by STSSocketDemuxers so we know who our demuxer is upon connect()</span>
+  <span class="n">address2demuxer</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="STSMockSocket.connect"><a class="viewcode-back" href="../../../../sts.util.socket_mux.html#sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket.connect">[docs]</a>  <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">address</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">address</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">address2demuxer</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;don&#39;t know our demuxer </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">address</span><span class="p">))</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">peer_address</span> <span class="o">=</span> <span class="n">address</span>
+    <span class="n">demuxer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">address2demuxer</span><span class="p">[</span><span class="n">address</span><span class="p">]</span>
+    <span class="n">demuxer</span><span class="o">.</span><span class="n">add_new_socket</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="c"># Send a SYN</span>
+    <span class="n">true_address</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">client_info</span>
+    <span class="n">wrapped</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;id&#39;</span> <span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">sock_id</span><span class="p">,</span> <span class="s">&#39;type&#39;</span> <span class="p">:</span> <span class="s">&#39;SYN&#39;</span><span class="p">,</span> <span class="s">&#39;address&#39;</span> <span class="p">:</span> <span class="n">true_address</span> <span class="p">}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">json_worker</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">wrapped</span><span class="p">)</span>
+    <span class="c"># Note: select() won&#39;t be called by STS with this socket as a param until</span>
+    <span class="c"># the switch receives a HELLO message. But for that to occur, we need the</span>
+    <span class="c"># controller to initiate the HELLO message in reaction to our connection</span>
+    <span class="c"># attempt. Therefore, we need to explicitly</span>
+    <span class="c"># cause the underlying socket to send here.</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">l</span> <span class="o">=</span> <span class="n">demuxer</span><span class="o">.</span><span class="n">true_io_worker</span><span class="o">.</span><span class="n">socket</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">demuxer</span><span class="o">.</span><span class="n">true_io_worker</span><span class="o">.</span><span class="n">send_buf</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">l</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">demuxer</span><span class="o">.</span><span class="n">true_io_worker</span><span class="o">.</span><span class="n">_consume_send_buf</span><span class="p">(</span><span class="n">l</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">socket</span><span class="o">.</span><span class="n">error</span> <span class="k">as</span> <span class="p">(</span><span class="n">s_errno</span><span class="p">,</span> <span class="n">strerror</span><span class="p">):</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s">&quot;Socket error: &quot;</span> <span class="o">+</span> <span class="n">strerror</span><span class="p">)</span>
+      <span class="k">raise</span>
+</div>
+<div class="viewcode-block" id="STSMockSocket.getpeername"><a class="viewcode-back" href="../../../../sts.util.socket_mux.html#sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket.getpeername">[docs]</a>  <span class="k">def</span> <span class="nf">getpeername</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">peer_address</span>
+
+<span class="c"># To monkey patch client side:</span>
+<span class="c">#  - After booting the controller,</span>
+<span class="c">#  - and after STSSyncProtocol&#39;s socket has been created (no more auxiliary</span>
+<span class="c">#    sockets remain to be instantiated)</span>
+<span class="c">#  - create a single real socket for each ControllerInfo</span>
+<span class="c">#  - connect them normally</span>
+<span class="c">#  - wrap them in MultiplexedSelect&#39;s io_worker</span>
+<span class="c">#  - create a STSSocketDemultiplexer for them</span>
+<span class="c">#  - override select.select with MultiplexedSelect (this will create a true</span>
+<span class="c">#    socket for the pinger)</span>
+<span class="c">#  - override socket.socket</span>
+<span class="c">#    - takes two params: protocol, socket type</span>
+<span class="c">#    - if not SOCK_STREAM type, return a normal socket</span>
+<span class="c">#    - else, return STSMockSocket</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

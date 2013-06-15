@@ -1,0 +1,738 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.headerspace.headerspace.hs &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.headerspace.headerspace.hs</h1><div class="highlight"><pre>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Created on Jan 24, 2011</span>
+
+<span class="sd">@author: peyman kazemian</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">ceil</span>
+<span class="kn">from</span> <span class="nn">operator</span> <span class="kn">import</span> <span class="n">xor</span>
+
+<div class="viewcode-block" id="byte_array_intersect"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_intersect">[docs]</a><span class="k">def</span> <span class="nf">byte_array_intersect</span><span class="p">(</span><span class="n">a1</span><span class="p">,</span> <span class="n">a2</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  a1 n a2.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a1</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">a2</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[]</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">a1</span><span class="p">)):</span>
+    <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&amp;</span> <span class="n">a2</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+  <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">b</span> <span class="o">&amp;</span> <span class="mh">0x03</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">b</span> <span class="o">&amp;</span> <span class="mh">0x0c</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">b</span> <span class="o">&amp;</span> <span class="mh">0x30</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">b</span> <span class="o">&amp;</span> <span class="mh">0xc0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+      <span class="k">return</span> <span class="p">[]</span>
+  <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="byte_array_complement"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_complement">[docs]</a><span class="k">def</span> <span class="nf">byte_array_complement</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  a&#39;</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x03</span> <span class="o">==</span> <span class="mh">0x01</span><span class="p">:</span>
+        <span class="n">all_x</span> <span class="o">=</span> <span class="n">byte_array_get_all_x</span><span class="p">(</span><span class="n">length</span><span class="p">)</span>
+        <span class="n">all_x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="mh">0xFE</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xff</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="mh">0xFF</span> <span class="o">&gt;&gt;</span> <span class="p">(</span><span class="mi">8</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="p">))</span> <span class="o">&amp;</span> <span class="mh">0xff</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">all_x</span><span class="p">)</span>
+      <span class="k">elif</span> <span class="p">(</span><span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x03</span> <span class="o">==</span> <span class="mh">0x02</span><span class="p">:</span>
+        <span class="n">all_x</span> <span class="o">=</span> <span class="n">byte_array_get_all_x</span><span class="p">(</span><span class="n">length</span><span class="p">)</span>
+        <span class="n">all_x</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="mh">0xFD</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xff</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="mh">0xFF</span> <span class="o">&gt;&gt;</span> <span class="p">(</span><span class="mi">8</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">j</span><span class="p">))</span> <span class="o">&amp;</span> <span class="mh">0xff</span><span class="p">)</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">all_x</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="byte_array_difference"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_difference">[docs]</a><span class="k">def</span> <span class="nf">byte_array_difference</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;&#39;</span>
+<span class="sd">  a - b = a n b&#39;</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">diff</span> <span class="o">=</span> <span class="p">[]</span>
+  <span class="n">b_complement</span> <span class="o">=</span> <span class="n">byte_array_complement</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+  <span class="k">for</span> <span class="n">b_array</span> <span class="ow">in</span> <span class="n">b_complement</span><span class="p">:</span>
+    <span class="n">isect</span> <span class="o">=</span> <span class="n">byte_array_intersect</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b_complement</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">isect</span> <span class="o">!=</span> <span class="p">[]:</span>
+      <span class="n">diff</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">isect</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">diff</span>
+</div>
+<div class="viewcode-block" id="byte_array_equal"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_equal">[docs]</a><span class="k">def</span> <span class="nf">byte_array_equal</span><span class="p">(</span><span class="n">a1</span><span class="p">,</span><span class="n">a2</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  checks if a1=a2.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">r</span> <span class="o">=</span> <span class="n">a1</span><span class="o">.</span><span class="n">__eq__</span><span class="p">(</span><span class="n">a2</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">r</span>
+</div>
+<div class="viewcode-block" id="byte_array_list_contained_in"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_list_contained_in">[docs]</a><span class="k">def</span> <span class="nf">byte_array_list_contained_in</span><span class="p">(</span><span class="n">list_a</span><span class="p">,</span><span class="n">list_b</span><span class="p">):</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="bp">True</span>
+  <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">list_a</span><span class="p">:</span>
+    <span class="n">this_result</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">list_b</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">byte_array_equal</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">):</span>
+        <span class="n">this_result</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="k">break</span>
+    <span class="k">if</span> <span class="n">this_result</span> <span class="o">==</span> <span class="bp">False</span><span class="p">:</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="bp">False</span>
+      <span class="k">break</span>
+  <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="byte_array_subset"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_subset">[docs]</a><span class="k">def</span> <span class="nf">byte_array_subset</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  checks if a is subset of b.</span>
+<span class="sd">  doesn&#39;t work if a is empty</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)):</span>
+    <span class="nb">cmp</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">^</span> <span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">cmp</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">cmp</span> <span class="o">&amp;</span> <span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">cmp</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="byte_array_and"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_and">[docs]</a><span class="k">def</span> <span class="nf">byte_array_and</span><span class="p">(</span><span class="n">b1</span><span class="p">,</span> <span class="n">b2</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  perform &#39;and&#39; operation when b1 and b2 can have wildcard bits</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">b_out</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b1</span><span class="p">)):</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="p">(</span><span class="n">b1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&amp;</span> <span class="n">b2</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0xaa</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">b1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">|</span> <span class="n">b2</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0x55</span><span class="p">)</span>
+    <span class="n">b_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">b_out</span>
+</div>
+<div class="viewcode-block" id="byte_array_or"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_or">[docs]</a><span class="k">def</span> <span class="nf">byte_array_or</span><span class="p">(</span><span class="n">b1</span><span class="p">,</span> <span class="n">b2</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  perform &#39;or&#39; operation when b1 and b2 can have wildcard bits</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">b_out</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b1</span><span class="p">)):</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="p">(</span><span class="n">b1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&amp;</span> <span class="n">b2</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&amp;</span> <span class="mh">0x55</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">b1</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">|</span> <span class="n">b2</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&amp;</span> <span class="mh">0xaa</span><span class="p">)</span>
+    <span class="n">b_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">b_out</span>
+</div>
+<div class="viewcode-block" id="byte_array_not"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_not">[docs]</a><span class="k">def</span> <span class="nf">byte_array_not</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  perform &#39;or&#39; operation when b1 and b2 can have wildcard bits</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">b_out</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)):</span>
+    <span class="n">tmp</span> <span class="o">=</span> <span class="p">((</span><span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xaa</span><span class="p">)</span> <span class="o">|</span> <span class="p">((</span><span class="n">b</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x55</span><span class="p">)</span>
+    <span class="n">b_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">);</span>
+  <span class="k">return</span> <span class="n">b_out</span>
+</div>
+<div class="viewcode-block" id="byte_array_to_hs_string"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_to_hs_string">[docs]</a><span class="k">def</span> <span class="nf">byte_array_to_hs_string</span><span class="p">(</span><span class="n">byte_array</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">byte_array</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="s">&quot;None&quot;</span>
+  <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+  <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">byte_array</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+      <span class="n">b_shift</span> <span class="o">=</span> <span class="n">b</span> <span class="o">&gt;&gt;</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+      <span class="n">next_bit</span> <span class="o">=</span> <span class="n">b_shift</span> <span class="o">&amp;</span> <span class="mh">0x03</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">next_bit</span> <span class="o">==</span> <span class="mh">0x01</span><span class="p">):</span>
+        <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;0&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+      <span class="k">elif</span> <span class="p">(</span><span class="n">next_bit</span> <span class="o">==</span> <span class="mh">0x02</span><span class="p">):</span>
+        <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;1&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+      <span class="k">elif</span> <span class="p">(</span><span class="n">next_bit</span> <span class="o">==</span> <span class="mh">0x03</span><span class="p">):</span>
+        <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;x&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;z&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+  <span class="k">return</span> <span class="nb">str</span>
+</div>
+<div class="viewcode-block" id="byte_has_no_x"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_has_no_x">[docs]</a><span class="k">def</span> <span class="nf">byte_has_no_x</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+    <span class="n">b_shift</span> <span class="o">=</span> <span class="n">b</span> <span class="o">&gt;&gt;</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">next_bit</span> <span class="o">=</span> <span class="n">b_shift</span> <span class="o">&amp;</span> <span class="mh">0x03</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">next_bit</span> <span class="o">==</span> <span class="mh">0x03</span> <span class="ow">or</span> <span class="n">next_bit</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+      <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="bytes_all_x"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.bytes_all_x">[docs]</a><span class="k">def</span> <span class="nf">bytes_all_x</span><span class="p">(</span><span class="nb">bytes</span><span class="p">):</span>
+  <span class="c"># A byte is 8 bits</span>
+  <span class="c"># HSA bytes only carries 4 bits of information though</span>
+  <span class="c"># So b &gt;&gt; 0  &amp; b&#39;11 is the right-most bit</span>
+  <span class="c">#    b &gt;&gt; 2  &amp; b&#39;11 is the second-from-right bit</span>
+  <span class="c"># 0 -&gt; b&#39;01 == 0x01</span>
+  <span class="c"># 1 -&gt; b&#39;10 == 0x02</span>
+  <span class="c"># x -&gt; b&#39;11 == 0x03</span>
+  <span class="c"># z -&gt; b&#39;00 == 0x00</span>
+  <span class="k">for</span> <span class="n">byte</span> <span class="ow">in</span> <span class="nb">bytes</span><span class="p">:</span>
+    <span class="c"># b&#39;11111111 == 0xFF</span>
+    <span class="k">if</span> <span class="n">byte</span> <span class="o">!=</span> <span class="mh">0xFF</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="byte_to_int"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_to_int">[docs]</a><span class="k">def</span> <span class="nf">byte_to_int</span><span class="p">(</span><span class="n">b</span><span class="p">):</span>
+  <span class="c"># Big endian</span>
+  <span class="c"># fill in bits of val from least-significant to most significant</span>
+  <span class="n">val</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+    <span class="c"># b &gt;&gt; 0 &amp; 0x03 is the right-most bit</span>
+    <span class="n">b_shift</span> <span class="o">=</span> <span class="n">b</span> <span class="o">&gt;&gt;</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">next_bit</span> <span class="o">=</span> <span class="n">b_shift</span> <span class="o">&amp;</span> <span class="mh">0x03</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">next_bit</span> <span class="o">==</span> <span class="mh">0x02</span><span class="p">):</span>
+      <span class="n">val</span> <span class="o">=</span> <span class="n">val</span> <span class="o">+</span> <span class="mi">2</span><span class="o">**</span><span class="n">i</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">next_bit</span> <span class="o">!=</span> <span class="mh">0x01</span><span class="p">):</span>
+      <span class="k">return</span> <span class="bp">None</span>
+  <span class="k">return</span> <span class="n">val</span>
+</div>
+<div class="viewcode-block" id="bytes_to_int"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.bytes_to_int">[docs]</a><span class="k">def</span> <span class="nf">bytes_to_int</span><span class="p">(</span><span class="nb">bytes</span><span class="p">):</span>
+  <span class="c"># Big endian</span>
+  <span class="c"># Fill in bytes of val from most-significant to least significant</span>
+  <span class="n">val</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="c"># bytes[0] is least significant, so we reverse</span>
+  <span class="k">for</span> <span class="n">byte</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="nb">bytes</span><span class="p">):</span>
+    <span class="c"># Each HSA byte contains 4 bits of information, not 8</span>
+    <span class="n">val</span> <span class="o">&lt;&lt;=</span> <span class="mi">4</span>
+    <span class="n">byte_val</span> <span class="o">=</span> <span class="n">byte_to_int</span><span class="p">(</span><span class="n">byte</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">byte_val</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">None</span>
+    <span class="n">val</span> <span class="o">+=</span> <span class="n">byte_val</span>
+  <span class="k">return</span> <span class="n">val</span>
+</div>
+<div class="viewcode-block" id="byte_array_to_pretty_hs_string"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_to_pretty_hs_string">[docs]</a><span class="k">def</span> <span class="nf">byte_array_to_pretty_hs_string</span><span class="p">(</span><span class="n">byte_array</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">byte_array</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="s">&quot;None&quot;</span>
+  <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+  <span class="n">ln</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">byte_array</span><span class="p">)</span>
+  <span class="n">cntr</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+  <span class="n">pretty_flag</span> <span class="o">=</span> <span class="bp">False</span>
+  <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">byte_array</span><span class="p">:</span>
+    <span class="n">cntr</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">cntr</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">cntr</span><span class="o">+</span><span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">):</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">byte_has_no_x</span><span class="p">(</span><span class="n">byte_array</span><span class="p">[</span><span class="n">cntr</span><span class="p">])</span> <span class="ow">and</span> <span class="n">byte_has_no_x</span><span class="p">(</span><span class="n">byte_array</span><span class="p">[</span><span class="n">cntr</span><span class="o">+</span><span class="mi">1</span><span class="p">])):</span>
+        <span class="n">pretty_flag</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="c"># *16 &lt;-&gt; &lt;&lt; 4</span>
+        <span class="n">val</span> <span class="o">=</span> <span class="n">byte_to_int</span><span class="p">(</span><span class="n">byte_array</span><span class="p">[</span><span class="n">cntr</span><span class="p">])</span> <span class="o">+</span> <span class="n">byte_to_int</span><span class="p">(</span><span class="n">byte_array</span><span class="p">[</span><span class="n">cntr</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span><span class="o">*</span><span class="mi">16</span>
+        <span class="k">if</span> <span class="n">cntr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+          <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;D</span><span class="si">%d</span><span class="s">,</span><span class="si">%s</span><span class="s">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">val</span><span class="p">,</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;D</span><span class="si">%d%s</span><span class="s">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">val</span><span class="p">,</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">continue</span>
+    <span class="k">elif</span> <span class="p">(</span><span class="n">pretty_flag</span><span class="p">):</span>
+      <span class="n">pretty_flag</span> <span class="o">=</span> <span class="bp">False</span>
+      <span class="k">continue</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">cntr</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">cntr</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">):</span>
+      <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;,&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+      <span class="n">b_shift</span> <span class="o">=</span> <span class="n">b</span> <span class="o">&gt;&gt;</span> <span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+      <span class="n">next_bit</span> <span class="o">=</span> <span class="n">b_shift</span> <span class="o">&amp;</span> <span class="mh">0x03</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">next_bit</span> <span class="o">==</span> <span class="mh">0x01</span><span class="p">):</span>
+        <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;0&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+      <span class="k">elif</span> <span class="p">(</span><span class="n">next_bit</span> <span class="o">==</span> <span class="mh">0x02</span><span class="p">):</span>
+        <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;1&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+      <span class="k">elif</span> <span class="p">(</span><span class="n">next_bit</span> <span class="o">==</span> <span class="mh">0x03</span><span class="p">):</span>
+        <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;x&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="nb">str</span> <span class="o">=</span> <span class="s">&quot;z&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+
+  <span class="k">return</span> <span class="nb">str</span>
+</div>
+<div class="viewcode-block" id="hs_string_to_byte_array"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.hs_string_to_byte_array">[docs]</a><span class="k">def</span> <span class="nf">hs_string_to_byte_array</span><span class="p">(</span><span class="nb">str</span><span class="p">):</span>
+  <span class="k">if</span> <span class="nb">str</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">None</span>
+  <span class="k">if</span> <span class="nb">str</span> <span class="o">==</span> <span class="s">&quot;None&quot;</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">None</span>
+  <span class="n">strlen</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+  <span class="n">ln</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ceil</span><span class="p">(</span><span class="n">strlen</span> <span class="o">/</span> <span class="mf">4.0</span><span class="p">))</span>
+  <span class="n">br</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ln</span><span class="p">):</span>
+    <span class="n">substr</span> <span class="o">=</span> <span class="nb">str</span><span class="p">[</span><span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="n">strlen</span><span class="o">-</span><span class="mi">4</span><span class="o">*</span><span class="n">j</span><span class="o">-</span><span class="mi">4</span><span class="p">):</span><span class="n">strlen</span><span class="o">-</span><span class="mi">4</span><span class="o">*</span><span class="n">j</span><span class="p">]</span>
+    <span class="n">next_byte</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">sublen</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">substr</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="n">sublen</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+        <span class="n">next_byte</span> <span class="o">=</span> <span class="n">next_byte</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x03</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="p">)</span>
+      <span class="k">elif</span> <span class="p">(</span><span class="n">substr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;X&#39;</span> <span class="ow">or</span> <span class="n">substr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;x&#39;</span><span class="p">):</span>
+        <span class="n">next_byte</span> <span class="o">=</span> <span class="n">next_byte</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x03</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="n">sublen</span><span class="o">-</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+      <span class="k">elif</span> <span class="p">(</span><span class="n">substr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;1&#39;</span><span class="p">):</span>
+        <span class="n">next_byte</span> <span class="o">=</span> <span class="n">next_byte</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x02</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="n">sublen</span><span class="o">-</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+      <span class="k">elif</span> <span class="p">(</span><span class="n">substr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;0&#39;</span><span class="p">):</span>
+        <span class="n">next_byte</span> <span class="o">=</span> <span class="n">next_byte</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x01</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="n">sublen</span><span class="o">-</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+      <span class="k">elif</span> <span class="p">(</span><span class="n">substr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;Z&#39;</span> <span class="ow">or</span> <span class="n">substr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s">&#39;z&#39;</span><span class="p">):</span>
+        <span class="n">next_byte</span> <span class="o">=</span> <span class="n">next_byte</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x00</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="p">(</span><span class="n">sublen</span><span class="o">-</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">br</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">next_byte</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">br</span>
+</div>
+<div class="viewcode-block" id="int_to_byte_array"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.int_to_byte_array">[docs]</a><span class="k">def</span> <span class="nf">int_to_byte_array</span><span class="p">(</span><span class="n">int_value</span><span class="p">,</span> <span class="nb">len</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  reads len bits from int_value and converts it to a bytearray of len ceil(len/4).</span>
+<span class="sd">  Note: len should be a multiple of 4.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="n">ln</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">ceil</span><span class="p">(</span><span class="nb">len</span><span class="o">/</span><span class="mf">4.0</span><span class="p">))</span>
+  <span class="n">br</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">ln</span><span class="p">):</span>
+    <span class="n">nible</span> <span class="o">=</span> <span class="p">(</span><span class="n">int_value</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="o">*</span><span class="n">j</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xf</span>
+    <span class="n">next_byte</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">nible</span> <span class="o">&gt;&gt;</span> <span class="n">i</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x1</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">next_byte</span> <span class="o">=</span> <span class="n">next_byte</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x01</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="p">)</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">nible</span> <span class="o">&gt;&gt;</span> <span class="n">i</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x1</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">next_byte</span> <span class="o">=</span> <span class="n">next_byte</span> <span class="o">|</span> <span class="p">(</span><span class="mh">0x02</span> <span class="o">&lt;&lt;</span> <span class="mi">2</span><span class="o">*</span><span class="n">i</span><span class="p">)</span>
+    <span class="n">br</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">next_byte</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">br</span>
+</div>
+<div class="viewcode-block" id="byte_array_get_all_x"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_get_all_x">[docs]</a><span class="k">def</span> <span class="nf">byte_array_get_all_x</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+  <span class="n">b</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mh">0xFF</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">b</span>
+</div>
+<div class="viewcode-block" id="byte_array_get_all_one"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_get_all_one">[docs]</a><span class="k">def</span> <span class="nf">byte_array_get_all_one</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+  <span class="n">b</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mh">0xaa</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">b</span>
+</div>
+<div class="viewcode-block" id="byte_array_get_all_zero"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_get_all_zero">[docs]</a><span class="k">def</span> <span class="nf">byte_array_get_all_zero</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+  <span class="n">b</span> <span class="o">=</span> <span class="nb">bytearray</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">length</span><span class="p">):</span>
+    <span class="n">b</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mh">0x55</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">b</span>
+</div>
+<div class="viewcode-block" id="byte_array_set_bit"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_set_bit">[docs]</a><span class="k">def</span> <span class="nf">byte_array_set_bit</span><span class="p">(</span><span class="n">b_array</span><span class="p">,</span><span class="n">byte</span><span class="p">,</span><span class="n">bit</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">byte</span><span class="o">&gt;=</span><span class="nb">len</span><span class="p">(</span><span class="n">b_array</span><span class="p">)</span> <span class="o">|</span> <span class="n">bit</span> <span class="o">&gt;=</span> <span class="mi">4</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">b_array</span><span class="p">[</span><span class="n">byte</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">b_array</span><span class="p">[</span><span class="n">byte</span><span class="p">]</span> <span class="o">&amp;</span> <span class="o">~</span><span class="p">(</span><span class="mh">0x3</span> <span class="o">&lt;&lt;</span> <span class="n">bit</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">value</span> <span class="o">&lt;&lt;</span> <span class="n">bit</span><span class="o">*</span><span class="mi">2</span><span class="p">))</span>
+    <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="byte_array_get_bit"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_get_bit">[docs]</a><span class="k">def</span> <span class="nf">byte_array_get_bit</span><span class="p">(</span><span class="n">b_array</span><span class="p">,</span><span class="n">byte</span><span class="p">,</span><span class="n">bit</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">byte</span><span class="o">&gt;=</span><span class="nb">len</span><span class="p">(</span><span class="n">b_array</span><span class="p">)</span> <span class="o">|</span> <span class="n">bit</span> <span class="o">&gt;=</span> <span class="mi">4</span><span class="p">:</span>
+    <span class="k">return</span> <span class="mh">0x04</span><span class="p">;</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">b_array</span><span class="p">[</span><span class="n">byte</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">2</span><span class="o">*</span><span class="n">bit</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0x03</span><span class="p">;</span>
+</div>
+<div class="viewcode-block" id="hsa_bit_to_normal_bit"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.hsa_bit_to_normal_bit">[docs]</a><span class="k">def</span> <span class="nf">hsa_bit_to_normal_bit</span><span class="p">(</span><span class="n">bit</span><span class="p">):</span>
+  <span class="c"># 0 -&gt; b&#39;01 == 1</span>
+  <span class="c"># 1 -&gt; b&#39;10 == 2</span>
+  <span class="c"># x -&gt; b&#39;11 == 0x03</span>
+  <span class="c"># z -&gt; b&#39;00 == 0x00</span>
+  <span class="k">if</span> <span class="n">bit</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+    <span class="k">return</span> <span class="mi">0</span>
+  <span class="k">if</span> <span class="n">bit</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+    <span class="k">return</span> <span class="mi">1</span>
+  <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;Not passed a normal bit </span><span class="si">%d</span><span class="s">!&quot;</span> <span class="o">%</span> <span class="n">bit</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="byte_array_set_bytes"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.byte_array_set_bytes">[docs]</a><span class="k">def</span> <span class="nf">byte_array_set_bytes</span><span class="p">(</span><span class="n">b_array</span><span class="p">,</span> <span class="n">byte</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">num_bytes</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">byte</span><span class="o">+</span><span class="n">num_bytes</span><span class="o">&gt;</span><span class="nb">len</span><span class="p">(</span><span class="n">b_array</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_bytes</span><span class="p">):</span>
+      <span class="n">b_array</span><span class="p">[</span><span class="n">byte</span><span class="o">+</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span> <span class="o">&gt;&gt;</span> <span class="n">i</span><span class="o">*</span><span class="mi">8</span><span class="p">)</span> <span class="o">&amp;</span> <span class="mh">0xff</span>
+    <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="headerspace"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace">[docs]</a><span class="k">class</span> <span class="nc">headerspace</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  A headerspace object keeps a set of header space regions. it can be union of</span>
+<span class="sd">  [0,1,x,z] expressions. It can also keep a list of headerspaces to be subtracted</span>
+<span class="sd">  from this object. The subtraction can be done lazily.</span>
+<span class="sd">  It also enables normal set operations on header space.</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hsa_format</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Constructor</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># For backwards compabibility</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">hsa_format</span><span class="p">)</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">hsa_format</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">format</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">=</span> <span class="n">hsa_format</span><span class="p">[</span><span class="s">&quot;length&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">format</span> <span class="o">=</span> <span class="n">hsa_format</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c"># list of (tf,rule_id,port) that has been lazy evaluated</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">lazy_rule_ids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c"># list of (tf,rule_id,port) that has been evaluated on this headerspace</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">applied_rule_ids</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="headerspace.add_hs"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.add_hs">[docs]</a>  <span class="k">def</span> <span class="nf">add_hs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    adds value to the list of headerspaces, hs_list</span>
+<span class="sd">    @value: bytearray of lenght self.length or another headerspace objects</span>
+<span class="sd">    @return: True if successful, False otherwise</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="nb">bytearray</span><span class="p">:</span>
+      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">value</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">headerspace</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">length</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">elem</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">elem</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="headerspace.add_hs_list"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.add_hs_list">[docs]</a>  <span class="k">def</span> <span class="nf">add_hs_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    adds values to the list of headerspaces, hs_list</span>
+<span class="sd">    @values: list of bytearray of lenght self.length or other headerspace objects</span>
+<span class="sd">    @return: True</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="nb">bytearray</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+      <span class="k">elif</span> <span class="n">value</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">headerspace</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">length</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+          <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">elem</span><span class="p">))</span>
+          <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">elem</span><span class="p">))</span>
+    <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="headerspace.diff_hs"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.diff_hs">[docs]</a>  <span class="k">def</span> <span class="nf">diff_hs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    lazily subtract value from this headerspace</span>
+<span class="sd">    @value: bytearray of lenght self.length</span>
+<span class="sd">    @return: True if successful, False otherwise</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="nb">bytearray</span><span class="p">:</span>
+      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">False</span>
+</div>
+<div class="viewcode-block" id="headerspace.diff_hs_list"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.diff_hs_list">[docs]</a>  <span class="k">def</span> <span class="nf">diff_hs_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    lazily subtract values from this headerspace</span>
+<span class="sd">    @values: list of bytearray of lenght self.length</span>
+<span class="sd">    @return: True</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">values</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">value</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="nb">bytearray</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+    <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="headerspace.count"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.count">[docs]</a>  <span class="k">def</span> <span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    returns count of number of elements in hs_list</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="headerspace.count_dif"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.count_dif">[docs]</a>  <span class="k">def</span> <span class="nf">count_dif</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    returns count of number of elements in hs_dif</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="headerspace.copy"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.copy">[docs]</a>  <span class="k">def</span> <span class="nf">copy</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    create a deep copy of itself</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">deep_copy</span> <span class="o">=</span> <span class="n">headerspace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">deep_copy</span> <span class="o">=</span> <span class="n">headerspace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+      <span class="n">deep_copy</span><span class="o">.</span><span class="n">hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">elem</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">:</span>
+      <span class="n">deep_copy</span><span class="o">.</span><span class="n">hs_diff</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="n">elem</span><span class="p">))</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">ntf</span><span class="p">,</span><span class="n">rule_id</span><span class="p">,</span><span class="n">port</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">applied_rule_ids</span><span class="p">:</span>
+      <span class="n">deep_copy</span><span class="o">.</span><span class="n">applied_rule_ids</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ntf</span><span class="p">,</span><span class="n">rule_id</span><span class="p">,</span><span class="n">port</span><span class="p">))</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">ntf</span><span class="p">,</span><span class="n">rule_id</span><span class="p">,</span><span class="n">port</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lazy_rule_ids</span><span class="p">:</span>
+      <span class="n">deep_copy</span><span class="o">.</span><span class="n">lazy_rule_ids</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ntf</span><span class="p">,</span><span class="n">rule_id</span><span class="p">,</span><span class="n">port</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">deep_copy</span>
+</div>
+<div class="viewcode-block" id="headerspace.to_string"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.to_string">[docs]</a>  <span class="k">def</span> <span class="nf">to_string</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    represent a [0,1,x,z] string showing the header space.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">strings</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">diffs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">hs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">new_expression</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="p">[</span><span class="s">&quot;display&quot;</span><span class="p">](</span><span class="n">hs</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">new_expression</span> <span class="o">=</span> <span class="n">byte_array_to_pretty_hs_string</span><span class="p">(</span><span class="n">hs</span><span class="p">)</span>
+      <span class="n">strings</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_expression</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">hs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">:</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="n">new_expression</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format</span><span class="p">[</span><span class="s">&quot;display&quot;</span><span class="p">](</span><span class="n">hs</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">new_expression</span> <span class="o">=</span> <span class="n">byte_array_to_pretty_hs_string</span><span class="p">(</span><span class="n">hs</span><span class="p">)</span>
+      <span class="n">diffs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_expression</span><span class="p">)</span>
+
+    <span class="n">union1</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="n">union2</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="k">for</span> <span class="nb">str</span> <span class="ow">in</span> <span class="n">strings</span><span class="p">:</span>
+      <span class="n">union1</span> <span class="o">=</span> <span class="n">union1</span> <span class="o">+</span> <span class="s">&quot; U</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">union1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">union1</span> <span class="o">=</span> <span class="n">union1</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span>
+    <span class="k">for</span> <span class="nb">str</span> <span class="ow">in</span> <span class="n">diffs</span><span class="p">:</span>
+      <span class="n">union2</span> <span class="o">=</span> <span class="n">union2</span> <span class="o">+</span> <span class="s">&quot; U</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> <span class="nb">str</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">union2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">union2</span> <span class="o">=</span> <span class="n">union2</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span>
+      <span class="n">union1</span> <span class="o">=</span> <span class="s">&quot;(</span><span class="si">%s</span><span class="s">) </span><span class="se">\n</span><span class="s">-</span><span class="se">\n</span><span class="s">(</span><span class="si">%s</span><span class="s">)&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">union1</span><span class="p">,</span><span class="n">union2</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">union1</span>
+</div>
+<div class="viewcode-block" id="headerspace.intersect"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.intersect">[docs]</a>  <span class="k">def</span> <span class="nf">intersect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_hs</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    intersect itself with other_hs if the header lengths are equal.</span>
+<span class="sd">    The result will be saved in the caller instance itself.</span>
+<span class="sd">    @other_fs: @type headerspace or bytearray: the other headerspace to intersect with</span>
+<span class="sd">    @return: @type Boolean: True if successful, False if an error happens</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">other_hs</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="n">headerspace</span><span class="p">:</span>
+      <span class="n">new_hs_list</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">!=</span> <span class="n">other_hs</span><span class="o">.</span><span class="n">length</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+      <span class="k">for</span> <span class="n">hs1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">hs2</span> <span class="ow">in</span> <span class="n">other_hs</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+          <span class="n">isect</span> <span class="o">=</span> <span class="n">byte_array_intersect</span><span class="p">(</span><span class="n">hs1</span><span class="p">,</span> <span class="n">hs2</span><span class="p">)</span>
+          <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">isect</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">isect</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span> <span class="o">=</span> <span class="n">new_hs_list</span>
+      <span class="k">for</span> <span class="n">hs</span> <span class="ow">in</span> <span class="n">other_hs</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hs</span><span class="p">)</span>
+      <span class="k">return</span> <span class="bp">True</span>
+    <span class="k">elif</span> <span class="n">other_hs</span><span class="o">.</span><span class="n">__class__</span> <span class="o">==</span> <span class="nb">bytearray</span><span class="p">:</span>
+      <span class="n">new_hs_list</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">length</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other_hs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">False</span>
+      <span class="k">for</span> <span class="n">hs1</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+        <span class="n">isect</span> <span class="o">=</span> <span class="n">byte_array_intersect</span><span class="p">(</span><span class="n">hs1</span><span class="p">,</span> <span class="n">other_hs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">isect</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+          <span class="n">new_hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">isect</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span> <span class="o">=</span> <span class="n">new_hs_list</span>
+      <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="headerspace.copy_intersect"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.copy_intersect">[docs]</a>  <span class="k">def</span> <span class="nf">copy_intersect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_hs</span><span class="p">):</span>
+    <span class="n">cpy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">cpy</span><span class="o">.</span><span class="n">intersect</span><span class="p">(</span><span class="n">other_hs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cpy</span>
+</div>
+<div class="viewcode-block" id="headerspace.complement"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.complement">[docs]</a>  <span class="k">def</span> <span class="nf">complement</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    find the complement of header space pieces saved in hs_list</span>
+<span class="sd">    and saves it back to itself</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># if empty, make it all x</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">byte_array_get_all_x</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">))</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">c_hs_list</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="c"># create on hs object per union element in self.hs_list</span>
+      <span class="k">for</span> <span class="n">elem</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+        <span class="n">c_set</span> <span class="o">=</span> <span class="n">byte_array_complement</span><span class="p">(</span><span class="n">elem</span><span class="p">)</span>
+        <span class="n">tmp</span> <span class="o">=</span> <span class="n">headerspace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span>
+        <span class="n">tmp</span><span class="o">.</span><span class="n">add_hs_list</span><span class="p">(</span><span class="n">c_set</span><span class="p">)</span>
+        <span class="n">c_hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+
+      <span class="n">result</span> <span class="o">=</span> <span class="n">c_hs_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">c_hs_list</span><span class="p">)):</span>
+        <span class="n">result</span><span class="o">.</span><span class="n">intersect</span><span class="p">(</span><span class="n">c_hs_list</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">hs_list</span><span class="p">)</span>
+      <span class="c"># add hs_diff to results:</span>
+      <span class="k">for</span> <span class="n">hs</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hs</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span> <span class="o">=</span> <span class="p">[]</span>
+</div>
+<div class="viewcode-block" id="headerspace.copy_complement"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.copy_complement">[docs]</a>  <span class="k">def</span> <span class="nf">copy_complement</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">cpy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">cpy</span><span class="o">.</span><span class="n">complement</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">cpy</span>
+</div>
+<div class="viewcode-block" id="headerspace.minus"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.minus">[docs]</a>  <span class="k">def</span> <span class="nf">minus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_fs</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    computes self - other_fs. note that the hs_diff will be intact</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">cpy</span> <span class="o">=</span> <span class="n">other_fs</span><span class="o">.</span><span class="n">copy_complement</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">intersect</span><span class="p">(</span><span class="n">cpy</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="headerspace.copy_minus"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.copy_minus">[docs]</a>  <span class="k">def</span> <span class="nf">copy_minus</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_fs</span><span class="p">):</span>
+    <span class="n">cpy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">cpy</span><span class="o">.</span><span class="n">minus</span><span class="p">(</span><span class="n">other_fs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cpy</span>
+</div>
+<div class="viewcode-block" id="headerspace.self_diff"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.self_diff">[docs]</a>  <span class="k">def</span> <span class="nf">self_diff</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    computes hs_list - hs_diff and saves all the result in hs_list.</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="k">return</span>
+    <span class="n">temp</span> <span class="o">=</span> <span class="n">headerspace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">length</span><span class="p">)</span>
+    <span class="n">temp</span><span class="o">.</span><span class="n">add_hs_list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">minus</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="headerspace.is_subset_of"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.is_subset_of">[docs]</a>  <span class="k">def</span> <span class="nf">is_subset_of</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other_fs</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    checks if self is a subset of other_hs</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">cpy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">cpy</span><span class="o">.</span><span class="n">minus</span><span class="p">(</span><span class="n">other_fs</span><span class="p">)</span>
+    <span class="n">cpy</span><span class="o">.</span><span class="n">self_diff</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cpy</span><span class="o">.</span><span class="n">hs_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="headerspace.compress"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.compress">[docs]</a>  <span class="k">def</span> <span class="nf">compress</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;&#39;</span>
+<span class="sd">    TODO: Compress function need to consider more cases</span>
+<span class="sd">    Warning: depreciated</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="n">pop_index</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">)):</span>
+      <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">byte_array_equal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+          <span class="n">pop_index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">byte_array_subset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">[</span><span class="n">j</span><span class="p">]):</span>
+          <span class="n">pop_index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">byte_array_subset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">[</span><span class="n">j</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+          <span class="n">pop_index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+
+    <span class="n">new_hs_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">)):</span>
+      <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pop_index</span><span class="p">:</span>
+        <span class="n">new_hs_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span> <span class="o">=</span> <span class="n">new_hs_list</span>
+</div>
+<div class="viewcode-block" id="headerspace.clean_up"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.clean_up">[docs]</a>  <span class="k">def</span> <span class="nf">clean_up</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">new_hs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+      <span class="n">flag</span> <span class="o">=</span> <span class="bp">False</span>
+      <span class="k">for</span> <span class="n">dh</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">byte_array_subset</span><span class="p">(</span><span class="n">h</span><span class="p">,</span><span class="n">dh</span><span class="p">):</span>
+          <span class="n">flag</span> <span class="o">=</span> <span class="bp">True</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">flag</span><span class="p">:</span>
+        <span class="n">new_hs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">h</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">new_hs</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span> <span class="o">=</span> <span class="n">new_hs</span>
+      <span class="n">new_diff_hs</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">for</span> <span class="n">dh</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span><span class="p">:</span>
+          <span class="n">tmp</span> <span class="o">=</span> <span class="n">byte_array_intersect</span><span class="p">(</span><span class="n">h</span><span class="p">,</span><span class="n">dh</span><span class="p">)</span>
+          <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_diff_hs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span> <span class="o">=</span> <span class="n">new_diff_hs</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_list</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">hs_diff</span> <span class="o">=</span> <span class="p">[]</span>
+
+</div>
+<div class="viewcode-block" id="headerspace.add_lazy_tf_rule"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.add_lazy_tf_rule">[docs]</a>  <span class="k">def</span> <span class="nf">add_lazy_tf_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ntf</span><span class="p">,</span> <span class="n">rule_id</span><span class="p">,</span><span class="n">port</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">lazy_rule_ids</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ntf</span><span class="p">,</span><span class="n">rule_id</span><span class="p">,</span><span class="n">port</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="headerspace.apply_lazy_tf_rule"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.apply_lazy_tf_rule">[docs]</a>  <span class="k">def</span> <span class="nf">apply_lazy_tf_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">copy</span><span class="p">()]</span>
+    <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">lazy_rule_ids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">ntf</span><span class="p">,</span><span class="n">rule_id</span><span class="p">,</span><span class="n">port</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lazy_rule_ids</span><span class="p">:</span>
+      <span class="n">temp</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">for</span> <span class="n">elemHS</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+        <span class="n">temp</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">ntf</span><span class="o">.</span><span class="n">T_rule</span><span class="p">(</span><span class="n">rule_id</span><span class="p">,</span><span class="n">elemHS</span><span class="p">,</span><span class="n">port</span><span class="p">))</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="n">temp</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">result</span>
+</div>
+<div class="viewcode-block" id="headerspace.push_applied_tf_rule"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.push_applied_tf_rule">[docs]</a>  <span class="k">def</span> <span class="nf">push_applied_tf_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">ntf</span><span class="p">,</span><span class="n">rule_id</span><span class="p">,</span><span class="n">in_port</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">applied_rule_ids</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">ntf</span><span class="p">,</span><span class="n">rule_id</span><span class="p">,</span><span class="n">in_port</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="headerspace.pop_applied_tf_rule"><a class="viewcode-back" href="../../../../sts.headerspace.headerspace.html#sts.headerspace.headerspace.hs.headerspace.pop_applied_tf_rule">[docs]</a>  <span class="k">def</span> <span class="nf">pop_applied_tf_rule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">applied_rule_ids</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+</div>
+  <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+
+  <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

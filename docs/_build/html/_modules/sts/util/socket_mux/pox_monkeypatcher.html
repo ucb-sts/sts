@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.util.socket_mux.pox_monkeypatcher &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.util.socket_mux.pox_monkeypatcher</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+
+<span class="kn">from</span> <span class="nn">server_socket_multiplexer</span> <span class="kn">import</span> <span class="n">ServerMultiplexedSelect</span><span class="p">,</span><span class="n">ServerMockSocket</span>
+<span class="kn">import</span> <span class="nn">select</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+
+<span class="c"># Note: Make sure that this module is loaded after all other modules except</span>
+<span class="c"># of_01; the OpenFlow listen socket needs to be mocked.</span>
+
+<div class="viewcode-block" id="launch"><a class="viewcode-back" href="../../../../sts.util.socket_mux.html#sts.util.socket_mux.pox_monkeypatcher.launch">[docs]</a><span class="k">def</span> <span class="nf">launch</span><span class="p">():</span>
+  <span class="c"># Server side:</span>
+  <span class="c">#  - Instantiate ServerMultipexedSelect (this will create a true</span>
+  <span class="c">#    socket for the pinger)</span>
+  <span class="c">#  - override select.select with ServerMultiplexedSelect</span>
+  <span class="c">#  - override socket.socket</span>
+  <span class="c">#    - takes two params: protocol, socket type</span>
+  <span class="c">#    - if not SOCK_STREAM type, return a normal socket</span>
+  <span class="c">#  - we don&#39;t know bind address until bind() is called</span>
+  <span class="c">#  - after bind(), create true socket, create SocketDemultiplexer</span>
+  <span class="c"># All subsequent sockets will be instantiated through accept()</span>
+  <span class="n">mux_select</span> <span class="o">=</span> <span class="n">ServerMultiplexedSelect</span><span class="p">()</span>
+  <span class="c"># Monkey patch select.select</span>
+  <span class="n">select</span><span class="o">.</span><span class="n">_old_select</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">select</span>
+  <span class="n">select</span><span class="o">.</span><span class="n">select</span> <span class="o">=</span> <span class="n">mux_select</span><span class="o">.</span><span class="n">select</span>
+  <span class="c"># Monkey patch socket.socket</span>
+  <span class="n">socket</span><span class="o">.</span><span class="n">_old_socket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span>
+  <span class="k">def</span> <span class="nf">socket_patch</span><span class="p">(</span><span class="n">protocol</span><span class="p">,</span> <span class="n">sock_type</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">sock_type</span> <span class="o">==</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">ServerMockSocket</span><span class="p">(</span><span class="n">protocol</span><span class="p">,</span> <span class="n">sock_type</span><span class="p">,</span>
+                 <span class="n">set_true_listen_socket</span><span class="o">=</span><span class="n">mux_select</span><span class="o">.</span><span class="n">set_true_listen_socket</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">socket</span><span class="o">.</span><span class="n">_old_socket</span><span class="p">(</span><span class="n">protocol</span><span class="p">,</span> <span class="n">sock_type</span><span class="p">)</span>
+  <span class="n">socket</span><span class="o">.</span><span class="n">socket</span> <span class="o">=</span> <span class="n">socket_patch</span>
+  <span class="c"># TODO(cs): will mux_select be GC&#39;ed?</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

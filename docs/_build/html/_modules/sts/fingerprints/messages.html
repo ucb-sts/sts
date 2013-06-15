@@ -1,0 +1,299 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.fingerprints.messages &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.fingerprints.messages</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">binascii</span>
+
+<span class="kn">from</span> <span class="nn">sts.fingerprints.base</span> <span class="kn">import</span> <span class="n">Fingerprint</span>
+<span class="kn">from</span> <span class="nn">pox.openflow.libopenflow_01</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pox.lib.packet.ethernet</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pox.lib.packet.lldp</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pox.lib.packet.arp</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">pox.lib.packet.ipv4</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">sts.headerspace.config_parser.openflow_parser</span> <span class="kn">as</span> <span class="nn">hsa</span>
+
+<div class="viewcode-block" id="process_data"><a class="viewcode-back" href="../../../sts.fingerprints.html#sts.fingerprints.messages.process_data">[docs]</a><span class="k">def</span> <span class="nf">process_data</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">data</span> <span class="o">==</span> <span class="n">b</span><span class="s">&#39;&#39;</span><span class="p">:</span>
+    <span class="k">return</span> <span class="p">()</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">dp_packet</span> <span class="o">=</span> <span class="n">ethernet</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">DPFingerprint</span><span class="o">.</span><span class="n">from_pkt</span><span class="p">(</span><span class="n">dp_packet</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="process_actions"><a class="viewcode-back" href="../../../sts.fingerprints.html#sts.fingerprints.messages.process_actions">[docs]</a><span class="k">def</span> <span class="nf">process_actions</span><span class="p">(</span><span class="n">msg</span><span class="p">):</span>
+  <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="s">&quot;output(</span><span class="si">%d</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="n">a</span><span class="o">.</span><span class="n">port</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">ofp_action_output</span><span class="p">)</span> <span class="k">else</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">action</span><span class="p">))</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">msg</span><span class="o">.</span><span class="n">actions</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="OFFingerprint"><a class="viewcode-back" href="../../../sts.fingerprints.html#sts.fingerprints.messages.OFFingerprint">[docs]</a><span class="k">class</span> <span class="nc">OFFingerprint</span><span class="p">(</span><span class="n">Fingerprint</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Fingerprints for openflow messages &#39;&#39;&#39;</span>
+  <span class="c">#  ofp_type -&gt; fields to include in fingerprint</span>
+  <span class="c"># TODO(cs): I&#39;m erring on the side of sparseness rather than completeness. We</span>
+  <span class="c"># may need to include more fields here to get an unambiguous fingerprint</span>
+  <span class="n">pkt_type_to_fields</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s">&quot;ofp_features_reply&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;datapath_id&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_switch_config&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;flags&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_flow_mod&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;command&quot;</span><span class="p">,</span> <span class="s">&quot;match&quot;</span><span class="p">,</span> <span class="s">&quot;idle_timeout&quot;</span><span class="p">,</span> <span class="s">&quot;hard_timeout&quot;</span><span class="p">,</span> <span class="s">&quot;priority&quot;</span><span class="p">,</span>
+                     <span class="s">&quot;out_port&quot;</span><span class="p">,</span> <span class="s">&quot;flags&quot;</span><span class="p">,</span> <span class="s">&quot;actions&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_port_mod&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;port_no&quot;</span><span class="p">,</span> <span class="s">&quot;config&quot;</span><span class="p">,</span> <span class="s">&quot;mask&quot;</span><span class="p">,</span> <span class="s">&quot;advertise&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_queue_get_config_request&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_queue_get_config_reply&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_stats_request&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;type&quot;</span><span class="p">,</span> <span class="s">&quot;flags&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_stats_reply&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;type&quot;</span><span class="p">,</span> <span class="s">&quot;flags&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_desc_stats&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_flow_stats_request&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_flow_stats&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_aggregate_stats_request&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_aggregate_stats&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_port_stats_request&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_port_stats&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_queue_stats_request&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_queue_stats&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_packet_out&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;data&quot;</span><span class="p">,</span> <span class="s">&quot;in_port&quot;</span><span class="p">,</span> <span class="s">&quot;actions&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_barrier_reply&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_barrier_request&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_packet_in&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;in_port&quot;</span><span class="p">,</span> <span class="s">&quot;data&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_flow_removed&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;match&quot;</span><span class="p">,</span> <span class="s">&quot;reason&quot;</span><span class="p">,</span> <span class="s">&quot;priority&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_port_status&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;reason&quot;</span><span class="p">,</span> <span class="s">&quot;desc&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_error&quot;</span> <span class="p">:</span> <span class="p">[</span><span class="s">&quot;type&quot;</span><span class="p">,</span> <span class="s">&quot;code&quot;</span><span class="p">],</span>
+    <span class="s">&quot;ofp_hello&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_echo_request&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_echo_reply&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_vendor_header&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_vendor&quot;</span> <span class="p">:</span> <span class="p">[],</span> <span class="c"># (body of ofp_vendor_header)</span>
+    <span class="s">&quot;ofp_features_request&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_get_config_request&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_get_config_reply&quot;</span> <span class="p">:</span> <span class="p">[],</span>
+    <span class="s">&quot;ofp_set_config&quot;</span> <span class="p">:</span> <span class="p">[]</span>
+  <span class="p">}</span>
+
+  <span class="n">flow_mod_commands</span> <span class="o">=</span> <span class="p">{</span> <span class="n">v</span><span class="p">:</span> <span class="n">k</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;OFPFC_&quot;</span><span class="p">,</span><span class="s">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">ofp_flow_mod_command_rev_map</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="p">}</span>
+  <span class="n">special_fields</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c"># data needs a nested fingerprint</span>
+    <span class="s">&#39;data&#39;</span> <span class="p">:</span> <span class="n">process_data</span><span class="p">,</span>
+    <span class="c"># desc is a ofp_phy_port object</span>
+    <span class="s">&#39;desc&#39;</span> <span class="p">:</span> <span class="k">lambda</span> <span class="n">pkt</span><span class="p">:</span> <span class="p">(</span><span class="n">pkt</span><span class="o">.</span><span class="n">desc</span><span class="o">.</span><span class="n">port_no</span><span class="p">,</span> <span class="n">pkt</span><span class="o">.</span><span class="n">desc</span><span class="o">.</span><span class="n">hw_addr</span><span class="o">.</span><span class="n">toStr</span><span class="p">()),</span>
+    <span class="c"># actions is an ordered list</span>
+    <span class="c"># for now, store it as a tuple of just the names of the action types</span>
+    <span class="s">&#39;actions&#39;</span> <span class="p">:</span> <span class="n">process_actions</span><span class="p">,</span>
+    <span class="c"># match has a bunch of crazy fields</span>
+    <span class="c"># Trick: convert it to an hsa match, and extract the human readable string</span>
+    <span class="c"># for the hsa match</span>
+    <span class="s">&#39;match&#39;</span> <span class="p">:</span> <span class="k">lambda</span> <span class="n">pkt</span><span class="p">:</span> <span class="n">hsa</span><span class="o">.</span><span class="n">hs_format</span><span class="p">[</span><span class="s">&quot;display&quot;</span><span class="p">](</span><span class="n">hsa</span><span class="o">.</span><span class="n">ofp_match_to_hsa_match</span><span class="p">(</span><span class="n">pkt</span><span class="o">.</span><span class="n">match</span><span class="p">)),</span>
+    <span class="s">&#39;command&#39;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">ofp</span><span class="p">:</span> <span class="n">OFFingerprint</span><span class="o">.</span><span class="n">flow_mod_commands</span><span class="p">[</span><span class="n">ofp</span><span class="o">.</span><span class="n">command</span><span class="p">]</span>
+  <span class="p">}</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field2value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">field2value</span><span class="p">)</span> <span class="o">==</span> <span class="n">OFFingerprint</span><span class="p">:</span>
+      <span class="n">field2value</span> <span class="o">=</span> <span class="n">field2value</span><span class="o">.</span><span class="n">_field2value</span>
+    <span class="c"># Convert matches to DPFingerprint objects</span>
+    <span class="k">for</span> <span class="n">field</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">field2value</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+      <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">==</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="n">field2value</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">DPFingerprint</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">OFFingerprint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">field2value</span><span class="p">)</span>
+
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="OFFingerprint.from_pkt"><a class="viewcode-back" href="../../../sts.fingerprints.html#sts.fingerprints.messages.OFFingerprint.from_pkt">[docs]</a>  <span class="k">def</span> <span class="nf">from_pkt</span><span class="p">(</span><span class="n">pkt</span><span class="p">):</span>
+    <span class="n">pkt_type</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">pkt</span><span class="p">)</span><span class="o">.</span><span class="n">__name__</span>
+    <span class="k">if</span> <span class="n">pkt_type</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">OFFingerprint</span><span class="o">.</span><span class="n">pkt_type_to_fields</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown pkt_type </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">pkt_type</span><span class="p">)</span>
+    <span class="n">field2value</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">field2value</span><span class="p">[</span><span class="s">&quot;class&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pkt_type</span>
+    <span class="n">fields</span> <span class="o">=</span> <span class="n">OFFingerprint</span><span class="o">.</span><span class="n">pkt_type_to_fields</span><span class="p">[</span><span class="n">pkt_type</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">fields</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">OFFingerprint</span><span class="o">.</span><span class="n">special_fields</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">OFFingerprint</span><span class="o">.</span><span class="n">special_fields</span><span class="p">[</span><span class="n">field</span><span class="p">](</span><span class="n">pkt</span><span class="p">)</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">pkt</span><span class="p">,</span> <span class="n">field</span><span class="p">)</span>
+      <span class="n">field2value</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">OFFingerprint</span><span class="p">(</span><span class="n">field2value</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="OFFingerprint.human_str"><a class="viewcode-back" href="../../../sts.fingerprints.html#sts.fingerprints.messages.OFFingerprint.human_str">[docs]</a>  <span class="k">def</span> <span class="nf">human_str</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">: &quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&quot;class&quot;</span><span class="p">]</span> <span class="o">+</span> \
+        <span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">=</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="o">!=</span> <span class="s">&quot;class&quot;</span> <span class="p">)</span>
+
+</div>
+  <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="nb">hash</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">class_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&quot;class&quot;</span><span class="p">]</span>
+    <span class="nb">hash</span> <span class="o">+=</span> <span class="n">class_name</span><span class="o">.</span><span class="n">__hash__</span><span class="p">()</span>
+    <span class="c"># Note that the order is important</span>
+    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_type_to_fields</span><span class="p">[</span><span class="n">class_name</span><span class="p">]:</span>
+      <span class="nb">hash</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="n">field</span><span class="p">]</span><span class="o">.</span><span class="n">__hash__</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nb">hash</span>
+
+  <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">!=</span> <span class="n">OFFingerprint</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&quot;class&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&quot;class&quot;</span><span class="p">]:</span>
+      <span class="k">return</span> <span class="bp">False</span>
+    <span class="n">klass</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&quot;class&quot;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">pkt_type_to_fields</span><span class="p">[</span><span class="n">klass</span><span class="p">]:</span>
+      <span class="c">###### NOTE: do /not/ use the &#39;!=&#39; operator here, this doesn&#39;t invoke an override __eq__ method</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="n">field</span><span class="p">]):</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">return</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="DPFingerprint"><a class="viewcode-back" href="../../../sts.fingerprints.html#sts.fingerprints.messages.DPFingerprint">[docs]</a><span class="k">class</span> <span class="nc">DPFingerprint</span><span class="p">(</span><span class="n">Fingerprint</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Fingerprints for dataplane messages &#39;&#39;&#39;</span>
+  <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;dl_src&#39;</span><span class="p">,</span> <span class="s">&#39;dl_dst&#39;</span><span class="p">,</span> <span class="s">&#39;nw_src&#39;</span><span class="p">,</span> <span class="s">&#39;nw_dst&#39;</span><span class="p">]</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">field2value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">field2value</span><span class="p">)</span> <span class="o">==</span> <span class="n">DPFingerprint</span><span class="p">:</span>
+      <span class="n">field2value</span> <span class="o">=</span> <span class="n">field2value</span><span class="o">.</span><span class="n">_field2value</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">DPFingerprint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">field2value</span><span class="p">)</span>
+
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="DPFingerprint.from_pkt"><a class="viewcode-back" href="../../../sts.fingerprints.html#sts.fingerprints.messages.DPFingerprint.from_pkt">[docs]</a>  <span class="k">def</span> <span class="nf">from_pkt</span><span class="p">(</span><span class="n">pkt</span><span class="p">):</span>
+    <span class="c"># For now, just take (src MAC, dst MAC, src IP, dst IP) as the fingerprint for</span>
+    <span class="c"># dataplane packets</span>
+    <span class="c"># TODO(cs): might finer granularity later</span>
+    <span class="n">eth</span> <span class="o">=</span> <span class="n">pkt</span>
+    <span class="n">ip</span> <span class="o">=</span> <span class="n">pkt</span><span class="o">.</span><span class="n">next</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span> <span class="o">==</span> <span class="n">lldp</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">DPFingerprint</span><span class="p">({</span><span class="s">&#39;class&#39;</span><span class="p">:</span> <span class="s">&#39;lldp&#39;</span><span class="p">})</span>
+    <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span> <span class="o">==</span> <span class="n">ipv4</span><span class="p">:</span>
+      <span class="n">field2value</span> <span class="o">=</span> <span class="p">{</span><span class="s">&#39;dl_src&#39;</span><span class="p">:</span> <span class="n">eth</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">toStr</span><span class="p">(),</span> <span class="s">&#39;dl_dst&#39;</span><span class="p">:</span> <span class="n">eth</span><span class="o">.</span><span class="n">dst</span><span class="o">.</span><span class="n">toStr</span><span class="p">(),</span>
+                     <span class="s">&#39;nw_src&#39;</span><span class="p">:</span> <span class="n">ip</span><span class="o">.</span><span class="n">srcip</span><span class="o">.</span><span class="n">toStr</span><span class="p">(),</span> <span class="s">&#39;nw_dst&#39;</span><span class="p">:</span> <span class="n">ip</span><span class="o">.</span><span class="n">dstip</span><span class="o">.</span><span class="n">toStr</span><span class="p">()}</span>
+      <span class="k">return</span> <span class="n">DPFingerprint</span><span class="p">(</span><span class="n">field2value</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span> <span class="o">==</span> <span class="n">arp</span><span class="p">:</span>
+      <span class="c"># TODO(cs): should include more context</span>
+      <span class="k">return</span> <span class="n">DPFingerprint</span><span class="p">({</span><span class="s">&#39;class&#39;</span><span class="p">:</span> <span class="s">&#39;arp&#39;</span><span class="p">})</span>
+    <span class="k">elif</span> <span class="nb">type</span><span class="p">(</span><span class="n">ip</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">DPFingerprint</span><span class="p">({</span><span class="s">&#39;dl_type&#39;</span> <span class="p">:</span> <span class="n">eth</span><span class="o">.</span><span class="n">type</span> <span class="p">})</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;Unknown dataplane packet type </span><span class="si">%s</span><span class="s"> (eth type 0x</span><span class="si">%x</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">ip</span><span class="p">)),</span> <span class="n">eth</span><span class="o">.</span><span class="n">type</span><span class="p">))</span>
+</div>
+  <span class="k">def</span> <span class="nf">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="nb">hash</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="s">&#39;class&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="c"># This is not an IP packet -- it could be, e.g., an LLDAP packet</span>
+      <span class="nb">hash</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&#39;class&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">__hash__</span><span class="p">()</span>
+      <span class="k">return</span> <span class="nb">hash</span>
+
+    <span class="k">if</span> <span class="s">&#39;dl_type&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="c"># This is not an IP packet -- it could be, e.g., an LLDAP packet</span>
+      <span class="nb">hash</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&#39;dl_type&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">__hash__</span><span class="p">()</span>
+      <span class="k">return</span> <span class="nb">hash</span>
+
+    <span class="c"># Else it&#39;s an IP packet</span>
+    <span class="c"># Note that the order is important</span>
+    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+      <span class="nb">hash</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="n">field</span><span class="p">]</span><span class="o">.</span><span class="n">__hash__</span><span class="p">()</span>
+    <span class="k">return</span> <span class="nb">hash</span>
+
+  <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="o">!=</span> <span class="n">DPFingerprint</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">_field2value</span><span class="p">):</span>
+      <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">if</span> <span class="s">&#39;dl_type&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">:</span>
+      <span class="k">return</span> <span class="p">(</span><span class="s">&#39;dl_type&#39;</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">_field2value</span> <span class="ow">and</span>
+              <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&#39;dl_type&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&#39;dl_type&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="s">&#39;class&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">:</span>
+      <span class="k">return</span> <span class="p">(</span><span class="s">&#39;class&#39;</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">_field2value</span> <span class="ow">and</span>
+              <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&#39;class&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="s">&#39;class&#39;</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">_field2value</span><span class="p">[</span><span class="n">field</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">False</span>
+    <span class="k">return</span> <span class="bp">True</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,452 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.invariant_checker &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.invariant_checker</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c"># Copyright 2012-2012 Kyriakos Zarifis</span>
+<span class="c"># Copyright 2012-2013 Sam Whitlock</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+
+<span class="kn">from</span> <span class="nn">pox.openflow.libopenflow_01</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">entities</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">sts.headerspace.topology_loader.topology_loader</span> <span class="kn">as</span> <span class="nn">hsa_topo</span>
+<span class="kn">import</span> <span class="nn">sts.headerspace.headerspace.applications</span> <span class="kn">as</span> <span class="nn">hsa</span>
+<span class="kn">from</span> <span class="nn">sts.headerspace.config_parser.openflow_parser</span> <span class="kn">import</span> <span class="n">get_uniq_port_id</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">collections</span>
+<span class="kn">from</span> <span class="nn">sts.util.console</span> <span class="kn">import</span> <span class="n">msg</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;invariant_checker&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="InvariantChecker"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker">[docs]</a><span class="k">class</span> <span class="nc">InvariantChecker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">snapshotService</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">snapshotService</span> <span class="o">=</span> <span class="n">snapshotService</span>
+
+  <span class="c"># --------------------------------------------------------------#</span>
+  <span class="c">#                    Invariant checks                           #</span>
+  <span class="c"># --------------------------------------------------------------#</span>
+
+  <span class="c"># All invariant check methods must return a list, which is empty</span>
+  <span class="c"># for no violations, and non-empty for violations</span>
+
+  <span class="c"># TODO(cs): when we start logging invariant exceptions rather than halting,</span>
+  <span class="c"># we need to make sure that the return value of these checks are</span>
+  <span class="c"># determinstic (viz., always sort sets, hashes)</span>
+
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="InvariantChecker.check_liveness"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker.check_liveness">[docs]</a>  <span class="k">def</span> <span class="nf">check_liveness</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Very simple: have the controllers crashed? &#39;&#39;&#39;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Checking controller liveness...&quot;</span><span class="p">)</span>
+    <span class="n">dead_controllers</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">check_controller_processes_alive</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">dead_controllers</span><span class="p">:</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Problems found while checking controller liveness:&quot;</span><span class="p">)</span>
+      <span class="k">for</span> <span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">msg</span><span class="p">)</span> <span class="ow">in</span> <span class="n">dead_controllers</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot; Controller </span><span class="si">%s</span><span class="s"> - </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>  <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">label</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">msg</span><span class="p">)))</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">live_controllers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;No live controllers left&quot;</span><span class="p">)</span>
+      <span class="n">dead_controllers</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">down_controllers</span><span class="p">)</span>
+
+    <span class="c"># Make the return result serializable</span>
+    <span class="n">dead_controllers</span> <span class="o">=</span> <span class="p">[</span> <span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">label</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">dead_controllers</span> <span class="p">]</span>
+    <span class="k">return</span> <span class="n">dead_controllers</span>
+</div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="InvariantChecker.check_loops"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker.check_loops">[docs]</a>  <span class="k">def</span> <span class="nf">check_loops</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+    <span class="c"># Always check liveness if there is a single controllers</span>
+    <span class="c"># Dynamic imports to allow this method to be serialized</span>
+    <span class="kn">import</span> <span class="nn">sts.headerspace.topology_loader.topology_loader</span> <span class="kn">as</span> <span class="nn">hsa_topo</span>
+    <span class="kn">import</span> <span class="nn">sts.headerspace.headerspace.applications</span> <span class="kn">as</span> <span class="nn">hsa</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">controllers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="c"># TODO(cs): a better conditional would be: are all controllers down?</span>
+      <span class="n">down_controllers</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_liveness</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">down_controllers</span> <span class="o">!=</span> <span class="p">[]:</span>
+        <span class="k">return</span> <span class="n">down_controllers</span>
+    <span class="c"># Warning! depends on python Hassell -- may be really slow!</span>
+    <span class="n">NTF</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">generate_NTF</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_switches</span><span class="p">)</span>
+    <span class="n">TTF</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">generate_TTF</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_links</span><span class="p">)</span>
+    <span class="n">loops</span> <span class="o">=</span> <span class="n">hsa</span><span class="o">.</span><span class="n">detect_loop</span><span class="p">(</span><span class="n">NTF</span><span class="p">,</span> <span class="n">TTF</span><span class="p">,</span> <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_switches</span><span class="p">)</span>
+    <span class="n">loops</span> <span class="o">=</span> <span class="p">[</span> <span class="nb">str</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">loops</span> <span class="p">]</span>
+    <span class="k">return</span> <span class="n">loops</span>
+</div>
+  <span class="nd">@staticmethod</span>
+  <span class="k">def</span> <span class="nf">_get_all_pairs</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+    <span class="c"># TODO(cs): translate HSA port numbers to ofp_phy_ports in the</span>
+    <span class="c"># headerspace/ module instead of computing uniq_port_id here</span>
+    <span class="n">access_links</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">access_links</span>
+    <span class="n">all_pairs</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span class="n">get_uniq_port_id</span><span class="p">(</span><span class="n">l1</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="n">l1</span><span class="o">.</span><span class="n">switch_port</span><span class="p">),</span><span class="n">get_uniq_port_id</span><span class="p">(</span><span class="n">l2</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="n">l2</span><span class="o">.</span><span class="n">switch_port</span><span class="p">))</span>
+                  <span class="k">for</span> <span class="n">l1</span> <span class="ow">in</span> <span class="n">access_links</span>
+                  <span class="k">for</span> <span class="n">l2</span> <span class="ow">in</span> <span class="n">access_links</span> <span class="k">if</span> <span class="n">l1</span> <span class="o">!=</span> <span class="n">l2</span> <span class="p">]</span>
+    <span class="n">all_pairs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">all_pairs</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">all_pairs</span>
+
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="InvariantChecker.python_check_connectivity"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker.python_check_connectivity">[docs]</a>  <span class="k">def</span> <span class="nf">python_check_connectivity</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+    <span class="c"># Warning! depends on python Hassell -- may be really slow!</span>
+    <span class="n">NTF</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">generate_NTF</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_switches</span><span class="p">)</span>
+    <span class="n">TTF</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">generate_TTF</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_links</span><span class="p">)</span>
+    <span class="n">paths</span> <span class="o">=</span> <span class="n">hsa</span><span class="o">.</span><span class="n">find_reachability</span><span class="p">(</span><span class="n">NTF</span><span class="p">,</span> <span class="n">TTF</span><span class="p">,</span> <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">access_links</span><span class="p">)</span>
+    <span class="c"># Paths is: in_port -&gt; [p_node1, p_node2]</span>
+    <span class="c"># Where p_node is a hash:</span>
+    <span class="c">#  &quot;hdr&quot; -&gt; foo</span>
+    <span class="c">#  &quot;port&quot; -&gt; foo</span>
+    <span class="c">#  &quot;visits&quot; -&gt; foo</span>
+    <span class="n">connected_pairs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">in_port</span><span class="p">,</span> <span class="n">p_nodes</span> <span class="ow">in</span> <span class="n">paths</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+      <span class="k">for</span> <span class="n">p_node</span> <span class="ow">in</span> <span class="n">p_nodes</span><span class="p">:</span>
+        <span class="n">connected_pairs</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">in_port</span><span class="p">,</span> <span class="n">p_node</span><span class="p">[</span><span class="s">&quot;port&quot;</span><span class="p">]))</span>
+    <span class="n">all_pairs</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">_get_all_pairs</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+    <span class="n">remaining_pairs</span> <span class="o">=</span> <span class="n">all_pairs</span> <span class="o">-</span> <span class="n">connected_pairs</span>
+    <span class="n">partitioned_pairs</span> <span class="o">=</span> <span class="n">check_partitions</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">,</span>
+                                         <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_links</span><span class="p">,</span>
+                                         <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">access_links</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">partitioned_pairs</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Partitioned pairs! </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">partitioned_pairs</span><span class="p">))</span>
+    <span class="n">remaining_pairs</span> <span class="o">-=</span> <span class="n">partitioned_pairs</span>
+
+    <span class="c"># TODO(cs): don&#39;t print results here</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">remaining_pairs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">msg</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;Not all </span><span class="si">%d</span><span class="s"> pairs are connected! (</span><span class="si">%d</span><span class="s"> missing)&quot;</span> <span class="o">%</span>
+               <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_pairs</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">remaining_pairs</span><span class="p">)))</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;remaining_pairs: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">remaining_pairs</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">msg</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="s">&quot;Fully connected!&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">remaining_pairs</span><span class="p">)</span> <span class="p">]</span>
+</div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="InvariantChecker.check_connectivity"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker.check_connectivity">[docs]</a>  <span class="k">def</span> <span class="nf">check_connectivity</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return any pairs that couldn&#39;t reach each other &#39;&#39;&#39;</span>
+    <span class="c"># Dynamic imports to allow this method to be serialized</span>
+    <span class="kn">from</span> <span class="nn">sts.headerspace.config_parser.openflow_parser</span> <span class="kn">import</span> <span class="n">get_uniq_port_id</span>
+    <span class="kn">from</span> <span class="nn">sts.util.console</span> <span class="kn">import</span> <span class="n">msg</span>
+    <span class="c"># Always check liveness if there is a single controllers</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">controllers</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="c"># TODO(cs): a better conditional would be: are all controllers down?</span>
+      <span class="n">down_controllers</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_liveness</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">down_controllers</span> <span class="o">!=</span> <span class="p">[]:</span>
+        <span class="k">return</span> <span class="n">down_controllers</span>
+
+    <span class="c"># Effectively, run compute physical omega, ignore concrete values of headers, and</span>
+    <span class="c"># check that all pairs can reach eachother</span>
+    <span class="n">physical_omega</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">compute_physical_omega</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_switches</span><span class="p">,</span>
+                                                             <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_links</span><span class="p">,</span>
+                                                             <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">access_links</span><span class="p">)</span>
+    <span class="n">connected_pairs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="c"># Omegas are { original port -&gt; [(final hs1, final port1), (final hs2, final port2)...] }</span>
+    <span class="k">for</span> <span class="n">start_port</span><span class="p">,</span> <span class="n">final_location_list</span> <span class="ow">in</span> <span class="n">physical_omega</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+      <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">final_port</span> <span class="ow">in</span> <span class="n">final_location_list</span><span class="p">:</span>
+        <span class="n">connected_pairs</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">start_port</span><span class="p">,</span> <span class="n">final_port</span><span class="p">))</span>
+    <span class="n">all_pairs</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">_get_all_pairs</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+    <span class="n">remaining_pairs</span> <span class="o">=</span> <span class="n">all_pairs</span> <span class="o">-</span> <span class="n">connected_pairs</span>
+    <span class="n">partitioned_pairs</span> <span class="o">=</span> <span class="n">check_partitions</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">,</span>
+                                         <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_links</span><span class="p">,</span>
+                                         <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">access_links</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">partitioned_pairs</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Partitioned pairs! </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">partitioned_pairs</span><span class="p">))</span>
+    <span class="n">remaining_pairs</span> <span class="o">-=</span> <span class="n">partitioned_pairs</span>
+
+    <span class="c"># TODO(cs): don&#39;t print results here</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">remaining_pairs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="n">msg</span><span class="o">.</span><span class="n">fail</span><span class="p">(</span><span class="s">&quot;Not all </span><span class="si">%d</span><span class="s"> pairs are connected! (</span><span class="si">%d</span><span class="s"> missing)&quot;</span> <span class="o">%</span>
+               <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">all_pairs</span><span class="p">),</span><span class="nb">len</span><span class="p">(</span><span class="n">remaining_pairs</span><span class="p">)))</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;remaining_pairs: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">remaining_pairs</span><span class="p">)))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">msg</span><span class="o">.</span><span class="n">success</span><span class="p">(</span><span class="s">&quot;Fully connected!&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">remaining_pairs</span><span class="p">)</span> <span class="p">]</span>
+</div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="InvariantChecker.check_blackholes"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker.check_blackholes">[docs]</a>  <span class="k">def</span> <span class="nf">check_blackholes</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Do any switches:</span>
+<span class="sd">         - send packets into a down link?</span>
+<span class="sd">         - drop packets that are supposed to go out their in_port?</span>
+
+<span class="sd">       This method double checks whether it&#39;s possible for any</span>
+<span class="sd">       packets to fall into the blackhole in the first place.</span>
+
+<span class="sd">       Slightly different than check_connectivity. blackholes imply no</span>
+<span class="sd">       connectivity, but not vice versa. No connectivity could also be due to:</span>
+<span class="sd">         - a loop</span>
+<span class="sd">         - PacketIn-based reactive routing</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="c"># TODO(cs): just realized -- the C-version of Hassell might be configured to</span>
+    <span class="c"># *stop* as soon as it gets to an edge port. At least, this is the</span>
+    <span class="c"># behavior of the find_reachability function in python Hassell. So we&#39;d</span>
+    <span class="c"># have to do an iterative computation: all switches that are one</span>
+    <span class="c"># hop away, then two hops, etc. Otherwise we wouldn&#39;t find blackholes in</span>
+    <span class="c"># the middle of the network.</span>
+    <span class="c"># For now, use a python method that explicitly</span>
+    <span class="c"># finds blackholes rather than inferring them from check_reachability</span>
+    <span class="c"># Warning! depends on python Hassell -- may be really slow!</span>
+    <span class="n">NTF</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">generate_NTF</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_switches</span><span class="p">)</span>
+    <span class="n">TTF</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">generate_TTF</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_links</span><span class="p">)</span>
+    <span class="n">blackholes</span> <span class="o">=</span> <span class="n">hsa</span><span class="o">.</span><span class="n">find_blackholes</span><span class="p">(</span><span class="n">NTF</span><span class="p">,</span> <span class="n">TTF</span><span class="p">,</span> <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">access_links</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span> <span class="nb">str</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">blackholes</span> <span class="p">]</span>
+</div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="InvariantChecker.check_correspondence"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker.check_correspondence">[docs]</a>  <span class="k">def</span> <span class="nf">check_correspondence</span><span class="p">(</span><span class="n">simulation</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return if there were any policy-violations &#39;&#39;&#39;</span>
+    <span class="n">controllers_with_violations</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">controllers_with_violations</span> <span class="o">+=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_liveness</span><span class="p">(</span><span class="n">simulation</span><span class="p">)</span>
+
+    <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Snapshotting live controllers...&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">controller</span> <span class="ow">in</span> <span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">live_controllers</span><span class="p">:</span>
+      <span class="n">controller_snapshot</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">snapshot_service</span><span class="o">.</span><span class="n">fetchSnapshot</span><span class="p">(</span><span class="n">controller</span><span class="p">)</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Computing physical omega...&quot;</span><span class="p">)</span>
+      <span class="n">physical_omega</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">compute_physical_omega</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_switches</span><span class="p">,</span>
+                                                               <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_links</span><span class="p">,</span>
+                                                               <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">access_links</span><span class="p">)</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Computing controller omega...&quot;</span><span class="p">)</span>
+      <span class="c"># note: using all_switches to compute the controller omega. The controller might still</span>
+      <span class="c"># reference switches in his omega that are currently dead, which should result in a</span>
+      <span class="c"># policy violation, not sts crashing</span>
+      <span class="n">controller_omega</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">compute_controller_omega</span><span class="p">(</span><span class="n">controller_snapshot</span><span class="p">,</span>
+                                                                   <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">,</span>
+                                                                   <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">live_links</span><span class="p">,</span>
+                                                                   <span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">access_links</span><span class="p">)</span>
+      <span class="n">violations</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">infer_policy_violations</span><span class="p">(</span><span class="n">physical_omega</span><span class="p">,</span> <span class="n">controller_omega</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">violations</span><span class="p">:</span>
+        <span class="n">controllers_with_violations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">controller</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">controllers_with_violations</span>
+
+  <span class="c"># --------------------------------------------------------------#</span>
+  <span class="c">#                    HSA utilities                              #</span>
+  <span class="c"># --------------------------------------------------------------#</span></div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="InvariantChecker.compute_physical_omega"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker.compute_physical_omega">[docs]</a>  <span class="k">def</span> <span class="nf">compute_physical_omega</span><span class="p">(</span><span class="n">live_switches</span><span class="p">,</span> <span class="n">live_links</span><span class="p">,</span> <span class="n">edge_links</span><span class="p">):</span>
+    <span class="p">(</span><span class="n">name_tf_pairs</span><span class="p">,</span> <span class="n">TTF</span><span class="p">)</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">_get_transfer_functions</span><span class="p">(</span><span class="n">live_switches</span><span class="p">,</span> <span class="n">live_links</span><span class="p">)</span>
+    <span class="n">physical_omega</span> <span class="o">=</span> <span class="n">hsa</span><span class="o">.</span><span class="n">compute_omega</span><span class="p">(</span><span class="n">name_tf_pairs</span><span class="p">,</span> <span class="n">TTF</span><span class="p">,</span> <span class="n">edge_links</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">physical_omega</span>
+</div>
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="InvariantChecker.compute_controller_omega"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker.compute_controller_omega">[docs]</a>  <span class="k">def</span> <span class="nf">compute_controller_omega</span><span class="p">(</span><span class="n">controller_snapshot</span><span class="p">,</span> <span class="n">live_switches</span><span class="p">,</span> <span class="n">live_links</span><span class="p">,</span> <span class="n">edge_links</span><span class="p">):</span>
+    <span class="n">name_tf_pairs</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">tf_pairs_from_snapshot</span><span class="p">(</span><span class="n">controller_snapshot</span><span class="p">,</span> <span class="n">live_switches</span><span class="p">)</span>
+    <span class="c"># Frenetic doesn&#39;t store any link or host information.</span>
+    <span class="c"># No virtualization though, so we can assume the same TTF. TODO(cs): for now...</span>
+    <span class="n">TTF</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">generate_TTF</span><span class="p">(</span><span class="n">live_links</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">hsa</span><span class="o">.</span><span class="n">compute_omega</span><span class="p">(</span><span class="n">name_tf_pairs</span><span class="p">,</span> <span class="n">TTF</span><span class="p">,</span> <span class="n">edge_links</span><span class="p">)</span>
+</div>
+  <span class="nd">@staticmethod</span>
+  <span class="k">def</span> <span class="nf">_get_transfer_functions</span><span class="p">(</span><span class="n">live_switches</span><span class="p">,</span> <span class="n">live_links</span><span class="p">):</span>
+    <span class="n">name_tf_pairs</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">generate_tf_pairs</span><span class="p">(</span><span class="n">live_switches</span><span class="p">)</span>
+    <span class="n">TTF</span> <span class="o">=</span> <span class="n">hsa_topo</span><span class="o">.</span><span class="n">generate_TTF</span><span class="p">(</span><span class="n">live_links</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">name_tf_pairs</span><span class="p">,</span> <span class="n">TTF</span><span class="p">)</span>
+
+  <span class="nd">@staticmethod</span>
+<div class="viewcode-block" id="InvariantChecker.infer_policy_violations"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.InvariantChecker.infer_policy_violations">[docs]</a>  <span class="k">def</span> <span class="nf">infer_policy_violations</span><span class="p">(</span><span class="n">physical_omega</span><span class="p">,</span> <span class="n">controller_omega</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return if there were any missing entries &#39;&#39;&#39;</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;# entries in physical omega: </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">physical_omega</span><span class="p">))</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;# entries in controller omega: </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">controller_omega</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">get_simple_dict</span><span class="p">(</span><span class="n">omega</span><span class="p">):</span>
+      <span class="c"># TODO(cs): ignoring original hs means that we don&#39;t account for</span>
+      <span class="c"># field modifications, e.g. TTL decreases</span>
+      <span class="c">#</span>
+      <span class="c"># Omegas are { original port -&gt; [(final hs1, final port1), (final hs2, final port2)...] }</span>
+      <span class="c"># Want to turn them into port -&gt; [(final hs1, final port1), (final hs2, final port2)...]</span>
+      <span class="n">simple_dict</span> <span class="o">=</span> <span class="n">collections</span><span class="o">.</span><span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">set</span><span class="p">())</span>
+      <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">tuples</span> <span class="ow">in</span> <span class="n">omega</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">key</span>
+        <span class="k">for</span> <span class="n">tup</span> <span class="ow">in</span> <span class="n">tuples</span><span class="p">:</span>
+          <span class="n">printable_tup</span> <span class="o">=</span> <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">tup</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">tup</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+          <span class="n">simple_dict</span><span class="p">[</span><span class="n">port</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">printable_tup</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">simple_dict</span>
+
+    <span class="n">physical_omega</span> <span class="o">=</span> <span class="n">get_simple_dict</span><span class="p">(</span><span class="n">physical_omega</span><span class="p">)</span>
+    <span class="n">controller_omega</span> <span class="o">=</span> <span class="n">get_simple_dict</span><span class="p">(</span><span class="n">controller_omega</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">print_missing_entries</span><span class="p">(</span><span class="n">print_string</span><span class="p">,</span> <span class="n">omega1</span><span class="p">,</span> <span class="n">omega2</span><span class="p">):</span>
+      <span class="n">any_missing_entries</span> <span class="o">=</span> <span class="bp">False</span>
+      <span class="k">for</span> <span class="n">origin_port</span><span class="p">,</span> <span class="n">final_locations</span> <span class="ow">in</span> <span class="n">omega1</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">final_location</span> <span class="ow">in</span> <span class="n">final_locations</span><span class="p">:</span>
+          <span class="k">if</span> <span class="n">origin_port</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">omega2</span> <span class="ow">or</span> <span class="n">final_location</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">omega2</span><span class="p">[</span><span class="n">origin_port</span><span class="p">]:</span>
+            <span class="n">any_missing_entries</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;: </span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">print_string</span><span class="p">,</span>  <span class="nb">str</span><span class="p">(</span><span class="n">final_location</span><span class="p">)))</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="n">any_missing_entries</span><span class="p">:</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;No </span><span class="si">%s</span><span class="s">!&quot;</span> <span class="o">%</span> <span class="n">print_string</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">any_missing_entries</span>
+
+    <span class="c"># (physical - controller) = missing routing policies</span>
+    <span class="n">missing_routing_entries</span> <span class="o">=</span> <span class="n">print_missing_entries</span><span class="p">(</span><span class="s">&quot;final locations in physical missing from virtual&quot;</span><span class="p">,</span>
+                                                    <span class="n">physical_omega</span><span class="p">,</span> <span class="n">controller_omega</span><span class="p">)</span>
+    <span class="c"># (controller - physical) = missing ACL policies.</span>
+    <span class="n">missing_acl_entries</span> <span class="o">=</span> <span class="n">print_missing_entries</span><span class="p">(</span><span class="s">&quot;final locations in virtual missing from physical&quot;</span><span class="p">,</span>
+                                                <span class="n">controller_omega</span><span class="p">,</span> <span class="n">physical_omega</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">missing_routing_entries</span> <span class="ow">or</span> <span class="n">missing_acl_entries</span>
+</div></div>
+<div class="viewcode-block" id="check_partitions"><a class="viewcode-back" href="../../sts.html#sts.invariant_checker.check_partitions">[docs]</a><span class="k">def</span> <span class="nf">check_partitions</span><span class="p">(</span><span class="n">switches</span><span class="p">,</span> <span class="n">live_links</span><span class="p">,</span> <span class="n">access_links</span><span class="p">):</span>
+  <span class="c"># TODO(cs): lifted directly from pox.forwarding.l2_multi. Highly</span>
+  <span class="c"># redundant!</span>
+
+  <span class="c"># Adjacency map.  [sw1][sw2] -&gt; port from sw1 to sw2</span>
+  <span class="n">adjacency</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span><span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span><span class="bp">None</span><span class="p">))</span>
+
+  <span class="k">for</span> <span class="n">link</span> <span class="ow">in</span> <span class="n">live_links</span><span class="p">:</span>
+    <span class="c"># Make sure to disregard links that are adjacent to down switches</span>
+    <span class="c"># (technically those links are still `live&#39;, but it&#39;s easier to treat it</span>
+    <span class="c">#  this way)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span><span class="o">.</span><span class="n">failed</span> <span class="ow">or</span>
+            <span class="n">link</span><span class="o">.</span><span class="n">end_software_switch</span><span class="o">.</span><span class="n">failed</span><span class="p">):</span>
+      <span class="n">adjacency</span><span class="p">[</span><span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span><span class="p">][</span><span class="n">link</span><span class="o">.</span><span class="n">end_software_switch</span><span class="p">]</span> <span class="o">=</span> <span class="n">link</span>
+
+  <span class="c"># Switches we know of.  [dpid] -&gt; Switch</span>
+  <span class="n">switches</span> <span class="o">=</span> <span class="p">{</span> <span class="n">sw</span><span class="o">.</span><span class="n">dpid</span> <span class="p">:</span> <span class="n">sw</span> <span class="k">for</span> <span class="n">sw</span> <span class="ow">in</span> <span class="n">switches</span> <span class="p">}</span>
+
+  <span class="c"># [sw1][sw2] -&gt; (distance, intermediate)</span>
+  <span class="n">path_map</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span><span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:(</span><span class="bp">None</span><span class="p">,</span><span class="bp">None</span><span class="p">)))</span>
+
+  <span class="k">def</span> <span class="nf">_calc_paths</span> <span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Essentially Floyd-Warshall algorithm</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sws</span> <span class="o">=</span> <span class="n">switches</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+    <span class="n">path_map</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">sws</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">j</span><span class="p">,</span><span class="n">port</span> <span class="ow">in</span> <span class="n">adjacency</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">port</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span> <span class="k">continue</span>
+        <span class="n">path_map</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="bp">None</span><span class="p">)</span>
+      <span class="n">path_map</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="bp">None</span><span class="p">)</span> <span class="c"># distance, intermediate</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    for i in sws:</span>
+<span class="sd">      for j in sws:</span>
+<span class="sd">        a = path_map[i][j][0]</span>
+<span class="sd">        #a = adjacency[i][j]</span>
+<span class="sd">        if a is None: a = &quot;*&quot;</span>
+<span class="sd">        print a,</span>
+<span class="sd">      print</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">sws</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">sws</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">sws</span><span class="p">:</span>
+          <span class="k">if</span> <span class="n">path_map</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">k</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">path_map</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+              <span class="c"># i -&gt; k -&gt; j exists</span>
+              <span class="n">ikj_dist</span> <span class="o">=</span> <span class="n">path_map</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">k</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="n">path_map</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+              <span class="k">if</span> <span class="n">path_map</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">ikj_dist</span> <span class="o">&lt;</span> <span class="n">path_map</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="c"># i -&gt; k -&gt; j is better than existing</span>
+                <span class="n">path_map</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">ikj_dist</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    print &quot;--------------------&quot;</span>
+<span class="sd">    for i in sws:</span>
+<span class="sd">      for j in sws:</span>
+<span class="sd">        print path_map[i][j][0],</span>
+<span class="sd">      print</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+  <span class="n">all_link_pairs</span> <span class="o">=</span> <span class="p">[</span> <span class="p">(</span><span class="n">l1</span><span class="p">,</span><span class="n">l2</span><span class="p">)</span> <span class="k">for</span> <span class="n">l1</span> <span class="ow">in</span> <span class="n">access_links</span>
+                                <span class="k">for</span> <span class="n">l2</span> <span class="ow">in</span> <span class="n">access_links</span> <span class="k">if</span> <span class="n">l1</span> <span class="o">!=</span> <span class="n">l2</span> <span class="p">]</span>
+
+  <span class="n">_calc_paths</span><span class="p">()</span>
+  <span class="n">partioned_pairs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+  <span class="k">for</span> <span class="n">link_pair</span> <span class="ow">in</span> <span class="n">all_link_pairs</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">path_map</span><span class="p">[</span><span class="n">link_pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">switch</span><span class="p">][</span><span class="n">link_pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">switch</span><span class="p">]</span> <span class="o">==</span> <span class="p">(</span><span class="bp">None</span><span class="p">,</span><span class="bp">None</span><span class="p">):</span>
+      <span class="n">id1</span> <span class="o">=</span> <span class="n">get_uniq_port_id</span><span class="p">(</span><span class="n">link_pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="n">link_pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">switch_port</span><span class="p">)</span>
+      <span class="n">id2</span> <span class="o">=</span> <span class="n">get_uniq_port_id</span><span class="p">(</span><span class="n">link_pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">switch</span><span class="p">,</span> <span class="n">link_pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">switch_port</span><span class="p">)</span>
+      <span class="n">partioned_pairs</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">id1</span><span class="p">,</span><span class="n">id2</span><span class="p">))</span>
+  <span class="k">return</span> <span class="n">partioned_pairs</span>
+</pre></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

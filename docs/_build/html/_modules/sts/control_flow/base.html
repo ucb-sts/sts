@@ -1,0 +1,290 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.control_flow.base &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.control_flow.base</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">pox.lib.revent</span>
+<span class="kn">from</span> <span class="nn">pox.lib.revent</span> <span class="kn">import</span> <span class="n">EventMixin</span>
+<span class="kn">from</span> <span class="nn">sts.replay_event</span> <span class="kn">import</span> <span class="n">ControllerStateChange</span><span class="p">,</span> <span class="n">PendingStateChange</span><span class="p">,</span> <span class="n">DeterministicValue</span>
+<span class="kn">from</span> <span class="nn">sts.syncproto.base</span> <span class="kn">import</span> <span class="n">SyncTime</span>
+<span class="kn">from</span> <span class="nn">sts.syncproto.sts_syncer</span> <span class="kn">import</span> <span class="n">STSSyncCallback</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">partial</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">Counter</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;control_flow&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ControlFlow"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ControlFlow">[docs]</a><span class="k">class</span> <span class="nc">ControlFlow</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39; Superclass of ControlFlow types &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_cfg</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span> <span class="o">=</span> <span class="n">simulation_cfg</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sync_callback</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">invariant_check_name</span> <span class="o">=</span> <span class="bp">None</span>
+
+<div class="viewcode-block" id="ControlFlow.simulate"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ControlFlow.simulate">[docs]</a>  <span class="k">def</span> <span class="nf">simulate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Move the simulation forward!&#39;&#39;&#39;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="ControlFlow.init_results"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ControlFlow.init_results">[docs]</a>  <span class="k">def</span> <span class="nf">init_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results_dir</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Set up event log files&#39;&#39;&#39;</span>
+    <span class="k">pass</span>
+</div>
+<div class="viewcode-block" id="ControlFlow.get_sync_callback"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ControlFlow.get_sync_callback">[docs]</a>  <span class="k">def</span> <span class="nf">get_sync_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sync_callback</span>
+
+<span class="c"># ---------------------------------------- #</span>
+<span class="c">#  Callbacks for controller sync messages  #</span>
+<span class="c"># ---------------------------------------- #</span>
+</div></div>
+<div class="viewcode-block" id="StateChange"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.StateChange">[docs]</a><span class="k">class</span> <span class="nc">StateChange</span><span class="p">(</span><span class="n">pox</span><span class="o">.</span><span class="n">lib</span><span class="o">.</span><span class="n">revent</span><span class="o">.</span><span class="n">Event</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pending_state_change</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">StateChange</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">pending_state_change</span> <span class="o">=</span> <span class="n">pending_state_change</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback">[docs]</a><span class="k">class</span> <span class="nc">ReplaySyncCallback</span><span class="p">(</span><span class="n">STSSyncCallback</span><span class="p">,</span> <span class="n">EventMixin</span><span class="p">):</span>
+
+  <span class="n">_eventMixin_events</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="n">StateChange</span><span class="p">])</span>
+
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">get_interpolated_time</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; If get_interpolated_time is None, will always wait on deterministic</span>
+<span class="sd">    values. If not None, will always invoke get_interpolated_time and respond</span>
+<span class="sd">    immediately&#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">get_interpolated_time</span> <span class="o">=</span> <span class="n">get_interpolated_time</span>
+    <span class="c"># TODO(cs): move buffering functionality into the GodScheduler? Or a</span>
+    <span class="c"># separate class?</span>
+    <span class="c"># Python&#39;s Counter object is effectively a multiset</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+    <span class="c"># Each controller can have at most one outstanding state change (since</span>
+    <span class="c"># it&#39;s blocked)</span>
+    <span class="c"># { controller id -&gt; function to send ACK message }</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cid2ack</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="c"># { controller id -&gt; function to send deterministic value responses }</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cid2deterministic_value</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;synccallback&quot;</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_pass_through_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_change_event</span><span class="p">):</span>
+    <span class="n">state_change</span> <span class="o">=</span> <span class="n">state_change_event</span><span class="o">.</span><span class="n">pending_state_change</span>
+    <span class="c"># Pass through</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">ack_pending_state_change</span><span class="p">(</span><span class="n">state_change</span><span class="p">)</span>
+    <span class="c"># Record</span>
+    <span class="n">replay_event</span> <span class="o">=</span> <span class="n">ControllerStateChange</span><span class="p">(</span><span class="n">state_change</span><span class="o">.</span><span class="n">controller_id</span><span class="p">,</span>
+                                         <span class="n">state_change</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">,</span>
+                                         <span class="n">state_change</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                         <span class="n">state_change</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                                         <span class="n">time</span><span class="o">=</span><span class="n">state_change</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">passed_through_events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">replay_event</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ReplaySyncCallback.set_pass_through"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.set_pass_through">[docs]</a>  <span class="k">def</span> <span class="nf">set_pass_through</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Cause all pending state changes to pass through without being buffered&#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">passed_through_events</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">addListener</span><span class="p">(</span><span class="n">StateChange</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pass_through_handler</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.unset_pass_through"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.unset_pass_through">[docs]</a>  <span class="k">def</span> <span class="nf">unset_pass_through</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Unset pass through mode, and return any events that were passed through</span>
+<span class="sd">    since pass through mode was set&#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">removeListener</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pass_through_handler</span><span class="p">)</span>
+    <span class="n">passed_events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">passed_through_events</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">passed_through_events</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">return</span> <span class="n">passed_events</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.state_change_pending"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.state_change_pending">[docs]</a>  <span class="k">def</span> <span class="nf">state_change_pending</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pending_state_change</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return whether the PendingStateChange has been observed &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span><span class="p">[</span><span class="n">pending_state_change</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.ack_pending_state_change"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.ack_pending_state_change">[docs]</a>  <span class="k">def</span> <span class="nf">ack_pending_state_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pending_state_change</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; ACK the pending state change, and collect the PendingStateChange from our buffer&#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span><span class="p">[</span><span class="n">pending_state_change</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span><span class="p">[</span><span class="n">pending_state_change</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span><span class="p">[</span><span class="n">pending_state_change</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">pending_state_change</span><span class="o">.</span><span class="n">controller_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2ack</span><span class="p">:</span>
+      <span class="c"># Send an ACK to the controller to let it proceed</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cid2ack</span><span class="p">[</span><span class="n">pending_state_change</span><span class="o">.</span><span class="n">controller_id</span><span class="p">]()</span>
+      <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2ack</span><span class="p">[</span><span class="n">pending_state_change</span><span class="o">.</span><span class="n">controller_id</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.flush"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.flush">[docs]</a>  <span class="k">def</span> <span class="nf">flush</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; ACK any pending state changes &#39;&#39;&#39;</span>
+    <span class="n">num_pending_state_changes</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">num_pending_state_changes</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Flushing </span><span class="si">%d</span><span class="s"> pending state changes&quot;</span> <span class="o">%</span>
+                    <span class="n">num_pending_state_changes</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span> <span class="o">=</span> <span class="n">Counter</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">cid</span><span class="p">,</span> <span class="n">ack</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2ack</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+      <span class="n">ack</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cid2ack</span> <span class="o">=</span> <span class="p">{}</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.state_change"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.state_change">[docs]</a>  <span class="k">def</span> <span class="nf">state_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sync_type</span><span class="p">,</span> <span class="n">xid</span><span class="p">,</span> <span class="n">controller</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">fingerprint</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="c"># TODO(cs): xid arguably shouldn&#39;t be known to STS</span>
+    <span class="n">pending_state_change</span> <span class="o">=</span> <span class="n">PendingStateChange</span><span class="p">(</span><span class="n">controller</span><span class="o">.</span><span class="n">cid</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span>
+                                              <span class="n">fingerprint</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span><span class="p">[</span><span class="n">pending_state_change</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">sync_type</span> <span class="o">==</span> <span class="s">&quot;SYNC&quot;</span><span class="p">:</span>
+      <span class="n">cid</span> <span class="o">=</span> <span class="n">controller</span><span class="o">.</span><span class="n">cid</span>
+      <span class="k">if</span> <span class="n">cid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2ack</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;More than one outstanding ACKs for </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span>
+                           <span class="nb">str</span><span class="p">(</span><span class="n">cid</span><span class="p">))</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cid2ack</span><span class="p">[</span><span class="n">cid</span><span class="p">]</span> <span class="o">=</span>\
+            <span class="n">partial</span><span class="p">(</span><span class="n">controller</span><span class="o">.</span><span class="n">sync_connection</span><span class="o">.</span><span class="n">ack_sync_notification</span><span class="p">,</span>
+                    <span class="s">&quot;StateChange&quot;</span><span class="p">,</span> <span class="n">xid</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">raiseEvent</span><span class="p">(</span><span class="n">StateChange</span><span class="p">(</span><span class="n">pending_state_change</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.pending_state_changes"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.pending_state_changes">[docs]</a>  <span class="k">def</span> <span class="nf">pending_state_changes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return any pending state changes &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.pending_state_changes_with_counts"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.pending_state_changes_with_counts">[docs]</a>  <span class="k">def</span> <span class="nf">pending_state_changes_with_counts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return any pending state changes &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pending_state_changes</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.get_deterministic_value"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.get_deterministic_value">[docs]</a>  <span class="k">def</span> <span class="nf">get_deterministic_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controller</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">xid</span><span class="p">):</span>
+    <span class="c"># TODO(cs): xid arguably shouldn&#39;t be known to STS</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="s">&quot;gettimeofday&quot;</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;unsupported deterministic value: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+    <span class="c"># TODO(cs): need to dynamically set get_interpolated_time to not None for</span>
+    <span class="c"># peek()</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_interpolated_time</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_interpolated_time</span><span class="p">()</span>
+      <span class="n">controller</span><span class="o">.</span><span class="n">sync_connection</span><span class="o">.</span><span class="n">send_deterministic_value</span><span class="p">(</span><span class="n">xid</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cid2deterministic_value</span><span class="p">[</span><span class="n">controller</span><span class="o">.</span><span class="n">cid</span><span class="p">]</span> <span class="o">=</span>\
+          <span class="n">partial</span><span class="p">(</span><span class="n">controller</span><span class="o">.</span><span class="n">sync_connection</span><span class="o">.</span><span class="n">send_deterministic_value</span><span class="p">,</span> <span class="n">xid</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.pending_deterministic_value_request"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.pending_deterministic_value_request">[docs]</a>  <span class="k">def</span> <span class="nf">pending_deterministic_value_request</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controller_id</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">controller_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2deterministic_value</span>
+</div>
+<div class="viewcode-block" id="ReplaySyncCallback.send_deterministic_value"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.ReplaySyncCallback.send_deterministic_value">[docs]</a>  <span class="k">def</span> <span class="nf">send_deterministic_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controller_id</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">cid2deterministic_value</span><span class="p">[</span><span class="n">controller_id</span><span class="p">](</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">cid2deterministic_value</span><span class="p">[</span><span class="n">controller_id</span><span class="p">]</span>
+</div></div>
+<div class="viewcode-block" id="RecordingSyncCallback"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.RecordingSyncCallback">[docs]</a><span class="k">class</span> <span class="nc">RecordingSyncCallback</span><span class="p">(</span><span class="n">STSSyncCallback</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_logger</span><span class="p">,</span> <span class="n">record_deterministic_values</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">input_logger</span> <span class="o">=</span> <span class="n">input_logger</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">record_deterministic_values</span> <span class="o">=</span> <span class="n">record_deterministic_values</span>
+
+<div class="viewcode-block" id="RecordingSyncCallback.state_change"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.RecordingSyncCallback.state_change">[docs]</a>  <span class="k">def</span> <span class="nf">state_change</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sync_type</span><span class="p">,</span> <span class="n">xid</span><span class="p">,</span> <span class="n">controller</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">fingerprint</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="c"># TODO(cs): xid arguably shouldn&#39;t be known to STS</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">input_logger</span><span class="o">.</span><span class="n">log_input_event</span><span class="p">(</span><span class="n">ControllerStateChange</span><span class="p">(</span><span class="n">controller</span><span class="o">.</span><span class="n">cid</span><span class="p">,</span>
+                                                              <span class="n">fingerprint</span><span class="p">,</span>
+                                                              <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span>
+                                                              <span class="n">time</span><span class="o">=</span><span class="n">time</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">sync_type</span> <span class="o">==</span> <span class="s">&quot;SYNC&quot;</span><span class="p">:</span>
+      <span class="n">controller</span><span class="o">.</span><span class="n">sync_connection</span><span class="o">.</span><span class="n">ack_sync_notification</span><span class="p">(</span><span class="s">&quot;StateChange&quot;</span><span class="p">,</span> <span class="n">xid</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="RecordingSyncCallback.get_deterministic_value"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.base.RecordingSyncCallback.get_deterministic_value">[docs]</a>  <span class="k">def</span> <span class="nf">get_deterministic_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controller</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">xid</span><span class="p">):</span>
+    <span class="c"># TODO(cs): xid arguably shouldn&#39;t be known to STS</span>
+    <span class="n">value</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s">&quot;gettimeofday&quot;</span><span class="p">:</span>
+      <span class="n">value</span> <span class="o">=</span> <span class="n">SyncTime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s">&quot;unsupported deterministic value: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+    <span class="c"># TODO(cs): implement Andi&#39;s improved gettime heuristic</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">record_deterministic_values</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">input_logger</span><span class="o">.</span><span class="n">log_input_event</span><span class="p">(</span><span class="n">DeterministicValue</span><span class="p">(</span><span class="n">controller</span><span class="o">.</span><span class="n">cid</span><span class="p">,</span>
+                                                           <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span>
+                                                           <span class="n">time</span><span class="o">=</span><span class="n">value</span><span class="p">))</span>
+    <span class="n">controller</span><span class="o">.</span><span class="n">sync_connection</span><span class="o">.</span><span class="n">send_deterministic_value</span><span class="p">(</span><span class="n">xid</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

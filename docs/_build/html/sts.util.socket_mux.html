@@ -1,0 +1,352 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>socket_mux Package &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="index.html" />
+    <link rel="up" title="util Package" href="sts.util.html" />
+    <link rel="next" title="tests Package" href="tests.html" />
+    <link rel="prev" title="util Package" href="sts.util.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tests.html" title="tests Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="sts.util.html" title="util Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" >sts Package</a> &raquo;</li>
+          <li><a href="sts.util.html" accesskey="U">util Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="socket-mux-package">
+<h1>socket_mux Package<a class="headerlink" href="#socket-mux-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2><tt class="xref py py-mod docutils literal"><span class="pre">socket_mux</span></tt> Package<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<span class="target" id="module-sts.util.socket_mux"></span></div>
+<div class="section" id="module-sts.util.socket_mux.base">
+<span id="base-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">base</span></tt> Module<a class="headerlink" href="#module-sts.util.socket_mux.base" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="sts.util.socket_mux.base.MockSocket">
+<em class="property">class </em><tt class="descclassname">sts.util.socket_mux.base.</tt><tt class="descname">MockSocket</tt><big>(</big><em>protocol</em>, <em>sock_type</em>, <em>sock_id=-1</em>, <em>json_worker=None</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MockSocket.append_read">
+<tt class="descname">append_read</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket.append_read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket.append_read" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MockSocket.close">
+<tt class="descname">close</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket.close"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket.close" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MockSocket.fileno">
+<tt class="descname">fileno</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket.fileno"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket.fileno" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MockSocket.getpeername">
+<tt class="descname">getpeername</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket.getpeername"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket.getpeername" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MockSocket.ready_to_read">
+<tt class="descname">ready_to_read</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket.ready_to_read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket.ready_to_read" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MockSocket.recv">
+<tt class="descname">recv</tt><big>(</big><em>bufsize</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket.recv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket.recv" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MockSocket.send">
+<tt class="descname">send</tt><big>(</big><em>data</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket.send"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket.send" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MockSocket.setblocking">
+<tt class="descname">setblocking</tt><big>(</big><em>_</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket.setblocking"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket.setblocking" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MockSocket.setsockopt">
+<tt class="descname">setsockopt</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MockSocket.setsockopt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MockSocket.setsockopt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sts.util.socket_mux.base.MultiplexedSelect">
+<em class="property">class </em><tt class="descclassname">sts.util.socket_mux.base.</tt><tt class="descname">MultiplexedSelect</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MultiplexedSelect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MultiplexedSelect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="sts.util.html#sts.util.io_master.IOMaster" title="sts.util.io_master.IOMaster"><tt class="xref py py-class docutils literal"><span class="pre">sts.util.io_master.IOMaster</span></tt></a></p>
+<dl class="attribute">
+<dt id="sts.util.socket_mux.base.MultiplexedSelect.fileno2ready_to_read">
+<tt class="descname">fileno2ready_to_read</tt><em class="property"> = {}</em><a class="headerlink" href="#sts.util.socket_mux.base.MultiplexedSelect.fileno2ready_to_read" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MultiplexedSelect.handle_socks_rwe">
+<tt class="descname">handle_socks_rwe</tt><big>(</big><em>rl</em>, <em>wl</em>, <em>xl</em>, <em>mock_read_socks</em>, <em>mock_write_workers</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MultiplexedSelect.handle_socks_rwe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MultiplexedSelect.handle_socks_rwe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MultiplexedSelect.ready_to_read">
+<tt class="descname">ready_to_read</tt><big>(</big><em>sock_or_io_worker</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MultiplexedSelect.ready_to_read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MultiplexedSelect.ready_to_read" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MultiplexedSelect.select">
+<tt class="descname">select</tt><big>(</big><em>rl</em>, <em>wl</em>, <em>xl</em>, <em>timeout=0</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MultiplexedSelect.select"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MultiplexedSelect.select" title="Permalink to this definition">¶</a></dt>
+<dd><p>Note that this layer is <em>below</em> IOMaster&#8217;s Select loop</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.base.MultiplexedSelect.set_true_io_worker">
+<tt class="descname">set_true_io_worker</tt><big>(</big><em>true_io_worker</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#MultiplexedSelect.set_true_io_worker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.MultiplexedSelect.set_true_io_worker" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sts.util.socket_mux.base.SocketDemultiplexer">
+<em class="property">class </em><tt class="descclassname">sts.util.socket_mux.base.</tt><tt class="descname">SocketDemultiplexer</tt><big>(</big><em>true_io_worker</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#SocketDemultiplexer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.SocketDemultiplexer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.util.socket_mux.base.is_mocked">
+<tt class="descclassname">sts.util.socket_mux.base.</tt><tt class="descname">is_mocked</tt><big>(</big><em>sock_or_io_worker</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#is_mocked"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.is_mocked" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.util.socket_mux.base.sort_sockets">
+<tt class="descclassname">sts.util.socket_mux.base.</tt><tt class="descname">sort_sockets</tt><big>(</big><em>rl</em>, <em>wl</em>, <em>xl</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/base.html#sort_sockets"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.base.sort_sockets" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-sts.util.socket_mux.pox_monkeypatcher">
+<span id="pox-monkeypatcher-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">pox_monkeypatcher</span></tt> Module<a class="headerlink" href="#module-sts.util.socket_mux.pox_monkeypatcher" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="sts.util.socket_mux.pox_monkeypatcher.launch">
+<tt class="descclassname">sts.util.socket_mux.pox_monkeypatcher.</tt><tt class="descname">launch</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/pox_monkeypatcher.html#launch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.pox_monkeypatcher.launch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-sts.util.socket_mux.server_socket_multiplexer">
+<span id="server-socket-multiplexer-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">server_socket_multiplexer</span></tt> Module<a class="headerlink" href="#module-sts.util.socket_mux.server_socket_multiplexer" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket">
+<em class="property">class </em><tt class="descclassname">sts.util.socket_mux.server_socket_multiplexer.</tt><tt class="descname">ServerMockSocket</tt><big>(</big><em>protocol</em>, <em>sock_type</em>, <em>sock_id=-1</em>, <em>json_worker=None</em>, <em>set_true_listen_socket=&lt;function &lt;lambda&gt; at 0x3be6e30&gt;</em>, <em>peer_address=None</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMockSocket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sts.util.socket_mux.base.MockSocket" title="sts.util.socket_mux.base.MockSocket"><tt class="xref py py-class docutils literal"><span class="pre">sts.util.socket_mux.base.MockSocket</span></tt></a></p>
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.accept">
+<tt class="descname">accept</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMockSocket.accept"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.accept" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.append_new_mock_socket">
+<tt class="descname">append_new_mock_socket</tt><big>(</big><em>mock_sock</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMockSocket.append_new_mock_socket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.append_new_mock_socket" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.bind">
+<tt class="descname">bind</tt><big>(</big><em>server_info</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMockSocket.bind"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.bind" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.listen">
+<tt class="descname">listen</tt><big>(</big><em>_</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMockSocket.listen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.listen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.ready_to_read">
+<tt class="descname">ready_to_read</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMockSocket.ready_to_read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMockSocket.ready_to_read" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect">
+<em class="property">class </em><tt class="descclassname">sts.util.socket_mux.server_socket_multiplexer.</tt><tt class="descname">ServerMultiplexedSelect</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMultiplexedSelect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sts.util.socket_mux.base.MultiplexedSelect" title="sts.util.socket_mux.base.MultiplexedSelect"><tt class="xref py py-class docutils literal"><span class="pre">sts.util.socket_mux.base.MultiplexedSelect</span></tt></a></p>
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect.grab_workers_rwe">
+<tt class="descname">grab_workers_rwe</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMultiplexedSelect.grab_workers_rwe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect.grab_workers_rwe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect.handle_socks_rwe">
+<tt class="descname">handle_socks_rwe</tt><big>(</big><em>rl</em>, <em>wl</em>, <em>xl</em>, <em>mock_read_socks</em>, <em>mock_write_workers</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMultiplexedSelect.handle_socks_rwe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect.handle_socks_rwe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect.ready_to_read">
+<tt class="descname">ready_to_read</tt><big>(</big><em>sock_or_io_worker</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMultiplexedSelect.ready_to_read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect.ready_to_read" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect.set_true_listen_socket">
+<tt class="descname">set_true_listen_socket</tt><big>(</big><em>true_listen_socket</em>, <em>mock_listen_sock</em>, <em>accept_callback</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerMultiplexedSelect.set_true_listen_socket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerMultiplexedSelect.set_true_listen_socket" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerSocketDemultiplexer">
+<em class="property">class </em><tt class="descclassname">sts.util.socket_mux.server_socket_multiplexer.</tt><tt class="descname">ServerSocketDemultiplexer</tt><big>(</big><em>true_io_worker</em>, <em>mock_listen_sock</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerSocketDemultiplexer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerSocketDemultiplexer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sts.util.socket_mux.base.SocketDemultiplexer" title="sts.util.socket_mux.base.SocketDemultiplexer"><tt class="xref py py-class docutils literal"><span class="pre">sts.util.socket_mux.base.SocketDemultiplexer</span></tt></a></p>
+<dl class="method">
+<dt id="sts.util.socket_mux.server_socket_multiplexer.ServerSocketDemultiplexer.new_socket">
+<tt class="descname">new_socket</tt><big>(</big><em>sock_id=-1</em>, <em>peer_address=None</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/server_socket_multiplexer.html#ServerSocketDemultiplexer.new_socket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.server_socket_multiplexer.ServerSocketDemultiplexer.new_socket" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-sts.util.socket_mux.sts_socket_multiplexer">
+<span id="sts-socket-multiplexer-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">sts_socket_multiplexer</span></tt> Module<a class="headerlink" href="#module-sts.util.socket_mux.sts_socket_multiplexer" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket">
+<em class="property">class </em><tt class="descclassname">sts.util.socket_mux.sts_socket_multiplexer.</tt><tt class="descname">STSMockSocket</tt><big>(</big><em>protocol</em>, <em>sock_type</em>, <em>sock_id=-1</em>, <em>json_worker=None</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/sts_socket_multiplexer.html#STSMockSocket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sts.util.socket_mux.base.MockSocket" title="sts.util.socket_mux.base.MockSocket"><tt class="xref py py-class docutils literal"><span class="pre">sts.util.socket_mux.base.MockSocket</span></tt></a></p>
+<dl class="attribute">
+<dt id="sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket.address2demuxer">
+<tt class="descname">address2demuxer</tt><em class="property"> = {}</em><a class="headerlink" href="#sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket.address2demuxer" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket.connect">
+<tt class="descname">connect</tt><big>(</big><em>address</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/sts_socket_multiplexer.html#STSMockSocket.connect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket.connect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket.getpeername">
+<tt class="descname">getpeername</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/sts_socket_multiplexer.html#STSMockSocket.getpeername"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.sts_socket_multiplexer.STSMockSocket.getpeername" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="sts.util.socket_mux.sts_socket_multiplexer.STSSocketDemultiplexer">
+<em class="property">class </em><tt class="descclassname">sts.util.socket_mux.sts_socket_multiplexer.</tt><tt class="descname">STSSocketDemultiplexer</tt><big>(</big><em>true_io_worker</em>, <em>server_info</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/sts_socket_multiplexer.html#STSSocketDemultiplexer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.sts_socket_multiplexer.STSSocketDemultiplexer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#sts.util.socket_mux.base.SocketDemultiplexer" title="sts.util.socket_mux.base.SocketDemultiplexer"><tt class="xref py py-class docutils literal"><span class="pre">sts.util.socket_mux.base.SocketDemultiplexer</span></tt></a></p>
+<dl class="method">
+<dt id="sts.util.socket_mux.sts_socket_multiplexer.STSSocketDemultiplexer.add_new_socket">
+<tt class="descname">add_new_socket</tt><big>(</big><em>new_socket</em><big>)</big><a class="reference internal" href="_modules/sts/util/socket_mux/sts_socket_multiplexer.html#STSSocketDemultiplexer.add_new_socket"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.util.socket_mux.sts_socket_multiplexer.STSSocketDemultiplexer.add_new_socket" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">socket_mux Package</a><ul>
+<li><a class="reference internal" href="#id1"><tt class="docutils literal"><span class="pre">socket_mux</span></tt> Package</a></li>
+<li><a class="reference internal" href="#module-sts.util.socket_mux.base"><tt class="docutils literal"><span class="pre">base</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.util.socket_mux.pox_monkeypatcher"><tt class="docutils literal"><span class="pre">pox_monkeypatcher</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.util.socket_mux.server_socket_multiplexer"><tt class="docutils literal"><span class="pre">server_socket_multiplexer</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.util.socket_mux.sts_socket_multiplexer"><tt class="docutils literal"><span class="pre">sts_socket_multiplexer</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="sts.util.html"
+                        title="previous chapter">util Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="tests.html"
+                        title="next chapter">tests Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/sts.util.socket_mux.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="tests.html" title="tests Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="sts.util.html" title="util Package"
+             >previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" >sts Package</a> &raquo;</li>
+          <li><a href="sts.util.html" >util Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

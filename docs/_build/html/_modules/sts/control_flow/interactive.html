@@ -1,0 +1,655 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.control_flow.interactive &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.control_flow.interactive</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">control flow type for running the simulation forward.</span>
+<span class="sd">  - Interactive: presents an interactive prompt for injecting events and</span>
+<span class="sd">    checking for invariants at the users&#39; discretion</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">sts.util.tabular</span> <span class="kn">import</span> <span class="n">Tabular</span>
+<span class="kn">from</span> <span class="nn">sts.util.procutils</span> <span class="kn">import</span> <span class="n">printlock</span>
+<span class="kn">from</span> <span class="nn">sts.topology</span> <span class="kn">import</span> <span class="n">BufferedPatchPanel</span>
+<span class="kn">from</span> <span class="nn">sts.util.console</span> <span class="kn">import</span> <span class="n">msg</span><span class="p">,</span> <span class="n">color</span>
+<span class="kn">from</span> <span class="nn">sts.replay_event</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">sts.util.convenience</span> <span class="kn">import</span> <span class="n">find</span>
+<span class="kn">from</span> <span class="nn">sts.traffic_generator</span> <span class="kn">import</span> <span class="n">TrafficGenerator</span>
+
+<span class="kn">import</span> <span class="nn">pox.openflow.libopenflow_01</span> <span class="kn">as</span> <span class="nn">of</span>
+
+<span class="kn">from</span> <span class="nn">sts.control_flow.base</span> <span class="kn">import</span> <span class="n">ControlFlow</span><span class="p">,</span> <span class="n">RecordingSyncCallback</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;interactive&quot;</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">code</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">random</span> <span class="kn">import</span> <span class="n">Random</span>
+
+<span class="k">try</span><span class="p">:</span>
+  <span class="kn">import</span> <span class="nn">readline</span>
+  <span class="n">readline</span><span class="o">.</span><span class="n">parse_and_bind</span><span class="p">(</span><span class="s">&#39;tab: complete&#39;</span><span class="p">)</span>
+<span class="k">except</span><span class="p">:</span>
+  <span class="n">log</span><span class="o">.</span><span class="n">critical</span><span class="p">(</span><span class="s">&quot;Need to install readline: $ sudo pip install readline&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="STSCommandArg"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSCommandArg">[docs]</a><span class="k">class</span> <span class="nc">STSCommandArg</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">help_msg</span> <span class="o">=</span> <span class="n">help_msg</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_values</span> <span class="o">=</span> <span class="n">values</span>
+
+<div class="viewcode-block" id="STSCommandArg.arg_help"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSCommandArg.arg_help">[docs]</a>  <span class="k">def</span> <span class="nf">arg_help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">help_msg</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">help_msg</span>
+    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="p">:</span>
+      <span class="k">return</span> <span class="s">&quot;one of </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">values</span><span class="p">())))</span>
+</div>
+<div class="viewcode-block" id="STSCommandArg.values"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSCommandArg.values">[docs]</a>  <span class="k">def</span> <span class="nf">values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_values</span><span class="p">()</span>
+
+</div></div>
+<div class="viewcode-block" id="STSCommand"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSCommand">[docs]</a><span class="k">class</span> <span class="nc">STSCommand</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="n">help_msg</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">func</span> <span class="o">=</span> <span class="n">func</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">alias</span> <span class="o">=</span> <span class="n">alias</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">help_msg</span> <span class="o">=</span> <span class="n">help_msg</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="STSCommand.arg"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSCommand.arg">[docs]</a>  <span class="k">def</span> <span class="nf">arg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">STSCommandArg</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">help_msg</span><span class="p">,</span> <span class="n">values</span><span class="p">))</span>
+    <span class="k">return</span> <span class="bp">self</span>
+</div>
+<div class="viewcode-block" id="STSCommand.arg_help"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSCommand.arg_help">[docs]</a>  <span class="k">def</span> <span class="nf">arg_help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span> <span class="s">&quot;  &lt;</span><span class="si">%s</span><span class="s">&gt;: </span><span class="si">%s</span><span class="s">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">a</span><span class="o">.</span><span class="n">arg_help</span><span class="p">())</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">arg_help</span><span class="p">()</span> <span class="p">]</span>
+</div>
+<div class="viewcode-block" id="STSCommand.get_help"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSCommand.get_help">[docs]</a>  <span class="k">def</span> <span class="nf">get_help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">name_with_args</span> <span class="o">=</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> \
+        <span class="p">(</span><span class="s">&quot; &quot;</span> <span class="o">+</span> <span class="p">(</span><span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="s">&quot;&lt;</span><span class="si">%s</span><span class="s">&gt;&quot;</span> <span class="o">%</span> <span class="n">a</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">)))</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="k">else</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">aliases</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;[&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">alias</span><span class="o">+</span><span class="s">&quot;]&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">alias</span> <span class="k">else</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">help_msg</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">help_msg</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">help_msg</span> <span class="k">else</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">args_help</span> <span class="o">=</span> <span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\n</span><span class="s">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">arg_help</span><span class="p">())</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">arg_help</span><span class="p">()</span> <span class="k">else</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="s">&quot;</span><span class="si">%-24s</span><span class="s"> </span><span class="si">%-8s</span><span class="s"> </span><span class="si">%s%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name_with_args</span><span class="p">,</span> <span class="n">aliases</span><span class="p">,</span> <span class="n">help_msg</span><span class="p">,</span> <span class="n">args_help</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="STSRegisteredObject"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSRegisteredObject">[docs]</a><span class="k">class</span> <span class="nc">STSRegisteredObject</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="n">help_msg</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">obj</span> <span class="o">=</span> <span class="n">obj</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">alias</span> <span class="o">=</span> <span class="n">alias</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">help_msg</span> <span class="o">=</span> <span class="n">help_msg</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="p">[]</span>
+
+<div class="viewcode-block" id="STSRegisteredObject.get_help"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSRegisteredObject.get_help">[docs]</a>  <span class="k">def</span> <span class="nf">get_help</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="s">&quot;</span><span class="si">%s</span><span class="se">\t</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> \
+      <span class="p">(</span><span class="s">&quot;[&quot;</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">alias</span><span class="o">+</span><span class="s">&quot;]&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">alias</span> <span class="k">else</span> <span class="s">&quot;&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;</span><span class="se">\t</span><span class="s">&quot;</span> <span class="o">+</span> \
+      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">help_msg</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">help_msg</span> <span class="k">else</span> <span class="s">&quot;&quot;</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="STSConsole"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSConsole">[docs]</a><span class="k">class</span> <span class="nc">STSConsole</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_command</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">call_env</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">help_items</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">commands</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_default_command</span> <span class="o">=</span> <span class="n">default_command</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">show_help</span><span class="p">,</span> <span class="s">&quot;help&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&#39;h&#39;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;This help screen&quot;</span><span class="p">)</span>
+
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="STSConsole.default_command"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSConsole.default_command">[docs]</a>  <span class="k">def</span> <span class="nf">default_command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_command</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_default_command</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_command</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_command</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="STSConsole.show_help"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSConsole.show_help">[docs]</a>  <span class="k">def</span> <span class="nf">show_help</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">command</span><span class="p">:</span>
+      <span class="k">if</span> <span class="n">command</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">commands</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;==================== Command </span><span class="si">%s</span><span class="s"> ========================&quot;</span> <span class="o">%</span> <span class="n">command</span>
+        <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">commands</span><span class="p">[</span><span class="n">command</span><span class="p">]</span><span class="o">.</span><span class="n">get_help</span><span class="p">()</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Command </span><span class="si">%s</span><span class="s"> not found&quot;</span> <span class="o">%</span> <span class="n">command</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;==================== Command help ========================&quot;</span>
+      <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">help_items</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+          <span class="k">print</span> <span class="n">item</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="k">print</span> <span class="n">item</span><span class="o">.</span><span class="n">get_help</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="STSConsole.cmd_group"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSConsole.cmd_group">[docs]</a>  <span class="k">def</span> <span class="nf">cmd_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">help_items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s">&quot;</span><span class="se">\n</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="s">&quot;-&quot;</span> <span class="o">*</span> <span class="p">((</span><span class="mi">80</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">name</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span><span class="p">),</span> <span class="n">name</span><span class="p">,</span> <span class="s">&#39;-&#39;</span> <span class="o">*</span> <span class="p">((</span><span class="mi">80</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="n">name</span><span class="p">))</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span> <span class="p">))</span>
+</div>
+  <span class="k">def</span> <span class="nf">_register</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">call_env</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span>
+    <span class="k">if</span> <span class="n">alias</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">alias</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;|&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">call_env</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span>
+
+<div class="viewcode-block" id="STSConsole.cmd"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSConsole.cmd">[docs]</a>  <span class="k">def</span> <span class="nf">cmd</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_register</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="p">)</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="n">STSCommand</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="n">help_msg</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">commands</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">command</span>
+    <span class="k">if</span> <span class="n">alias</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">alias</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;|&#39;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">commands</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">command</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">help_items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+    <span class="n">command</span><span class="o">.</span><span class="n">get_help</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">command</span>
+</div>
+<div class="viewcode-block" id="STSConsole.register_obj"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSConsole.register_obj">[docs]</a>  <span class="k">def</span> <span class="nf">register_obj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_register</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="p">)</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">STSRegisteredObject</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="n">help_msg</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">help_items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="STSConsole.autocomplete_matches"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSConsole.autocomplete_matches">[docs]</a>  <span class="k">def</span> <span class="nf">autocomplete_matches</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="k">return</span> <span class="p">[</span> <span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_env</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">      if parts[0] in self.commands:</span>
+<span class="sd">        command = self.commands[parts[0]]</span>
+<span class="sd">        argno = len(parts) - 2</span>
+<span class="sd">        argval = parts[-1]</span>
+<span class="sd">        if argno &lt; len(command.args):</span>
+<span class="sd">          return [ s for s in self.args[argo].values() if s.startswith(argval) ]</span>
+<span class="sd">      &quot;&quot;&quot;</span>
+      <span class="k">return</span> <span class="p">[]</span>
+</div>
+<div class="viewcode-block" id="STSConsole.run"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.STSConsole.run">[docs]</a>  <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">local</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_env</span>
+    <span class="k">def</span> <span class="nf">completer</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+      <span class="k">try</span><span class="p">:</span>
+        <span class="n">matches</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">autocomplete_matches</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">readline</span><span class="o">.</span><span class="n">get_begidx</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">matches</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">matches</span><span class="p">[</span><span class="n">state</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">None</span>
+      <span class="k">except</span> <span class="ne">BaseException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">print</span> <span class="s">&quot;Error on autocompleting: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">e</span>
+        <span class="k">raise</span> <span class="n">e</span>
+
+    <span class="n">readline</span><span class="o">.</span><span class="n">set_completer</span><span class="p">(</span><span class="n">completer</span><span class="p">)</span>
+    <span class="n">digits</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">r&#39;\d+&#39;</span><span class="p">)</span>
+    <span class="n">quoted</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s">r&#39;&quot;.*&quot;|</span><span class="se">\&#39;</span><span class="s">.*</span><span class="se">\&#39;</span><span class="s">&#39;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">quote_parameter</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">quoted</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">s</span>
+      <span class="k">elif</span> <span class="n">digits</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">s</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&quot;&#39;</span><span class="si">%s</span><span class="s">&#39;&quot;</span> <span class="o">%</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;&#39;&quot;</span><span class="p">,</span> <span class="s">&quot;</span><span class="se">\\</span><span class="s">&#39;&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">input</span><span class="p">(</span><span class="n">prompt</span><span class="p">):</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_command</span><span class="p">:</span>
+        <span class="n">prompt</span> <span class="o">=</span> <span class="n">prompt</span> <span class="o">+</span> <span class="n">color</span><span class="o">.</span><span class="n">GRAY</span> <span class="o">+</span> <span class="s">&quot;[&quot;</span><span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_command</span> <span class="o">+</span> <span class="s">&quot;]&quot;</span> <span class="o">+</span> <span class="n">color</span><span class="o">.</span><span class="n">WHITE</span> <span class="o">+</span> <span class="s">&quot; &gt;&quot;</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="n">prompt</span> <span class="o">=</span> <span class="n">prompt</span> <span class="o">+</span> <span class="s">&quot;&gt; &quot;</span>
+      <span class="k">with</span> <span class="n">printlock</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">msg</span><span class="o">.</span><span class="n">raw_input</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
+      <span class="k">if</span> <span class="n">x</span> <span class="o">==</span> <span class="s">&quot;&quot;</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_command</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_command</span>
+
+      <span class="n">parts</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&quot; &quot;</span><span class="p">)</span>
+      <span class="n">cmd_name</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+      <span class="k">if</span> <span class="n">cmd_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">commands</span><span class="p">:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">+</span><span class="s">&quot;(&quot;</span> <span class="o">+</span> <span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">quote_parameter</span><span class="p">(</span><span class="n">s</span><span class="p">),</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span> <span class="o">+</span> <span class="s">&quot;)&quot;</span>
+      <span class="k">return</span> <span class="n">x</span>
+
+    <span class="n">sys</span><span class="o">.</span><span class="n">ps1</span> <span class="o">=</span> <span class="n">color</span><span class="o">.</span><span class="n">GREEN</span> <span class="o">+</span> <span class="s">&quot;STS &quot;</span> <span class="o">+</span> <span class="n">color</span><span class="o">.</span><span class="n">WHITE</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">sys</span><span class="p">,</span> <span class="s">&quot;_orig_stdout&quot;</span><span class="p">):</span>
+      <span class="n">patched_stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
+      <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">_orig_stdout</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">patched_stdout</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="n">code</span><span class="o">.</span><span class="n">interact</span><span class="p">(</span><span class="n">color</span><span class="o">.</span><span class="n">GREEN</span> <span class="o">+</span> <span class="s">&quot;STS Interactive console.&quot;</span><span class="o">+</span><span class="n">color</span><span class="o">.</span><span class="n">WHITE</span><span class="o">+</span><span class="s">&quot;</span><span class="se">\n</span><span class="s">Python expressions and sts commands supported.</span><span class="se">\n</span><span class="s">Type &#39;help&#39; for an overview of available commands.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="nb">input</span><span class="p">,</span> <span class="n">local</span><span class="o">=</span><span class="n">local</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">patched_stdout</span><span class="p">:</span>
+      <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">patched_stdout</span>
+</div></div>
+<div class="viewcode-block" id="Interactive"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive">[docs]</a><span class="k">class</span> <span class="nc">Interactive</span><span class="p">(</span><span class="n">ControlFlow</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Presents an interactive prompt for injecting events and</span>
+<span class="sd">  checking for invariants at the users&#39; discretion</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_cfg</span><span class="p">,</span> <span class="n">input_logger</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">ControlFlow</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation_cfg</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">sync_callback</span> <span class="o">=</span> <span class="n">RecordingSyncCallback</span><span class="p">(</span><span class="n">input_logger</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">logical_time</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span> <span class="o">=</span> <span class="n">input_logger</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">traffic_generator</span> <span class="o">=</span> <span class="n">TrafficGenerator</span><span class="p">(</span><span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">())</span>
+    <span class="c"># TODO(cs): future feature: allow the user to interactively choose the order</span>
+    <span class="c"># events occur for each round, whether to delay, drop packets, fail nodes,</span>
+    <span class="c"># etc.</span>
+    <span class="c"># self.failure_lvl = [</span>
+    <span class="c">#   NOTHING,    # Everything is handled by the random number generator</span>
+    <span class="c">#   CRASH,      # The user only controls node crashes and restarts</span>
+    <span class="c">#   DROP,       # The user also controls message dropping</span>
+    <span class="c">#   DELAY,      # The user also controls message delays</span>
+    <span class="c">#   EVERYTHING  # The user controls everything, including message ordering</span>
+    <span class="c"># ]</span>
+
+  <span class="k">def</span> <span class="nf">_log_input_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">):</span>
+    <span class="c"># TODO(cs): redundant with Fuzzer._log_input_event</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">event</span><span class="o">.</span><span class="n">round</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">logical_time</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span><span class="o">.</span><span class="n">log_input_event</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="o">**</span><span class="n">kws</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Interactive.init_results"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.init_results">[docs]</a>  <span class="k">def</span> <span class="nf">init_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results_dir</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">results_dir</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Interactive.simulate"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.simulate">[docs]</a>  <span class="k">def</span> <span class="nf">simulate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">bound_objects</span><span class="o">=</span><span class="p">()):</span>
+    <span class="k">if</span> <span class="n">simulation</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span><span class="o">.</span><span class="n">bootstrap</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sync_callback</span><span class="p">)</span>
+      <span class="c"># Always connect to controllers explicitly</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">connect_to_controllers</span><span class="p">()</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">ConnectToControllers</span><span class="p">())</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span> <span class="o">=</span> <span class="n">simulation</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">_forwarded_this_step</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">try</span><span class="p">:</span>
+      <span class="n">c</span> <span class="o">=</span> <span class="n">STSConsole</span><span class="p">(</span><span class="n">default_command</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">default_command</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd_group</span><span class="p">(</span><span class="s">&quot;Simulation state&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">next_step</span><span class="p">,</span> <span class="s">&quot;next&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;n&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Proceed to next simulation step&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">quit</span><span class="p">,</span> <span class="s">&quot;quit&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;q&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Quit the simulation&quot;</span><span class="p">)</span>
+
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd_group</span><span class="p">(</span><span class="s">&quot;Invariants&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">invariant_check</span><span class="p">,</span> <span class="s">&quot;check_invariants&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;inv&quot;</span><span class="p">,</span>  <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Run an invariant check&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;kind&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="p">[</span><span class="s">&#39;omega&#39;</span><span class="p">,</span> <span class="s">&#39;connectivity&#39;</span><span class="p">,</span> <span class="s">&#39;loops&#39;</span><span class="p">,</span> <span class="s">&#39;liveness&#39;</span><span class="p">])</span>
+
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd_group</span><span class="p">(</span><span class="s">&quot;Dataplane&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataplane_trace_feed</span><span class="p">,</span> <span class="s">&quot;dp_inject&quot;</span><span class="p">,</span>  <span class="n">alias</span><span class="o">=</span><span class="s">&quot;dpi&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Inject the next dataplane event from the trace&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataplane_forward</span><span class="p">,</span>    <span class="s">&quot;dp_forward&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;dpf&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Forward a pending dataplane event&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataplane_drop</span><span class="p">,</span>       <span class="s">&quot;dp_drop&quot;</span><span class="p">,</span>    <span class="n">alias</span><span class="o">=</span><span class="s">&quot;dpd&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Drop a pending dataplane event&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dataplane_delay</span><span class="p">,</span>      <span class="s">&quot;dp_delay&quot;</span><span class="p">,</span>   <span class="n">alias</span><span class="o">=</span><span class="s">&quot;dpe&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Delay a pending dataplane event&quot;</span><span class="p">)</span>
+
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd_group</span><span class="p">(</span><span class="s">&quot;Controlling entitities&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_controllers</span><span class="p">,</span> <span class="s">&quot;list_controllers&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;lsc&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;List controllers&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kill_controller</span><span class="p">,</span>  <span class="s">&quot;kill_controller&quot;</span><span class="p">,</span>  <span class="n">alias</span><span class="o">=</span><span class="s">&quot;kc&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Kill a controller&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;label&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">live_controllers</span><span class="p">))</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_controller</span><span class="p">,</span>  <span class="s">&quot;start_controller&quot;</span><span class="p">,</span>  <span class="n">alias</span><span class="o">=</span><span class="s">&quot;sc&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Restart a controller&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;label&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">down_controllers</span><span class="p">))</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_switches</span><span class="p">,</span> <span class="s">&quot;list_switches&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;lss&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;List switches&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kill_switch</span><span class="p">,</span>  <span class="s">&quot;kill_switch&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;ks&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Kill a switch&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;dpid&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_switch</span><span class="p">,</span>  <span class="s">&quot;start_switch&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;ss&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Restart a switch&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;dpid&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cut_link</span><span class="p">,</span>  <span class="s">&quot;cut_link&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;cl&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Cut a link&quot;</span><span class="p">)</span>\
+           <span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;dpid1&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>\
+           <span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;dpid2&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">repair_link</span><span class="p">,</span>  <span class="s">&quot;repair_link&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;rl&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Repair a link&quot;</span><span class="p">)</span>\
+           <span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;dpid1&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>\
+           <span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;dpid2&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">show_flow_table</span><span class="p">,</span>  <span class="s">&quot;show_flows&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;sf&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Show flowtable of a switch&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;dpid&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">list_hosts</span><span class="p">,</span> <span class="s">&quot;list_hosts&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;lhs&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;List hosts&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">migrate_host</span><span class="p">,</span> <span class="s">&quot;migrate_host&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;mh&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;Migrate a host to switch dpid&quot;</span><span class="p">)</span>\
+            <span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;hid&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">h</span><span class="p">:</span> <span class="n">h</span><span class="o">.</span><span class="n">hid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">hosts</span><span class="p">))</span>\
+            <span class="o">.</span><span class="n">arg</span><span class="p">(</span><span class="s">&quot;dpid&quot;</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">s</span><span class="p">:</span> <span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">))</span>
+
+      <span class="n">c</span><span class="o">.</span><span class="n">cmd_group</span><span class="p">(</span><span class="s">&quot;Python objects&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">register_obj</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="p">,</span> <span class="s">&quot;simulation&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;access the simulation object&quot;</span><span class="p">)</span>
+      <span class="n">c</span><span class="o">.</span><span class="n">register_obj</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span> <span class="s">&quot;topology&quot;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s">&quot;topo&quot;</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;access the topology object&quot;</span><span class="p">)</span>
+      <span class="k">for</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">obj</span><span class="p">)</span> <span class="ow">in</span> <span class="n">bound_objects</span><span class="p">:</span>
+        <span class="n">c</span><span class="o">.</span><span class="n">register_obj</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">help_msg</span><span class="o">=</span><span class="s">&quot;access the </span><span class="si">%s</span><span class="s"> object&quot;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+      <span class="n">c</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+    <span class="k">finally</span><span class="p">:</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_input_logger</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation_cfg</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span>
+</div>
+<div class="viewcode-block" id="Interactive.default_command"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.default_command">[docs]</a>  <span class="k">def</span> <span class="nf">default_command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">queued</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">patch_panel</span><span class="o">.</span><span class="n">queued_dataplane_events</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">queued</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forwarded_this_step</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">ok_to_send</span><span class="p">(</span><span class="n">queued</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+      <span class="k">return</span> <span class="s">&quot;dpf&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">return</span> <span class="s">&quot;next&quot;</span>
+</div>
+<div class="viewcode-block" id="Interactive.quit"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.quit">[docs]</a>  <span class="k">def</span> <span class="nf">quit</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">print</span> <span class="s">&quot;End console with CTRL-D&quot;</span>
+</div>
+<div class="viewcode-block" id="Interactive.next_step"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.next_step">[docs]</a>  <span class="k">def</span> <span class="nf">next_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.05</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">logical_time</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_forwarded_this_step</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">print</span> <span class="s">&quot;-------------------&quot;</span>
+    <span class="k">print</span> <span class="s">&quot;Advanced to step </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">logical_time</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">show_queued_events</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Interactive.show_queued_events"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.show_queued_events">[docs]</a>  <span class="k">def</span> <span class="nf">show_queued_events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">queued</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">patch_panel</span><span class="o">.</span><span class="n">queued_dataplane_events</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">queued</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;Queued Dataplane events:&quot;</span>
+      <span class="k">for</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">queued</span><span class="p">):</span>
+        <span class="k">print</span> <span class="s">&quot;</span><span class="si">%d</span><span class="s">: </span><span class="si">%s</span><span class="s"> on </span><span class="si">%s</span><span class="s">:</span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">e</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">node</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Interactive.list_controllers"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.list_controllers">[docs]</a>  <span class="k">def</span> <span class="nf">list_controllers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">cm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span>
+    <span class="n">live</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">live_controllers</span>
+    <span class="k">print</span> <span class="s">&quot;Controllers:&quot;</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cm</span><span class="o">.</span><span class="n">controllers</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;</span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">cid</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">c</span><span class="p">),</span> <span class="s">&quot;[ALIVE]&quot;</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">live</span> <span class="k">else</span> <span class="s">&quot;[DEAD]&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Interactive.kill_controller"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.kill_controller">[docs]</a>  <span class="k">def</span> <span class="nf">kill_controller</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+    <span class="n">cm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">get_controller_by_label</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">c</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;Killing controller: </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+      <span class="n">cm</span><span class="o">.</span><span class="n">kill_controller</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">ControllerFailure</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">cid</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;Controller with label </span><span class="si">%s</span><span class="s"> not found&quot;</span> <span class="o">%</span><span class="n">label</span>
+</div>
+<div class="viewcode-block" id="Interactive.start_controller"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.start_controller">[docs]</a>  <span class="k">def</span> <span class="nf">start_controller</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">label</span><span class="p">):</span>
+    <span class="n">cm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="n">cm</span><span class="o">.</span><span class="n">get_controller_by_label</span><span class="p">(</span><span class="n">label</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">c</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;Killing controller: </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">c</span><span class="p">))</span>
+      <span class="n">cm</span><span class="o">.</span><span class="n">reboot_controller</span><span class="p">(</span><span class="n">c</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">ControllerRecovery</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">cid</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;Controller with label </span><span class="si">%s</span><span class="s"> not found&quot;</span> <span class="o">%</span><span class="n">label</span>
+</div>
+<div class="viewcode-block" id="Interactive.list_switches"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.list_switches">[docs]</a>  <span class="k">def</span> <span class="nf">list_switches</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span>
+    <span class="n">live</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">live_switches</span>
+    <span class="k">print</span> <span class="s">&quot;Switches:&quot;</span>
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;</span><span class="si">%d</span><span class="s"> </span><span class="si">%s</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">s</span><span class="p">),</span> <span class="s">&quot;[ALIVE]&quot;</span> <span class="k">if</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">live</span> <span class="k">else</span> <span class="s">&quot;[DEAD]&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="Interactive.list_hosts"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.list_hosts">[docs]</a>  <span class="k">def</span> <span class="nf">list_hosts</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span>
+    <span class="k">print</span> <span class="s">&quot;Hosts:&quot;</span>
+    <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">topology</span><span class="o">.</span><span class="n">hosts</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;</span><span class="si">%d</span><span class="s"> </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">h</span><span class="o">.</span><span class="n">hid</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">h</span><span class="p">),)</span>
+</div>
+<div class="viewcode-block" id="Interactive.kill_switch"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.kill_switch">[docs]</a>  <span class="k">def</span> <span class="nf">kill_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid</span><span class="p">):</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span>
+    <span class="n">switch</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">get_switch</span><span class="p">(</span><span class="n">dpid</span><span class="p">)</span>
+    <span class="n">topology</span><span class="o">.</span><span class="n">crash_switch</span><span class="p">(</span><span class="n">switch</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">SwitchFailure</span><span class="p">(</span><span class="n">switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Interactive.start_switch"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.start_switch">[docs]</a>  <span class="k">def</span> <span class="nf">start_switch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid</span><span class="p">):</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span>
+    <span class="n">switch</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">get_switch</span><span class="p">(</span><span class="n">dpid</span><span class="p">)</span>
+    <span class="n">down_controller_ids</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">cid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">down_controllers</span><span class="p">)</span>
+    <span class="n">topology</span><span class="o">.</span><span class="n">recover_switch</span><span class="p">(</span><span class="n">switch</span><span class="p">,</span> <span class="n">down_controller_ids</span><span class="o">=</span><span class="n">down_controller_ids</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">SwitchRecovery</span><span class="p">(</span><span class="n">switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Interactive.cut_link"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.cut_link">[docs]</a>  <span class="k">def</span> <span class="nf">cut_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid1</span><span class="p">,</span> <span class="n">dpid2</span><span class="p">):</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span>
+    <span class="n">link</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">get_link</span><span class="p">(</span><span class="n">dpid1</span><span class="p">,</span> <span class="n">dpid2</span><span class="p">)</span>
+    <span class="n">topology</span><span class="o">.</span><span class="n">sever_link</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">LinkFailure</span><span class="p">(</span>
+                          <span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span>
+                          <span class="n">link</span><span class="o">.</span><span class="n">start_port</span><span class="o">.</span><span class="n">port_no</span><span class="p">,</span>
+                          <span class="n">link</span><span class="o">.</span><span class="n">end_software_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span>
+                          <span class="n">link</span><span class="o">.</span><span class="n">end_port</span><span class="o">.</span><span class="n">port_no</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Interactive.repair_link"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.repair_link">[docs]</a>  <span class="k">def</span> <span class="nf">repair_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid1</span><span class="p">,</span> <span class="n">dpid2</span><span class="p">):</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span>
+    <span class="n">link</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">get_link</span><span class="p">(</span><span class="n">dpid1</span><span class="p">,</span> <span class="n">dpid2</span><span class="p">)</span>
+    <span class="n">topology</span><span class="o">.</span><span class="n">repair_link</span><span class="p">(</span><span class="n">link</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">LinkRecovery</span><span class="p">(</span>
+                          <span class="n">link</span><span class="o">.</span><span class="n">start_software_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span>
+                          <span class="n">link</span><span class="o">.</span><span class="n">start_port</span><span class="o">.</span><span class="n">port_no</span><span class="p">,</span>
+                          <span class="n">link</span><span class="o">.</span><span class="n">end_software_switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span>
+                          <span class="n">link</span><span class="o">.</span><span class="n">end_port</span><span class="o">.</span><span class="n">port_no</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Interactive.migrate_host"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.migrate_host">[docs]</a>  <span class="k">def</span> <span class="nf">migrate_host</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hid</span><span class="p">,</span> <span class="n">dpid</span><span class="p">):</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">get_host</span><span class="p">(</span><span class="n">hid</span><span class="p">)</span>
+    <span class="c"># TODO(cs): make this lookup more efficient</span>
+    <span class="n">access_link</span> <span class="o">=</span> <span class="n">find</span><span class="p">(</span><span class="k">lambda</span> <span class="n">a</span><span class="p">:</span> <span class="n">a</span><span class="o">.</span><span class="n">host</span> <span class="o">==</span> <span class="n">host</span><span class="p">,</span> <span class="n">topology</span><span class="o">.</span><span class="n">access_links</span><span class="p">)</span>
+    <span class="n">old_ingress_dpid</span> <span class="o">=</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch</span><span class="o">.</span><span class="n">dpid</span>
+    <span class="n">old_ingress_port_no</span> <span class="o">=</span> <span class="n">access_link</span><span class="o">.</span><span class="n">switch_port</span><span class="o">.</span><span class="n">port_no</span>
+    <span class="n">new_switch</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">get_switch</span><span class="p">(</span><span class="n">dpid</span><span class="p">)</span>
+    <span class="n">new_port_no</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">new_switch</span><span class="o">.</span><span class="n">ports</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">migrate_host</span><span class="p">(</span><span class="n">old_ingress_dpid</span><span class="p">,</span>
+                                          <span class="n">old_ingress_port_no</span><span class="p">,</span>
+                                          <span class="n">dpid</span><span class="p">,</span>
+                                          <span class="n">new_port_no</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">HostMigration</span><span class="p">(</span><span class="n">old_ingress_dpid</span><span class="p">,</span>
+                                        <span class="n">old_ingress_port_no</span><span class="p">,</span>
+                                        <span class="n">dpid</span><span class="p">,</span>
+                                        <span class="n">new_port_no</span><span class="p">,</span>
+                                        <span class="n">access_link</span><span class="o">.</span><span class="n">host</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_send_initialization_packet</span><span class="p">(</span><span class="n">access_link</span><span class="o">.</span><span class="n">host</span><span class="p">,</span> <span class="n">self_pkt</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+  <span class="c"># TODO(cs): ripped directly from fuzzer. Redundant!</span></div>
+  <span class="k">def</span> <span class="nf">_send_initialization_packet</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">self_pkt</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="n">traffic_type</span> <span class="o">=</span> <span class="s">&quot;icmp_ping&quot;</span>
+    <span class="n">dp_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">traffic_generator</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">traffic_type</span><span class="p">,</span> <span class="n">host</span><span class="p">,</span> <span class="n">self_pkt</span><span class="o">=</span><span class="n">self_pkt</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">TrafficInjection</span><span class="p">(</span><span class="n">dp_event</span><span class="o">=</span><span class="n">dp_event</span><span class="p">))</span>
+
+<div class="viewcode-block" id="Interactive.show_flow_table"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.show_flow_table">[docs]</a>  <span class="k">def</span> <span class="nf">show_flow_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dpid</span><span class="p">):</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span>
+    <span class="n">switch</span> <span class="o">=</span> <span class="n">topology</span><span class="o">.</span><span class="n">get_switch</span><span class="p">(</span><span class="n">dpid</span><span class="p">)</span>
+
+    <span class="n">dl_types</span> <span class="o">=</span> <span class="p">{</span> <span class="mh">0x0800</span><span class="p">:</span> <span class="s">&quot;IP&quot;</span><span class="p">,</span>
+                 <span class="mh">0x0806</span><span class="p">:</span> <span class="s">&quot;ARP&quot;</span><span class="p">,</span>
+                 <span class="mh">0x8100</span><span class="p">:</span> <span class="s">&quot;VLAN&quot;</span><span class="p">,</span>
+                 <span class="mh">0x88cc</span><span class="p">:</span> <span class="s">&quot;LLDP&quot;</span><span class="p">,</span>
+                 <span class="mh">0x888e</span><span class="p">:</span> <span class="s">&quot;PAE&quot;</span>
+                 <span class="p">}</span>
+    <span class="n">nw_protos</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span> <span class="p">:</span> <span class="s">&quot;ICMP&quot;</span><span class="p">,</span> <span class="mi">6</span> <span class="p">:</span> <span class="s">&quot;TCP&quot;</span><span class="p">,</span> <span class="mi">17</span> <span class="p">:</span> <span class="s">&quot;UDP&quot;</span> <span class="p">}</span>
+
+    <span class="n">ports</span> <span class="o">=</span> <span class="p">{</span> <span class="n">v</span><span class="p">:</span> <span class="n">k</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s">&quot;OFPP_&quot;</span><span class="p">,</span><span class="s">&quot;&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span><span class="n">v</span><span class="p">)</span> <span class="ow">in</span> <span class="n">of</span><span class="o">.</span><span class="n">ofp_port_rev_map</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">dl_type</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+      <span class="n">d</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">dl_type</span>
+      <span class="k">if</span> <span class="n">d</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">d</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">dl_types</span><span class="p">[</span><span class="n">d</span><span class="p">]</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">dl_types</span> <span class="k">else</span> <span class="s">&quot;</span><span class="si">%x</span><span class="s">&quot;</span> <span class="o">%</span><span class="n">d</span>
+
+    <span class="k">def</span> <span class="nf">nw_proto</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+      <span class="n">p</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">nw_proto</span>
+      <span class="k">return</span> <span class="n">nw_protos</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">if</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">nw_protos</span> <span class="k">else</span> <span class="n">p</span>
+
+    <span class="k">def</span> <span class="nf">action</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+      <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">ofp_action_output</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ports</span><span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">port</span><span class="p">]</span> <span class="k">if</span> <span class="n">a</span><span class="o">.</span><span class="n">port</span> <span class="ow">in</span> <span class="n">ports</span> <span class="k">else</span> <span class="s">&quot;output(</span><span class="si">%d</span><span class="s">)&quot;</span> <span class="o">%</span> <span class="n">a</span><span class="o">.</span><span class="n">port</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">actions</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+      <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">actions</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&quot;(drop)&quot;</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">action</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">e</span><span class="o">.</span><span class="n">actions</span><span class="p">)</span>
+
+
+    <span class="n">t</span> <span class="o">=</span> <span class="n">Tabular</span><span class="p">(</span> <span class="p">(</span><span class="s">&quot;Prio&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">priority</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;in_port&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">in_port</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;dl_type&quot;</span><span class="p">,</span> <span class="n">dl_type</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;dl_src&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">dl_src</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;dl_dst&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">dl_dst</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;nw_proto&quot;</span><span class="p">,</span> <span class="n">nw_proto</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;nw_src&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">nw_src</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;nw_dst&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">nw_dst</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;tp_src&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">tp_src</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;tp_dst&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">match</span><span class="o">.</span><span class="n">tp_dst</span><span class="p">),</span>
+                <span class="p">(</span><span class="s">&quot;actions&quot;</span><span class="p">,</span> <span class="n">actions</span><span class="p">),</span>
+                <span class="p">)</span>
+    <span class="n">t</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">switch</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">entries</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="Interactive.invariant_check"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.invariant_check">[docs]</a>  <span class="k">def</span> <span class="nf">invariant_check</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kind</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;omega&quot;</span> <span class="ow">or</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;o&quot;</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">CheckInvariants</span><span class="p">(</span><span class="n">invariant_check_name</span><span class="o">=</span><span class="s">&quot;InvariantChecker.check_correspondence&quot;</span><span class="p">))</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_correspondence</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="p">)</span>
+      <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;Controllers with miscorrepondence: &quot;</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;connectivity&quot;</span> <span class="ow">or</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;c&quot;</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">CheckInvariants</span><span class="p">(</span><span class="n">invariant_check_name</span><span class="o">=</span><span class="s">&quot;InvariantChecker.check_connectivity&quot;</span><span class="p">))</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_connectivity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="p">)</span>
+      <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;Disconnected host pairs: &quot;</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;python_connectivity&quot;</span> <span class="ow">or</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;pc&quot;</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">CheckInvariants</span><span class="p">(</span><span class="n">invariant_check_name</span><span class="o">=</span><span class="s">&quot;InvariantChecker.python_check_connectivity&quot;</span><span class="p">))</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">python_check_connectivity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="p">)</span>
+      <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;Disconnected host pairs: &quot;</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;loops&quot;</span> <span class="ow">or</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;lo&quot;</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">CheckInvariants</span><span class="p">(</span><span class="n">invariant_check_name</span><span class="o">=</span><span class="s">&quot;InvariantChecker.check_loops&quot;</span><span class="p">))</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_loops</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="p">)</span>
+      <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;Loops: &quot;</span>
+    <span class="k">elif</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;liveness&quot;</span> <span class="ow">or</span> <span class="n">kind</span> <span class="o">==</span> <span class="s">&quot;li&quot;</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">CheckInvariants</span><span class="p">(</span><span class="n">invariant_check_name</span><span class="o">=</span><span class="s">&quot;InvariantChecker.check_liveness&quot;</span><span class="p">))</span>
+      <span class="n">result</span> <span class="o">=</span> <span class="n">InvariantChecker</span><span class="o">.</span><span class="n">check_loops</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="p">)</span>
+      <span class="n">message</span> <span class="o">=</span> <span class="s">&quot;Crashed controllers: &quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s">&quot;Unknown invariant kind...&quot;</span><span class="p">)</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">interactive</span><span class="p">(</span><span class="n">message</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">result</span> <span class="o">!=</span> <span class="p">[]:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">InvariantViolation</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Interactive.dataplane_trace_feed"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.dataplane_trace_feed">[docs]</a>  <span class="k">def</span> <span class="nf">dataplane_trace_feed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">dataplane_trace</span><span class="p">:</span>
+      <span class="n">dp_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">dataplane_trace</span><span class="o">.</span><span class="n">inject_trace_event</span><span class="p">()</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">TrafficInjection</span><span class="p">(</span><span class="n">dp_event</span><span class="o">=</span><span class="n">dp_event</span><span class="p">))</span>
+</div>
+  <span class="k">def</span> <span class="nf">_select_dataplane_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sel</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">queued</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">patch_panel</span><span class="o">.</span><span class="n">queued_dataplane_events</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">queued</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;No dataplane events queued.&quot;</span>
+      <span class="k">return</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">sel</span><span class="p">:</span>
+      <span class="k">return</span> <span class="n">queued</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">sel</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">queued</span><span class="p">):</span>
+      <span class="k">print</span> <span class="s">&quot;Given index out of bounds. Try a value smaller than </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">queued</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">queued</span><span class="p">[</span><span class="n">sel</span><span class="p">]</span> 
+    
+<div class="viewcode-block" id="Interactive.dataplane_forward"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.dataplane_forward">[docs]</a>  <span class="k">def</span> <span class="nf">dataplane_forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">dp_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_select_dataplane_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dp_event</span><span class="p">:</span>
+      <span class="k">return</span>
+
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">ok_to_send</span><span class="p">(</span><span class="n">dp_event</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">patch_panel</span><span class="o">.</span><span class="n">permit_dp_event</span><span class="p">(</span><span class="n">dp_event</span><span class="p">)</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">DataplanePermit</span><span class="p">(</span><span class="n">dp_event</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">))</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_forwarded_this_step</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="k">print</span> <span class="s">&quot;Not ready to send event </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">event</span>
+</div>
+<div class="viewcode-block" id="Interactive.dataplane_drop"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.dataplane_drop">[docs]</a>  <span class="k">def</span> <span class="nf">dataplane_drop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">dp_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_select_dataplane_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dp_event</span><span class="p">:</span>
+      <span class="k">return</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">patch_panel</span><span class="o">.</span><span class="n">drop_dp_event</span><span class="p">(</span><span class="n">dp_event</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_log_input_event</span><span class="p">(</span><span class="n">DataplaneDrop</span><span class="p">(</span><span class="n">dp_event</span><span class="o">.</span><span class="n">fingerprint</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="Interactive.dataplane_delay"><a class="viewcode-back" href="../../../sts.control_flow.html#sts.control_flow.interactive.Interactive.dataplane_delay">[docs]</a>  <span class="k">def</span> <span class="nf">dataplane_delay</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">dp_event</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_select_dataplane_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">dp_event</span><span class="p">:</span>
+      <span class="k">return</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">simulation</span><span class="o">.</span><span class="n">patch_panel</span><span class="o">.</span><span class="n">delay_dp_event</span><span class="p">(</span><span class="n">dp_event</span><span class="p">)</span>
+
+  <span class="c"># TODO(cs): add support for control channel blocking + link,</span>
+  <span class="c"># controller failures, god scheduling</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

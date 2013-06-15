@@ -1,0 +1,209 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.util.deferred_io &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.util.deferred_io</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Created on Feb 25, 2012</span>
+
+<span class="sd">@author: aw, cs</span>
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">Queue</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">()</span>
+
+<div class="viewcode-block" id="DeferredIOWorker"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker">[docs]</a><span class="k">class</span> <span class="nc">DeferredIOWorker</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Wrapper class for RecocoIOWorkers.</span>
+
+<span class="sd">  Rather than actually sending/receiving right away, queue the data.</span>
+<span class="sd">  Then there are separate methods for actually sending the data via</span>
+<span class="sd">  the wrapped io_worker</span>
+
+<span class="sd">  io_worker: io_worker to wrap</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">io_worker</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_io_worker</span> <span class="o">=</span> <span class="n">io_worker</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_io_worker</span><span class="o">.</span><span class="n">set_receive_handler</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_worker_receive_handler</span><span class="p">)</span>
+    <span class="c"># Thread-safe read and write queues of indefinite length</span>
+    <span class="c"># TODO(cs): no need for thread safety anymore</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_receive_queue</span> <span class="o">=</span> <span class="n">Queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_send_queue</span> <span class="o">=</span> <span class="n">Queue</span><span class="o">.</span><span class="n">Queue</span><span class="p">()</span>
+    <span class="c"># Read buffer that we present to clients</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_receive_buf</span> <span class="o">=</span> <span class="s">&quot;&quot;</span>
+    <span class="c"># Whether this control channel is currently blocked. If False, passes</span>
+    <span class="c"># through packets.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_currently_blocked</span> <span class="o">=</span> <span class="bp">False</span>
+
+<div class="viewcode-block" id="DeferredIOWorker.block"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.block">[docs]</a>  <span class="k">def</span> <span class="nf">block</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Stop allowing data through until unblock() is called &#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_currently_blocked</span> <span class="o">=</span> <span class="bp">True</span>
+</div>
+<div class="viewcode-block" id="DeferredIOWorker.unblock"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.unblock">[docs]</a>  <span class="k">def</span> <span class="nf">unblock</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Allow data through, and flush buffers &#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_currently_blocked</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+      <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_send_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_actual_send</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_receive_queue</span><span class="o">.</span><span class="n">empty</span><span class="p">():</span>
+      <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_receive_queue</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_actual_receive</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="DeferredIOWorker.send"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.send">[docs]</a>  <span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; send data from the client side. fire and forget. &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_currently_blocked</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_send_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_actual_send</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</div>
+  <span class="k">def</span> <span class="nf">_actual_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_io_worker</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+
+  <span class="k">def</span> <span class="nf">_actual_receive</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_receive_buf</span> <span class="o">+=</span> <span class="n">data</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_client_receive_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DeferredIOWorker.set_receive_handler"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.set_receive_handler">[docs]</a>  <span class="k">def</span> <span class="nf">set_receive_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">block</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Called by client &#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_client_receive_handler</span> <span class="o">=</span> <span class="n">block</span>
+</div>
+<div class="viewcode-block" id="DeferredIOWorker.peek_receive_buf"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.peek_receive_buf">[docs]</a>  <span class="k">def</span> <span class="nf">peek_receive_buf</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Called by client &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_receive_buf</span>
+</div>
+<div class="viewcode-block" id="DeferredIOWorker.consume_receive_buf"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.consume_receive_buf">[docs]</a>  <span class="k">def</span> <span class="nf">consume_receive_buf</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">l</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; called by client to consume receive buffer &#39;&#39;&#39;</span>
+    <span class="k">assert</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_receive_buf</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">l</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_receive_buf</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_receive_buf</span><span class="p">[</span><span class="n">l</span><span class="p">:]</span>
+</div>
+<div class="viewcode-block" id="DeferredIOWorker.io_worker_receive_handler"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.io_worker_receive_handler">[docs]</a>  <span class="k">def</span> <span class="nf">io_worker_receive_handler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">io_worker</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; called from io_worker (recoco thread, after the Select loop pushes onto io_worker) &#39;&#39;&#39;</span>
+    <span class="c"># Consume everything immediately</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">io_worker</span><span class="o">.</span><span class="n">peek_receive_buf</span><span class="p">()</span>
+    <span class="n">io_worker</span><span class="o">.</span><span class="n">consume_receive_buf</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">))</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_currently_blocked</span><span class="p">:</span>
+      <span class="c"># thread-safe queue</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_receive_queue</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_actual_receive</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="DeferredIOWorker.currently_blocked"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.currently_blocked">[docs]</a>  <span class="k">def</span> <span class="nf">currently_blocked</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Return whether we are currently allowing data through &#39;&#39;&#39;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_currently_blocked</span>
+
+  <span class="c"># ------- Delegation functions. ---------</span>
+  <span class="c"># TODO(cs): is there a more pythonic way to implement delegation?</span>
+</div>
+<div class="viewcode-block" id="DeferredIOWorker.fileno"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.fileno">[docs]</a>  <span class="k">def</span> <span class="nf">fileno</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="c"># thread safety shoudn&#39;t matter here</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_io_worker</span><span class="o">.</span><span class="n">fileno</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="DeferredIOWorker.close"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.close">[docs]</a>  <span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_io_worker</span><span class="o">.</span><span class="n">close</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="DeferredIOWorker.socket"><a class="viewcode-back" href="../../../sts.util.html#sts.util.deferred_io.DeferredIOWorker.socket">[docs]</a>  <span class="k">def</span> <span class="nf">socket</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_io_worker</span><span class="o">.</span><span class="n">socket</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

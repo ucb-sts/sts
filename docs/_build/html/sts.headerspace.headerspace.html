@@ -1,0 +1,883 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>headerspace Package &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="index.html" />
+    <link rel="up" title="headerspace Package" href="sts.headerspace.html" />
+    <link rel="next" title="topology_loader Package" href="sts.headerspace.topology_loader.html" />
+    <link rel="prev" title="config_parser Package" href="sts.headerspace.config_parser.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sts.headerspace.topology_loader.html" title="topology_loader Package"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="sts.headerspace.config_parser.html" title="config_parser Package"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" >sts Package</a> &raquo;</li>
+          <li><a href="sts.headerspace.html" accesskey="U">headerspace Package</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="headerspace-package">
+<h1>headerspace Package<a class="headerlink" href="#headerspace-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-sts.headerspace.headerspace.applications">
+<span id="applications-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">applications</span></tt> Module<a class="headerlink" href="#module-sts.headerspace.headerspace.applications" title="Permalink to this headline">¶</a></h2>
+<p>Created on Jan 27, 2011</p>
+<p>&#64;author: peyman kazemian</p>
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.compute_omega">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">compute_omega</tt><big>(</big><em>name_tf_pairs</em>, <em>TTF</em>, <em>edge_links</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#compute_omega"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.compute_omega" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.compute_single_omega">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">compute_single_omega</tt><big>(</big><em>start_port</em>, <em>edge_ports</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#compute_single_omega"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.compute_single_omega" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.detect_loop">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">detect_loop</tt><big>(</big><em>NTF</em>, <em>TTF</em>, <em>ports</em>, <em>test_packet=None</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#detect_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.detect_loop" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.find_blackholes">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">find_blackholes</tt><big>(</big><em>NTF</em>, <em>TTF</em>, <em>edge_links</em>, <em>test_packet=None</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#find_blackholes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.find_blackholes" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Do any switches:</dt>
+<dd><ul class="first last simple">
+<li>send packets into a down link?</li>
+<li>drop packets that are supposed to go out their in_port?</li>
+</ul>
+</dd>
+</dl>
+<p>Specifically, checks whether it&#8217;s possible for any
+packets to fall into the blackhole in the first place.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.find_loop_original_header">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">find_loop_original_header</tt><big>(</big><em>NTF</em>, <em>TTF</em>, <em>propagation_node</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#find_loop_original_header"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.find_loop_original_header" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.find_reachability">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">find_reachability</tt><big>(</big><em>NTF</em>, <em>TTF</em>, <em>edge_links</em>, <em>test_packet=None</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#find_reachability"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.find_reachability" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.get_all_x">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">get_all_x</tt><big>(</big><em>NTF</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#get_all_x"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.get_all_x" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.invoke_hassel_c">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">invoke_hassel_c</tt><big>(</big><em>start_port</em>, <em>edge_ports</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#invoke_hassel_c"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.invoke_hassel_c" title="Permalink to this definition">¶</a></dt>
+<dd><p>invoke reachability test, and return the proc object</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.loop_path_to_str">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">loop_path_to_str</tt><big>(</big><em>p_node</em>, <em>reverse_map</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#loop_path_to_str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.loop_path_to_str" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.prepare_hassel_c">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">prepare_hassel_c</tt><big>(</big><em>name_tf_pairs</em>, <em>TTF</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#prepare_hassel_c"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.prepare_hassel_c" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.print_loops">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">print_loops</tt><big>(</big><em>loops</em>, <em>reverse_map</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#print_loops"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.print_loops" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.print_p_node">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">print_p_node</tt><big>(</big><em>p_node</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#print_p_node"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.print_p_node" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.print_reachability">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">print_reachability</tt><big>(</big><em>paths</em>, <em>reverse_map</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#print_reachability"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.print_reachability" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.trace_hs_back">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">trace_hs_back</tt><big>(</big><em>applied_rule_list</em>, <em>hs</em>, <em>last_port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#trace_hs_back"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.trace_hs_back" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.applications.translate_ports">
+<tt class="descclassname">sts.headerspace.headerspace.applications.</tt><tt class="descname">translate_ports</tt><big>(</big><em>ports</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/applications.html#translate_ports"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.applications.translate_ports" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-sts.headerspace.headerspace.hs">
+<span id="hs-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">hs</span></tt> Module<a class="headerlink" href="#module-sts.headerspace.headerspace.hs" title="Permalink to this headline">¶</a></h2>
+<p>Created on Jan 24, 2011</p>
+<p>&#64;author: peyman kazemian</p>
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_and">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_and</tt><big>(</big><em>b1</em>, <em>b2</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_and"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_and" title="Permalink to this definition">¶</a></dt>
+<dd><p>perform &#8216;and&#8217; operation when b1 and b2 can have wildcard bits</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_complement">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_complement</tt><big>(</big><em>a</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_complement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_complement" title="Permalink to this definition">¶</a></dt>
+<dd><p>a&#8217;</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_difference">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_difference</tt><big>(</big><em>a</em>, <em>b</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_difference"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_difference" title="Permalink to this definition">¶</a></dt>
+<dd><p>&#8216;
+a - b = a n b&#8217;</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_equal">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_equal</tt><big>(</big><em>a1</em>, <em>a2</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_equal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_equal" title="Permalink to this definition">¶</a></dt>
+<dd><p>checks if a1=a2.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_get_all_one">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_get_all_one</tt><big>(</big><em>length</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_get_all_one"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_get_all_one" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_get_all_x">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_get_all_x</tt><big>(</big><em>length</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_get_all_x"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_get_all_x" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_get_all_zero">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_get_all_zero</tt><big>(</big><em>length</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_get_all_zero"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_get_all_zero" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_get_bit">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_get_bit</tt><big>(</big><em>b_array</em>, <em>byte</em>, <em>bit</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_get_bit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_get_bit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_intersect">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_intersect</tt><big>(</big><em>a1</em>, <em>a2</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_intersect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_intersect" title="Permalink to this definition">¶</a></dt>
+<dd><p>a1 n a2.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_list_contained_in">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_list_contained_in</tt><big>(</big><em>list_a</em>, <em>list_b</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_list_contained_in"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_list_contained_in" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_not">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_not</tt><big>(</big><em>b</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_not"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_not" title="Permalink to this definition">¶</a></dt>
+<dd><p>perform &#8216;or&#8217; operation when b1 and b2 can have wildcard bits</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_or">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_or</tt><big>(</big><em>b1</em>, <em>b2</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_or"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_or" title="Permalink to this definition">¶</a></dt>
+<dd><p>perform &#8216;or&#8217; operation when b1 and b2 can have wildcard bits</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_set_bit">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_set_bit</tt><big>(</big><em>b_array</em>, <em>byte</em>, <em>bit</em>, <em>value</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_set_bit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_set_bit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_set_bytes">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_set_bytes</tt><big>(</big><em>b_array</em>, <em>byte</em>, <em>value</em>, <em>num_bytes</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_set_bytes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_set_bytes" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_subset">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_subset</tt><big>(</big><em>a</em>, <em>b</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_subset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_subset" title="Permalink to this definition">¶</a></dt>
+<dd><p>checks if a is subset of b.
+doesn&#8217;t work if a is empty</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_to_hs_string">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_to_hs_string</tt><big>(</big><em>byte_array</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_to_hs_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_to_hs_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_array_to_pretty_hs_string">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_array_to_pretty_hs_string</tt><big>(</big><em>byte_array</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_array_to_pretty_hs_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_array_to_pretty_hs_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_has_no_x">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_has_no_x</tt><big>(</big><em>b</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_has_no_x"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_has_no_x" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.byte_to_int">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">byte_to_int</tt><big>(</big><em>b</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#byte_to_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.byte_to_int" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.bytes_all_x">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">bytes_all_x</tt><big>(</big><em>bytes</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#bytes_all_x"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.bytes_all_x" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.bytes_to_int">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">bytes_to_int</tt><big>(</big><em>bytes</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#bytes_to_int"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.bytes_to_int" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="sts.headerspace.headerspace.hs.headerspace">
+<em class="property">class </em><tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">headerspace</tt><big>(</big><em>hsa_format</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>A headerspace object keeps a set of header space regions. it can be union of
+[0,1,x,z] expressions. It can also keep a list of headerspaces to be subtracted
+from this object. The subtraction can be done lazily.
+It also enables normal set operations on header space.</p>
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.add_hs">
+<tt class="descname">add_hs</tt><big>(</big><em>value</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.add_hs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.add_hs" title="Permalink to this definition">¶</a></dt>
+<dd><p>adds value to the list of headerspaces, hs_list
+&#64;value: bytearray of lenght self.length or another headerspace objects
+&#64;return: True if successful, False otherwise</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.add_hs_list">
+<tt class="descname">add_hs_list</tt><big>(</big><em>values</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.add_hs_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.add_hs_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>adds values to the list of headerspaces, hs_list
+&#64;values: list of bytearray of lenght self.length or other headerspace objects
+&#64;return: True</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.add_lazy_tf_rule">
+<tt class="descname">add_lazy_tf_rule</tt><big>(</big><em>ntf</em>, <em>rule_id</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.add_lazy_tf_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.add_lazy_tf_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.apply_lazy_tf_rule">
+<tt class="descname">apply_lazy_tf_rule</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.apply_lazy_tf_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.apply_lazy_tf_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.clean_up">
+<tt class="descname">clean_up</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.clean_up"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.clean_up" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.complement">
+<tt class="descname">complement</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.complement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.complement" title="Permalink to this definition">¶</a></dt>
+<dd><p>find the complement of header space pieces saved in hs_list
+and saves it back to itself</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.compress">
+<tt class="descname">compress</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.compress"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.compress" title="Permalink to this definition">¶</a></dt>
+<dd><p>&#8216;
+TODO: Compress function need to consider more cases
+Warning: depreciated</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.copy">
+<tt class="descname">copy</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.copy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>create a deep copy of itself</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.copy_complement">
+<tt class="descname">copy_complement</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.copy_complement"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.copy_complement" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.copy_intersect">
+<tt class="descname">copy_intersect</tt><big>(</big><em>other_hs</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.copy_intersect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.copy_intersect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.copy_minus">
+<tt class="descname">copy_minus</tt><big>(</big><em>other_fs</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.copy_minus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.copy_minus" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.count">
+<tt class="descname">count</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.count" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns count of number of elements in hs_list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.count_dif">
+<tt class="descname">count_dif</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.count_dif"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.count_dif" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns count of number of elements in hs_dif</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.diff_hs">
+<tt class="descname">diff_hs</tt><big>(</big><em>value</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.diff_hs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.diff_hs" title="Permalink to this definition">¶</a></dt>
+<dd><p>lazily subtract value from this headerspace
+&#64;value: bytearray of lenght self.length
+&#64;return: True if successful, False otherwise</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.diff_hs_list">
+<tt class="descname">diff_hs_list</tt><big>(</big><em>values</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.diff_hs_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.diff_hs_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>lazily subtract values from this headerspace
+&#64;values: list of bytearray of lenght self.length
+&#64;return: True</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.intersect">
+<tt class="descname">intersect</tt><big>(</big><em>other_hs</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.intersect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.intersect" title="Permalink to this definition">¶</a></dt>
+<dd><p>intersect itself with other_hs if the header lengths are equal.
+The result will be saved in the caller instance itself.
+&#64;other_fs: &#64;type headerspace or bytearray: the other headerspace to intersect with
+&#64;return: &#64;type Boolean: True if successful, False if an error happens</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.is_subset_of">
+<tt class="descname">is_subset_of</tt><big>(</big><em>other_fs</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.is_subset_of"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.is_subset_of" title="Permalink to this definition">¶</a></dt>
+<dd><p>checks if self is a subset of other_hs</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.minus">
+<tt class="descname">minus</tt><big>(</big><em>other_fs</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.minus"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.minus" title="Permalink to this definition">¶</a></dt>
+<dd><p>computes self - other_fs. note that the hs_diff will be intact</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.pop_applied_tf_rule">
+<tt class="descname">pop_applied_tf_rule</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.pop_applied_tf_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.pop_applied_tf_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.push_applied_tf_rule">
+<tt class="descname">push_applied_tf_rule</tt><big>(</big><em>ntf</em>, <em>rule_id</em>, <em>in_port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.push_applied_tf_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.push_applied_tf_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.self_diff">
+<tt class="descname">self_diff</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.self_diff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.self_diff" title="Permalink to this definition">¶</a></dt>
+<dd><p>computes hs_list - hs_diff and saves all the result in hs_list.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.hs.headerspace.to_string">
+<tt class="descname">to_string</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#headerspace.to_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.headerspace.to_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>represent a [0,1,x,z] string showing the header space.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.hs_string_to_byte_array">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">hs_string_to_byte_array</tt><big>(</big><em>str</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#hs_string_to_byte_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.hs_string_to_byte_array" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.hsa_bit_to_normal_bit">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">hsa_bit_to_normal_bit</tt><big>(</big><em>bit</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#hsa_bit_to_normal_bit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.hsa_bit_to_normal_bit" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.hs.int_to_byte_array">
+<tt class="descclassname">sts.headerspace.headerspace.hs.</tt><tt class="descname">int_to_byte_array</tt><big>(</big><em>int_value</em>, <em>len</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/hs.html#int_to_byte_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.hs.int_to_byte_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>reads len bits from int_value and converts it to a bytearray of len ceil(len/4).
+Note: len should be a multiple of 4.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-sts.headerspace.headerspace.slice">
+<span id="slice-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">slice</span></tt> Module<a class="headerlink" href="#module-sts.headerspace.headerspace.slice" title="Permalink to this headline">¶</a></h2>
+<p>Created on Jan 26, 2011</p>
+<p>&#64;author: peymankazemian</p>
+<dl class="class">
+<dt id="sts.headerspace.headerspace.slice.Slice">
+<em class="property">class </em><tt class="descclassname">sts.headerspace.headerspace.slice.</tt><tt class="descname">Slice</tt><big>(</big><em>length</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/slice.html#Slice"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.slice.Slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>classdocs</p>
+<dl class="method">
+<dt id="sts.headerspace.headerspace.slice.Slice.get_port_reservation">
+<tt class="descname">get_port_reservation</tt><big>(</big><em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/slice.html#Slice.get_port_reservation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.slice.Slice.get_port_reservation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.slice.Slice.intersect">
+<tt class="descname">intersect</tt><big>(</big><em>other_slice</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/slice.html#Slice.intersect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.slice.Slice.intersect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.slice.Slice.set_hs_reservation">
+<tt class="descname">set_hs_reservation</tt><big>(</big><em>ports</em>, <em>hs</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/slice.html#Slice.set_hs_reservation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.slice.Slice.set_hs_reservation" title="Permalink to this definition">¶</a></dt>
+<dd><p>set hs reservation on &#64;port to new_hs
+NOTE: hs.hs_list MUST have only one wildcard expression</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-sts.headerspace.headerspace.test_hs">
+<span id="test-hs-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">test_hs</span></tt> Module<a class="headerlink" href="#module-sts.headerspace.headerspace.test_hs" title="Permalink to this headline">¶</a></h2>
+<p>Created on Jun 20, 2011</p>
+<p>&#64;author: peymankazemian</p>
+<dl class="function">
+<dt id="sts.headerspace.headerspace.test_hs.test_hs_simple">
+<tt class="descclassname">sts.headerspace.headerspace.test_hs.</tt><tt class="descname">test_hs_simple</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/test_hs.html#test_hs_simple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.test_hs.test_hs_simple" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-sts.headerspace.headerspace.test_ip_compress">
+<span id="test-ip-compress-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">test_ip_compress</span></tt> Module<a class="headerlink" href="#module-sts.headerspace.headerspace.test_ip_compress" title="Permalink to this headline">¶</a></h2>
+<p>Created on Jul 27, 2011</p>
+<p>&#64;author: peymankazemian</p>
+</div>
+<div class="section" id="module-sts.headerspace.headerspace.test_ip_tf">
+<span id="test-ip-tf-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">test_ip_tf</span></tt> Module<a class="headerlink" href="#module-sts.headerspace.headerspace.test_ip_tf" title="Permalink to this headline">¶</a></h2>
+<p>Created on Aug 18, 2011</p>
+<p>&#64;author: peymankazemian</p>
+</div>
+<div class="section" id="module-sts.headerspace.headerspace.test_tf">
+<span id="test-tf-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">test_tf</span></tt> Module<a class="headerlink" href="#module-sts.headerspace.headerspace.test_tf" title="Permalink to this headline">¶</a></h2>
+<p>Created on Jun 20, 2011</p>
+<p>&#64;author: peymankazemian</p>
+<dl class="function">
+<dt id="sts.headerspace.headerspace.test_tf.convert">
+<tt class="descclassname">sts.headerspace.headerspace.test_tf.</tt><tt class="descname">convert</tt><big>(</big><em>ipsi</em>, <em>ipei</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/test_tf.html#convert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.test_tf.convert" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.test_tf.test_tf_simple">
+<tt class="descclassname">sts.headerspace.headerspace.test_tf.</tt><tt class="descname">test_tf_simple</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/test_tf.html#test_tf_simple"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.test_tf.test_tf_simple" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-sts.headerspace.headerspace.tf">
+<span id="tf-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">tf</span></tt> Module<a class="headerlink" href="#module-sts.headerspace.headerspace.tf" title="Permalink to this headline">¶</a></h2>
+<p>Created on Jan 24, 2011</p>
+<p>&#64;author: peyman kazemian</p>
+<dl class="class">
+<dt id="sts.headerspace.headerspace.tf.TF">
+<em class="property">class </em><tt class="descclassname">sts.headerspace.headerspace.tf.</tt><tt class="descname">TF</tt><big>(</big><em>hsa_format</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>models a box transfer function, a network transfer function or a topology transfer function</p>
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.T">
+<tt class="descname">T</tt><big>(</big><em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.T"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.T" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns a list of (hs, list of output ports) as a result of applying transfer function.
+hs will have A-B format, where A is the intersection of hs and the rule&#8217;s match struct
+and B will be union of match bytes of all the rules that influence on the matching rule.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.T_inv">
+<tt class="descname">T_inv</tt><big>(</big><em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.T_inv"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.T_inv" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns a list of (hs, list of in_ports) as possible inputs that can cause this (hs,port).
+The format of hs and returned headerspace object, is like T() method above.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.T_inv_rule">
+<tt class="descname">T_inv_rule</tt><big>(</big><em>rule_id</em>, <em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.T_inv_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.T_inv_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply rule with id = rule_id to (hs,port)
+Output is a list of [hs,list_of_out_ports].</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.T_rule">
+<tt class="descname">T_rule</tt><big>(</big><em>rule_id</em>, <em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.T_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.T_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply rule with id = rule_id to (hs,port)
+Output is a list of [hs,list_of_out_ports].</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.activate_hash_table">
+<tt class="descname">activate_hash_table</tt><big>(</big><em>nibble_indices</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.activate_hash_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.activate_hash_table" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.activate_lazy_eval">
+<tt class="descname">activate_lazy_eval</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.activate_lazy_eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.activate_lazy_eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.add_custom_rule">
+<tt class="descname">add_custom_rule</tt><big>(</big><em>rule</em>, <em>priority=-1</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.add_custom_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.add_custom_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a custom rule. You need to provide a function for finding math
+and a function for creating output header.
+rule should have the following entries:
+* &#8216;match&#8217;: a pointer to the function for finding if a packet match this rule.
+the function should accept (headerspace,in_port) as input and returns a list of
+headerspace objects that match this rule
+* &#8216;transform&#8217;: a pointer to a function which outputs a list of (headerspace, list of out_ports)
+pairs as the output of the rule.
+* &#8216;inv_match&#8217;: a pointer to the function for finding if an output packet can be
+generated by this rule. The function format is like &#8220;match&#8217;.
+* &#8216;inv_transform&#8217;: a pointer to a function which outputs a list of (headerspace,
+list of in_ports) pairs as the output of the inverse rule.
+WARNING: use custom rules in a transfer function with only custom rules. Interaction between
+custom rules and rewrite/fw rules is not defined.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.add_fwd_rule">
+<tt class="descname">add_fwd_rule</tt><big>(</big><em>rule</em>, <em>priority=-1</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.add_fwd_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.add_fwd_rule" title="Permalink to this definition">¶</a></dt>
+<dd><ul class="simple">
+<li>&#8216;match&#8217;: a bytearray of length self.length describing the header formats that</li>
+</ul>
+<p>match this rule.
+* &#8216;in_ports&#8217;: the list of input port numbers to match on
+* &#8216;out_ports&#8217;: the list of output port numbers.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.add_link_rule">
+<tt class="descname">add_link_rule</tt><big>(</big><em>rule</em>, <em>priority=-1</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.add_link_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.add_link_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is useful for topology transfer fucntions
+* &#8216;in_ports&#8217;: the list of input port numbers to match on
+* &#8216;out_port&#8217;: the list of output port numbers.
+WARNING: Use link rule only in Topology Transfer Function. Don&#8217;t mix it with other
+type of rules.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.add_rewrite_rule">
+<tt class="descname">add_rewrite_rule</tt><big>(</big><em>rule</em>, <em>priority=-1</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.add_rewrite_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.add_rewrite_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>rule is a dictionary with following keys:
+* &#8216;match&#8217;: a bytearray of length self.length describing the header formats that
+match this rule.
+* &#8216;in_ports&#8217;: the list of input port numbers to match on
+* &#8216;mask&#8217;: a bytearray of length self.length that masks all the bits that won&#8217;t
+be rewritten
+* &#8216;rewrite&#8217;: a bytearray of length self.length that rewrites the desired bits.
+* &#8216;out_ports&#8217;: the list of output port numbers.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.apply_custom_rule">
+<tt class="descname">apply_custom_rule</tt><big>(</big><em>rule</em>, <em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.apply_custom_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.apply_custom_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.apply_fwd_rule">
+<tt class="descname">apply_fwd_rule</tt><big>(</big><em>rule</em>, <em>hs</em>, <em>port</em>, <em>applied_rules=None</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.apply_fwd_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.apply_fwd_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.apply_inv_custom_rule">
+<tt class="descname">apply_inv_custom_rule</tt><big>(</big><em>rule</em>, <em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.apply_inv_custom_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.apply_inv_custom_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.apply_inv_fwd_rule">
+<tt class="descname">apply_inv_fwd_rule</tt><big>(</big><em>rule</em>, <em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.apply_inv_fwd_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.apply_inv_fwd_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.apply_inv_link_rule">
+<tt class="descname">apply_inv_link_rule</tt><big>(</big><em>rule</em>, <em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.apply_inv_link_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.apply_inv_link_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.apply_inv_rewrite_rule">
+<tt class="descname">apply_inv_rewrite_rule</tt><big>(</big><em>rule</em>, <em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.apply_inv_rewrite_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.apply_inv_rewrite_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.apply_link_rule">
+<tt class="descname">apply_link_rule</tt><big>(</big><em>rule</em>, <em>hs</em>, <em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.apply_link_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.apply_link_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.apply_rewrite_rule">
+<tt class="descname">apply_rewrite_rule</tt><big>(</big><em>rule</em>, <em>hs</em>, <em>port</em>, <em>applied_rules=None</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.apply_rewrite_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.apply_rewrite_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="sts.headerspace.headerspace.tf.TF.create_custom_rule">
+<em class="property">static </em><tt class="descname">create_custom_rule</tt><big>(</big><em>match</em>, <em>transform</em>, <em>inv_match</em>, <em>inv_transform</em>, <em>file_name</em>, <em>lines</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.create_custom_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.create_custom_rule" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="sts.headerspace.headerspace.tf.TF.create_multirewrite_rule">
+<em class="property">static </em><tt class="descname">create_multirewrite_rule</tt><big>(</big><em>in_ports</em>, <em>match</em>, <em>rules</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.create_multirewrite_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.create_multirewrite_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>creates a rule that if matches on in_ports, match, does all the actions
+in rules. the in_ports,matches in rules will be the same as in_ports, match
+in the multi-rewrite rule.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="sts.headerspace.headerspace.tf.TF.create_standard_rule">
+<em class="property">static </em><tt class="descname">create_standard_rule</tt><big>(</big><em>in_ports</em>, <em>match</em>, <em>out_ports</em>, <em>mask</em>, <em>rewrite</em>, <em>file_name=''</em>, <em>lines=</em><span class="optional">[</span><span class="optional">]</span><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.create_standard_rule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.create_standard_rule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a rule using input arguments. Use None if an input is not applicable.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.deactivate_hash_table">
+<tt class="descname">deactivate_hash_table</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.deactivate_hash_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.deactivate_hash_table" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.deactivate_lazy_eval">
+<tt class="descname">deactivate_lazy_eval</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.deactivate_lazy_eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.deactivate_lazy_eval" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.find_influences">
+<tt class="descname">find_influences</tt><big>(</big><em>priority</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.find_influences"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.find_influences" title="Permalink to this definition">¶</a></dt>
+<dd><p>After inserting the new_rule, into self.rules, call this method to update the
+rule dependencies.
+&#64;priority: priority or position of the new rule in the table</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.generate_next_id">
+<tt class="descname">generate_next_id</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.generate_next_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.generate_next_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.hs_string">
+<tt class="descname">hs_string</tt><big>(</big><em>byte_array</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.hs_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.hs_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.inv_to_string">
+<tt class="descname">inv_to_string</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.inv_to_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.inv_to_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.is_qualified_for_lazy_eval">
+<tt class="descname">is_qualified_for_lazy_eval</tt><big>(</big><em>rule</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.is_qualified_for_lazy_eval"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.is_qualified_for_lazy_eval" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a simple version of checking for lazy evaluation.
+TODO: implement a more complex version that understand packet header rather than
+just looking at some bit positions</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.load_object_from_file">
+<tt class="descname">load_object_from_file</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.load_object_from_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.load_object_from_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>load object from file, and replace the current object.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.print_influences">
+<tt class="descname">print_influences</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.print_influences"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.print_influences" title="Permalink to this definition">¶</a></dt>
+<dd><p>For each rule, shows the list of higher priority rules that has an intersection with
+the rule, and also the lower priority rules that has an intersection with the rule,
+in two separate lists.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.save_object_to_file">
+<tt class="descname">save_object_to_file</tt><big>(</big><em>file</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.save_object_to_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.save_object_to_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>saves all the non-custom transfer function rules to a file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.set_fast_lookup_pointers">
+<tt class="descname">set_fast_lookup_pointers</tt><big>(</big><em>priority</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.set_fast_lookup_pointers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.set_fast_lookup_pointers" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.set_lazy_evaluate">
+<tt class="descname">set_lazy_evaluate</tt><big>(</big><em>list_of_nibbles</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.set_lazy_evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.set_lazy_evaluate" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.set_prefix_id">
+<tt class="descname">set_prefix_id</tt><big>(</big><em>str_prefix</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.set_prefix_id"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.set_prefix_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.set_send_on_receiving_port">
+<tt class="descname">set_send_on_receiving_port</tt><big>(</big><em>val</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.set_send_on_receiving_port"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.set_send_on_receiving_port" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="staticmethod">
+<dt id="sts.headerspace.headerspace.tf.TF.standard_rule_to_string">
+<em class="property">static </em><tt class="descname">standard_rule_to_string</tt><big>(</big><em>std_rule</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.standard_rule_to_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.standard_rule_to_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.tf.TF.to_string">
+<tt class="descname">to_string</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#TF.to_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.TF.to_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.tf.port_to_hex">
+<tt class="descclassname">sts.headerspace.headerspace.tf.</tt><tt class="descname">port_to_hex</tt><big>(</big><em>port</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#port_to_hex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.port_to_hex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="sts.headerspace.headerspace.tf.ports_to_hex">
+<tt class="descclassname">sts.headerspace.headerspace.tf.</tt><tt class="descname">ports_to_hex</tt><big>(</big><em>ports</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/tf.html#ports_to_hex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.tf.ports_to_hex" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-sts.headerspace.headerspace.wildcard_dictionary">
+<span id="wildcard-dictionary-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">wildcard_dictionary</span></tt> Module<a class="headerlink" href="#module-sts.headerspace.headerspace.wildcard_dictionary" title="Permalink to this headline">¶</a></h2>
+<p>Created on Sep 13, 2011</p>
+<p>&#64;author: peymankazemian</p>
+<dl class="class">
+<dt id="sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary">
+<em class="property">class </em><tt class="descclassname">sts.headerspace.headerspace.wildcard_dictionary.</tt><tt class="descname">wildcard_dictionary</tt><big>(</big><em>num_key_bits</em>, <em>threshold</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/wildcard_dictionary.html#wildcard_dictionary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <tt class="xref py py-class docutils literal"><span class="pre">object</span></tt></p>
+<p>classdocs</p>
+<dl class="method">
+<dt id="sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.add_entry">
+<tt class="descname">add_entry</tt><big>(</big><em>keys</em>, <em>value</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/wildcard_dictionary.html#wildcard_dictionary.add_entry"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.add_entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.add_entry_to_table">
+<tt class="descname">add_entry_to_table</tt><big>(</big><em>table</em>, <em>key</em>, <em>value</em>, <em>next_keys</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/wildcard_dictionary.html#wildcard_dictionary.add_entry_to_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.add_entry_to_table" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.find_entry">
+<tt class="descname">find_entry</tt><big>(</big><em>keys</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/wildcard_dictionary.html#wildcard_dictionary.find_entry"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.find_entry" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.find_entry_in_table">
+<tt class="descname">find_entry_in_table</tt><big>(</big><em>table</em>, <em>keys</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/wildcard_dictionary.html#wildcard_dictionary.find_entry_in_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.find_entry_in_table" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.self_print">
+<tt class="descname">self_print</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/wildcard_dictionary.html#wildcard_dictionary.self_print"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.self_print" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.self_print_table">
+<tt class="descname">self_print_table</tt><big>(</big><em>table</em>, <em>indent</em><big>)</big><a class="reference internal" href="_modules/sts/headerspace/headerspace/wildcard_dictionary.html#wildcard_dictionary.self_print_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#sts.headerspace.headerspace.wildcard_dictionary.wildcard_dictionary.self_print_table" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">headerspace Package</a><ul>
+<li><a class="reference internal" href="#module-sts.headerspace.headerspace.applications"><tt class="docutils literal"><span class="pre">applications</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.headerspace.headerspace.hs"><tt class="docutils literal"><span class="pre">hs</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.headerspace.headerspace.slice"><tt class="docutils literal"><span class="pre">slice</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.headerspace.headerspace.test_hs"><tt class="docutils literal"><span class="pre">test_hs</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.headerspace.headerspace.test_ip_compress"><tt class="docutils literal"><span class="pre">test_ip_compress</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.headerspace.headerspace.test_ip_tf"><tt class="docutils literal"><span class="pre">test_ip_tf</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.headerspace.headerspace.test_tf"><tt class="docutils literal"><span class="pre">test_tf</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.headerspace.headerspace.tf"><tt class="docutils literal"><span class="pre">tf</span></tt> Module</a></li>
+<li><a class="reference internal" href="#module-sts.headerspace.headerspace.wildcard_dictionary"><tt class="docutils literal"><span class="pre">wildcard_dictionary</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="sts.headerspace.config_parser.html"
+                        title="previous chapter">config_parser Package</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="sts.headerspace.topology_loader.html"
+                        title="next chapter">topology_loader Package</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/sts.headerspace.headerspace.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="sts.headerspace.topology_loader.html" title="topology_loader Package"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="sts.headerspace.config_parser.html" title="config_parser Package"
+             >previous</a> |</li>
+        <li><a href="index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="sts.html" >sts Package</a> &raquo;</li>
+          <li><a href="sts.headerspace.html" >headerspace Package</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

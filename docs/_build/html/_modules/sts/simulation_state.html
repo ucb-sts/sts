@@ -1,0 +1,396 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>sts.simulation_state &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for sts.simulation_state</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="c">#!/usr/bin/env python</span>
+<span class="c"># Nom nom nom nom</span>
+
+<span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">Encapsulates the state of the simulation, including:</span>
+<span class="sd">  - The controllers</span>
+<span class="sd">  - The topology</span>
+<span class="sd">  - Dataplane forwarding</span>
+<span class="sd">  - (Optionally) the dataplane trace</span>
+<span class="sd">  - Metadata (e.g. # of failures)</span>
+<span class="sd">&#39;&#39;&#39;</span>
+
+<span class="kn">from</span> <span class="nn">sts.util.io_master</span> <span class="kn">import</span> <span class="n">IOMaster</span>
+<span class="kn">from</span> <span class="nn">sts.dataplane_traces.trace</span> <span class="kn">import</span> <span class="n">Trace</span>
+<span class="kn">from</span> <span class="nn">entities</span> <span class="kn">import</span> <span class="n">DeferredOFConnection</span>
+<span class="kn">from</span> <span class="nn">sts.controller_manager</span> <span class="kn">import</span> <span class="n">ControllerManager</span>
+<span class="kn">from</span> <span class="nn">sts.util.deferred_io</span> <span class="kn">import</span> <span class="n">DeferredIOWorker</span>
+<span class="kn">from</span> <span class="nn">sts.god_scheduler</span> <span class="kn">import</span> <span class="n">GodScheduler</span>
+<span class="kn">from</span> <span class="nn">sts.topology</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">sts.syncproto.sts_syncer</span> <span class="kn">import</span> <span class="n">STSSyncConnectionManager</span>
+<span class="kn">import</span> <span class="nn">sts.snapshot</span> <span class="kn">as</span> <span class="nn">snapshot</span>
+<span class="kn">from</span> <span class="nn">sts.util.socket_mux.base</span> <span class="kn">import</span> <span class="n">MultiplexedSelect</span>
+<span class="kn">from</span> <span class="nn">sts.util.socket_mux.sts_socket_multiplexer</span> <span class="kn">import</span> <span class="n">STSSocketDemultiplexer</span><span class="p">,</span> <span class="n">STSMockSocket</span>
+<span class="kn">from</span> <span class="nn">pox.lib.util</span> <span class="kn">import</span> <span class="n">connect_socket_with_backoff</span>
+
+<span class="kn">import</span> <span class="nn">select</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">log</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s">&quot;simulation&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SimulationConfig"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.SimulationConfig">[docs]</a><span class="k">class</span> <span class="nc">SimulationConfig</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">  Maintains the configuration for:</span>
+<span class="sd">    - The controllers: a list of ControllerConfig objects</span>
+<span class="sd">    - The topology</span>
+<span class="sd">    - Patch panel (dataplane forwarding)</span>
+<span class="sd">    - (Optionally) the dataplane trace</span>
+<span class="sd">    - Initialization parameters (switch_init_sleep_seconds)</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">controller_configs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+               <span class="n">topology_class</span><span class="o">=</span><span class="n">FatTree</span><span class="p">,</span>
+               <span class="n">topology_params</span><span class="o">=</span><span class="s">&quot;&quot;</span><span class="p">,</span>
+               <span class="n">patch_panel_class</span><span class="o">=</span><span class="n">BufferedPatchPanel</span><span class="p">,</span>
+               <span class="n">dataplane_trace</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+               <span class="n">snapshot_service</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+               <span class="n">multiplex_sockets</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">    Constructor parameters:</span>
+<span class="sd">      topology_class    =&gt; a sts.topology.Topology class (not object!)</span>
+<span class="sd">                           defining the switches and links</span>
+<span class="sd">      topology_params   =&gt; Comma-delimited list of arguments to pass into the FatTree</span>
+<span class="sd">                           constructor, specified just as you would type them within</span>
+<span class="sd">                           the parens.</span>
+<span class="sd">      patch_panel_class =&gt; a sts.topology.PatchPanel class (not object!)</span>
+<span class="sd">      dataplane_trace   =&gt; a path to a dataplane trace file</span>
+<span class="sd">                           (e.g. dataplane_traces/ping_pong_same_subnet.trace)</span>
+<span class="sd">      switch_init_sleep_seconds =&gt; number of seconds to wait for switches to</span>
+<span class="sd">                                   connect to controllers before starting the</span>
+<span class="sd">                                   simulation. Defaults to False (no wait).</span>
+<span class="sd">      monkey_patch_select =&gt; whether to use STS&#39;s custom deterministic</span>
+<span class="sd">                             select. Requires that the controller is</span>
+<span class="sd">                             monkey-patched too</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">if</span> <span class="n">controller_configs</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">controller_configs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">controller_configs</span> <span class="o">=</span> <span class="n">controller_configs</span>
+    <span class="c"># keep around topology_class and topology_params so we can construct</span>
+    <span class="c"># clean topology objects for (multiple invocations of) bootstrapping later</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_topology_class</span> <span class="o">=</span> <span class="n">topology_class</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_topology_params</span> <span class="o">=</span> <span class="n">topology_params</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_patch_panel_class</span> <span class="o">=</span> <span class="n">patch_panel_class</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_dataplane_trace_path</span> <span class="o">=</span> <span class="n">dataplane_trace</span>
+    <span class="c"># TODO(cs): is the snapshot service stateful?</span>
+    <span class="k">if</span> <span class="n">snapshot_service</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="c"># For snapshotting the controller&#39;s view of the network configuration</span>
+      <span class="n">snapshot_service</span> <span class="o">=</span> <span class="n">snapshot</span><span class="o">.</span><span class="n">get_snapshotservice</span><span class="p">(</span><span class="n">controller_configs</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_service</span> <span class="o">=</span> <span class="n">snapshot_service</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_simulation</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">multiplex_sockets</span> <span class="o">=</span> <span class="n">multiplex_sockets</span>
+
+<div class="viewcode-block" id="SimulationConfig.bootstrap"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.SimulationConfig.bootstrap">[docs]</a>  <span class="k">def</span> <span class="nf">bootstrap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sync_callback</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Return a simulation object encapsulating the state of</span>
+<span class="sd">       the system in its initial starting point:</span>
+<span class="sd">       - boots controllers</span>
+<span class="sd">       - connects switches to controllers</span>
+
+<span class="sd">       May be invoked multiple times!</span>
+<span class="sd">    &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">remove_monkey_patch</span><span class="p">():</span>
+      <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">select</span><span class="p">,</span> <span class="s">&quot;_old_select&quot;</span><span class="p">):</span>
+        <span class="c"># Revert the previous monkeypatch to allow the new true_sockets to</span>
+        <span class="c"># connect</span>
+        <span class="n">select</span><span class="o">.</span><span class="n">select</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">_old_select</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">socket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">_old_socket</span>
+
+    <span class="k">def</span> <span class="nf">initialize_io_loop</span><span class="p">():</span>
+      <span class="sd">&#39;&#39;&#39; boot the IOLoop (needed for the controllers) &#39;&#39;&#39;</span>
+      <span class="n">_io_master</span> <span class="o">=</span> <span class="n">IOMaster</span><span class="p">()</span>
+      <span class="c"># monkey patch time.sleep for all our friends</span>
+      <span class="n">_io_master</span><span class="o">.</span><span class="n">monkey_time_sleep</span><span class="p">()</span>
+      <span class="c"># tell sts.console to use our io_master</span>
+      <span class="n">msg</span><span class="o">.</span><span class="n">set_io_master</span><span class="p">(</span><span class="n">_io_master</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">_io_master</span>
+
+    <span class="k">def</span> <span class="nf">boot_controllers</span><span class="p">(</span><span class="n">sync_connection_manager</span><span class="p">):</span>
+      <span class="c"># Boot the controllers</span>
+      <span class="n">controllers</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">controller_configs</span><span class="p">:</span>
+        <span class="n">controller</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">type</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">sync_connection_manager</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">snapshot_service</span><span class="p">)</span>
+        <span class="n">controller</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Launched controller c</span><span class="si">%s</span><span class="s">: </span><span class="si">%s</span><span class="s"> [PID </span><span class="si">%d</span><span class="s">]&quot;</span> <span class="o">%</span>
+                 <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">cid</span><span class="p">),</span> <span class="s">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">expanded_start_cmd</span><span class="p">),</span> <span class="n">controller</span><span class="o">.</span><span class="n">pid</span><span class="p">))</span>
+        <span class="n">controllers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">controller</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">ControllerManager</span><span class="p">(</span><span class="n">controllers</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">instantiate_topology</span><span class="p">(</span><span class="n">create_io_worker</span><span class="p">):</span>
+      <span class="sd">&#39;&#39;&#39;construct a clean topology object from topology_class and</span>
+<span class="sd">      topology_params&#39;&#39;&#39;</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s">&quot;Creating topology...&quot;</span><span class="p">)</span>
+      <span class="c"># If you want to shoot yourself in the foot, feel free :)</span>
+      <span class="n">comma</span> <span class="o">=</span> <span class="s">&quot;&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_topology_params</span> <span class="o">==</span> <span class="s">&quot;&quot;</span> <span class="k">else</span> <span class="s">&quot;,&quot;</span>
+      <span class="n">topology</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="s">&quot;</span><span class="si">%s</span><span class="s">(</span><span class="si">%s%s</span><span class="s">create_io_worker=create_io_worker)&quot;</span> <span class="o">%</span>
+                      <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_topology_class</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">_topology_params</span><span class="p">,</span> <span class="n">comma</span><span class="p">))</span>
+      <span class="k">return</span> <span class="n">topology</span>
+
+    <span class="c"># Instantiate the pieces needed for Simulation&#39;s constructor</span>
+    <span class="n">remove_monkey_patch</span><span class="p">()</span>
+    <span class="n">io_master</span> <span class="o">=</span> <span class="n">initialize_io_loop</span><span class="p">()</span>
+    <span class="n">sync_connection_manager</span> <span class="o">=</span> <span class="n">STSSyncConnectionManager</span><span class="p">(</span><span class="n">io_master</span><span class="p">,</span>
+                                                       <span class="n">sync_callback</span><span class="p">)</span>
+    <span class="n">controller_manager</span> <span class="o">=</span> <span class="n">boot_controllers</span><span class="p">(</span><span class="n">sync_connection_manager</span><span class="p">)</span>
+    <span class="n">topology</span> <span class="o">=</span> <span class="n">instantiate_topology</span><span class="p">(</span><span class="n">io_master</span><span class="o">.</span><span class="n">create_worker_for_socket</span><span class="p">)</span>
+    <span class="n">patch_panel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_patch_panel_class</span><span class="p">(</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">,</span> <span class="n">topology</span><span class="o">.</span><span class="n">hosts</span><span class="p">,</span>
+                                          <span class="n">topology</span><span class="o">.</span><span class="n">get_connected_port</span><span class="p">)</span>
+    <span class="n">god_scheduler</span> <span class="o">=</span> <span class="n">GodScheduler</span><span class="p">()</span>
+    <span class="n">dataplane_trace</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataplane_trace_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="n">dataplane_trace</span> <span class="o">=</span> <span class="n">Trace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dataplane_trace_path</span><span class="p">,</span> <span class="n">topology</span><span class="p">)</span>
+
+    <span class="n">simulation</span> <span class="o">=</span> <span class="n">Simulation</span><span class="p">(</span><span class="n">topology</span><span class="p">,</span> <span class="n">controller_manager</span><span class="p">,</span> <span class="n">dataplane_trace</span><span class="p">,</span>
+                            <span class="n">god_scheduler</span><span class="p">,</span> <span class="n">io_master</span><span class="p">,</span> <span class="n">patch_panel</span><span class="p">,</span>
+                            <span class="n">sync_callback</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiplex_sockets</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">current_simulation</span> <span class="o">=</span> <span class="n">simulation</span>
+    <span class="k">return</span> <span class="n">simulation</span>
+</div>
+<div class="viewcode-block" id="SimulationConfig.set_dataplane_trace_path"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.SimulationConfig.set_dataplane_trace_path">[docs]</a>  <span class="k">def</span> <span class="nf">set_dataplane_trace_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dataplane_trace_path</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_dataplane_trace_path</span> <span class="o">=</span> <span class="n">path</span>
+</div>
+  <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="s">&#39;&#39;&#39;SimulationConfig(controller_configs=</span><span class="si">%s</span><span class="s">,</span><span class="se">\n</span><span class="s">&#39;&#39;&#39;</span>
+            <span class="sd">&#39;&#39;&#39;                 topology_class=%s,\n&#39;&#39;&#39;</span>
+            <span class="sd">&#39;&#39;&#39;                 topology_params=&quot;%s&quot;,\n&#39;&#39;&#39;</span>
+            <span class="sd">&#39;&#39;&#39;                 patch_panel_class=%s,\n&#39;&#39;&#39;</span>
+            <span class="sd">&#39;&#39;&#39;                 multiplex_sockets=%s)&#39;&#39;&#39;</span> <span class="o">%</span>
+            <span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controller_configs</span><span class="p">),</span><span class="bp">self</span><span class="o">.</span><span class="n">_topology_class</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+             <span class="bp">self</span><span class="o">.</span><span class="n">_topology_params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_patch_panel_class</span><span class="o">.</span><span class="n">__name__</span><span class="p">,</span>
+             <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">multiplex_sockets</span><span class="p">)))</span>
+</div>
+<div class="viewcode-block" id="Simulation"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.Simulation">[docs]</a><span class="k">class</span> <span class="nc">Simulation</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+  <span class="sd">&#39;&#39;&#39;</span>
+<span class="sd">  Encapsulates the running state of a single simulation:</span>
+<span class="sd">    - Topology (network state)</span>
+<span class="sd">    - Controller processes</span>
+<span class="sd">    - GodScheduler (OpenFlow messages)</span>
+<span class="sd">    - PatchPanel (Dataplane messages)</span>
+<span class="sd">    - RecordingSyncCallback (controller state changes)</span>
+<span class="sd">    - Dataplane Trace (pending dataplane messages)</span>
+<span class="sd">  &#39;&#39;&#39;</span>
+  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">topology</span><span class="p">,</span> <span class="n">controller_manager</span><span class="p">,</span> <span class="n">dataplane_trace</span><span class="p">,</span>
+               <span class="n">god_scheduler</span><span class="p">,</span> <span class="n">io_master</span><span class="p">,</span> <span class="n">patch_panel</span><span class="p">,</span>
+               <span class="n">controller_sync_callback</span><span class="p">,</span> <span class="n">multiplex_sockets</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">topology</span> <span class="o">=</span> <span class="n">topology</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">controller_manager</span> <span class="o">=</span> <span class="n">controller_manager</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dataplane_trace</span> <span class="o">=</span> <span class="n">dataplane_trace</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">god_scheduler</span> <span class="o">=</span> <span class="n">god_scheduler</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_io_master</span> <span class="o">=</span> <span class="n">io_master</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">patch_panel</span> <span class="o">=</span> <span class="n">patch_panel</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">controller_sync_callback</span> <span class="o">=</span> <span class="n">controller_sync_callback</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">multiplex_sockets</span> <span class="o">=</span> <span class="n">multiplex_sockets</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="Simulation.set_exit_code"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.Simulation.set_exit_code">[docs]</a>  <span class="k">def</span> <span class="nf">set_exit_code</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">code</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">exit_code</span> <span class="o">=</span> <span class="n">code</span>
+</div>
+<div class="viewcode-block" id="Simulation.set_pass_through"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.Simulation.set_pass_through">[docs]</a>  <span class="k">def</span> <span class="nf">set_pass_through</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Set to pass-through during bootstrap, so that switch initialization</span>
+<span class="sd">    messages don&#39;t get buffered &#39;&#39;&#39;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">god_scheduler</span><span class="o">.</span><span class="n">set_pass_through</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controller_sync_callback</span><span class="p">,</span> <span class="s">&quot;set_pass_through&quot;</span><span class="p">):</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">controller_sync_callback</span><span class="o">.</span><span class="n">set_pass_through</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="Simulation.unset_pass_through"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.Simulation.unset_pass_through">[docs]</a>  <span class="k">def</span> <span class="nf">unset_pass_through</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; unset pass-through mode &#39;&#39;&#39;</span>
+    <span class="n">observed_events</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">observed_events</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">god_scheduler</span><span class="o">.</span><span class="n">unset_pass_through</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controller_sync_callback</span><span class="p">,</span> <span class="s">&quot;unset_pass_through&quot;</span><span class="p">):</span>
+      <span class="n">observed_events</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">controller_sync_callback</span><span class="o">.</span><span class="n">unset_pass_through</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">observed_events</span>
+</div>
+<div class="viewcode-block" id="Simulation.clean_up"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.Simulation.clean_up">[docs]</a>  <span class="k">def</span> <span class="nf">clean_up</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39;Ensure that state from previous runs (old controller processes,</span>
+<span class="sd">    sockets, IOLoop object) are cleaned before the next time we</span>
+<span class="sd">    bootstrap&#39;&#39;&#39;</span>
+    <span class="c"># kill controllers</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">controller_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">kill_all</span><span class="p">()</span>
+
+    <span class="c"># Garbage collect sockets</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">topology</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="k">for</span> <span class="n">switch</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">switches</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">connection</span> <span class="ow">in</span> <span class="n">switch</span><span class="o">.</span><span class="n">connections</span><span class="p">:</span>
+          <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="c"># Just to make sure there isn&#39;t any state lying around, throw out</span>
+    <span class="c"># the old RecocoIOLoop</span>
+    <span class="n">msg</span><span class="o">.</span><span class="n">unset_io_master</span><span class="p">()</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_io_master</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_io_master</span><span class="o">.</span><span class="n">close_all</span><span class="p">()</span>
+</div>
+  <span class="nd">@property</span>
+<div class="viewcode-block" id="Simulation.io_master"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.Simulation.io_master">[docs]</a>  <span class="k">def</span> <span class="nf">io_master</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_io_master</span>
+</div>
+<div class="viewcode-block" id="Simulation.connect_to_controllers"><a class="viewcode-back" href="../../sts.html#sts.simulation_state.Simulation.connect_to_controllers">[docs]</a>  <span class="k">def</span> <span class="nf">connect_to_controllers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&#39;&#39;&#39; Connect all switches to all controllers &#39;&#39;&#39;</span>
+    <span class="k">def</span> <span class="nf">revert_socket_monkeypatch</span><span class="p">():</span>
+      <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">socket</span><span class="p">,</span> <span class="s">&quot;_old_socket&quot;</span><span class="p">):</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">socket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">_old_socket</span>
+
+    <span class="k">def</span> <span class="nf">revert_select_monkeypatch</span><span class="p">():</span>
+      <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">select</span><span class="p">,</span> <span class="s">&quot;_old_select&quot;</span><span class="p">):</span>
+        <span class="n">select</span><span class="o">.</span><span class="n">select</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">_old_select</span>
+
+    <span class="k">def</span> <span class="nf">monkeypatch_select</span><span class="p">():</span>
+      <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s">&quot;Monkeypatching STS select&quot;</span><span class="p">)</span>
+      <span class="n">mux_select</span> <span class="o">=</span> <span class="bp">None</span>
+      <span class="n">demuxers</span> <span class="o">=</span> <span class="p">[]</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">multiplex_sockets</span><span class="p">:</span>
+        <span class="n">revert_select_monkeypatch</span><span class="p">()</span>
+        <span class="n">revert_socket_monkeypatch</span><span class="p">()</span>
+        <span class="c"># Monkey patch select to use our deterministic version</span>
+        <span class="n">mux_select</span> <span class="o">=</span> <span class="n">MultiplexedSelect</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">controller_configs</span><span class="p">:</span>
+          <span class="c"># Connect the true sockets</span>
+          <span class="n">true_socket</span> <span class="o">=</span> <span class="n">connect_socket_with_backoff</span><span class="p">(</span><span class="n">address</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">address</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">c</span><span class="o">.</span><span class="n">port</span><span class="p">)</span>
+          <span class="n">true_socket</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+          <span class="n">io_worker</span> <span class="o">=</span> <span class="n">mux_select</span><span class="o">.</span><span class="n">create_worker_for_socket</span><span class="p">(</span><span class="n">true_socket</span><span class="p">)</span>
+          <span class="n">mux_select</span><span class="o">.</span><span class="n">set_true_io_worker</span><span class="p">(</span><span class="n">io_worker</span><span class="p">)</span>
+          <span class="n">demux</span> <span class="o">=</span> <span class="n">STSSocketDemultiplexer</span><span class="p">(</span><span class="n">io_worker</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">server_info</span><span class="p">)</span>
+          <span class="n">demuxers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">demux</span><span class="p">)</span>
+
+        <span class="c"># Monkey patch select.select</span>
+        <span class="n">select</span><span class="o">.</span><span class="n">_old_select</span> <span class="o">=</span> <span class="n">select</span><span class="o">.</span><span class="n">select</span>
+        <span class="n">select</span><span class="o">.</span><span class="n">select</span> <span class="o">=</span> <span class="n">mux_select</span><span class="o">.</span><span class="n">select</span>
+        <span class="c"># Monkey patch socket.socket</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">_old_socket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span>
+        <span class="k">def</span> <span class="nf">socket_patch</span><span class="p">(</span><span class="n">protocol</span><span class="p">,</span> <span class="n">sock_type</span><span class="p">):</span>
+          <span class="k">if</span> <span class="n">sock_type</span> <span class="o">==</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">STSMockSocket</span><span class="p">(</span><span class="n">protocol</span><span class="p">,</span> <span class="n">sock_type</span><span class="p">)</span>
+          <span class="k">else</span><span class="p">:</span>
+            <span class="n">socket</span><span class="o">.</span><span class="n">_old_socket</span><span class="p">(</span><span class="n">protocol</span><span class="p">,</span> <span class="n">sock_type</span><span class="p">)</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">socket</span> <span class="o">=</span> <span class="n">socket_patch</span>
+
+      <span class="k">return</span> <span class="p">(</span><span class="n">mux_select</span><span class="p">,</span> <span class="n">demuxers</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">create_connection</span><span class="p">(</span><span class="n">controller_info</span><span class="p">,</span> <span class="n">switch</span><span class="p">):</span>
+      <span class="sd">&#39;&#39;&#39; Connect switches to controllers. May raise a TimeoutError &#39;&#39;&#39;</span>
+      <span class="c"># TODO(cs): move this into a ConnectionFactory class</span>
+      <span class="n">socket</span> <span class="o">=</span> <span class="n">connect_socket_with_backoff</span><span class="p">(</span><span class="n">controller_info</span><span class="o">.</span><span class="n">address</span><span class="p">,</span>
+                                           <span class="n">controller_info</span><span class="o">.</span><span class="n">port</span><span class="p">,</span>
+                                           <span class="n">max_backoff_seconds</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+      <span class="c"># Set non-blocking</span>
+      <span class="n">socket</span><span class="o">.</span><span class="n">setblocking</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+      <span class="n">io_worker</span> <span class="o">=</span> <span class="n">DeferredIOWorker</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">io_master</span><span class="o">.</span><span class="n">create_worker_for_socket</span><span class="p">(</span><span class="n">socket</span><span class="p">))</span>
+      <span class="n">connection</span> <span class="o">=</span> <span class="n">DeferredOFConnection</span><span class="p">(</span><span class="n">io_worker</span><span class="p">,</span> <span class="n">controller_info</span><span class="o">.</span><span class="n">cid</span><span class="p">,</span> <span class="n">switch</span><span class="o">.</span><span class="n">dpid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">god_scheduler</span><span class="p">)</span>
+      <span class="k">return</span> <span class="n">connection</span>
+
+    <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mux_select</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">demuxers</span><span class="p">)</span> <span class="o">=</span> <span class="n">monkeypatch_select</span><span class="p">()</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">topology</span><span class="o">.</span><span class="n">connect_to_controllers</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">controller_manager</span><span class="o">.</span><span class="n">controller_configs</span><span class="p">,</span>
+                                         <span class="n">create_connection</span><span class="o">=</span><span class="n">create_connection</span><span class="p">)</span>
+
+    <span class="c"># create_connection should not be called again --revert monkeypatch in</span>
+    <span class="c"># case STS wants to open other sockets (e.g., xmlrplclib)</span>
+    <span class="n">revert_socket_monkeypatch</span><span class="p">()</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

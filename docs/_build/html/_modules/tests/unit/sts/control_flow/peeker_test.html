@@ -1,0 +1,240 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>tests.unit.sts.control_flow.peeker_test &mdash; STS 0.1 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../../',
+        VERSION:     '0.1',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <link rel="top" title="STS 0.1 documentation" href="../../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for tests.unit.sts.control_flow.peeker_test</h1><div class="highlight"><pre>
+<span class="c"># Copyright 2011-2013 Colin Scott</span>
+<span class="c"># Copyright 2011-2013 Andreas Wundsam</span>
+<span class="c">#</span>
+<span class="c"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c"># you may not use this file except in compliance with the License.</span>
+<span class="c"># You may obtain a copy of the License at:</span>
+<span class="c">#</span>
+<span class="c">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c">#</span>
+<span class="c"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c"># See the License for the specific language governing permissions and</span>
+<span class="c"># limitations under the License.</span>
+
+<span class="kn">import</span> <span class="nn">unittest</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+<span class="kn">import</span> <span class="nn">types</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+
+<span class="kn">from</span> <span class="nn">sts.control_flow.peeker</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="c"># TODO: move Mock internal events to lib</span>
+<span class="kn">from</span> <span class="nn">tests.unit.sts.event_dag_test</span> <span class="kn">import</span> <span class="n">MockInternalEvent</span>
+<span class="kn">from</span> <span class="nn">tests.unit.sts.mcs_finder_test</span> <span class="kn">import</span> <span class="n">MockInputEvent</span>
+<span class="kn">from</span> <span class="nn">config.experiment_config_lib</span> <span class="kn">import</span> <span class="n">ControllerConfig</span>
+<span class="kn">from</span> <span class="nn">sts.control_flow</span> <span class="kn">import</span> <span class="n">Replayer</span><span class="p">,</span> <span class="n">MCSFinder</span>
+<span class="kn">from</span> <span class="nn">sts.topology</span> <span class="kn">import</span> <span class="n">FatTree</span><span class="p">,</span> <span class="n">MeshTopology</span>
+<span class="kn">from</span> <span class="nn">sts.simulation_state</span> <span class="kn">import</span> <span class="n">Simulation</span><span class="p">,</span> <span class="n">SimulationConfig</span>
+<span class="kn">from</span> <span class="nn">sts.replay_event</span> <span class="kn">import</span> <span class="n">Event</span><span class="p">,</span> <span class="n">InternalEvent</span><span class="p">,</span> <span class="n">InputEvent</span>
+<span class="kn">from</span> <span class="nn">sts.event_dag</span> <span class="kn">import</span> <span class="n">EventDag</span>
+<span class="kn">from</span> <span class="nn">sts.entities</span> <span class="kn">import</span> <span class="n">Host</span><span class="p">,</span> <span class="n">Controller</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)</span> <span class="o">+</span> <span class="s">&quot;/../../..&quot;</span><span class="p">)</span>
+
+<span class="n">_running_simulation</span> <span class="o">=</span> <span class="bp">None</span>
+<div class="viewcode-block" id="handle_int"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.handle_int">[docs]</a><span class="k">def</span> <span class="nf">handle_int</span><span class="p">(</span><span class="n">sigspec</span><span class="p">,</span> <span class="n">frame</span><span class="p">):</span>
+  <span class="k">print</span> <span class="o">&gt;&gt;</span> <span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;Caught signal </span><span class="si">%d</span><span class="s">, stopping sdndebug&quot;</span> <span class="o">%</span> <span class="n">sigspec</span>
+  <span class="k">if</span> <span class="n">_running_simulation</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="n">_running_simulation</span><span class="o">.</span><span class="n">current_simulation</span><span class="o">.</span><span class="n">clean_up</span><span class="p">()</span>
+  <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s">&quot;terminating on signal </span><span class="si">%d</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">sigspec</span><span class="p">)</span>
+
+</div>
+<span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">,</span> <span class="n">handle_int</span><span class="p">)</span>
+<span class="n">signal</span><span class="o">.</span><span class="n">signal</span><span class="p">(</span><span class="n">signal</span><span class="o">.</span><span class="n">SIGTERM</span><span class="p">,</span> <span class="n">handle_int</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PeekerTest"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.PeekerTest">[docs]</a><span class="k">class</span> <span class="nc">PeekerTest</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+<div class="viewcode-block" id="PeekerTest.setUp"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.PeekerTest.setUp">[docs]</a>  <span class="k">def</span> <span class="nf">setUp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">input_trace</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInputEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="p">(</span><span class="s">&quot;class&quot;</span><span class="p">,</span><span class="n">f</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">7</span><span class="p">)</span> <span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">dag</span> <span class="o">=</span> <span class="n">EventDag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">input_trace</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">peeker</span> <span class="o">=</span> <span class="n">Peeker</span><span class="p">(</span><span class="bp">None</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PeekerTest.test_basic_noop"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.PeekerTest.test_basic_noop">[docs]</a>  <span class="k">def</span> <span class="nf">test_basic_noop</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; test_basic_noop: running on a dag with no input events returns the same dag &quot;&quot;&quot;</span>
+    <span class="n">events</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInputEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="p">(</span><span class="s">&quot;class&quot;</span><span class="p">,</span><span class="n">f</span><span class="p">))</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">7</span><span class="p">)</span> <span class="p">]</span>
+    <span class="n">new_dag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">peeker</span><span class="o">.</span><span class="n">peek</span><span class="p">(</span><span class="n">EventDag</span><span class="p">(</span><span class="n">events</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEquals</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="n">new_dag</span><span class="o">.</span><span class="n">events</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PeekerTest.test_basic_no_prune"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.PeekerTest.test_basic_no_prune">[docs]</a>  <span class="k">def</span> <span class="nf">test_basic_no_prune</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">inp1</span> <span class="o">=</span> <span class="n">MockInputEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="s">&quot;a&quot;</span><span class="p">)</span>
+    <span class="n">inp2</span> <span class="o">=</span> <span class="n">MockInputEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="s">&quot;b&quot;</span><span class="p">)</span>
+    <span class="n">int1</span> <span class="o">=</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="s">&quot;c&quot;</span><span class="p">)</span>
+    <span class="n">inp3</span> <span class="o">=</span>  <span class="n">MockInputEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="s">&quot;d&quot;</span><span class="p">)</span>
+    <span class="n">events</span> <span class="o">=</span> <span class="p">[</span> <span class="n">inp1</span><span class="p">,</span> <span class="n">inp2</span><span class="p">,</span> <span class="n">int1</span><span class="p">,</span> <span class="n">inp3</span> <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">fake_find_internal_events</span><span class="p">(</span><span class="n">replay_dag</span><span class="p">,</span> <span class="n">wait_time</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">replay_dag</span><span class="o">.</span><span class="n">events</span> <span class="o">==</span> <span class="p">[</span> <span class="n">inp1</span> <span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+      <span class="k">elif</span> <span class="n">replay_dag</span><span class="o">.</span><span class="n">events</span> <span class="o">==</span> <span class="p">[</span> <span class="n">inp1</span><span class="p">,</span> <span class="n">inp2</span> <span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[</span> <span class="n">int1</span> <span class="p">]</span>
+      <span class="k">elif</span> <span class="n">replay_dag</span><span class="o">.</span><span class="n">events</span> <span class="o">==</span> <span class="p">[</span> <span class="n">inp1</span><span class="p">,</span> <span class="n">inp2</span><span class="p">,</span> <span class="n">int1</span><span class="p">,</span> <span class="n">inp3</span> <span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s">&quot;Unexpected event sequence queried: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">replay_dag</span><span class="o">.</span><span class="n">events</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">peeker</span><span class="o">.</span><span class="n">find_internal_events</span> <span class="o">=</span> <span class="n">fake_find_internal_events</span>
+    <span class="n">new_dag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">peeker</span><span class="o">.</span><span class="n">peek</span><span class="p">(</span><span class="n">EventDag</span><span class="p">(</span><span class="n">events</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEquals</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="n">new_dag</span><span class="o">.</span><span class="n">events</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PeekerTest.test_basic_prune"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.PeekerTest.test_basic_prune">[docs]</a>  <span class="k">def</span> <span class="nf">test_basic_prune</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">inp1</span> <span class="o">=</span> <span class="n">MockInputEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="s">&quot;a&quot;</span><span class="p">)</span>
+    <span class="n">inp2</span> <span class="o">=</span> <span class="n">MockInputEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="s">&quot;b&quot;</span><span class="p">)</span>
+    <span class="n">int1</span> <span class="o">=</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="s">&quot;c&quot;</span><span class="p">)</span>
+    <span class="n">inp3</span> <span class="o">=</span>  <span class="n">MockInputEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="s">&quot;d&quot;</span><span class="p">)</span>
+    <span class="n">int2</span> <span class="o">=</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="o">=</span><span class="s">&quot;e&quot;</span><span class="p">)</span>
+    <span class="n">all_events</span> <span class="o">=</span> <span class="p">[</span> <span class="n">inp1</span><span class="p">,</span> <span class="n">inp2</span><span class="p">,</span> <span class="n">int1</span><span class="p">,</span> <span class="n">inp3</span><span class="p">,</span> <span class="n">int2</span> <span class="p">]</span>
+    <span class="n">sub_events</span> <span class="o">=</span> <span class="p">[</span> <span class="n">inp2</span><span class="p">,</span> <span class="n">int1</span><span class="p">,</span> <span class="n">inp3</span><span class="p">,</span> <span class="n">int2</span> <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">fake_find_internal_events</span><span class="p">(</span><span class="n">replay_dag</span><span class="p">,</span> <span class="n">wait_time</span><span class="p">):</span>
+      <span class="k">if</span> <span class="n">replay_dag</span><span class="o">.</span><span class="n">events</span> <span class="o">==</span> <span class="p">[</span> <span class="n">inp2</span> <span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[]</span>
+      <span class="k">elif</span> <span class="n">replay_dag</span><span class="o">.</span><span class="n">events</span> <span class="o">==</span> <span class="p">[</span> <span class="n">inp2</span><span class="p">,</span> <span class="n">inp3</span> <span class="p">]:</span>
+        <span class="k">return</span> <span class="p">[</span> <span class="n">int2</span> <span class="p">]</span>
+      <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">AssertionError</span><span class="p">(</span><span class="s">&quot;Unexpected event sequence queried: </span><span class="si">%s</span><span class="s">&quot;</span> <span class="o">%</span> <span class="n">replay_dag</span><span class="o">.</span><span class="n">events</span><span class="p">)</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">peeker</span><span class="o">.</span><span class="n">find_internal_events</span> <span class="o">=</span> <span class="n">fake_find_internal_events</span>
+    <span class="n">new_dag</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">peeker</span><span class="o">.</span><span class="n">peek</span><span class="p">(</span><span class="n">EventDag</span><span class="p">(</span><span class="n">sub_events</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEquals</span><span class="p">(</span> <span class="p">[</span><span class="n">inp2</span><span class="p">,</span> <span class="n">inp3</span><span class="p">,</span> <span class="n">int2</span> <span class="p">],</span> <span class="n">new_dag</span><span class="o">.</span><span class="n">events</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="MatchFingerPrintTest"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.MatchFingerPrintTest">[docs]</a><span class="k">class</span> <span class="nc">MatchFingerPrintTest</span><span class="p">(</span><span class="n">unittest</span><span class="o">.</span><span class="n">TestCase</span><span class="p">):</span>
+<div class="viewcode-block" id="MatchFingerPrintTest.test_match_fingerprints_simple"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.MatchFingerPrintTest.test_match_fingerprints_simple">[docs]</a>  <span class="k">def</span> <span class="nf">test_match_fingerprints_simple</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span> <span class="k">for</span> <span class="n">fingerprint</span> <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">]</span> <span class="p">]</span>
+    <span class="n">actual</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span> <span class="k">for</span> <span class="n">fingerprint</span>
+               <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">]</span> <span class="p">]</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">match_fingerprints</span><span class="p">(</span><span class="n">actual</span><span class="p">,</span> <span class="n">expected</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[</span> <span class="n">r</span><span class="o">.</span><span class="n">fingerprint</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span> <span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">([</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">],</span> <span class="n">result</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MatchFingerPrintTest.test_match_fingerprints_duplicate_expected"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.MatchFingerPrintTest.test_match_fingerprints_duplicate_expected">[docs]</a>  <span class="k">def</span> <span class="nf">test_match_fingerprints_duplicate_expected</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span> <span class="k">for</span> <span class="n">fingerprint</span>
+                 <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="s">&quot;f&quot;</span><span class="p">]</span> <span class="p">]</span>
+    <span class="n">actual</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span> <span class="k">for</span> <span class="n">fingerprint</span>
+               <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">]</span> <span class="p">]</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">match_fingerprints</span><span class="p">(</span><span class="n">actual</span><span class="p">,</span> <span class="n">expected</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[</span> <span class="n">r</span><span class="o">.</span><span class="n">fingerprint</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span> <span class="p">]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">([</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">],</span> <span class="n">result</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MatchFingerPrintTest.test_match_fingerprints_duplicate_inferred"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.MatchFingerPrintTest.test_match_fingerprints_duplicate_inferred">[docs]</a>  <span class="k">def</span> <span class="nf">test_match_fingerprints_duplicate_inferred</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span> <span class="k">for</span> <span class="n">fingerprint</span>
+                 <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">]</span> <span class="p">]</span>
+    <span class="n">actual</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span> <span class="k">for</span> <span class="n">fingerprint</span>
+               <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">]</span> <span class="p">]</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">match_fingerprints</span><span class="p">(</span><span class="n">actual</span><span class="p">,</span> <span class="n">expected</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[</span> <span class="n">r</span><span class="o">.</span><span class="n">fingerprint</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span> <span class="p">]</span>
+    <span class="c"># TODO(cs): perhaps we should include &quot;b&quot;? [i.e., make the inferrence</span>
+    <span class="c"># unordered or semi-ordered]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">([</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">],</span> <span class="n">result</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="MatchFingerPrintTest.test_match_fingerprints_empty"><a class="viewcode-back" href="../../../../../tests.unit.sts.control_flow.html#tests.unit.sts.control_flow.peeker_test.MatchFingerPrintTest.test_match_fingerprints_empty">[docs]</a>  <span class="k">def</span> <span class="nf">test_match_fingerprints_empty</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">expected</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span> <span class="k">for</span> <span class="n">fingerprint</span>
+                 <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;a&quot;</span><span class="p">,</span><span class="s">&quot;b&quot;</span><span class="p">,</span><span class="s">&quot;c&quot;</span><span class="p">]</span> <span class="p">]</span>
+    <span class="n">actual</span> <span class="o">=</span> <span class="p">[</span> <span class="n">MockInternalEvent</span><span class="p">(</span><span class="n">fingerprint</span><span class="p">)</span> <span class="k">for</span> <span class="n">fingerprint</span>
+               <span class="ow">in</span> <span class="p">[</span><span class="s">&quot;d&quot;</span><span class="p">,</span><span class="s">&quot;e&quot;</span><span class="p">,</span><span class="s">&quot;f&quot;</span><span class="p">]</span> <span class="p">]</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">match_fingerprints</span><span class="p">(</span><span class="n">actual</span><span class="p">,</span> <span class="n">expected</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[</span> <span class="n">r</span><span class="o">.</span><span class="n">fingerprint</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">result</span> <span class="p">]</span>
+    <span class="c"># TODO(cs): perhaps we should include &quot;b&quot;? [i.e., make the inferrence</span>
+    <span class="c"># unordered or semi-ordered]</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assertEqual</span><span class="p">([],</span> <span class="n">result</span><span class="p">)</span>
+</pre></div></div></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../../../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../../../../index.html">STS 0.1 documentation</a> &raquo;</li>
+          <li><a href="../../../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Colin Scott.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>
