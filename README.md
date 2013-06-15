@@ -85,6 +85,14 @@ If your controller supports OpenFlow 1.0, sts works out of the box. You'll
 only need to change one line in the config file to instruct sts how to launch
 your controller process(es).
 
+### Documentation
+
+For a high-level overview of STS's software architecture, see this
+[page](https://github.com/ucb-sts/sts/blob/master/DOCUMENTATION.md).
+
+For searchable code documentation, see this
+[page](http://ucb-sts.github.io/documentation/_build/html/index.html).
+
 ### Research
 
 For more information about the research behind sts, see our paper
