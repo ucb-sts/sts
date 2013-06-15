@@ -90,7 +90,8 @@ timestamp appended with the `-t` parameter
 The event types logged by Interactive and Fuzzer are defined in
 sts/replay_event.py
 
-Events are eventually serialized to JSON.
+Events are eventually serialized to JSON. The format of the JSON files is
+documented in docs/_build/html/sts.html#module-sts.replay_event.
 
 During replay events are stored in a EventDag object, which is essentially a
 linked list of events. Each input event object knows how to inject itself, and
