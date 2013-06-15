@@ -5,7 +5,7 @@ from sts.control_flow import MCSFinder, Peeker
 from sts.invariant_checker import InvariantChecker
 from sts.simulation_state import SimulationConfig
 
-controllers = [ControllerConfig(cmdline='./pox.py --verbose --no-cli openflow.of_01 --address=__address__ --port=__port__ sts.syncproto.pox_syncer samples.topo forwarding.l2_multi',
+controllers = [ControllerConfig(start_cmd='./pox.py --verbose --no-cli openflow.of_01 --address=__address__ --port=__port__ sts.syncproto.pox_syncer samples.topo forwarding.l2_multi',
                                 address='127.0.0.1', port=8888, cwd='pox', sync='tcp:localhost:18899')]
 topology_class = MeshTopology
 topology_params = "num_switches=2"
