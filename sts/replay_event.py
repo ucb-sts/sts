@@ -17,6 +17,21 @@
 '''
 Classes representing events to be replayed. These events can be serialized to
 events.trace JSON files.
+
+Note about the JSON events.trace format:
+
+All events are serialized to JSON with the Event.to_json() method.
+
+All events have a fingerprint field, which is used to compute functional
+equivalence between events across different replays of the trace.
+
+The default format of the fingerprint field is a tuple (event class name,).
+
+The specific format of the fingerprint field is documented in each class'
+fingerprint() method.
+
+The format of other additional fields is documented in
+each event's __init__() method.
 '''
 
 from sts.util.console import msg
@@ -181,6 +196,16 @@ class SwitchFailure(InputEvent):
   ''' Crashes a switch, by disconnecting its TCP connection with the
   controller(s).'''
   def __init__(self, dpid, label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - dpid: unique integer identifier of the switch.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(SwitchFailure, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
 
@@ -198,12 +223,23 @@ class SwitchFailure(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format: (class name, dpid) '''
     return (self.__class__.__name__,self.dpid,)
 
 class SwitchRecovery(InputEvent):
   ''' Recovers a crashed switch, by reconnecting its TCP connection with the
   controller(s).'''
   def __init__(self, dpid, label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - dpid: unique integer identifier of the switch.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(SwitchRecovery, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
 
@@ -229,6 +265,7 @@ class SwitchRecovery(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format: (class name, dpid) '''
     return (self.__class__.__name__,self.dpid,)
 
 def get_link(link_event, simulation):
@@ -244,6 +281,19 @@ class LinkFailure(InputEvent):
   this link will be dropped until a LinkRecovery occurs.'''
   def __init__(self, start_dpid, start_port_no, end_dpid, end_port_no,
                label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - start_dpid: unique integer identifier of the first switch connected to the link.
+     - start_port_no: integer port number of the start switch's port.
+     - end_dpid: unique integer identifier of the second switch connected to the link.
+     - end_port_no: integer port number of the end switch's port to be created.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(LinkFailure, self).__init__(label=label, round=round, time=time)
     self.start_dpid = start_dpid
     self.start_port_no = start_port_no
@@ -269,6 +319,8 @@ class LinkFailure(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, start dpid, start port_no, end dpid, end port_no) '''
     return (self.__class__.__name__,
             self.start_dpid, self.start_port_no,
             self.end_dpid, self.end_port_no)
@@ -278,6 +330,19 @@ class LinkRecovery(InputEvent):
   ofp_port_status message to its parent(s). '''
   def __init__(self, start_dpid, start_port_no, end_dpid, end_port_no,
                label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - start_dpid: unique integer identifier of the first switch connected to the link.
+     - start_port_no: integer port number of the start switch's port.
+     - end_dpid: unique integer identifier of the second switch connected to the link.
+     - end_port_no: integer port number of the end switch's port to be created.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(LinkRecovery, self).__init__(label=label, round=round, time=time)
     self.start_dpid = start_dpid
     self.start_port_no = start_port_no
@@ -303,6 +368,9 @@ class LinkRecovery(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, start dpid, start port, end dpid, end port)
+    '''
     return (self.__class__.__name__,
             self.start_dpid, self.start_port_no,
             self.end_dpid, self.end_port_no)
@@ -310,6 +378,16 @@ class LinkRecovery(InputEvent):
 class ControllerFailure(InputEvent):
   ''' Kills a controller process with `kill -9`'''
   def __init__(self, controller_id, label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - controller_id: unique string label for the controller to be killed.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(ControllerFailure, self).__init__(label=label, round=round, time=time)
     self.controller_id = controller_id
 
@@ -327,12 +405,23 @@ class ControllerFailure(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format: (class name, controller id) '''
     return (self.__class__.__name__,self.controller_id)
 
 class ControllerRecovery(InputEvent):
   ''' Reboots a crashed controller by reinvoking its original command line
   parameters'''
   def __init__(self, controller_id, label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - controller_id: unique string label for the controller.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(ControllerRecovery, self).__init__(label=label, round=round, time=time)
     self.controller_id = controller_id
 
@@ -350,6 +439,7 @@ class ControllerRecovery(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format: (class name, controller id) '''
     return (self.__class__.__name__,self.controller_id)
 
 class HostMigration(InputEvent):
@@ -358,6 +448,24 @@ class HostMigration(InputEvent):
   '''
   def __init__(self, old_ingress_dpid, old_ingress_port_no,
                new_ingress_dpid, new_ingress_port_no, host_id, label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - old_ingress_dpid: unique integer identifier of the ingress switch the host is
+       moving away from.
+     - old_ingress_port_no: integer identifier of the port the host is moving
+       away from.
+     - new_ingress_dpid: unique integer identifier of the ingress switch the host is
+       moving to.
+     - new_ingress_port_no: integer identifier of the port the host is moving
+       to.
+     - host_id: unique integer identifier of the host.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(HostMigration, self).__init__(label=label, round=round, time=time)
     self.old_ingress_dpid = old_ingress_dpid
     self.old_ingress_port_no = old_ingress_port_no
@@ -396,6 +504,8 @@ class HostMigration(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, old dpid, old port, new dpid, new port, host id) '''
     return (self.__class__.__name__,self.old_ingress_dpid,
             self.old_ingress_port_no, self.new_ingress_dpid,
             self.new_ingress_port_no, self.host_id)
@@ -420,6 +530,19 @@ class PolicyChange(InputEvent):
 class TrafficInjection(InputEvent):
   ''' Injects a dataplane packet into the network at the given host's access link '''
   def __init__(self, label=None, dp_event=None, round=-1, time=None, prunable=True):
+    '''
+    Parameters:
+     - dp_event: DataplaneEvent object encapsulating the packet contents and the
+       access link.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+     - prunable: whether this input event can be pruned during delta
+       debugging.
+    '''
     super(TrafficInjection, self).__init__(label=label, round=round, time=time,
                                            prunable=prunable)
     self.dp_event = dp_event
@@ -438,6 +561,11 @@ class TrafficInjection(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format: (class name, dp event)
+    The format of dp event is:
+    {"interface": HostInterface.to_json(), "packet": base 64 encoded packet contents}
+    See entities.py for the HostInterface json format.
+    '''
     return (self.__class__.__name__, self.dp_event)
 
   def to_json(self):
@@ -463,7 +591,16 @@ class WaitTime(InputEvent):
   ''' Causes the simulation to sleep for the specified number of seconds.
   Controller processes continue running during this time.'''
   def __init__(self, wait_time, label=None, round=-1, time=None):
-    ''' wait_time is specified in seconds '''
+    '''
+    Parameters:
+     - wait_time: float representing how long to sleep in seconds.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(WaitTime, self).__init__(label=label, round=round, time=time)
     self.wait_time = wait_time
 
@@ -484,6 +621,18 @@ class CheckInvariants(InputEvent):
   proceeding. '''
   def __init__(self, label=None, round=-1, time=None,
                invariant_check_name="InvariantChecker.check_correspondence"):
+    '''
+    Parameters:
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+     - invariant_check_name: unique name of the invariant to be checked. See
+       config.invariant_checks for an exhaustive list of possible invariant
+       checks.
+    '''
     super(CheckInvariants, self).__init__(label=label, round=round, time=time)
     # For backwards compatibility.. (invariants used to be specified as
     # marshalled functions, not invariant check names)
@@ -551,6 +700,17 @@ class ControlChannelBlock(InputEvent):
   messages will be sent over the connection until a ControlChannelUnblock
   occurs. '''
   def __init__(self, dpid, controller_id, label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - dpid: unique integer identifier of the switch.
+     - controller_id: unique string label for the controller.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(ControlChannelBlock, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
     self.controller_id = controller_id
@@ -565,6 +725,8 @@ class ControlChannelBlock(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format: (class name, dpid, controller id)
+    '''
     return (self.__class__.__name__,
             self.dpid, self.controller_id)
 
@@ -580,6 +742,17 @@ class ControlChannelUnblock(InputEvent):
   ''' Unblocks the control channel delay triggered by a ControlChannelUnblock.
   All queued messages will be sent.'''
   def __init__(self, dpid, controller_id, label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - dpid: unique integer identifier of the switch.
+     - controller_id: unique string label for the controller.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     super(ControlChannelUnblock, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
     self.controller_id = controller_id
@@ -594,6 +767,7 @@ class ControlChannelUnblock(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format: (class name, dpid, controller id) '''
     return (self.__class__.__name__,
             self.dpid, self.controller_id)
 
@@ -610,8 +784,18 @@ class DataplaneDrop(InputEvent):
   the network. '''
   def __init__(self, fingerprint, label=None, round=-1, time=None,
                passive=True):
-    ''' - passive: whether we're using Replayer.DataplaneChecker '''
+    '''
+    Parameters:
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+     - passive: whether we're using Replayer.DataplaneChecker
+    '''
     super(DataplaneDrop, self).__init__(label=label, round=round, time=time)
+    # N.B. fingerprint is monkeypatched on to DpPacketOut events by BufferedPatchPanel
     if fingerprint[0] != self.__class__.__name__:
       fingerprint = list(fingerprint)
       fingerprint.insert(0, self.__class__.__name__)
@@ -635,6 +819,10 @@ class DataplaneDrop(InputEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, DPFingerprint, switch dpid, port no)
+    See fingerprints/messages.py for format of DPFingerprint.
+    '''
     return self._fingerprint
 
   @staticmethod
@@ -702,6 +890,19 @@ class ControlMessageBase(InternalEvent):
   send an openflow packet.
   '''
   def __init__(self, dpid, controller_id, fingerprint, label=None, round=-1, time=None, timeout_disallowed=False):
+    '''
+    Parameters:
+     - dpid: unique integer identifier of the switch.
+     - controller_id: unique string label for the controller.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+     - timeout_disallowed: whether the replayer should wait indefinitely for
+       this event to occur. Defaults to False.
+    '''
     # If constructed directly (not from json), fingerprint is the
     # OFFingerprint, not including dpid and controller_id
     super(ControlMessageBase, self).__init__(label=label, round=round, time=time, timeout_disallowed=timeout_disallowed)
@@ -718,6 +919,10 @@ class ControlMessageBase(InternalEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, OFFingerprint, dpid, controller id)
+    See fingerprints/messages.py for OFFingerprint format.
+    '''
     return self._fingerprint
 
 class ControlMessageReceive(ControlMessageBase):
@@ -822,6 +1027,20 @@ class ControllerStateChange(InternalEvent):
   via syncproto.
   '''
   def __init__(self, controller_id, fingerprint, name, value, label=None, round=-1, time=None, timeout_disallowed=False):
+    '''
+    Parameters:
+     - controller_id: unique string label for the controller.
+     - name: The format string passed to the controller's logging library.
+     - value: An array of values for the format string.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+     - timeout_disallowed: whether the replayer should wait indefinitely for
+       this event to occur. Defaults to False.
+    '''
     super(ControllerStateChange, self).__init__(label=label, round=round, time=time, timeout_disallowed=timeout_disallowed)
     self.controller_id = controller_id
     if type(fingerprint) == str or type(fingerprint) == unicode:
@@ -854,6 +1073,11 @@ class ControllerStateChange(InternalEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, PendingStateChange.fingerprint, controller id)
+    PendingStateChange.fingerprint is the format string passed to the
+    controller's logging library (without interpolated values)
+    '''
     # Somewhat confusing: the StateChange's fingerprint is self._fingerprint,
     # but the overall fingerprint of this event needs to include the controller
     # id
@@ -884,6 +1108,20 @@ class DeterministicValue(InternalEvent):
   gettimeofday()
   '''
   def __init__(self, controller_id, name, value, label=None, round=-1, time=None, timeout_disallowed=False):
+    '''
+    Parameters:
+     - controller_id: unique string label for the controller.
+     - name: name of the DeterministicValue request, e.g. "gettimeofday"
+     - value: the return value of the DeterministicValue request.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+     - timeout_disallowed: whether the replayer should wait indefinitely for
+       this event to occur. Defaults to False.
+    '''
     super(DeterministicValue, self).__init__(label=label, round=round, time=time, timeout_disallowed=timeout_disallowed)
     self.controller_id = controller_id
     self.name = name
@@ -935,7 +1173,18 @@ class DataplanePermit(InternalEvent):
   '''
   def __init__(self, fingerprint, label=None, round=-1, time=None,
                passive=True):
-    ''' - passive: whether we're using Replayer.DataplaneChecker '''
+    '''
+    Parameters:
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+     - passive: whether we're using Replayer.DataplaneChecker
+    '''
+    # N.B. fingerprint is monkeypatched onto DpPacketOut events by
+    # BufferedPatchPanel
     super(DataplanePermit, self).__init__(label=label, round=round, time=time, )
     if fingerprint[0] != self.__class__.__name__:
       fingerprint = list(fingerprint)
@@ -959,6 +1208,10 @@ class DataplanePermit(InternalEvent):
 
   @property
   def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, DPFingerprint, switch dpid, port no)
+    See fingerprints/messages.py for format of DPFingerprint.
+    '''
     return self._fingerprint
 
   @staticmethod
@@ -989,6 +1242,18 @@ class SpecialEvent(Event):
 class InvariantViolation(SpecialEvent):
   ''' Class for logging violations as json dicts '''
   def __init__(self, violations, label=None, round=-1, time=None):
+    '''
+    Parameters:
+     - violations: an array of strings specifying the invariant violation
+       fingerprints. Format of the strings depends on the invariant check.
+       Empty array means there were no violations.
+     - label: a unique label for this event. Internal event labels begin with 'i'
+       and input event labels begin with 'e'.
+     - time: the timestamp of when this event occured. Stored as a tuple:
+       [seconds since unix epoch, microseconds].
+     - round: optional integer. Indicates what simulation round this event occured
+       in.
+    '''
     Event.__init__(self, label=label, round=round, time=time)
     self.violations = [ str(v) for v in violations ]
 
