@@ -8,14 +8,17 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "pox"))
 from pox.lib.packet.ethernet import *
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-i', '--input')
-parser.add_argument('-o', '--output', default="pcap.trace")
+def main(args):
+  p = pcap.open(args.input)
+  for i in p:
+    e = ethernet(raw=i[1])
+    import pdb; pdb.set_trace()
+    print e
 
-args = parser.parse_args()
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser()
+  parser.add_argument('-i', '--input')
+  parser.add_argument('-o', '--output', default="pcap.trace")
 
-p = pcap.open(args.input)
-for i in p:
-  e = ethernet(raw=i[1])
-  import pdb; pdb.set_trace()
-  print e
+  args = parser.parse_args()
+  main(args)
