@@ -16,7 +16,11 @@
  - TODO: messages that end up sitting in replayer's buffer?
    [new/unexpected evens]. Should timestamp arrival time for all messages.
 
- - need to make sure child replay process dieson ^C
+ - need to make sure child replay process dies on ^C
+
+ - Look at computeOffset bug in visualize_event_trace.html
+
+ - The current fingerprint pattern should be refactored.
 
 Questions:
  - Where to mark timed out / new / successful internal events? Replayer, or
