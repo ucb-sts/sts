@@ -4,7 +4,8 @@ version of this file.
 This document provides an overview of the software architecture and
 development workflow for STS.
 
-For code documentation, see docs/_build/html/index.html
+For searchable code documentation, see:
+http://ucb-sts.github.io/documentation/_build/html/index.html
 
 ## Software Architecture
 
@@ -91,7 +92,7 @@ The event types logged by Interactive and Fuzzer are defined in
 sts/replay_event.py
 
 Events are eventually serialized to JSON. The format of the JSON files is
-documented in docs/_build/html/sts.html#module-sts.replay_event.
+documented in http://ucb-sts.github.io/documentation/_build/html/sts.html#module-sts.replay_event
 
 During replay events are stored in a EventDag object, which is essentially a
 linked list of events. Each input event object knows how to inject itself, and
