@@ -163,6 +163,9 @@ class EventScheduler(EventSchedulerBase):
     elif isinstance(event, InternalEvent):
       self.wait_for_internal(event)
     self.update_event_time(event)
+    # Set event.time to now for the replay log
+    event.time = SyncTime.now()
+    self._log_event(event)
 
   def inject_input(self, event):
     if self.delay_input_events:
