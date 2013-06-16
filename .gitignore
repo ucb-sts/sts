@@ -41,6 +41,7 @@ runtime_stats/*gpi
 runtime_stats/*dat
 docs/_build/doctrees/*
 documentation/*
+documentation
 
 # Controllers
 nox/
