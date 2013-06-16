@@ -91,7 +91,7 @@ For a high-level overview of STS's software architecture, see this
 [page](https://github.com/ucb-sts/sts/blob/master/DOCUMENTATION.md).
 
 For searchable code documentation, see this
-[page](http://ucb-sts.github.io/documentation/_build/html/index.html).
+[page](http://ucb-sts.github.io/documentation/).
 
 ### Research
 
