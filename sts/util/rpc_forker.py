@@ -5,6 +5,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 import xmlrpclib
 import sys
 import marshal
+import signal
 from sts.util.convenience import find_port
 from pox.lib.util import connect_with_backoff
 import logging
@@ -101,6 +102,16 @@ class Forker(object):
     self.server.server_activate()
 
 class LocalForker(Forker):
+  # set of process ids that are currently running. These are all killed upon
+  # signal reception.
+  _active_pids = set()
+
+  @staticmethod
+  def kill_all():
+    for pid in list(LocalForker._active_pids):
+      os.kill(pid, signal.SIGTERM)
+    LocalForker._active_pids.clear()
+
   def register_task(self, task_name, code_block):
     self._task_registry.register_task(task_name, code_block)
 
@@ -111,14 +122,18 @@ class LocalForker(Forker):
     # TODO(cs): use subprocess to spawn baby snakes instead of os.fork()
     pid = os.fork()
     if pid == 0: # Child
+      # Send parents interrupts to the child
+      os.setsid()
       self._initialize_child_rpc_server(ip, port)
       self.server.register_function(task, task_name)
       self.server.handle_request()
       sys.exit(0)
     else: # Parent
+      LocalForker._active_pids.add(pid)
       try:
         child_return = self._invoke_child_rpc(ip, port,
                                               task_name, *args, **kws)
+        LocalForker._active_pids.remove(pid)
       except xmlrpclib.Fault as err:
         print "An RPC fault occurred"
         print "Fault code: %d" % err.faultCode

@@ -36,6 +36,7 @@ from sts.syncproto.sts_syncer import STSSyncConnectionManager
 import sts.snapshot as snapshot
 from sts.util.socket_mux.base import MultiplexedSelect
 from sts.util.socket_mux.sts_socket_multiplexer import STSSocketDemultiplexer, STSMockSocket
+from sts.util.rpc_forker import LocalForker
 from pox.lib.util import connect_socket_with_backoff
 
 import select
@@ -223,6 +224,9 @@ class Simulation(object):
     # kill controllers
     if self.controller_manager is not None:
       self.controller_manager.kill_all()
+
+    # kill fork()ed procs
+    LocalForker.kill_all()
 
     # Garbage collect sockets
     if self.topology is not None:
