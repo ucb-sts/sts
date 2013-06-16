@@ -96,7 +96,8 @@ For searchable code documentation, see this
 ### Research
 
 For more information about the research behind sts, see our paper
-[draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf).
+[draft](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf) or our talk
+[slides](http://www.eecs.berkeley.edu/~rcs/research/selectiverecall.pptx).
 
 ### Questions?
 
