@@ -63,7 +63,7 @@ class InvariantChecker(object):
     return dead_controllers
 
   @staticmethod
-  def check_loops(simulation):
+  def python_check_loops(simulation):
     # Always check liveness if there is a single controllers
     # Dynamic imports to allow this method to be serialized
     import sts.headerspace.topology_loader.topology_loader as hsa_topo
@@ -166,7 +166,7 @@ class InvariantChecker(object):
     return [ str(p) for p in list(remaining_pairs) ]
 
   @staticmethod
-  def check_blackholes(simulation):
+  def python_check_blackholes(simulation):
     '''Do any switches:
          - send packets into a down link?
          - drop packets that are supposed to go out their in_port?
