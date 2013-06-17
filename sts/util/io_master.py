@@ -181,6 +181,10 @@ class IOMaster(object):
       # TODO(cs): this is a hack: file descriptor is closed upon shut
       # down, and select throws up.
       sys.stderr.write("File Descriptor Closed\n")
+    except TypeError:
+      # Same behavior, error message is:
+      # TypeError: argument must be an int, or have a fileno() method.
+      sys.stderr.write("File Descriptor Closed\n")
     finally:
       self._in_select -= 1
     if self._in_select == 0 and self._close_requested and not self.closed:
