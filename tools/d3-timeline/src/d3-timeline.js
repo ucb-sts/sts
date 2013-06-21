@@ -19,7 +19,7 @@
         display = "rect",
         beginning = 0,
         ending = 0,
-        margin = {left: 30, right:30, top: 30, bottom:30},
+        margin = {left: 30, right:400, top: 30, bottom:30},
         stacked = false,
         rotateTicks = false,
         itemHeight = 20,
@@ -35,6 +35,10 @@
         maxStack = 1,
         minTime = 0,
         maxTime = 0;
+
+      var fe_ids = [];
+      var cxs = []; 
+      var cys = []; 
 
       setWidth();
 
@@ -79,16 +83,17 @@
         .scale(xScale)
         .orient(orient)
         .tickFormat(tickFormat.format)
-        .ticks(tickFormat.tickTime, tickFormat.tickNumber)
-        .tickSize(tickFormat.tickSize);
+        .ticks(tickFormat.tickTime, tickFormat.tickNumber);
+        //.tickSize(tickFormat.tickSize);
 
       g.append("g")
         .attr("class", "axis")
-        .attr("transform", "translate(" + 0 +","+(margin.top + (itemHeight + itemMargin) * maxStack)+")")
-        .call(xAxis);
+        .attr("transform", "translate(" + 80 +","+ 320 + ")")//(margin.top + (itemHeight*7 + itemMargin) * maxStack)+")")
+        .call(xAxis);  
 
       // draw the chart
       g.each(function(d, i) {
+
         d.forEach( function(datum, index){
           var data = datum.times;
           var hasLabel = (typeof(datum.label) != "undefined");
@@ -102,8 +107,9 @@
             })
             .attr("cy", getStackPosition)
             .attr("cx", getXPos)
-            .attr("r", itemHeight/2)
+            .attr("r", itemHeight/2/2)
             .attr("height", itemHeight)
+            .attr("fe_id",d.fe_id)
             .style("fill", colorCycle(index))
             .on("mousemove", function (d, i) {
               hover(d, index, datum);
@@ -118,6 +124,13 @@
               click(d, index, datum);
             })
           ;
+
+          for (i = 0; i< data.length; i++){
+            fe_ids.push(getFe_id(data[i],i));
+            cxs.push(getXPos(data[i],i)); 
+            cys.push(getStackPosition(data[i],i));
+          }
+
 
           // add the label
           if (hasLabel) {
@@ -142,8 +155,43 @@
             }
             return margin.top;
           }
+
+          function getFe_id(d,i){
+            return d.fe_id;
+          }
+
         });
+       
       });
+
+      //draw red lines connecting functionally equivalent events based upon prior calculated fe_id  
+      var timeline_event_pos = -1; 
+      var count = 0; 
+      var equiv_id = 0;
+      for( i = 0; i < cys.length ; i++ ){
+        if (cys[i] >= (cys[0]+6*25)){
+          timeline_event_pos = i; 
+          break;
+        }
+      }
+
+      for(i = timeline_event_pos; i < fe_ids.length; i++){
+        if (fe_ids[i] != -1 ){ // it has a functionally equivalent event in timeline0
+          for (id = 0; id < timeline_event_pos; id++){
+            if (fe_ids[id] == fe_ids[i]){
+              equiv_id = id;
+              break; 
+            }
+          }
+          g.append('line')
+            .attr("x1", cxs[equiv_id])
+            .attr("y1", cys[equiv_id])
+            .attr("x2", cxs[i])
+            .attr("y2", cys[i])
+            .style("stroke","rgb(255,0,0)");
+        }
+
+      }
 
       if (width > gParentSize.width) {
         var zoom = d3.behavior.zoom().x(xScale).on("zoom", move);
@@ -172,7 +220,7 @@
       setHeight();
 
       function getXPos(d, i) {
-        return margin.left + (d.starting_time - beginning) * scaleFactor;
+        return margin.left + 80 + (d.starting_time - beginning) * scaleFactor;
       }
 
       function setHeight() {

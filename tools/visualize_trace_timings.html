@@ -18,46 +18,120 @@
                           "DeterministicValue":true,
                           "DataplanePermit":true};
 
+    var data_timeline0; 
+    var data_timeline1;
+    var count = 0;
+
     function formatData(data) {
+      count++;
+
+      // FIRST TIMELINE
       internal_times = [];
       timed_out_times = [];
       input_times = [];
       // TODO(cs): assign the color red to violation_times
       violation_times = [];
       new_event_times = [];
-      // Split by \n
-      var split = data.split("\n");
-      for (i = 0; i < split.length-1; i++) {
-        var str = split[i];
-        var e = jQuery.parseJSON(str);
-        var epochMillis = (e["time"][0] * 1000) + (e["time"][1] / 1000);
-        var point = {"starting_time": epochMillis,
-                     "ending_time": epochMillis,
-                     "label": e["label"],
-                     "class": e["class"]};
-        // Demultiplex by element["class"] for internal vs. input
-        var eventClass = e["class"];
-        if (eventClass === "InvariantViolation") {
-          violation_times.push(point);
-        } else if (eventClass in internalEvents)  {
-          if ("timed_out" in e && e["timed_out"]) {
-            timed_out_times.push(point);
-          } else if ("new_internal_event" in e && e["new_internal_event"]) {
-            new_event_times.push(point);
+
+       // SECOND TIMELINE
+      internal_times2 = [];
+      timed_out_times2 = [];
+      input_times2 = [];
+      // TODO(cs): assign the color red to violation_times
+      violation_times2 = [];
+      new_event_times2 = [];
+      
+
+      if (count == 1){ // just pass both timelines in together to the chart
+
+        data_timeline0 = data;
+
+      } else {     
+        count = 0;    
+
+        data_timeline1 = data; 
+
+        // Timeline0: Split by \n
+        var split = data_timeline0.split("\n");
+        for (i = 0; i < split.length-1; i++) {
+          var str = split[i];
+          var e = jQuery.parseJSON(str);
+          var epochMillis = (e["time"][0] * 1000) + (e["time"][1] / 1000);
+          epochMillis*=100;
+          var point = {"starting_time": epochMillis,
+                       "ending_time": epochMillis,
+                       "label": e["label"],
+                       "class": e["class"],
+                       "fe_id": i };
+          // Demultiplex by element["class"] for internal vs. input
+          var eventClass = e["class"];
+          if (eventClass === "InvariantViolation") {
+            violation_times.push(point);
+          } else if (eventClass in internalEvents)  {
+            if ("timed_out" in e && e["timed_out"]) {
+              timed_out_times.push(point);
+            } else if ("new_internal_event" in e && e["new_internal_event"]) {
+              new_event_times.push(point);
+            } else {
+              internal_times.push(point);
+            }
           } else {
-            internal_times.push(point);
+            input_times.push(point);
           }
-        } else {
-          input_times.push(point);
         }
+
+        // Timeline1: Split by \n
+        var split2 = data.split("\n");
+        var start_position = 0;
+        for (i = 0; i < split2.length-1; i++) {
+          var str = split2[i];
+          var e = jQuery.parseJSON(str);
+          var epochMillis = (e["time"][0] * 1000) + (e["time"][1] / 1000);
+          epochMillis*=100;
+
+          var e_id = findFunctionallyEquivalentEventID(split, e, start_position); 
+
+          if (e_id != -1){ // remember to update the starting position for the next event
+            start_position = e_id+1; 
+          }        
+
+          var point = {"starting_time": epochMillis,
+                       "ending_time": epochMillis,
+                       "label": e["label"],
+                       "class": e["class"],
+                       "fe_id": e_id};
+          // Demultiplex by element["class"] for internal vs. input
+          var eventClass = e["class"];
+          if (eventClass === "InvariantViolation") {
+            violation_times2.push(point);
+          } else if (eventClass in internalEvents)  {
+            if ("timed_out" in e && e["timed_out"]) {
+              timed_out_times2.push(point);
+            } else if ("new_internal_event" in e && e["new_internal_event"]) {
+              new_event_times2.push(point);
+            } else {
+              internal_times2.push(point);
+            }
+          } else {
+            input_times2.push(point);
+          }
+        }
+        
       }
 
       return [{"label": "internal", "times": internal_times},
               {"label": "input", "times": input_times},
               {"label": "timed_out", "times": timed_out_times},
               {"label": "new_internal", "times": new_event_times},
-              {"label": "violation", "times": violation_times}];
+              {"label": "violation", "times": violation_times},
+              {"label": "", "times": []},
+              {"label": "internal", "times": internal_times2},
+              {"label": "input", "times": input_times2},
+              {"label": "timed_out", "times": timed_out_times2},
+              {"label": "new_internal", "times": new_event_times2},
+              {"label": "violation", "times": violation_times2}];
     }
+
     function initFileUpload(elementId, svg, chart, primaryChart) {
       var upload = document.getElementById(elementId);
 
@@ -82,22 +156,34 @@
           }
 
           timelineCircle(svg, chart, data);
-          // Add another chart element for the user to compare any number of
-          // charts
-          appendChart(nullData);
+
         };
         reader.readAsText(file);
 
         return false;
       };
     }
+
+    function findFunctionallyEquivalentEventID(split, e, start_position){ 
+      for (i_old = start_position; i_old < split.length-1; i_old++) {
+        var str_old = split[i_old];
+        var e_old = jQuery.parseJSON(str_old);
+
+        if ( e_old["class"] == e["class"] 
+          && JSON.stringify(e_old["fingerprint"]) == JSON.stringify(e["fingerprint"]) ){
+            return i_old;
+        }
+      }
+      return -1;
+    }
+
   </script>
   <script type="text/javascript">
     var tooltip = {};
     var nullData = [
       {times: []}
     ];
-    var width = 2000;
+    var width = 4000;
     var charts = [];
     var svgs = [];
 
@@ -137,6 +223,7 @@
       content += '<p class="main">' + d.class + '</span></p>';
       content += '<p class="main">Time (ms): ' + d.starting_time + '</span></p>';
       tooltip.showTooltip(content, d3.event);
+
     };
 
     // Mouseout callback
@@ -148,11 +235,17 @@
       svg.datum(data).call(chart);
     }
 
-    function appendToDOM(chartElement, fileElement) {
+    function appendToDOM(chartElement, fileElement1, fileElement2) {
       var p = document.createElement('p');
       var input = document.createElement('input');
       input.setAttribute('type', 'file');
-      input.setAttribute('id', fileElement);
+      input.setAttribute('id', fileElement1);
+      p.appendChild(input);
+      document.body.appendChild(p);
+      var p = document.createElement('p');
+      var input = document.createElement('input');
+      input.setAttribute('type', 'file');
+      input.setAttribute('id', fileElement2);
       p.appendChild(input);
       document.body.appendChild(p);
       var div = document.createElement('div');
@@ -163,14 +256,17 @@
     function appendChart(data) {
       var index = charts.length;
       var chartElement = "timeline" + index;
-      var fileElement = "fileinput" + index;
-      appendToDOM(chartElement, fileElement);
+      var fileElement1 = "fileinput" + index;
+
+      var fileElement2 = "fileinput" + (index+1);
+      appendToDOM(chartElement, fileElement1, fileElement2);
 
       charts.push(d3.timeline()
+        .stack()
         .tickFormat(
           {format: d3.time.format("%M:%S:%L"),
           tickTime: d3.time.seconds,
-          tickNumber: 10,
+          tickNumber: 20,
           tickSize: 30})
         .rotateTicks(45)
         .display("circle") // toggle between rectangles and circles
@@ -178,7 +274,8 @@
         .mouseout(hideDetails));
       svgs.push(d3.select("#" + chartElement).insert("svg").attr("width", width));
       timelineCircle(svgs[index], charts[index], data);
-      initFileUpload(fileElement, svgs[index], charts[index], true);
+      initFileUpload(fileElement1, svgs[index], charts[index], true);
+      initFileUpload(fileElement2, svgs[index], charts[index], true);
     }
 
     window.onload = function() {
