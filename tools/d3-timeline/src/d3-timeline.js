@@ -23,7 +23,8 @@
         stacked = false,
         rotateTicks = false,
         itemHeight = 20,
-        itemMargin = 5
+        itemMargin = 5,
+        timelineDiffHeight = 150
       ;
 
     function timeline (gParent) {
@@ -36,9 +37,7 @@
         minTime = 0,
         maxTime = 0;
 
-      var fe_ids = [];
-      var cxs = []; 
-      var cys = []; 
+      var feIDs = {};
 
       setWidth();
 
@@ -84,11 +83,10 @@
         .orient(orient)
         .tickFormat(tickFormat.format)
         .ticks(tickFormat.tickTime, tickFormat.tickNumber);
-        //.tickSize(tickFormat.tickSize);
-
+        
       g.append("g")
         .attr("class", "axis")
-        .attr("transform", "translate(" + 80 +","+ 320 + ")")//(margin.top + (itemHeight*7 + itemMargin) * maxStack)+")")
+        .attr("transform", "translate(" + 80 +","+ (2*timelineDiffHeight+20) + ")")
         .call(xAxis);  
 
       // draw the chart
@@ -107,9 +105,8 @@
             })
             .attr("cy", getStackPosition)
             .attr("cx", getXPos)
-            .attr("r", itemHeight/2/2)
+            .attr("r", itemHeight/4)
             .attr("height", itemHeight)
-            .attr("fe_id",d.fe_id)
             .style("fill", colorCycle(index))
             .on("mousemove", function (d, i) {
               hover(d, index, datum);
@@ -125,12 +122,14 @@
             })
           ;
 
-          for (i = 0; i< data.length; i++){
-            fe_ids.push(getFe_id(data[i],i));
-            cxs.push(getXPos(data[i],i)); 
-            cys.push(getStackPosition(data[i],i));
+          for (i = 0; i < data.length; i++){
+            if ( !((getFeID(data[i],i)) in feIDs)){
+              feIDs[getFeID(data[i],i)] = [getXPos(data[i],i), getStackPosition(data[i],i)];
+            } else {
+              feIDs[getFeID(data[i],i)].push(getXPos(data[i],i)); 
+              feIDs[getFeID(data[i],i)].push(getStackPosition(data[i],i));
+            }
           }
-
 
           // add the label
           if (hasLabel) {
@@ -156,7 +155,7 @@
             return margin.top;
           }
 
-          function getFe_id(d,i){
+          function getFeID(d,i){
             return d.fe_id;
           }
 
@@ -165,32 +164,15 @@
       });
 
       //draw red lines connecting functionally equivalent events based upon prior calculated fe_id  
-      var timeline_event_pos = -1; 
-      var count = 0; 
-      var equiv_id = 0;
-      for( i = 0; i < cys.length ; i++ ){
-        if (cys[i] >= (cys[0]+6*25)){
-          timeline_event_pos = i; 
-          break;
-        }
-      }
-
-      for(i = timeline_event_pos; i < fe_ids.length; i++){
-        if (fe_ids[i] != -1 ){ // it has a functionally equivalent event in timeline0
-          for (id = 0; id < timeline_event_pos; id++){
-            if (fe_ids[id] == fe_ids[i]){
-              equiv_id = id;
-              break; 
-            }
-          }
+      for (var id in feIDs){
+        if (feIDs[id].length == 4){
           g.append('line')
-            .attr("x1", cxs[equiv_id])
-            .attr("y1", cys[equiv_id])
-            .attr("x2", cxs[i])
-            .attr("y2", cys[i])
+            .attr("x1", feIDs[id][0])
+            .attr("y1", feIDs[id][1])
+            .attr("x2", feIDs[id][2])
+            .attr("y2", feIDs[id][3])
             .style("stroke","rgb(255,0,0)");
         }
-
       }
 
       if (width > gParentSize.width) {
