@@ -96,12 +96,13 @@
         var e_id; 
 
         if (timelineNum == 1) { 
-          // arbitrary id that is its position in the event list of timeline1
+          // arbitrary id that is simply its position in the event list of timeline1
           e_id = i; 
         } else { 
-          // id that corresponds to its functionally equivalent other half in timeline1
+          // id that corresponds to its functionally equivalent event in timeline1
           e_id = findFunctionallyEquivalentEventID(e, start_position);
-          // update the starting position for the next event, to keep ordering correct 
+          
+          // update the starting position for the next event (to keep relative ordering correct) 
           if (e_id != -1){ 
             start_position = e_id+1; 
           } 
@@ -146,7 +147,7 @@
         var str_old = data_timeline[1][i_old];
         var e_old = jQuery.parseJSON(str_old);
 
-        // using JSON.stringify() to mimick .equals() for objects/arrays in fingerprint
+        // using JSON.stringify() to compute .equals() for objects/arrays in fingerprint
         if ( e_old["class"] === e["class"] 
           && JSON.stringify(e_old["fingerprint"]) === JSON.stringify(e["fingerprint"]) ){
             return i_old;

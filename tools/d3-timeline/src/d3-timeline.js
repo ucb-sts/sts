@@ -123,11 +123,12 @@
           ;
 
           for (i = 0; i < data.length; i++){
-            if ( !((getFeID(data[i],i)) in feIDs)){
-              feIDs[getFeID(data[i],i)] = [getXPos(data[i],i), getStackPosition(data[i],i)];
+            var id = data[i].fe_id;  
+            if ( !(id in feIDs)){
+              feIDs[id] = [getXPos(data[i],i), getStackPosition(data[i],i)];
             } else {
-              feIDs[getFeID(data[i],i)].push(getXPos(data[i],i)); 
-              feIDs[getFeID(data[i],i)].push(getStackPosition(data[i],i));
+              feIDs[id].push(getXPos(data[i],i)); 
+              feIDs[id].push(getStackPosition(data[i],i));
             }
           }
 
