@@ -487,6 +487,6 @@ class Fuzzer(ControlFlow):
                                               old_ingress_port_no,
                                               new_switch_dpid,
                                               new_port_no,
-                                              access_link.host.name))
+                                              access_link.host.hid))
           self._send_initialization_packet(access_link.host, self_pkt=True)
 
