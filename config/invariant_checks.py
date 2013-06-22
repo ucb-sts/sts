@@ -9,7 +9,7 @@ def bail_on_connectivity(simulation):
   return []
 
 def check_for_loops_or_connectivity(simulation):
-  result = InvariantChecker.check_loops(simulation)
+  result = InvariantChecker.python_check_loops(simulation)
   if result:
     return result
   return bail_on_connectivity(simulation)
