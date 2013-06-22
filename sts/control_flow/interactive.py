@@ -532,8 +532,8 @@ class Interactive(ControlFlow):
       return queued[0]
     if sel >= len(queued):
       print "Given index out of bounds. Try a value smaller than %d" % len(queued)
-    return queued[sel] 
-    
+    return queued[sel]
+
   def dataplane_forward(self, event=None):
     dp_event = self._select_dataplane_event(event)
     if not dp_event:
