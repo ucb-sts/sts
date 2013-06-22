@@ -253,7 +253,7 @@ class Fuzzer(ControlFlow):
 
   def _send_initialization_packet(self, host, self_pkt=False):
     traffic_type = "icmp_ping"
-    dp_event = self.traffic_generator.generate(traffic_type, host, self_pkt=self_pkt)
+    dp_event = self.traffic_generator.generateAndInject(traffic_type, host, self_pkt=self_pkt)
     self._log_input_event(TrafficInjection(dp_event=dp_event))
 
   def _send_initialization_packets(self, self_pkts=False):
@@ -444,7 +444,7 @@ class Fuzzer(ControlFlow):
             msg.event("injecting a random packet")
             traffic_type = "icmp_ping"
             # Generates a packet, and feeds it to the software_switch
-            dp_event = self.traffic_generator.generate(traffic_type, host)
+            dp_event = self.traffic_generator.generateAndInject(traffic_type, host)
             self._log_input_event(TrafficInjection(dp_event=dp_event))
 
   def check_controllers(self):

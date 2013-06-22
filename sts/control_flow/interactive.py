@@ -436,8 +436,7 @@ class Interactive(ControlFlow):
   # TODO(cs): ripped directly from fuzzer. Redundant!
   def _send_initialization_packet(self, host, self_pkt=False):
     traffic_type = "icmp_ping"
-    dp_event = self.traffic_generator.generate(traffic_type, host, self_pkt=self_pkt)
-    self._log_input_event(TrafficInjection(dp_event=dp_event))
+    dp_event = self.traffic_generator.generateAndInject(traffic_type, host, self_pkt=self_pkt)
 
   def show_flow_table(self, dpid):
     topology = self.simulation.topology

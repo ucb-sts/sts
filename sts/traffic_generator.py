@@ -40,7 +40,7 @@ class TrafficGenerator (object):
       others = [ h for h in hosts if h != host ]
       self.host2dests[host] = itertools.cycle(others)
 
-  def generate(self, packet_type, host, self_pkt=False):
+  def generateAndInject(self, packet_type, host, self_pkt=False):
     if packet_type not in self._packet_generators:
       raise AttributeError("Unknown event type %s" % str(packet_type))
 
