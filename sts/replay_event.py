@@ -529,11 +529,13 @@ class PolicyChange(InputEvent):
 
 class TrafficInjection(InputEvent):
   ''' Injects a dataplane packet into the network at the given host's access link '''
-  def __init__(self, label=None, dp_event=None, round=-1, time=None, prunable=True):
+  def __init__(self, label=None, dp_event=None, host_id=None, round=-1, time=None, prunable=True):
     '''
     Parameters:
      - dp_event: DataplaneEvent object encapsulating the packet contents and the
        access link.
+     - host_id: unique integer label identifying the host that generated the
+       packet.
      - label: a unique label for this event. Internal event labels begin with 'i'
        and input event labels begin with 'e'.
      - time: the timestamp of when this event occured. Stored as a tuple:
@@ -546,6 +548,7 @@ class TrafficInjection(InputEvent):
     super(TrafficInjection, self).__init__(label=label, round=round, time=time,
                                            prunable=prunable)
     self.dp_event = dp_event
+    self.host_id = host_id
 
   def proceed(self, simulation):
     # If dp_event is None, backwards compatibility
@@ -561,12 +564,12 @@ class TrafficInjection(InputEvent):
 
   @property
   def fingerprint(self):
-    ''' Fingerprint tuple format: (class name, dp event)
+    ''' Fingerprint tuple format: (class name, dp event, host_id)
     The format of dp event is:
     {"interface": HostInterface.to_json(), "packet": base 64 encoded packet contents}
     See entities.py for the HostInterface json format.
     '''
-    return (self.__class__.__name__, self.dp_event)
+    return (self.__class__.__name__, self.dp_event, self.host_id)
 
   def to_json(self):
     fields = {}
@@ -585,7 +588,10 @@ class TrafficInjection(InputEvent):
     dp_event = None
     if 'dp_event' in json_hash:
       dp_event = DataplaneEvent.from_json(json_hash['dp_event'])
-    return TrafficInjection(label=label, dp_event=dp_event, time=time, round=round, prunable=prunable)
+    host_id = None
+    if 'host_id' in json_hash:
+      host_id = json_hash['host_id']
+    return TrafficInjection(label=label, dp_event=dp_event, host_id=host_id, time=time, round=round, prunable=prunable)
 
 class WaitTime(InputEvent):
   ''' Causes the simulation to sleep for the specified number of seconds.

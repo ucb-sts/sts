@@ -82,4 +82,4 @@ class Trace(object):
         return
       host = self.interface2host[dp_event.interface]
       host.send(dp_event.interface, dp_event.packet)
-      return dp_event
+      return (dp_event, host)

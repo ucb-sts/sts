@@ -437,6 +437,7 @@ class Interactive(ControlFlow):
   def _send_initialization_packet(self, host, self_pkt=False):
     traffic_type = "icmp_ping"
     dp_event = self.traffic_generator.generateAndInject(traffic_type, host, self_pkt=self_pkt)
+    self._log_input_event(TrafficInjection(dp_event=dp_event, host_id=host.hid))
 
   def show_flow_table(self, dpid):
     topology = self.simulation.topology
@@ -519,8 +520,8 @@ class Interactive(ControlFlow):
 
   def dataplane_trace_feed(self):
     if self.simulation.dataplane_trace:
-      dp_event = self.simulation.dataplane_trace.inject_trace_event()
-      self._log_input_event(TrafficInjection(dp_event=dp_event))
+      (dp_event, host) = self.simulation.dataplane_trace.inject_trace_event()
+      self._log_input_event(TrafficInjection(dp_event=dp_event, host=host.hid))
 
   def _select_dataplane_event(self, sel=None):
     queued = self.simulation.patch_panel.queued_dataplane_events
