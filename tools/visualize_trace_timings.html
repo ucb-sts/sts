@@ -228,21 +228,27 @@
     }
 
     function appendToDOM(chartElement, fileElement1, fileElement2) {
-      var p = document.createElement('p');
-      var input = document.createElement('input');
-      input.setAttribute('type', 'file');
-      input.setAttribute('id', fileElement1);
-      p.appendChild(input);
-      document.body.appendChild(p);
-      var p = document.createElement('p');
-      var input = document.createElement('input');
-      input.setAttribute('type', 'file');
-      input.setAttribute('id', fileElement2);
-      p.appendChild(input);
-      document.body.appendChild(p);
-      var div = document.createElement('div');
-      div.setAttribute('id', chartElement);
-      document.body.appendChild(div);
+      // the order in which elements are currently displayed
+      appendElementToDOM("file upload", fileElement1); 
+      appendElementToDOM("file upload", fileElement2); 
+      appendElementToDOM("chart", chartElement);
+    }
+
+    // appendElementToDOM currently only supports two types of elements: 
+    // file uploads and charts
+    function appendElementToDOM(type, element){
+      if (type === "file upload"){ 
+        var p = document.createElement('p');
+        var input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('id', element);
+        p.appendChild(input);
+        document.body.appendChild(p);
+      } else if (type === "chart"){
+        var div = document.createElement('div');
+        div.setAttribute('id', element);
+        document.body.appendChild(div);
+      } 
     }
 
     function appendChart(data) {
@@ -251,7 +257,7 @@
       var fileElement1 = "fileinput" + index;
       var fileElement2 = "fileinput" + (index+1);
       appendToDOM(chartElement, fileElement1, fileElement2);
-
+      
       charts.push(d3.timeline()
         .stack()
         .tickFormat(

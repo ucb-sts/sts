@@ -155,13 +155,7 @@
             }
             return margin.top;
           }
-
-          function getFeID(d,i){
-            return d.fe_id;
-          }
-
-        });
-       
+        });       
       });
 
       //draw red lines connecting functionally equivalent events based upon prior calculated fe_id  
