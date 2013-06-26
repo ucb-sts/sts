@@ -577,6 +577,7 @@ class TrafficInjection(InputEvent):
     fields['class'] = self.__class__.__name__
     fields['dp_event'] = self.dp_event.to_json()
     fields['fingerprint'] = (self.__class__.__name__, self.dp_event.to_json())
+    fields['host_id'] = self.host_id
     return json.dumps(fields)
 
   @staticmethod
