@@ -576,7 +576,7 @@ class TrafficInjection(InputEvent):
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
     fields['dp_event'] = self.dp_event.to_json()
-    fields['fingerprint'] = (self.__class__.__name__, self.dp_event.to_json())
+    fields['fingerprint'] = (self.__class__.__name__, self.dp_event.to_json(), self.host_id)
     fields['host_id'] = self.host_id
     return json.dumps(fields)
 
@@ -1099,10 +1099,10 @@ class ControllerStateChange(InternalEvent):
   @staticmethod
   def from_json(json_hash):
     (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
-    assert_fields_exist(json_hash, 'controller_id', '_fingerprint',
+    assert_fields_exist(json_hash, 'controller_id', 'fingerprint',
                         'name', 'value')
     controller_id = json_hash['controller_id']
-    fingerprint = json_hash['_fingerprint']
+    fingerprint = json_hash['fingerprint']
     name = json_hash['name']
     value = json_hash['value']
     return ControllerStateChange(controller_id, fingerprint, name, value,
