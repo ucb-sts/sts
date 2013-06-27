@@ -276,8 +276,8 @@ class Interactive(ControlFlow):
       c.cmd(self.quit, "quit", alias="q", help_msg="Quit the simulation")
 
       c.cmd_group("Invariants")
-      c.cmd(self.invariant_check, "check_invariants", alias="inv",  help_msg="Run an invariant check").arg("kind", values=['omega', 'connectivity', 'loops', 'liveness'])
-
+      c.cmd(self.invariant_check, "check_invariants", alias="inv", help_msg="Run an invariant check")\
+           .arg("kind", values=['omega', 'connectivity', 'loops', 'liveness', "python_connectivity", "blackholes"])
       c.cmd_group("Dataplane")
       c.cmd(self.dataplane_trace_feed, "dp_inject",  alias="dpi", help_msg="Inject the next dataplane event from the trace")
       c.cmd(self.dataplane_forward,    "dp_forward", alias="dpf", help_msg="Forward a pending dataplane event")
@@ -506,12 +506,16 @@ class Interactive(ControlFlow):
       message = "Disconnected host pairs: "
     elif kind == "loops" or kind == "lo":
       self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_loops"))
-      result = InvariantChecker.check_loops(self.simulation)
+      result = InvariantChecker.python_check_loops(self.simulation)
       message = "Loops: "
     elif kind == "liveness" or kind == "li":
       self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_liveness"))
-      result = InvariantChecker.check_loops(self.simulation)
+      result = InvariantChecker.check_liveness(self.simulation)
       message = "Crashed controllers: "
+    elif kind == "blackholes" or kind == "bl":
+      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_blackholes"))
+      result = InvariantChecker.python_check_blackholes(self.simulation)
+      message = "Blackholes: "
     else:
       log.warn("Unknown invariant kind...")
     msg.interactive(message + str(result))
