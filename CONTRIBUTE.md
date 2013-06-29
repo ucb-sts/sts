@@ -20,7 +20,7 @@ These are the core STS contributors:
 The best way to add new features is to fork the repository on github and issue a pull
 request.
 
-Some tips to getting your pull request accepted:
+Some tips for getting your pull request accepted:
 
 * Try to adhere to the Google python [style guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html).
   Note that we use 2 space indentation rather than 4 space indentation.
@@ -45,11 +45,12 @@ We also keep a list of features we hope to implement on
 This section explains how to deal with bugs you find in STS.
 
 * You can help report bugs by filing them [here](http://github.com/ucb-sts/sts/issues)
-* Make sure to search for existing bug reports before issuing a new one.
+* Make sure to search for existing bug reports before filing a new one.
 * When filing a bug, please include the following information:
 ** Is bug is reproducible?
 ** Is it reproducible in other environments?
 ** What are the steps to reproduce?
+
 * Feel free to update or remove duplicate bug reports as well.
 
 # Still have questions?
