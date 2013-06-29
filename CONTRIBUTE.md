@@ -34,7 +34,7 @@ Some tips for getting your pull request accepted:
 * Include a unit test in the appropriate tests/ subdirectory. Make sure to run
  `nosetests` and verify that all tests pass before issuing the pull request.
 
-If you there is a feature you would like but you don’t have time to implement
+If you have a feature you would like but you don’t have time to implement
 it, issue a feature request [here](http://github.com/ucb-sts/sts/issues).
 
 We also keep a list of features we hope to implement on
