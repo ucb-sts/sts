@@ -47,9 +47,9 @@ This section explains how to deal with bugs you find in STS.
 * You can help report bugs by filing them [here](http://github.com/ucb-sts/sts/issues)
 * Make sure to search for existing bug reports before filing a new one.
 * When filing a bug, please include the following information:
-- Is bug is reproducible?
-- Is it reproducible in other environments?
-- What are the steps to reproduce?
+  - Is bug is reproducible?
+  - Is it reproducible in other environments?
+  - What are the steps to reproduce?
 
 * Feel free to update or remove duplicate bug reports as well.
 
