@@ -1,12 +1,14 @@
-This is the CONTRIBUTE.md of our project. Great to have you here. Here are a few ways you can help make this project better!
+Great to have you here. Here are a few ways you can help make this project better!
 
 ## Team members
 
-Colin Scott: @colin-scott
-Andreas Wunsdam: @andiwundsam
-Sam Whitlock: @samwhitlock
-Andrew Or: @andrewor14
-Chih Hu: @chih-hu
+These are the core STS contributors:
+
+* Colin Scott: [@colin-scott](http://github.com/colin-scott)
+* Andreas Wundsam: [@andiwundsam](http://github.com/andiwundsam)
+* Sam Whitlock: [@samwhitlock](http://github.com/samwhitlock)
+* Andrew Or: [@andrewor14](http://github.com/andrewor14)
+* Chih Hu: [@chih-hu](https://github.com/chih-hu)
 
 ## Learn & listen
 
@@ -15,38 +17,41 @@ Chih Hu: @chih-hu
 
 ## Adding new features
 
-* Here is how we like people to add new features:
-* Here are some specifics on the coding style we prefer:
-* This is how you send your pull request:
-* You should include the following tests:
-* These are the updates we hope you make to the changelog:
+The best way to add new features is to fork the repository on github and issue a pull
+request.
 
-Don’t get discouraged! Maintainers typically respond within a day or two.
+Some tips to getting your pull request accepted:
+
+* Try to adhere to the Google python [style guide](http://google-styleguide.googlecode.com/svn/trunk/pyguide.html).
+  Note that we use 2 space indentation rather than 4 space indentation.
+
+* Please try to include pydoc strings for your classes and functions.
+
+* If you make a major change to the code, please update our documentation
+  [file](https://github.com/ucb-sts/sts/blob/master/DOCUMENTATION.md), which describes
+  the overall software architecture of STS.
+
+* Include a unit test in the appropriate tests/ subdirectory. Make sure to run
+ `nosetests` and verify that all tests pass before issuing the pull request.
+
+If you there is a feature you would like but you don’t have time to implement
+it, issue a feature request [here](http://github.com/ucb-sts/sts/issues).
+
+We also keep a list of features we hope to implement on
+[Trello](https://trello.com/board/sts/4f44384523d39fc2042fa672).
 
 # Bug triage
 
-This section explains how bug triaging is done for STS. Help beginners by including examples to good bug reports and providing them questions they should look to answer.
+This section explains how to deal with bugs you find in STS.
 
-* You can help report bugs by filing them here:
-* You can look through the existing bugs here:
+* You can help report bugs by filing them [here](http://github.com/ucb-sts/sts/issues)
+* Make sure to search for existing bug reports before issuing a new one.
+* When filing a bug, please include the following information:
+** Is bug is reproducible?
+** Is it reproducible in other environments?
+** What are the steps to reproduce?
+* Feel free to update or remove duplicate bug reports as well.
 
-* Look at existing bugs and help us understand if
-** The bug is reproducible? Is it reproducible in other environments? What are the steps to reproduce?
+# Still have questions?
 
-* You can close fixed bugs by testing old tickets to see if they are happening
-* You can update our change log here
-* You can remove duplicate bug reports
-
-
-# Your first bugfix
-
-This section should help a person get started with their very first bug fix and thinking through the problem.
-
-
-# Documentation
-
-This section includes any help you need with the documentation and where it can be found. Code needs explanation, and sometimes those who know the code well have trouble explaining it to someone just getting into it.
-
-* Help us with documentation here
-
-* If you have further questions, contact Colin Scott: cs@cs.berkeley.edu
+* Feel free to contact Colin Scott: cs@cs.berkeley.edu
