@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>sts by ucb-sts</title>
+    <title>STS by ucb-sts</title>
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
@@ -31,23 +31,23 @@
 
       <section>
         <div id="title">
-          <h1>sts</h1>
+          <h1>STS</h1>
           <p>SDN Troubleshooting Simulator</p>
           <hr>
           <span class="credits left">Project maintained by <a href="https://github.com/ucb-sts">ucb-sts</a></span>
-          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
         </div>
 
-        <p>Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? sts seeks to eliminate this need, freeing you to debug the problematic code itself. </p>
+        <p>Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? STS seeks to eliminate this need, freeing you to debug the problematic code itself. </p>
 
-<p>sts simulates the devices of your network, allowing you to easily generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.</p>
+<p>STS simulates the devices of your network, allowing you to easily generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.</p>
 
 <p><img src="http://www.eecs.berkeley.edu/%7Ercs/research/Debugger_Architecture.jpg" alt="sts architecture"></p>
 
 <h3>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h3>
 
-<p>sts depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install sts, you'll just need to clone both repositories:</p>
+<p>STS depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install STS, you'll just need to clone both repositories:</p>
 
 <pre><code>$ git clone git://github.com/ucb-sts/sts.git
 $ cd sts
@@ -57,24 +57,24 @@ $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 <h3>
 <a name="running" class="anchor" href="#running"><span class="octicon octicon-link"></span></a>Running</h3>
 
-<p>Take sts for a test drive with:</p>
+<p>Take STS for a test drive with:</p>
 
 <pre><code>$ ./simulator.py
 </code></pre>
 
 <p>This will boot up pox, generate a 20-switch FatTree network, and begin feeding in random inputs.</p>
 
-<p>You can also run sts interactively:</p>
+<p>You can also run STS interactively:</p>
 
 <pre><code>$ ./simulator.py -c config/interactive.py
 </code></pre>
 
-<p>sts can be used to replay previous executions:</p>
+<p>STS can be used to replay previous executions:</p>
 
 <pre><code>$ ./simulator.py -c config/pox_example_replay.py
 </code></pre>
 
-<p>Finally, sts is able to identify the minimal set of inputs that trigger a given bug:</p>
+<p>Finally, STS is able to identify the minimal set of inputs that trigger a given bug:</p>
 
 <pre><code>$ ./simulator.py -c config/pox_example_mcs.py
 </code></pre>
@@ -93,9 +93,9 @@ $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 <h3>
 <a name="dependencies" class="anchor" href="#dependencies"><span class="octicon octicon-link"></span></a>Dependencies</h3>
 
-<p>sts requires python 2.7+</p>
+<p>STS requires python 2.7+</p>
 
-<p>To use the advanced features of sts, you may need to install and make two dependencies:</p>
+<p>To use the advanced features of STS, you may need to install and make two dependencies:</p>
 
 <pre><code>$ sudo pip install pytrie
 $ (cd sts/headerspace/hassel-c &amp;&amp; make -j)
@@ -104,7 +104,7 @@ $ (cd sts/headerspace/hassel-c &amp;&amp; make -j)
 <h3>
 <a name="will-i-need-to-modify-my-controller-to-use-sts" class="anchor" href="#will-i-need-to-modify-my-controller-to-use-sts"><span class="octicon octicon-link"></span></a>Will I need to modify my controller to use sts?</h3>
 
-<p>If your controller supports OpenFlow 1.0, sts works out of the box. You'll only need to change one line in the config file to instruct sts how to launch your controller process(es).</p>
+<p>If your controller supports OpenFlow 1.0, STS works out of the box. You'll only need to change one line in the config file to instruct STS how to launch your controller process(es).</p>
 
 <h3>
 <a name="documentation" class="anchor" href="#documentation"><span class="octicon octicon-link"></span></a>Documentation</h3>
@@ -112,6 +112,11 @@ $ (cd sts/headerspace/hassel-c &amp;&amp; make -j)
 <p>For a high-level overview of STS's software architecture, see this <a href="https://github.com/ucb-sts/sts/blob/master/DOCUMENTATION.md">page</a>.</p>
 
 <p>For searchable code documentation, see this <a href="http://ucb-sts.github.io/documentation/">page</a>.</p>
+
+<h3>
+<a name="interested-in-contributing" class="anchor" href="#interested-in-contributing"><span class="octicon octicon-link"></span></a>Interested in contributing?</h3>
+
+<p>Check out this <a href="https://github.com/ucb-sts/sts/blob/master/CONTRIBUTE.md">page</a>.</p>
 
 <h3>
 <a name="research" class="anchor" href="#research"><span class="octicon octicon-link"></span></a>Research</h3>
