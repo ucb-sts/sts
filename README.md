@@ -1,19 +1,20 @@
 See http://ucb-sts.github.com/sts/ for an HTML version of this file.
 
 Ever had to manually dig through logs to find the one or two inputs that lead
-your controller software to break? sts seeks to eliminate this need, freeing
+your controller software to break? STS seeks to eliminate this need, freeing
 you to debug the problematic code itself.
 
-sts simulates the devices of your network, allowing you to easily generate
+STS simulates the devices of your network, allowing you to easily generate
 tricky test cases, interactively examine the state of the network, and
 automatically find the exact inputs that are responsible for triggering a
 given bug.
 
-![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/Debugger_Architecture.jpg)
+![sts
+architecture](http://www.eecs.berkeley.edu/~rcs/research/Debugger_Architecture.jpg)
 
 ### Installation
 
-sts depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install sts,
+STS depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install STS,
 you'll just need to clone both repositories:
 
 ```
@@ -24,7 +25,7 @@ $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 
 ### Running
 
-Take sts for a test drive with:
+Take STS for a test drive with:
 
 ```
 $ ./simulator.py
@@ -33,19 +34,19 @@ $ ./simulator.py
 This will boot up pox, generate a 20-switch FatTree network, and begin feeding
 in random inputs.
 
-You can also run sts interactively:
+You can also run STS interactively:
 
 ```
 $ ./simulator.py -c config/interactive.py
 ```
 
-sts can be used to replay previous executions:
+STS can be used to replay previous executions:
 
 ```
 $ ./simulator.py -c config/pox_example_replay.py
 ```
 
-Finally, sts is able to identify the minimal set of inputs that trigger a
+Finally, STS is able to identify the minimal set of inputs that trigger a
 given bug:
 
 ```
@@ -70,9 +71,9 @@ for more information.
 
 ### Dependencies
 
-sts requires python 2.7+
+STS requires python 2.7+
 
-To use the advanced features of sts, you may need to install and make two
+To use the advanced features of STS, you may need to install and make two
 dependencies:
 ```
 $ sudo pip install pytrie
@@ -81,8 +82,8 @@ $ (cd sts/headerspace/hassel-c && make -j)
 
 ### Will I need to modify my controller to use sts?
 
-If your controller supports OpenFlow 1.0, sts works out of the box. You'll
-only need to change one line in the config file to instruct sts how to launch
+If your controller supports OpenFlow 1.0, STS works out of the box. You'll
+only need to change one line in the config file to instruct STS how to launch
 your controller process(es).
 
 ### Documentation
@@ -92,6 +93,11 @@ For a high-level overview of STS's software architecture, see this
 
 For searchable code documentation, see this
 [page](http://ucb-sts.github.io/documentation/).
+
+### Interested in contributing?
+
+Check out this
+[page](https://github.com/ucb-sts/sts/blob/master/CONTRIBUTE.md).
 
 ### Research
 
