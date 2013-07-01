@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import time
+import re
 import os
 import errno
 import socket
@@ -51,6 +52,9 @@ def mkdir_p(dst):
       pass
     else:
       raise
+
+def address_is_ip(address):
+  return re.match("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", address)
 
 def port_used(address='127.0.0.1', port=6633):
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

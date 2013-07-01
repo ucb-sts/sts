@@ -42,6 +42,7 @@ from pox.lib.util import connect_socket_with_backoff
 import select
 import socket
 import logging
+import time
 
 log = logging.getLogger("simulation")
 
@@ -288,6 +289,9 @@ class Simulation(object):
 
     def create_connection(controller_info, switch):
       ''' Connect switches to controllers. May raise a TimeoutError '''
+      while controller_info.address == "__address__":
+        print "\n\n*** OOPS! create_connection does not want to connect to __address__! ***\n\n"
+        time.sleep(5)
       # TODO(cs): move this into a ConnectionFactory class
       socket = connect_socket_with_backoff(controller_info.address,
                                            controller_info.port,

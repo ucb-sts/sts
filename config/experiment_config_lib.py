@@ -18,10 +18,11 @@ import itertools
 import os
 import string
 import sys
-import re
 import socket
 import random
-from sts.util.convenience import find_port
+import threading
+import subprocess
+from sts.util.convenience import address_is_ip, find_port
 from sts.entities import Controller, POXController, BigSwitchController
 
 controller_type_map = {
@@ -37,7 +38,7 @@ class ControllerConfig(object):
   def __init__(self, start_cmd="", kill_cmd="", address="127.0.0.1", port=None,
                additional_ports={}, cwd=None, sync=None, controller_type=None,
                label=None, config_file=None, config_template=None,
-               try_new_ports=False):
+               try_new_ports=False, get_address_cmd=None):
     '''
     Store metadata for the controller.
       - start_cmd: command that starts a controller or a set of controllers,
@@ -54,8 +55,7 @@ class ControllerConfig(object):
     self.kill_cmd = kill_cmd
 
     self.address = address
-    if (re.match("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", address) or
-        address == "localhost"):
+    if address_is_ip(address) or address == "localhost":
       # Normal TCP socket
       if not port:
         port = self._port_gen.next()
@@ -63,6 +63,11 @@ class ControllerConfig(object):
         port = find_port(xrange(port, port+2000))
       self.port = port
       self._server_info = (self.address, port)
+    if address == "__address__":
+      if not port:
+        port = self._port_gen.next()
+      self.port = port
+      self.get_address(get_address_cmd, cwd)
     else:
       # Unix domain socket
       self.port = None
@@ -106,6 +111,20 @@ class ControllerConfig(object):
     self.config_file = config_file
     self.config_template = config_template
     self.additional_ports = additional_ports
+
+  def get_address(self, get_address_cmd, cwd):
+    print "\n\n### Calling get_address! self.address is %s ###\n\n" % str(self.address)
+    if get_address_cmd is None:
+      raise RuntimeError("Controller address \"__address__\" cannot be resolved!")
+    p = subprocess.Popen(get_address_cmd, shell=True, stdout=subprocess.PIPE, cwd=cwd)
+    new_address = p.communicate()[0]
+    new_address = new_address.strip()
+    print "\n\n!!! %s !!!\n\n" % str(new_address)
+    if address_is_ip(new_address) or new_address == "localhost":
+      self.address = new_address
+      self._server_info = (self.address, self.port)
+    else:
+      threading.Timer(5.0, self.get_address, args=[get_address_cmd, cwd]).start()
 
   @property
   def cid(self):
