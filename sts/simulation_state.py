@@ -295,7 +295,7 @@ class Simulation(object):
       # TODO(cs): move this into a ConnectionFactory class
       socket = connect_socket_with_backoff(controller_info.address,
                                            controller_info.port,
-                                           max_backoff_seconds=8)
+                                           max_backoff_seconds=1024)
       # Set non-blocking
       socket.setblocking(0)
       io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(socket))
