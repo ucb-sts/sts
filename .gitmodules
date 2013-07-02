@@ -1,0 +1,3 @@
+[submodule "sts/hassel"]
+	path = sts/hassel
+	url = git@bitbucket.org:colin_scott/hassel-sts.git
