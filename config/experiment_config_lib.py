@@ -113,13 +113,11 @@ class ControllerConfig(object):
     self.additional_ports = additional_ports
 
   def get_address(self, get_address_cmd, cwd):
-    print "\n\n### Calling get_address! self.address is %s ###\n\n" % str(self.address)
     if get_address_cmd is None:
       raise RuntimeError("Controller address \"__address__\" cannot be resolved!")
     p = subprocess.Popen(get_address_cmd, shell=True, stdout=subprocess.PIPE, cwd=cwd)
     new_address = p.communicate()[0]
     new_address = new_address.strip()
-    print "\n\n!!! %s !!!\n\n" % str(new_address)
     if address_is_ip(new_address) or new_address == "localhost":
       self.address = new_address
       self._server_info = (self.address, self.port)
