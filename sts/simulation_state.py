@@ -290,6 +290,7 @@ class Simulation(object):
     def create_connection(controller_info, switch):
       ''' Connect switches to controllers. May raise a TimeoutError '''
       while controller_info.address == "__address__":
+        log.debug("Waiting for controller address...")
         time.sleep(5)
       # TODO(cs): move this into a ConnectionFactory class
       socket = connect_socket_with_backoff(controller_info.address,
