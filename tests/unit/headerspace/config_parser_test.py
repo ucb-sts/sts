@@ -30,8 +30,8 @@ from pox.openflow.libopenflow_01 import *
 
 submodule_loaded = True
 try:
-  from sts.headerspace.config_parser.openflow_parser import generate_transfer_function, HS_FORMAT
-  from sts.headerspace.headerspace.tf import *
+  from config_parser.openflow_parser import generate_transfer_function, HS_FORMAT
+  from headerspace.tf import *
 except ImportError:
   submodule_loaded = False
 

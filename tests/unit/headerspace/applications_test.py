@@ -29,8 +29,8 @@ from pox.openflow.libopenflow_01 import *
 
 submodule_loaded = True
 try:
-  import sts.headerspace.topology_loader.topology_loader as hsa_topo
-  import sts.headerspace.headerspace.applications as hsa
+  import topology_loader.topology_loader as hsa_topo
+  import headerspace.applications as hsa
 except ImportError:
   submodule_loaded = False
 
