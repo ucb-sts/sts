@@ -26,8 +26,13 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 from sts.topology import *
 from pox.openflow.software_switch import SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
-import sts.headerspace.topology_loader.topology_loader as hsa_topo
-import sts.headerspace.headerspace.applications as hsa
+
+submodule_loaded = True
+try:
+  import sts.headerspace.topology_loader.topology_loader as hsa_topo
+  import sts.headerspace.headerspace.applications as hsa
+except ImportError:
+  submodule_loaded = False
 
 class MockAccessLink(object):
   def __init__(self, switch, switch_port):
@@ -66,4 +71,5 @@ class applications_test(unittest.TestCase):
     self.assertEqual([], blackholes)
 
 if __name__ == '__main__':
-  unittest.main()
+  if submodule_loaded:
+    unittest.main()

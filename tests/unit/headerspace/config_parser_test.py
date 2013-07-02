@@ -27,8 +27,13 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 from sts.topology import *
 from pox.openflow.software_switch import SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
-from sts.headerspace.config_parser.openflow_parser import generate_transfer_function, HS_FORMAT
-from sts.headerspace.headerspace.tf import *
+
+submodule_loaded = True
+try:
+  from sts.headerspace.config_parser.openflow_parser import generate_transfer_function, HS_FORMAT
+  from sts.headerspace.headerspace.tf import *
+except ImportError:
+  submodule_loaded = False
 
 class config_parser_test(unittest.TestCase):
   def test_basic(self):
@@ -77,4 +82,5 @@ class config_parser_test(unittest.TestCase):
     print "tf: %s" % str(tf)
 
 if __name__ == '__main__':
-  unittest.main()
+  if submodule_loaded:
+    unittest.main()
