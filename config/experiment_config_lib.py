@@ -66,7 +66,7 @@ class ControllerConfig(object):
         port = find_port(xrange(port, port+2000))
       self.port = port
       self._server_info = (self.address, port)
-    if address == "__address__":
+    elif address == "__address__":
       if not port:
         port = self._port_gen.next()
       self.port = port
