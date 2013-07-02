@@ -15,8 +15,8 @@ Copyright 2012-2012 Kyriakos Zarifis
 STS depends on libraries in the carp branch of POX, which is also
 licensed under Apache. POX can be found at: https://github.com/noxrepo/pox
 
-STS also (optionally) depends on the hassel network invariant checking
-library, which is licensed under GPLv2 with a FOSS exception. In loose terms
-this means that the GPL header is not "viral" for open source projects such
-as this one. For further information see sts/headerspace/LICENSE and
-sts/headerspace/LICENSE_EXCEPTION.txt.
+STS also optionally loads the hassel network invariant checking
+library as a submodule, which is licensed under GPLv2 with a FOSS exception.
+In loose terms this means that the GPL header is not "viral" for open source
+projects such as this one. For further information see
+sts/headerspace/LICENSE and sts/headerspace/LICENSE_EXCEPTION.txt.
