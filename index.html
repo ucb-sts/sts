@@ -95,16 +95,16 @@ $ git clone -b debugger git://github.com/noxrepo/pox.git pox/
 
 <p>STS requires python 2.7+</p>
 
-<p>To use the advanced replay features of STS, you may need to install pytrie:</p>
-
-<pre><code>$ sudo pip install pytrie
-</code></pre>
-
-<p>To check invariants with headerspace analysis, you will need to load <a href="https://bitbucket.org/peymank/hassel-public">hassel</a> as a submodule and <code>make</code> it: </p>
+<p>To check network invariants with headerspace analysis, you will need to load <a href="https://bitbucket.org/peymank/hassel-public">hassel</a> as a submodule and build it: </p>
 
 <pre><code>$ git submodule init 
 $ git submodule update
 $ (cd sts/hassel/hassel-c &amp;&amp; make -j)
+</code></pre>
+
+<p>To use the advanced replay features of STS, you may need to install pytrie:</p>
+
+<pre><code>$ sudo pip install pytrie
 </code></pre>
 
 <h3>
