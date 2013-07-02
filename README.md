@@ -64,6 +64,7 @@ To check network invariants with headerspace analysis, you will need to load [ha
 ```
 $ git submodule init 
 $ git submodule update
+$ (cd sts/hassel/hsa-python && source setup.sh)
 $ (cd sts/hassel/hassel-c && make -j)
 ```
 
