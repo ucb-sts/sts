@@ -33,6 +33,8 @@ try:
   from config_parser.openflow_parser import generate_transfer_function, HS_FORMAT
   from headerspace.tf import *
 except ImportError:
+  import traceback
+  traceback.print_exc()
   submodule_loaded = False
 
 class config_parser_test(unittest.TestCase):

@@ -32,6 +32,8 @@ try:
   import topology_loader.topology_loader as hsa_topo
   import headerspace.applications as hsa
 except ImportError:
+  import traceback
+  traceback.print_exc()
   submodule_loaded = False
 
 class MockAccessLink(object):
