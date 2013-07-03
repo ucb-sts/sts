@@ -116,7 +116,6 @@ class ControllerConfig(object):
     self.additional_ports = additional_ports
 
   def get_address(self, get_address_cmd, cwd):
-    log.debug("Retrieving real controller address...")
     if get_address_cmd is None:
       raise RuntimeError("Controller address \"__address__\" cannot be resolved!")
     p = subprocess.Popen(get_address_cmd, shell=True, stdout=subprocess.PIPE, cwd=cwd)

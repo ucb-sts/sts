@@ -444,7 +444,6 @@ class Fuzzer(ControlFlow):
           if len(host.interfaces) > 0:
             msg.event("injecting a random packet")
             traffic_type = "icmp_ping"
-            # Generates a packet, and feeds it to the software_switch
             dp_event = self.traffic_generator.generateAndInject(traffic_type, host)
             self._log_input_event(TrafficInjection(dp_event=dp_event))
 
