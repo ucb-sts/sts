@@ -81,13 +81,11 @@ class STSCommand(object):
     return [ "  <%s>: %s"%(a.name, a.arg_help()) for a in self.args if a.arg_help() ]
 
   def get_help(self):
-    name_with_args = "%s" % self.name + \
-        (" " + (" ".join(map(lambda a: "<%s>" % a.name, self.args))) if self.args else "")
-    aliases = ("["+self.alias+"]" if self.alias else "")
-    help_msg = (self.help_msg if self.help_msg else "")
-    args_help = ("\n" + "\n".join(self.arg_help()) if self.arg_help() else "")
-
-    return "%-24s %-8s %s%s" % (name_with_args, aliases, help_msg, args_help)
+    name_with_args = "%s %s" % (self.name, " ".join(map(lambda a: "<%s>" % a.name, self.args)) if self.args else "")
+    alias = "[%s]" % self.alias if self.alias else ""
+    help_msg = self.help_msg if self.help_msg else ""
+    args_help = "\n" + "\n".join(self.arg_help()) if self.arg_help() else ""
+    return "{0:34}{1:8}{2:20}{3:20}".format(name_with_args, alias, help_msg, args_help)
 
 class STSRegisteredObject(object):
   def __init__(self, obj, name, alias, help_msg):
@@ -98,10 +96,10 @@ class STSRegisteredObject(object):
     self.args = []
 
   def get_help(self):
-    return "%s\t" % self.name + \
-      ("["+self.alias+"]" if self.alias else "") + "\t" + \
-      (self.help_msg if self.help_msg else "")
-
+    name = self.name
+    alias = "[%s]" % self.alias if self.alias else ""
+    help_msg = self.help_msg if self.help_msg else ""
+    return "{0:34}{1:8}{2:20}".format(name, alias, help_msg)
 
 class STSConsole(object):
   def __init__(self, default_command=None):
@@ -109,7 +107,6 @@ class STSConsole(object):
     self.help_items = []
     self.commands = {}
     self._default_command = default_command
-
     self.cmd(self.show_help, "help", alias='h', help_msg="This help screen")
 
   @property
@@ -124,12 +121,14 @@ class STSConsole(object):
   def show_help(self, command=None):
     if command:
       if command in self.commands:
-        print "==================== Command %s ========================" % command
+        name = "Command %s" % command
+        print "%s %s %s" % ("=" * ((90-len(name))/2), name, '=' * ((90-len(name))/2) )
         print self.commands[command].get_help()
       else:
         print "Command %s not found" % command
     else:
-      print "==================== Command help ========================"
+      name = "Command Help"
+      print "%s %s %s" % ("=" * ((90-len(name))/2), name, '=' * ((90-len(name))/2) )
       for item in self.help_items:
         if isinstance(item, str):
           print item
@@ -137,7 +136,7 @@ class STSConsole(object):
           print item.get_help()
 
   def cmd_group(self, name):
-    self.help_items.append("\n%s %s %s" % ("-" * ((80-len(name))/2), name, '-' * ((80-len(name))/2) ))
+    self.help_items.append("\n%s %s %s" % ("-" * ((90-len(name))/2), name, '-' * ((90-len(name))/2) ))
 
   def _register(self, func, name, alias=None):
     self.call_env[name] = func
@@ -271,41 +270,47 @@ class Interactive(ControlFlow):
     self._forwarded_this_step = 0
     try:
       c = STSConsole(default_command=self.default_command)
-      c.cmd_group("Simulation state")
-      c.cmd(self.next_step, "next", alias="n", help_msg="Proceed to next simulation step")
-      c.cmd(self.quit, "quit", alias="q", help_msg="Quit the simulation")
+      c.cmd_group("Simulation State")
+      c.cmd(self.next_step,             "next",             alias="n",      help_msg="Proceed to next simulation step")
+      c.cmd(self.quit,                  "quit",             alias="q",      help_msg="Quit the simulation")
 
       c.cmd_group("Invariants")
-      c.cmd(self.invariant_check, "check_invariants", alias="inv", help_msg="Run an invariant check")\
-           .arg("kind", values=['omega', 'connectivity', 'loops', 'liveness', "python_connectivity", "blackholes"])
+      c.cmd(self.invariant_check,       "check_invariants", alias="inv",    help_msg="Run an invariant check")\
+          .arg("kind", values=['omega', 'connectivity', 'loops', 'liveness', "python_connectivity", "blackholes"])
+          
       c.cmd_group("Dataplane")
-      c.cmd(self.dataplane_trace_feed, "dp_inject",  alias="dpi", help_msg="Inject the next dataplane event from the trace")
-      c.cmd(self.dataplane_forward,    "dp_forward", alias="dpf", help_msg="Forward a pending dataplane event")
-      c.cmd(self.dataplane_drop,       "dp_drop",    alias="dpd", help_msg="Drop a pending dataplane event")
-      c.cmd(self.dataplane_delay,      "dp_delay",   alias="dpe", help_msg="Delay a pending dataplane event")
+      c.cmd(self.dataplane_trace_feed,  "dp_inject",        alias="dpi",    help_msg="Inject the next dataplane event from the trace")
+      c.cmd(self.dataplane_forward,     "dp_forward",       alias="dpf",    help_msg="Forward a pending dataplane event")
+      c.cmd(self.dataplane_drop,        "dp_drop",          alias="dpd",    help_msg="Drop a pending dataplane event")
+      c.cmd(self.dataplane_delay,       "dp_delay",         alias="dpe",    help_msg="Delay a pending dataplane event")
 
-      c.cmd_group("Controlling entitities")
-      c.cmd(self.list_controllers, "list_controllers", alias="lsc", help_msg="List controllers")
-      c.cmd(self.kill_controller,  "kill_controller",  alias="kc", help_msg="Kill a controller").arg("label", values=lambda: map(lambda c: c.label, self.simulation.controller_manager.live_controllers))
-      c.cmd(self.start_controller,  "start_controller",  alias="sc", help_msg="Restart a controller").arg("label", values=lambda: map(lambda c: c.label, self.simulation.controller_manager.down_controllers))
-      c.cmd(self.list_switches, "list_switches", alias="lss", help_msg="List switches")
-      c.cmd(self.kill_switch,  "kill_switch", alias="ks", help_msg="Kill a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
-      c.cmd(self.start_switch,  "start_switch", alias="ss", help_msg="Restart a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
-      c.cmd(self.cut_link,  "cut_link", alias="cl", help_msg="Cut a link")\
-           .arg("dpid1", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))\
-           .arg("dpid2", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
-      c.cmd(self.repair_link,  "repair_link", alias="rl", help_msg="Repair a link")\
-           .arg("dpid1", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))\
-           .arg("dpid2", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
-      c.cmd(self.show_flow_table,  "show_flows", alias="sf", help_msg="Show flowtable of a switch").arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
-      c.cmd(self.list_hosts, "list_hosts", alias="lhs", help_msg="List hosts")
-      c.cmd(self.migrate_host, "migrate_host", alias="mh", help_msg="Migrate a host to switch dpid")\
-            .arg("hid", values=lambda: map(lambda h: h.hid, self.simulation.topology.hosts))\
-            .arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd_group("Controlling Entitities")
+      c.cmd(self.list_controllers,  "list_controllers",     alias="lsc",    help_msg="List controllers")
+      c.cmd(self.kill_controller,   "kill_controller",      alias="kc",     help_msg="Kill a controller")\
+          .arg("label", values=lambda: map(lambda c: c.label, self.simulation.controller_manager.live_controllers))
+      c.cmd(self.start_controller,  "start_controller",     alias="sc",     help_msg="Restart a controller")\
+          .arg("label", values=lambda: map(lambda c: c.label, self.simulation.controller_manager.down_controllers))
+      c.cmd(self.list_switches,     "list_switches",        alias="lss",    help_msg="List switches")
+      c.cmd(self.kill_switch,       "kill_switch",          alias="ks",     help_msg="Kill a switch")\
+          .arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.start_switch,      "start_switch",         alias="ss",     help_msg="Restart a switch")\
+          .arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.cut_link,          "cut_link",             alias="cl",     help_msg="Cut a link")\
+          .arg("dpid1", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))\
+          .arg("dpid2", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.repair_link,       "repair_link",          alias="rl",     help_msg="Repair a link")\
+          .arg("dpid1", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))\
+          .arg("dpid2", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.show_flow_table,   "show_flows",           alias="sf",     help_msg="Show flowtable of a switch")\
+          .arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.list_hosts,        "list_hosts",           alias="lhs",    help_msg="List hosts")
+      c.cmd(self.migrate_host,      "migrate_host",         alias="mh",     help_msg="Migrate a host to switch dpid")\
+          .arg("hid", values=lambda: map(lambda h: h.hid, self.simulation.topology.hosts))\
+          .arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
 
-      c.cmd_group("Python objects")
-      c.register_obj(self.simulation, "simulation", help_msg="access the simulation object")
-      c.register_obj(self.simulation.topology, "topology", alias="topo", help_msg="access the topology object")
+      c.cmd_group("Python Objects")
+      c.register_obj(self.simulation,           "simulation", alias="sim",  help_msg="access the simulation object")
+      c.register_obj(self.simulation.topology,  "topology",   alias="topo", help_msg="access the topology object")
       for (name, obj) in bound_objects:
         c.register_obj(obj, name, help_msg="access the %s object" % name)
 
@@ -526,6 +531,8 @@ class Interactive(ControlFlow):
     if self.simulation.dataplane_trace:
       (dp_event, host) = self.simulation.dataplane_trace.inject_trace_event()
       self._log_input_event(TrafficInjection(dp_event=dp_event, host=host.hid))
+    else:
+      print "No dataplane trace to inject from."
 
   def _select_dataplane_event(self, sel=None):
     queued = self.simulation.patch_panel.queued_dataplane_events
@@ -542,7 +549,6 @@ class Interactive(ControlFlow):
     dp_event = self._select_dataplane_event(event)
     if not dp_event:
       return
-
     if self.simulation.topology.ok_to_send(dp_event):
       self.simulation.patch_panel.permit_dp_event(dp_event)
       self._log_input_event(DataplanePermit(dp_event.fingerprint))
