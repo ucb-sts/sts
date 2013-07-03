@@ -113,5 +113,9 @@ class DeferredIOWorker(object):
     self._io_worker.close
 
   @property
+  def closed(self):
+    self._io_worker.closed
+
+  @property
   def socket(self):
     return self._io_worker.socket

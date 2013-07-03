@@ -72,13 +72,13 @@ class ControllerManager(object):
     msg.event("Restarting controller %s" % str(controller))
     controller.start()
 
-  def check_controller_processes_alive(self):
+  def check_controller_status(self, simulation):
     controllers_with_problems = []
     live = list(self.live_controllers)
     live.sort(key=lambda c: c.cid)
     for c in live:
-      (rc, msg) = c.check_process_status()
+      (rc, msg) = c.check_status(simulation)
       if not rc:
         c.alive = False
-        controllers_with_problems.append ( (c, msg) )
+        controllers_with_problems.append((c, msg))
     return controllers_with_problems

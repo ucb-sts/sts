@@ -31,6 +31,7 @@ class STSIOWorker(IOWorker):
   def __init__(self, socket, on_close):
     IOWorker.__init__(self)
     self.socket = socket
+    self.closed = False
     # (on_close factory method hides details of the Select loop)
     self.on_close = on_close
 
@@ -78,6 +79,7 @@ class IOMaster(object):
     # Our callback for io_worker.close():
     def on_close(worker):
       worker.socket.close()
+      worker.closed = True
       self._workers.discard(worker)
 
     worker = STSIOWorker(socket, on_close=on_close)

@@ -54,6 +54,10 @@ class DeferredOFConnection(OFConnection):
     self.on_message_received = self.insert_pending_receipt
     self.true_on_message_handler = None
 
+  @property
+  def closed(self):
+    return self.io_worker.closed
+
   def get_controller_id(self):
     return self.cid
 
@@ -106,7 +110,6 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       self.log.exception(e)
       raise e
 
-    # controller (ip, port) -> connection
     self.cid2connection = {}
     self.error_handler = error_handler
     self.controller_info = []
@@ -134,7 +137,6 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
         self.set_connection(conn)
         # cause errors to be raised
         conn.error_handler = self.error_handler
-        # controller (ip, port) -> connection
         self.cid2connection[info.cid] = conn
         connected_to_at_least_one = True
 
@@ -147,9 +149,15 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       super(FuzzSoftwareSwitch, self).send(*args, **kwargs)
 
   def get_connection(self, cid):
-    if cid not in self.cid2connection:
+    if cid not in self.cid2connection.keys():
       raise ValueError("No such connection %s" % str(cid))
     return self.cid2connection[cid]
+
+  def is_connected_to(self, cid):
+    if cid in self.cid2connection.keys():
+      conn = self.get_connection(cid)
+      return not conn.closed
+    return False
 
   def fail(self):
     # TODO(cs): depending on the type of failure, a real switch failure
@@ -525,8 +533,7 @@ class Controller(object):
       else:
         self.kill() # make sure it is killed if this was started errantly
 
-  def __init__(self, controller_config, sync_connection_manager,
-               snapshot_service):
+  def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     '''idx is the unique index for the controller used mostly for logging purposes.'''
     self.config = controller_config
     self.alive = False
@@ -549,13 +556,11 @@ class Controller(object):
   @property
   def cid(self):
     '''Return the id of this controller. See ControllerConfig for more details.'''
-    return self.config.label
+    return self.config.cid
 
   def kill(self):
     '''Kill the process the controller is running in.'''
-    msg.event("Killing controller %s" % (str(self.cid)))
-    if self.sync_connection:
-      self.sync_connection.close()
+    msg.event("Killing controller %s" % self.cid)
     kill_procs([self.process])
     if self.config.kill_cmd != "":
       self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
@@ -571,26 +576,21 @@ class Controller(object):
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
-    if self.config.sync:
-      self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
     self.alive = True
 
   def restart(self):
     self.kill()
     self.start()
-
-  def check_process_status(self):
+  
+  def check_status(self, simulation):
+    '''Check whether the actual status of the controller coincides with self.alive. Returns a message
+    entailing the details of the status.'''
     if not self.alive:
       return (True, "OK")
-    else:
-      if not self.process:
-        return (False, "Controller %s: Alive, but no controller process found" %
-                self.config.label)
-      rc = self.process.poll()
-      if rc is not None:
-        return (False, "Controller %s: Alive, but controller process terminated with return code %d" %
-                (self.config.label, rc))
-      return (True, "OK")
+    for switch in simulation.topology.switches:
+      if switch.is_connected_to(self.cid):
+        return (True, "OK")
+    return (False, "Controller %s: Alive, but disconnected from all switches" % self.cid)
 
 class POXController(Controller):
   # N.B. controller-specific configuration is optional. The purpose of this
@@ -654,6 +654,20 @@ class POXController(Controller):
     if self.config.sync:
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
     self.alive = True
+    
+  def check_status(self, simulation):
+    if not self.alive:
+      return (True, "OK")
+    if not self.process:
+      return (False, "Controller %s: Alive, but no controller process found" % self.cid)      
+    rc = self.process.poll()
+    if rc is not None:
+      return (False, "Controller %s: Alive, but controller process terminated with return code %d" %
+              (self.cid, rc))
+    for switch in simulation.topology.switches:
+      if switch.is_connected_to(self.cid):
+        return (True, "OK")
+    return (False, "Controller %s: Alive, but disconnected from all switches" % self.cid)
 
 class BigSwitchController(Controller):
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
@@ -663,8 +677,6 @@ class BigSwitchController(Controller):
   def kill(self):
     '''Kill the process the controller is running in.'''
     msg.event("Killing controller %s" % (str(self.cid)))
-    if self.sync_connection:
-      self.sync_connection.close()
     if self.config.kill_cmd != "":
       self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
       popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd, self.config.cwd)
@@ -673,11 +685,4 @@ class BigSwitchController(Controller):
   def start(self):
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
-    if self.config.sync:
-      self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
     self.alive = True
-
-  # TODO(ao): Add correct check
-  def check_process_status(self):
-    return (True, "OK")
-
