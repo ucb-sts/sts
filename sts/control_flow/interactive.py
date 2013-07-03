@@ -26,7 +26,10 @@ from sts.util.console import msg, color
 from sts.replay_event import *
 from sts.util.convenience import find
 from sts.traffic_generator import TrafficGenerator
-
+from pox.lib.packet.ethernet import *
+from pox.lib.packet.ipv4 import *
+from pox.lib.packet.udp import *
+from pox.lib.packet.icmp import *
 import pox.openflow.libopenflow_01 as of
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
@@ -36,7 +39,7 @@ log = logging.getLogger("interactive")
 import code
 import sys
 import re
-from random import Random
+import random
 
 try:
   import readline
@@ -237,7 +240,7 @@ class Interactive(ControlFlow):
     self.sync_callback = RecordingSyncCallback(input_logger)
     self.logical_time = 0
     self._input_logger = input_logger
-    self.traffic_generator = TrafficGenerator(random.Random())
+    self.traffic_generator = TrafficGenerator(random.random())
     # TODO(cs): future feature: allow the user to interactively choose the order
     # events occur for each round, whether to delay, drop packets, fail nodes,
     # etc.
@@ -280,6 +283,8 @@ class Interactive(ControlFlow):
           
       c.cmd_group("Dataplane")
       c.cmd(self.dataplane_trace_feed,  "dp_inject",        alias="dpi",    help_msg="Inject the next dataplane event from the trace")
+      c.cmd(self.dataplane_generate,    "dp_generate",      alias="dpg",    help_msg="Generate a new packet")
+      c.cmd(self.dataplane_ping,        "dp_ping",          alias="dpp",    help_msg="Generate a new packet ping packet")
       c.cmd(self.dataplane_forward,     "dp_forward",       alias="dpf",    help_msg="Forward a pending dataplane event")
       c.cmd(self.dataplane_drop,        "dp_drop",          alias="dpd",    help_msg="Drop a pending dataplane event")
       c.cmd(self.dataplane_delay,       "dp_delay",         alias="dpe",    help_msg="Delay a pending dataplane event")
@@ -480,7 +485,6 @@ class Interactive(ControlFlow):
       else:
         return ", ".join(action(a) for a in e.actions)
 
-
     t = Tabular( ("Prio", lambda e: e.priority),
                 ("in_port", lambda e: e.match.in_port),
                 ("dl_type", dl_type),
@@ -494,7 +498,6 @@ class Interactive(ControlFlow):
                 ("actions", actions),
                 )
     t.show(switch.table.entries)
-
 
   def invariant_check(self, kind):
     if kind == "omega" or kind == "o":
@@ -533,6 +536,64 @@ class Interactive(ControlFlow):
       self._log_input_event(TrafficInjection(dp_event=dp_event, host=host.hid))
     else:
       print "No dataplane trace to inject from."
+
+  def dataplane_generate(self, from_hid=None, to_hid=None):
+    topology = self.simulation.topology
+    if from_hid is None:
+      from_hid = random.choice(topology.hid2host.keys())
+    while to_hid is None or to_hid == from_hid:
+      to_hid = random.choice(topology.hid2host.keys())
+    if from_hid not in topology.hid2host.keys():
+      print "Unknown host %s" % from_hid
+      return
+    if to_hid not in topology.hid2host.keys():
+      print "Unknown host %s" % to_hid
+      return  
+    from_host = topology.get_host(from_hid)
+    to_host = topology.get_host(to_hid)
+    from_interface = random.choice(from_host.interfaces)
+    to_interface = random.choice(to_host.interfaces)
+    
+    packet = self._generate_icmp_packet(from_interface, to_interface, raw_input("Enter payload content:\n"))
+    from_host.send(from_interface, packet)
+    self._log_input_event(TrafficInjection(dp_event=DataplaneEvent(from_interface, packet)))
+    
+  def dataplane_ping(self, from_hid=None, to_hid=None):
+    topology = self.simulation.topology
+    if from_hid is None:
+      from_hid = random.choice(topology.hid2host.keys())
+    while to_hid is None or to_hid == from_hid:
+      to_hid = random.choice(topology.hid2host.keys())
+    if from_hid not in topology.hid2host.keys():
+      print "Unknown host %s" % from_hid
+      return
+    if to_hid not in topology.hid2host.keys():
+      print "Unknown host %s" % to_hid
+      return  
+    from_host = topology.get_host(from_hid)
+    to_host = topology.get_host(to_hid)
+    from_interface = random.choice(from_host.interfaces)
+    to_interface = random.choice(to_host.interfaces)
+    
+    packet = self._generate_icmp_packet(from_interface, to_interface, "PingPing" * 6)
+    from_host.send(from_interface, packet)
+    self._log_input_event(TrafficInjection(dp_event=DataplaneEvent(from_interface, packet)))  
+
+  def _generate_icmp_packet(self, from_interface, to_interface, payload_content):
+    e = ethernet()
+    e.src = from_interface.hw_addr
+    e.dst = to_interface.hw_addr
+    e.type = ethernet.IP_TYPE
+    i = ipv4()
+    i.protocol = ipv4.ICMP_PROTOCOL
+    i.srcip = random.choice(from_interface.ips)
+    i.dstip = random.choice(to_interface.ips)
+    ping = icmp()
+    ping.type = random.choice([TYPE_ECHO_REQUEST, TYPE_ECHO_REPLY])
+    ping.payload = payload_content
+    i.payload = ping
+    e.payload = i
+    return e
 
   def _select_dataplane_event(self, sel=None):
     queued = self.simulation.patch_panel.queued_dataplane_events
