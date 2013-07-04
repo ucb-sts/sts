@@ -21,7 +21,7 @@ from pox.lib.packet.ethernet import *
 from pox.lib.packet.lldp import *
 from pox.lib.packet.arp import *
 from pox.lib.packet.ipv4 import *
-import sts.headerspace.config_parser.openflow_parser as hsa
+import config_parser.openflow_parser as hsa
 
 def process_data(msg):
   if msg.data == b'':

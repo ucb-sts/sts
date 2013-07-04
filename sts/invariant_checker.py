@@ -18,9 +18,9 @@
 
 from pox.openflow.libopenflow_01 import *
 from entities import *
-import sts.headerspace.topology_loader.topology_loader as hsa_topo
-import sts.headerspace.headerspace.applications as hsa
-from sts.headerspace.config_parser.openflow_parser import get_uniq_port_id
+import topology_loader.topology_loader as hsa_topo
+import headerspace.applications as hsa
+from config_parser.openflow_parser import get_uniq_port_id
 import logging
 import collections
 from sts.util.console import msg
@@ -63,8 +63,8 @@ class InvariantChecker(object):
   def python_check_loops(simulation):
     # Always check liveness if there is a single controllers
     # Dynamic imports to allow this method to be serialized
-    import sts.headerspace.topology_loader.topology_loader as hsa_topo
-    import sts.headerspace.headerspace.applications as hsa
+    import topology_loader.topology_loader as hsa_topo
+    import headerspace.applications as hsa
     if len(simulation.controller_manager.controllers) == 1:
       # TODO(cs): a better conditional would be: are all controllers down?
       down_controllers = InvariantChecker.check_liveness(simulation)
@@ -125,7 +125,7 @@ class InvariantChecker(object):
   def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
     # Dynamic imports to allow this method to be serialized
-    from sts.headerspace.config_parser.openflow_parser import get_uniq_port_id
+    from config_parser.openflow_parser import get_uniq_port_id
     from sts.util.console import msg
     # Always check liveness if there is a single controllers
     if len(simulation.controller_manager.controllers) == 1:
