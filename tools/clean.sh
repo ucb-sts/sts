@@ -11,6 +11,6 @@ if [ -f .project ]; then
     cp /tmp/.project /tmp/.pydevproject .
 fi
 
-cd sts/headerspace/hassel-c
+cd sts/hassel/hassel-c
 make
 
