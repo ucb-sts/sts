@@ -141,24 +141,24 @@ loop explicitly gives permission.
 
 STS primarily uses [headerspace analysis](http://cseweb.ucsd.edu/~varghese/PAPERS/headerspace.pdf)
 ([hassel](https://bitbucket.org/peymank/hassel-public/)) to check network invariants. All
-hassel code can be found under sts/headerspace.
+hassel code can be found under sts/hassel.
 
-We use two versions of hassel:
-  - The python version can be found under sts/headerspace/headerspace. This
+We use two parts of hassel:
+  - The python version can be found under sts/hassel/hsa-python. This
     version is potentially much slower for large networks, but is much easier
     to modify.
-  - The optimized C version can be found under sts/headerspace/hassel-c. This
+  - The optimized C version can be found under sts/hassel/hassel-c. This
     must be explicitly compiled with:
 
 ```
-$ (cd sts/headerspace/hassel-c; make)
+$ (cd sts/hassel/hassel-c; make)
 ```
 
 We convert our OpenFlow routing tables to headerspace transfer functions in
-sts/headerspace/config_parser/openflow_parser.py.
+sts/hassel/config_parser/openflow_parser.py.
 
 We generate a topology transfer function in
-sts/headerspace/topology_loader/topology_loader.py
+sts/hassel/topology_loader/topology_loader.py
 
 #### Defining New Invariants
 
