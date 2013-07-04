@@ -240,7 +240,7 @@ class Interactive(ControlFlow):
     self.sync_callback = RecordingSyncCallback(input_logger)
     self.logical_time = 0
     self._input_logger = input_logger
-    self.traffic_generator = TrafficGenerator(random.random())
+    self.traffic_generator = TrafficGenerator(random.Random())
     # TODO(cs): future feature: allow the user to interactively choose the order
     # events occur for each round, whether to delay, drop packets, fail nodes,
     # etc.

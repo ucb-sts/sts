@@ -26,7 +26,7 @@ class TrafficGenerator (object):
   Generate sensible randomly generated (openflow) events
   """
 
-  def __init__(self, random=random.random()):
+  def __init__(self, random=random.Random()):
     self.random = random
     self.host2dests = {}
 
