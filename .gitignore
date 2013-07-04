@@ -47,6 +47,8 @@ documentation
 nox/
 nox_classic/
 floodlight/
+carp/
+betta/
 
 # ignore eclipse project files
 .pydevproject
