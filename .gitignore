@@ -26,15 +26,6 @@ input_traces/20*.trace.unacked
 input_traces/*final.trace
 input_traces/20*.final.unacked
 dataplane_traces/20*.trace
-sts/headerspace/hassel-c/tfs/sts/*tf
-sts/headerspace/hassel-c/data/*
-sts/headerspace/hassel-c/build/*
-sts/headerspace/hassel-c/gen
-sts/headerspace/hassel-c/sts
-sts/headerspace/hassel-c/i2
-sts/headerspace/hassel-c/stanford
-sts/headerspace/hassel-c/test
-sts/headerspace/hassel-c/hs-test
 runtime_stats/*json
 runtime_stats/*pdf
 runtime_stats/*gpi
