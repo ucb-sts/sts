@@ -24,9 +24,15 @@ from pox.lib.packet.ipv4 import *
 try:
    import config_parser.openflow_parser as hsa
 except ImportError:
-   hsa = object()
-   hsa.format = lambda *args: None
-   hsa.ofp_match_to_hsa_match = lambda *args: None
+   class NeedSubmodule(object):
+     def _need_submodule():
+       raise RuntimeError('''Need to load the hassel submodule:\n '''
+                          ''' $ git submodule init \n'''
+                          ''' $ git submodule update ''')
+     def format(self, *args): self._need_submodule()
+     def ofp_match_to_hsa_match(): self._need_submodule()
+
+   hsa = NeedSubmodule()
 
 def process_data(msg):
   if msg.data == b'':
