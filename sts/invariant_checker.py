@@ -18,9 +18,6 @@
 
 from pox.openflow.libopenflow_01 import *
 from entities import *
-import topology_loader.topology_loader as hsa_topo
-import headerspace.applications as hsa
-from config_parser.openflow_parser import get_uniq_port_id
 import logging
 import collections
 from sts.util.console import msg
@@ -62,7 +59,6 @@ class InvariantChecker(object):
   @staticmethod
   def python_check_loops(simulation):
     # Always check liveness if there is a single controllers
-    # Dynamic imports to allow this method to be serialized
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
     if len(simulation.controller_manager.controllers) == 1:
@@ -81,6 +77,7 @@ class InvariantChecker(object):
   def _get_all_pairs(simulation):
     # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
     # headerspace/ module instead of computing uniq_port_id here
+    from config_parser.openflow_parser import get_uniq_port_id
     access_links = simulation.topology.access_links
     all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port),get_uniq_port_id(l2.switch, l2.switch_port))
                   for l1 in access_links
@@ -91,6 +88,8 @@ class InvariantChecker(object):
   @staticmethod
   def python_check_connectivity(simulation):
     # Warning! depends on python Hassell -- may be really slow!
+    import topology_loader.topology_loader as hsa_topo
+    import headerspace.applications as hsa
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     paths = hsa.find_reachability(NTF, TTF, simulation.topology.access_links)
@@ -124,9 +123,6 @@ class InvariantChecker(object):
   @staticmethod
   def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
-    # Dynamic imports to allow this method to be serialized
-    from config_parser.openflow_parser import get_uniq_port_id
-    from sts.util.console import msg
     # Always check liveness if there is a single controllers
     if len(simulation.controller_manager.controllers) == 1:
       # TODO(cs): a better conditional would be: are all controllers down?
@@ -185,6 +181,8 @@ class InvariantChecker(object):
     # For now, use a python method that explicitly
     # finds blackholes rather than inferring them from check_reachability
     # Warning! depends on python Hassell -- may be really slow!
+    import topology_loader.topology_loader as hsa_topo
+    import headerspace.applications as hsa
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
@@ -222,12 +220,14 @@ class InvariantChecker(object):
   # --------------------------------------------------------------#
   @staticmethod
   def compute_physical_omega(live_switches, live_links, edge_links):
+    import headerspace.applications as hsa
     (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(live_switches, live_links)
     physical_omega = hsa.compute_omega(name_tf_pairs, TTF, edge_links)
     return physical_omega
 
   @staticmethod
   def compute_controller_omega(controller_snapshot, live_switches, live_links, edge_links):
+    import topology_loader.topology_loader as hsa_topo
     name_tf_pairs = hsa_topo.tf_pairs_from_snapshot(controller_snapshot, live_switches)
     # Frenetic doesn't store any link or host information.
     # No virtualization though, so we can assume the same TTF. TODO(cs): for now...
@@ -236,6 +236,7 @@ class InvariantChecker(object):
 
   @staticmethod
   def _get_transfer_functions(live_switches, live_links):
+    import topology_loader.topology_loader as hsa_topo
     name_tf_pairs = hsa_topo.generate_tf_pairs(live_switches)
     TTF = hsa_topo.generate_TTF(live_links)
     return (name_tf_pairs, TTF)

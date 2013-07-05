@@ -21,7 +21,12 @@ from pox.lib.packet.ethernet import *
 from pox.lib.packet.lldp import *
 from pox.lib.packet.arp import *
 from pox.lib.packet.ipv4 import *
-import config_parser.openflow_parser as hsa
+try:
+   import config_parser.openflow_parser as hsa
+except ImportError:
+   hsa = object()
+   hsa.format = lambda *args: None
+   hsa.ofp_match_to_hsa_match = lambda *args: None
 
 def process_data(msg):
   if msg.data == b'':
