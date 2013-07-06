@@ -110,11 +110,11 @@ class DeferredIOWorker(object):
     return self._io_worker.fileno()
 
   def close(self):
-    self._io_worker.close
+    self._io_worker.close()
 
   @property
   def closed(self):
-    self._io_worker.closed
+    return self._io_worker.closed
 
   @property
   def socket(self):
