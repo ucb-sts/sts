@@ -1,7 +1,7 @@
 
 from abc import *
 import os
-from SimpleXMLRPCServer import SimpleXMLRPCServer
+from SimpleXMLRPCServer import SimpleXMLRPCServer, SimpleXMLRPCRequestHandler
 import xmlrpclib
 import sys
 import marshal
@@ -39,6 +39,20 @@ class TaskRegistry(object):
     if task_name not in self._name_to_task:
       raise ValueError("Task %s is not registered" % task_name)
     return self._name_to_task[task_name]
+
+class ReplayException(Exception):
+  pass
+
+class DebuggableHandler(SimpleXMLRPCRequestHandler):
+  ''' Simple handler that extracts the stack trace of any exceptions that occur '''
+  ''' on the server side, and encapsulates them in a new exception to send '''
+  ''' to the client as a xmlrpclib.Fault '''
+  def _dispatch(self, method, params):
+    try:
+      return self.server.funcs[method](*params)
+    except Exception as e:
+      import traceback
+      raise type(e)("\n" + traceback.format_exc())
 
 class Forker(object):
   ''' Easily fork a job and retrieve the results '''
@@ -84,7 +98,12 @@ class Forker(object):
     test_serialize_request(task_name, *args)
     proxy = xmlrpclib.ServerProxy(child_url, allow_none=True)
     def invoke_child():
-      return getattr(proxy, task_name)(*args)
+      try:
+        return getattr(proxy, task_name)(*args)
+      except xmlrpclib.Fault as e:
+        raise ReplayException("An Exception (code %d) occured in the child replay process: %s" %
+                              (e.faultCode, e.faultString))
+
     child_return = connect_with_backoff(invoke_child)
     # Magic to close the underlying socket. I'm not sure if this is actually
     # needed? See ServerProxy.__call__ in:
@@ -95,7 +114,7 @@ class Forker(object):
   def _initialize_child_rpc_server(self, ip, port):
     # Called within the child process.
     # The child's RPC methods must registered through register_task()
-    self.server = SimpleXMLRPCServer((ip, port), allow_none=True,
+    self.server = SimpleXMLRPCServer((ip, port), DebuggableHandler, allow_none=True,
                                      bind_and_activate=False)
     self.server.allow_reuse_address = True
     self.server.server_bind()
@@ -130,15 +149,9 @@ class LocalForker(Forker):
       sys.exit(0)
     else: # Parent
       LocalForker._active_pids.add(pid)
-      try:
-        child_return = self._invoke_child_rpc(ip, port,
-                                              task_name, *args, **kws)
-        LocalForker._active_pids.remove(pid)
-      except xmlrpclib.Fault as err:
-        print "An RPC fault occurred"
-        print "Fault code: %d" % err.faultCode
-        print "Fault string: %s" % err.faultString
-        raise
+      child_return = self._invoke_child_rpc(ip, port,
+                                            task_name, *args, **kws)
+      LocalForker._active_pids.remove(pid)
 
       os.waitpid(pid, 0)
       return child_return
