@@ -57,15 +57,20 @@ class InvariantChecker(object):
     return dead_controllers
 
   @staticmethod
-  def python_check_loops(simulation):
+  def _maybe_check_liveness(simulation):
     # Always check liveness if there is a single controllers
-    import topology_loader.topology_loader as hsa_topo
-    import headerspace.applications as hsa
     if len(simulation.controller_manager.controllers) == 1:
       # TODO(cs): a better conditional would be: are all controllers down?
-      down_controllers = InvariantChecker.check_liveness(simulation)
-      if down_controllers != []:
-        return down_controllers
+      return InvariantChecker.check_liveness(simulation)
+
+
+  @staticmethod
+  def python_check_loops(simulation):
+    import topology_loader.topology_loader as hsa_topo
+    import headerspace.applications as hsa
+    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    if down_controllers != []:
+      return down_controllers
     # Warning! depends on python Hassell -- may be really slow!
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
@@ -90,6 +95,9 @@ class InvariantChecker(object):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
+    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    if down_controllers != []:
+      return down_controllers
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     paths = hsa.find_reachability(NTF, TTF, simulation.topology.access_links)
@@ -123,12 +131,9 @@ class InvariantChecker(object):
   @staticmethod
   def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
-    # Always check liveness if there is a single controllers
-    if len(simulation.controller_manager.controllers) == 1:
-      # TODO(cs): a better conditional would be: are all controllers down?
-      down_controllers = InvariantChecker.check_liveness(simulation)
-      if down_controllers != []:
-        return down_controllers
+    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    if down_controllers != []:
+      return down_controllers
 
     # Effectively, run compute physical omega, ignore concrete values of headers, and
     # check that all pairs can reach eachother
@@ -183,6 +188,9 @@ class InvariantChecker(object):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
+    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    if down_controllers != []:
+      return down_controllers
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
@@ -191,6 +199,10 @@ class InvariantChecker(object):
   @staticmethod
   def check_correspondence(simulation):
     ''' Return if there were any policy-violations '''
+    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    if down_controllers != []:
+      return down_controllers
+
     controllers_with_violations = []
 
     controllers_with_violations += InvariantChecker.check_liveness(simulation)
