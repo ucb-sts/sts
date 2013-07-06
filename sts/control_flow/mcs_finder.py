@@ -365,7 +365,8 @@ class MCSFinder(ControlFlow):
       log.warn("unacked internal events file from original run does not exist")
       return
     prev_buffered_receives = [ e.pending_receive for e in
-                               EventDag(log_parser.parse_path(path)).events ]
+                               [ f for f in EventDag(log_parser.parse_path(path)).events
+                                 if type(f) == ControlMessageReceive ] ]
     new_message_receipts = []
     for p in simulation.god_scheduler.pending_receives():
       if p not in prev_buffered_receives:
