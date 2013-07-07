@@ -79,6 +79,19 @@ class InvariantChecker(object):
     return loops
 
   @staticmethod
+  def check_loops(simulation):
+    import headerspace.applications as hsa
+    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    if down_controllers != []:
+      return down_controllers
+
+    live_switches = simulation.topology.live_switches
+    live_links = simulation.topology.live_links
+    (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(live_switches, live_links)
+    loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, simulation.topology.access_links)
+    return [ str(l) for l in loops ]
+
+  @staticmethod
   def _get_all_pairs(simulation):
     # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
     # headerspace/ module instead of computing uniq_port_id here
