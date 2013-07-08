@@ -42,6 +42,26 @@ class MockAccessLink(object):
     self.switch_port = switch_port
 
 class applications_test(unittest.TestCase):
+  def test_loop(self):
+    # by default OpenFlow ignores rules that outputs packets over the same
+    # port they came in on, so we need to create a 3-switch topology.
+    switch1 = create_switch(1, 2)
+    flow_mod1 = ofp_flow_mod(match=ofp_match(in_port=2, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
+    switch1.table.process_flow_mod(flow_mod1)
+    switch2 = create_switch(2, 2)
+    flow_mod2 = ofp_flow_mod(match=ofp_match(in_port=1, nw_src="1.2.3.4"), action=ofp_action_output(port=2))
+    switch2.table.process_flow_mod(flow_mod2)
+    switch3 = create_switch(3, 2)
+    flow_mod3 = ofp_flow_mod(match=ofp_match(in_port=2, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
+    switch3.table.process_flow_mod(flow_mod3)
+    network_links = [Link(switch1, switch1.ports[1], switch2, switch2.ports[1]),
+                     Link(switch2, switch2.ports[2], switch3, switch3.ports[2]),
+                     Link(switch3, switch3.ports[1], switch1, switch1.ports[2])]
+    NTF = hsa_topo.generate_NTF([switch1, switch2, switch3])
+    TTF = hsa_topo.generate_TTF(network_links)
+    loops = hsa.detect_loop(NTF, TTF, [switch1, switch2, switch3])
+    self.assertTrue(loops != [])
+
   def test_blackhole(self):
     switch1 = create_switch(1, 2)
     flow_mod = ofp_flow_mod(xid=124, priority=1, match=ofp_match(in_port=1, nw_src="1.2.3.4"), action=ofp_action_output(port=2))
