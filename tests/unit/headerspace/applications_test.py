@@ -26,6 +26,7 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 from sts.topology import *
 from pox.openflow.software_switch import SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
+from sts.invariant_checker import InvariantChecker
 
 submodule_loaded = True
 try:
@@ -42,24 +43,42 @@ class MockAccessLink(object):
     self.switch_port = switch_port
 
 class applications_test(unittest.TestCase):
-  def test_loop(self):
+  def _create_loop(self):
     # by default OpenFlow ignores rules that outputs packets over the same
     # port they came in on, so we need to create a 3-switch topology.
     switch1 = create_switch(1, 2)
     flow_mod1 = ofp_flow_mod(match=ofp_match(in_port=2, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
+    flow_mod1_in = ofp_flow_mod(match=ofp_match(in_port=3, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
     switch1.table.process_flow_mod(flow_mod1)
+    switch1.table.process_flow_mod(flow_mod1_in)
     switch2 = create_switch(2, 2)
     flow_mod2 = ofp_flow_mod(match=ofp_match(in_port=1, nw_src="1.2.3.4"), action=ofp_action_output(port=2))
+    flow_mod2_in = ofp_flow_mod(match=ofp_match(in_port=3, nw_src="1.2.3.4"), action=ofp_action_output(port=2))
     switch2.table.process_flow_mod(flow_mod2)
+    switch2.table.process_flow_mod(flow_mod2_in)
     switch3 = create_switch(3, 2)
     flow_mod3 = ofp_flow_mod(match=ofp_match(in_port=2, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
+    flow_mod3_in = ofp_flow_mod(match=ofp_match(in_port=3, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
     switch3.table.process_flow_mod(flow_mod3)
+    switch3.table.process_flow_mod(flow_mod3_in)
+    switches = [switch1, switch2, switch3]
     network_links = [Link(switch1, switch1.ports[1], switch2, switch2.ports[1]),
                      Link(switch2, switch2.ports[2], switch3, switch3.ports[2]),
                      Link(switch3, switch3.ports[1], switch1, switch1.ports[2])]
-    NTF = hsa_topo.generate_NTF([switch1, switch2, switch3])
+    return (switches, network_links)
+
+  def test_python_loop(self):
+    (switches, network_links) = self._create_loops()
+    NTF = hsa_topo.generate_NTF(switches)
     TTF = hsa_topo.generate_TTF(network_links)
-    loops = hsa.detect_loop(NTF, TTF, [switch1, switch2, switch3])
+    loops = hsa.detect_loop(NTF, TTF, switches)
+    self.assertTrue(loops != [])
+
+  def test_hassel_c_loop(self):
+    (switches, network_links) = self._create_loops()
+    (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(switches, network_links)
+    access_links =  [ MockAccessLink(sw, sw.ports[2]) for sw in switches ]
+    loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, access_links)
     self.assertTrue(loops != [])
 
   def test_blackhole(self):
@@ -69,10 +88,10 @@ class applications_test(unittest.TestCase):
     switch2 = create_switch(2, 2)
     network_links = [Link(switch1, switch1.ports[2], switch2, switch2.ports[2]),
                      Link(switch2, switch2.ports[2], switch1, switch1.ports[2])]
-    NTF = hsa_topo.generate_NTF([switch1, switch2])
+    switches = [switch1, switch2]
+    NTF = hsa_topo.generate_NTF(switches)
     TTF = hsa_topo.generate_TTF(network_links)
-    access_links = [MockAccessLink(switch1, switch1.ports[1]),
-                    MockAccessLink(switch2, switch2.ports[1])]
+    access_links = [ MockAccessLink(sw, sw.ports[1]) for sw in switches ]
     blackholes = hsa.find_blackholes(NTF, TTF, access_links)
     self.assertEqual([(100002, [100001, 100002])], blackholes)
 
