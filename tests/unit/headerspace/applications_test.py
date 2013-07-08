@@ -43,13 +43,14 @@ class MockAccessLink(object):
     self.switch_port = switch_port
 
 class applications_test(unittest.TestCase):
-  def _create_loop(self):
+  def _create_loopy_network(self, cut_loop=False):
     # by default OpenFlow ignores rules that outputs packets over the same
     # port they came in on, so we need to create a 3-switch topology.
     switch1 = create_switch(1, 2)
-    flow_mod1 = ofp_flow_mod(match=ofp_match(in_port=2, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
+    if not cut_loop:
+      flow_mod1 = ofp_flow_mod(match=ofp_match(in_port=2, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
+      switch1.table.process_flow_mod(flow_mod1)
     flow_mod1_in = ofp_flow_mod(match=ofp_match(in_port=3, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
-    switch1.table.process_flow_mod(flow_mod1)
     switch1.table.process_flow_mod(flow_mod1_in)
     switch2 = create_switch(2, 2)
     flow_mod2 = ofp_flow_mod(match=ofp_match(in_port=1, nw_src="1.2.3.4"), action=ofp_action_output(port=2))
@@ -68,18 +69,25 @@ class applications_test(unittest.TestCase):
     return (switches, network_links)
 
   def test_python_loop(self):
-    (switches, network_links) = self._create_loop()
+    (switches, network_links) = self._create_loopy_network()
     NTF = hsa_topo.generate_NTF(switches)
     TTF = hsa_topo.generate_TTF(network_links)
     loops = hsa.detect_loop(NTF, TTF, switches)
     self.assertTrue(loops != [])
 
   def test_hassel_c_loop(self):
-    (switches, network_links) = self._create_loop()
+    (switches, network_links) = self._create_loopy_network()
     (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(switches, network_links)
     access_links =  [ MockAccessLink(sw, sw.ports[2]) for sw in switches ]
     loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, access_links)
     self.assertTrue(loops != [])
+
+  def test_hassel_c_no_loop(self):
+    (switches, network_links) = self._create_loopy_network(cut_loop=True)
+    (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(switches, network_links)
+    access_links = [ MockAccessLink(sw, sw.ports[2]) for sw in switches ]
+    loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, access_links)
+    self.assertTrue(loops == [])
 
   def test_blackhole(self):
     switch1 = create_switch(1, 2)
