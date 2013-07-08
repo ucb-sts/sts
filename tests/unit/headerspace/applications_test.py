@@ -68,14 +68,14 @@ class applications_test(unittest.TestCase):
     return (switches, network_links)
 
   def test_python_loop(self):
-    (switches, network_links) = self._create_loops()
+    (switches, network_links) = self._create_loop()
     NTF = hsa_topo.generate_NTF(switches)
     TTF = hsa_topo.generate_TTF(network_links)
     loops = hsa.detect_loop(NTF, TTF, switches)
     self.assertTrue(loops != [])
 
   def test_hassel_c_loop(self):
-    (switches, network_links) = self._create_loops()
+    (switches, network_links) = self._create_loop()
     (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(switches, network_links)
     access_links =  [ MockAccessLink(sw, sw.ports[2]) for sw in switches ]
     loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, access_links)
