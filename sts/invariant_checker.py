@@ -62,7 +62,7 @@ class InvariantChecker(object):
     if len(simulation.controller_manager.controllers) == 1:
       # TODO(cs): a better conditional would be: are all controllers down?
       return InvariantChecker.check_liveness(simulation)
-
+    return []
 
   @staticmethod
   def python_check_loops(simulation):

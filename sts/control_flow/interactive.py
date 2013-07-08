@@ -264,6 +264,7 @@ class Interactive(ControlFlow):
   def simulate(self, simulation=None, bound_objects=()):
     if simulation is None:
       self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
+
       # Always connect to controllers explicitly
       self.simulation.connect_to_controllers()
       self._log_input_event(ConnectToControllers())
@@ -280,7 +281,7 @@ class Interactive(ControlFlow):
       c.cmd_group("Invariants")
       c.cmd(self.invariant_check,       "check_invariants", alias="inv",    help_msg="Run an invariant check")\
           .arg("kind", values=['omega', 'connectivity', 'loops', 'liveness', "python_connectivity", "blackholes"])
-          
+
       c.cmd_group("Dataplane")
       c.cmd(self.dataplane_trace_feed,  "dp_inject",        alias="dpi",    help_msg="Inject the next dataplane event from the trace")
       c.cmd(self.dataplane_generate,    "dp_generate",      alias="dpg",    help_msg="Generate a new packet")
@@ -548,16 +549,16 @@ class Interactive(ControlFlow):
       return
     if to_hid not in topology.hid2host.keys():
       print "Unknown host %s" % to_hid
-      return  
+      return
     from_host = topology.get_host(from_hid)
     to_host = topology.get_host(to_hid)
     from_interface = random.choice(from_host.interfaces)
     to_interface = random.choice(to_host.interfaces)
-    
+
     packet = self._generate_icmp_packet(from_interface, to_interface, raw_input("Enter payload content:\n"))
     from_host.send(from_interface, packet)
     self._log_input_event(TrafficInjection(dp_event=DataplaneEvent(from_interface, packet)))
-    
+
   def dataplane_ping(self, from_hid=None, to_hid=None):
     topology = self.simulation.topology
     if from_hid is None:
@@ -569,15 +570,15 @@ class Interactive(ControlFlow):
       return
     if to_hid not in topology.hid2host.keys():
       print "Unknown host %s" % to_hid
-      return  
+      return
     from_host = topology.get_host(from_hid)
     to_host = topology.get_host(to_hid)
     from_interface = random.choice(from_host.interfaces)
     to_interface = random.choice(to_host.interfaces)
-    
+
     packet = self._generate_icmp_packet(from_interface, to_interface, "PingPing" * 6)
     from_host.send(from_interface, packet)
-    self._log_input_event(TrafficInjection(dp_event=DataplaneEvent(from_interface, packet)))  
+    self._log_input_event(TrafficInjection(dp_event=DataplaneEvent(from_interface, packet)))
 
   def _generate_icmp_packet(self, from_interface, to_interface, payload_content):
     e = ethernet()
