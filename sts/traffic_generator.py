@@ -28,65 +28,69 @@ class TrafficGenerator (object):
 
   def __init__(self, random=random.Random()):
     self.random = random
-    self.host2dests = {}
-
+    self.topology = None
     self._packet_generators = {
       "icmp_ping" : self.icmp_ping
     }
 
-  def set_hosts(self, hosts):
-    ''' Let us know how to set the destination addresses '''
-    for host in hosts:
-      others = [ h for h in hosts if h != host ]
-      self.host2dests[host] = itertools.cycle(others)
+  def set_topology(self, topology):
+    self.topology = topology
 
-  def generateAndInject(self, packet_type, host, self_pkt=False):
-    if packet_type not in self._packet_generators:
-      raise AttributeError("Unknown event type %s" % str(packet_type))
-
-    # Inject the packet through one of the hosts' interfaces
-    if len(host.interfaces) < 1:
-      raise RuntimeError("No interfaces to choose from on host %s!" %
-                         (str(host)))
-
-    interface = self.random.choice(host.interfaces)
-    destination_interface = None
-    if self_pkt:
-      # Send a packet to ourself to help the controller learn our location
-      destination_interface = interface
-    elif self.host2dests:
-      destination = self.host2dests[host].next()
-      destination_interface = self.random.choice(destination.interfaces)
-
-    packet = self._packet_generators[packet_type](interface, destination_interface)
-    host.send(interface, packet)
-    return DataplaneEvent(interface, packet)
-
-  # Generates an ICMP ping, and injects it through the interface
-  def icmp_ping(self, interface, destination_interface):
-    # randomly choose an in_port.
+  def icmp_ping(self, src_interface, dest_interface, payload_content=None):
     e = ethernet()
-    e.src = interface.hw_addr
-    if destination_interface is not None:
-      e.dst = destination_interface.hw_addr
-    else:
-      # TODO(cs): need a better way to create random MAC addresses
-      e.dst = EthAddr(struct.pack("Q",self.random.randint(1,0xFF))[:6])
+    e.src = src_interface.hw_addr
+    e.dst = dest_interface.hw_addr
     e.type = ethernet.IP_TYPE
-    ipp = ipv4()
-    ipp.protocol = ipv4.ICMP_PROTOCOL
-    if hasattr(interface, 'ips'):
-      ipp.srcip = self.random.choice(interface.ips)
-    else:
-      ipp.srcip = IPAddr(self.random.randint(0,0xFFFFFFFF))
-    if destination_interface is not None and hasattr(destination_interface, 'ips'):
-      ipp.dstip = self.random.choice(destination_interface.ips)
-    else:
-      ipp.dstip = IPAddr(self.random.randint(0,0xFFFFFFFF))
+    i = ipv4()
+    i.protocol = ipv4.ICMP_PROTOCOL
+    i.srcip = random.choice(src_interface.ips)
+    i.dstip = random.choice(dest_interface.ips)
     ping = icmp()
-    ping.type = self.random.choice([TYPE_ECHO_REQUEST,TYPE_ECHO_REPLY])
-    ping.payload = "PingPing" * 6
-    ipp.payload = ping
-    e.payload = ipp
+    ping.type = random.choice([TYPE_ECHO_REQUEST, TYPE_ECHO_REPLY])
+    if payload_content == "" or payload_content is None:
+      payload_content = "Ping" * 12
+    ping.payload = payload_content
+    i.payload = ping
+    e.payload = i
     return e
 
+  def generate_and_inject(self, packet_type, src_host=None, dest_host=None,
+                          send_to_self=False, payload_content=None):
+    if packet_type not in self._packet_generators:
+      raise AttributeError("Unknown event type %s" % str(packet_type))
+    if self.topology is None:
+      raise RuntimeError("TrafficGenerator needs access to topology")
+  
+    if src_host is None:
+      src_hosts = self.topology.hosts
+      if len(src_hosts) == 0:
+        raise RuntimeError("No source host to choose from!")
+      src_host = self.random.choice(self.topology.hosts)
+    src_host = self._validate_host(src_host)
+    src_interface = self.random.choice(src_host.interfaces)
+  
+    if send_to_self:
+      dest_host = src_host
+      dest_interface = src_interface
+    else:
+      if dest_host is None:
+        dest_hosts = [h for h in self.topology.hosts if h != src_host]
+        if len(dest_hosts) == 0:
+          raise RuntimeError("No destination host to choose from!")
+        dest_host = self.random.choice(dest_hosts)
+      dest_host = self._validate_host(dest_host)
+      dest_interface = self.random.choice(dest_host.interfaces)
+    
+    packet = self._packet_generators[packet_type](src_interface, dest_interface,
+                                                  payload_content=payload_content)
+    src_host.send(src_interface, packet)
+    return DataplaneEvent(src_interface, packet)
+  
+  def _validate_host(self, host):
+    if host in self.topology.hid2host.keys():
+      host = self.topology.hid2host[host]
+    if host not in self.topology.hosts:
+      raise RuntimeError("Unknown host: %s" % (str(host)))
+    if len(host.interfaces) == 0:
+      raise RuntimeError("No interfaces to choose from on host %s!" % (str(host)))
+    return host

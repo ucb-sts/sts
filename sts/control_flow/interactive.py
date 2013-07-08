@@ -272,6 +272,7 @@ class Interactive(ControlFlow):
       self.simulation = simulation
 
     self._forwarded_this_step = 0
+    self.traffic_generator.set_topology(self.simulation.topology)
     try:
       c = STSConsole(default_command=self.default_command)
       c.cmd_group("Simulation State")
@@ -284,8 +285,7 @@ class Interactive(ControlFlow):
 
       c.cmd_group("Dataplane")
       c.cmd(self.dataplane_trace_feed,  "dp_inject",        alias="dpi",    help_msg="Inject the next dataplane event from the trace")
-      c.cmd(self.dataplane_generate,    "dp_generate",      alias="dpg",    help_msg="Generate a new packet")
-      c.cmd(self.dataplane_ping,        "dp_ping",          alias="dpp",    help_msg="Generate a new packet ping packet")
+      c.cmd(self.dataplane_ping,        "dp_ping",          alias="dpp",    help_msg="Generate and inject a new ping packet")
       c.cmd(self.dataplane_forward,     "dp_forward",       alias="dpf",    help_msg="Forward a pending dataplane event")
       c.cmd(self.dataplane_drop,        "dp_drop",          alias="dpd",    help_msg="Drop a pending dataplane event")
       c.cmd(self.dataplane_delay,       "dp_delay",         alias="dpe",    help_msg="Delay a pending dataplane event")
@@ -442,12 +442,12 @@ class Interactive(ControlFlow):
                                         dpid,
                                         new_port_no,
                                         access_link.host.hid))
-    self._send_initialization_packet(access_link.host, self_pkt=True)
+    self._send_initialization_packet(access_link.host, send_to_self=True)
 
   # TODO(cs): ripped directly from fuzzer. Redundant!
-  def _send_initialization_packet(self, host, self_pkt=False):
+  def _send_initialization_packet(self, host, send_to_self=False):
     traffic_type = "icmp_ping"
-    dp_event = self.traffic_generator.generateAndInject(traffic_type, host, self_pkt=self_pkt)
+    dp_event = self.traffic_generator.generate_and_inject(traffic_type, host, send_to_self=send_to_self)
     self._log_input_event(TrafficInjection(dp_event=dp_event, host_id=host.hid))
 
   def show_flow_table(self, dpid):
@@ -538,63 +538,18 @@ class Interactive(ControlFlow):
     else:
       print "No dataplane trace to inject from."
 
-  def dataplane_generate(self, from_hid=None, to_hid=None):
-    topology = self.simulation.topology
-    if from_hid is None:
-      from_hid = random.choice(topology.hid2host.keys())
-    while to_hid is None or to_hid == from_hid:
-      to_hid = random.choice(topology.hid2host.keys())
-    if from_hid not in topology.hid2host.keys():
-      print "Unknown host %s" % from_hid
-      return
-    if to_hid not in topology.hid2host.keys():
-      print "Unknown host %s" % to_hid
-      return
-    from_host = topology.get_host(from_hid)
-    to_host = topology.get_host(to_hid)
-    from_interface = random.choice(from_host.interfaces)
-    to_interface = random.choice(to_host.interfaces)
-
-    packet = self._generate_icmp_packet(from_interface, to_interface, raw_input("Enter payload content:\n"))
-    from_host.send(from_interface, packet)
-    self._log_input_event(TrafficInjection(dp_event=DataplaneEvent(from_interface, packet)))
-
   def dataplane_ping(self, from_hid=None, to_hid=None):
-    topology = self.simulation.topology
-    if from_hid is None:
-      from_hid = random.choice(topology.hid2host.keys())
-    while to_hid is None or to_hid == from_hid:
-      to_hid = random.choice(topology.hid2host.keys())
-    if from_hid not in topology.hid2host.keys():
+    if (from_hid is not None) and \
+       (from_hid not in self.simulation.topology.hid2host.keys()):
       print "Unknown host %s" % from_hid
       return
-    if to_hid not in topology.hid2host.keys():
+    if (to_hid is not None) and \
+       (to_hid not in self.simulation.topology.hid2host.keys()):
       print "Unknown host %s" % to_hid
       return
-    from_host = topology.get_host(from_hid)
-    to_host = topology.get_host(to_hid)
-    from_interface = random.choice(from_host.interfaces)
-    to_interface = random.choice(to_host.interfaces)
-
-    packet = self._generate_icmp_packet(from_interface, to_interface, "PingPing" * 6)
-    from_host.send(from_interface, packet)
-    self._log_input_event(TrafficInjection(dp_event=DataplaneEvent(from_interface, packet)))
-
-  def _generate_icmp_packet(self, from_interface, to_interface, payload_content):
-    e = ethernet()
-    e.src = from_interface.hw_addr
-    e.dst = to_interface.hw_addr
-    e.type = ethernet.IP_TYPE
-    i = ipv4()
-    i.protocol = ipv4.ICMP_PROTOCOL
-    i.srcip = random.choice(from_interface.ips)
-    i.dstip = random.choice(to_interface.ips)
-    ping = icmp()
-    ping.type = random.choice([TYPE_ECHO_REQUEST, TYPE_ECHO_REPLY])
-    ping.payload = payload_content
-    i.payload = ping
-    e.payload = i
-    return e
+    dp_event = self.traffic_generator.generate_and_inject("icmp_ping", from_hid, to_hid,
+                                    payload_content=raw_input("Enter payload content:\n"))
+    self._log_input_event(TrafficInjection(dp_event=dp_event))
 
   def _select_dataplane_event(self, sel=None):
     queued = self.simulation.patch_panel.queued_dataplane_events

@@ -169,7 +169,7 @@ class Fuzzer(ControlFlow):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
-    self.traffic_generator.set_hosts(self.simulation.topology.hosts)
+    self.traffic_generator.set_topology(self.simulation.topology)
     return self.loop()
 
   def loop(self):
@@ -217,12 +217,12 @@ class Fuzzer(ControlFlow):
             self.check_pending_messages(pass_through=True)
             if not sent_self_packets and (self.logical_time % self._all_to_all_interval) == 0:
               # Only need to send self packets once
-              self._send_initialization_packets(self_pkts=True)
+              self._send_initialization_packets(send_to_self=True)
               sent_self_packets = True
             elif self.logical_time > self.initialization_rounds:
                # All-to-all mode
                if (self.logical_time % self._all_to_all_interval) == 0:
-                  self._send_initialization_packets(self_pkts=False)
+                  self._send_initialization_packets(send_to_self=False)
                   self._all_to_all_iterations += 1
                   if self._all_to_all_iterations > len(self.simulation.topology.hosts):
                      log.info("Done initializing")
@@ -251,14 +251,14 @@ class Fuzzer(ControlFlow):
 
     return self.simulation
 
-  def _send_initialization_packet(self, host, self_pkt=False):
+  def _send_initialization_packet(self, host, send_to_self=False):
     traffic_type = "icmp_ping"
-    dp_event = self.traffic_generator.generateAndInject(traffic_type, host, self_pkt=self_pkt)
+    dp_event = self.traffic_generator.generate_and_inject(traffic_type, host, send_to_self=send_to_self)
     self._log_input_event(TrafficInjection(dp_event=dp_event, host_id=host.hid))
 
-  def _send_initialization_packets(self, self_pkts=False):
+  def _send_initialization_packets(self, send_to_self=False):
     for host in self.simulation.topology.hosts:
-      self._send_initialization_packet(host, self_pkt=self_pkts)
+      self._send_initialization_packet(host, send_to_self=send_to_self)
 
   def _print_buffers(self):
     buffered_events = []
@@ -274,8 +274,9 @@ class Fuzzer(ControlFlow):
       self._input_logger.dump_buffered_events(buffered_events)
 
   def maybe_check_invariant(self):
-    if (self.check_interval is not None and
-        (self.logical_time % self.check_interval) == 0):
+    #if (self.check_interval is not None and
+    #    (self.logical_time % self.check_interval) == 0):
+    if True:
       # Time to run correspondence!
       # TODO(cs): may need to revert to threaded version if runtime is too
       # long
@@ -444,7 +445,7 @@ class Fuzzer(ControlFlow):
           if len(host.interfaces) > 0:
             msg.event("injecting a random packet")
             traffic_type = "icmp_ping"
-            dp_event = self.traffic_generator.generateAndInject(traffic_type, host)
+            dp_event = self.traffic_generator.generate_and_inject(traffic_type, host)
             self._log_input_event(TrafficInjection(dp_event=dp_event))
 
   def check_controllers(self):
@@ -488,5 +489,5 @@ class Fuzzer(ControlFlow):
                                               new_switch_dpid,
                                               new_port_no,
                                               access_link.host.hid))
-          self._send_initialization_packet(access_link.host, self_pkt=True)
+          self._send_initialization_packet(access_link.host, send_to_self=True)
 
