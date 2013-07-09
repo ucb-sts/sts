@@ -274,9 +274,8 @@ class Fuzzer(ControlFlow):
       self._input_logger.dump_buffered_events(buffered_events)
 
   def maybe_check_invariant(self):
-    #if (self.check_interval is not None and
-    #    (self.logical_time % self.check_interval) == 0):
-    if True:
+    if (self.check_interval is not None and
+        (self.logical_time % self.check_interval) == 0):
       # Time to run correspondence!
       # TODO(cs): may need to revert to threaded version if runtime is too
       # long
