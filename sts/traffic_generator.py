@@ -61,35 +61,30 @@ class TrafficGenerator (object):
     if self.topology is None:
       raise RuntimeError("TrafficGenerator needs access to topology")
 
-    if src_host is None:
-      src_host = self._choose_host(self.topology.hosts) 
-    src_host = self._validate_host(src_host)
-    src_interface = self.random.choice(src_host.interfaces)
-  
+    (src_host, src_interface) = self._choose_host(src_host, self.topology.hosts)    
     if send_to_self:
-      dest_host = src_host
-      dest_interface = src_interface
+      (dest_host, dest_interface) = (src_host, src_interface)
     else:
-      if dest_host is None:
-        dest_host = self._choose_host([h for h in self.topology.hosts if h != src_host])
-      dest_host = self._validate_host(dest_host)
-      dest_interface = self.random.choice(dest_host.interfaces)
+      (dest_host, dest_interface) = self._choose_host(dest_host,
+                                      [h for h in self.topology.hosts if h != src_host])
     
     packet = self._packet_generators[packet_type](src_interface, dest_interface,
                                                   payload_content=payload_content)
     src_host.send(src_interface, packet)
     return DataplaneEvent(src_interface, packet)
 
-  def _choose_host(self, hosts):
-    if len(hosts) == 0:
-      raise RuntimeError("No host to choose from!")  
-    return self.random.choice(hosts)
-
-  def _validate_host(self, host):
+  def _choose_host(self, host, hosts):
+    if host is None:
+      if len(hosts) == 0:
+        raise RuntimeError("No host to choose from!")  
+      host = self.random.choice(hosts)
     if host in self.topology.hid2host.keys():
       host = self.topology.hid2host[host]
     if host not in self.topology.hosts:
       raise RuntimeError("Unknown host: %s" % (str(host)))
     if len(host.interfaces) == 0:
       raise RuntimeError("No interfaces to choose from on host %s!" % (str(host)))
-    return host
+    interface = self.random.choice(host.interfaces)
+    return (host, interface)
+    
+
