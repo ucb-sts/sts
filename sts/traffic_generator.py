@@ -60,12 +60,9 @@ class TrafficGenerator (object):
       raise AttributeError("Unknown event type %s" % str(packet_type))
     if self.topology is None:
       raise RuntimeError("TrafficGenerator needs access to topology")
-  
+
     if src_host is None:
-      src_hosts = self.topology.hosts
-      if len(src_hosts) == 0:
-        raise RuntimeError("No source host to choose from!")
-      src_host = self.random.choice(self.topology.hosts)
+      src_host = self._choose_host(self.topology.hosts) 
     src_host = self._validate_host(src_host)
     src_interface = self.random.choice(src_host.interfaces)
   
@@ -74,10 +71,7 @@ class TrafficGenerator (object):
       dest_interface = src_interface
     else:
       if dest_host is None:
-        dest_hosts = [h for h in self.topology.hosts if h != src_host]
-        if len(dest_hosts) == 0:
-          raise RuntimeError("No destination host to choose from!")
-        dest_host = self.random.choice(dest_hosts)
+        dest_host = self._choose_host([h for h in self.topology.hosts if h != src_host])
       dest_host = self._validate_host(dest_host)
       dest_interface = self.random.choice(dest_host.interfaces)
     
@@ -85,7 +79,12 @@ class TrafficGenerator (object):
                                                   payload_content=payload_content)
     src_host.send(src_interface, packet)
     return DataplaneEvent(src_interface, packet)
-  
+
+  def _choose_host(self, hosts):
+    if len(hosts) == 0:
+      raise RuntimeError("No host to choose from!")  
+    return self.random.choice(hosts)
+
   def _validate_host(self, host):
     if host in self.topology.hid2host.keys():
       host = self.topology.hid2host[host]
