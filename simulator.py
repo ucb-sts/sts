@@ -100,9 +100,14 @@ else:
 
 # Set an interrupt handler
 def handle_int(signal, frame):
-  print >> sys.stderr, "Caught signal %d, stopping sdndebug" % signal
+  import os
+  from sts.util.rpc_forker import LocalForker
+  sys.stderr.write("Caught signal %d, stopping sdndebug (pid %d)\n" %
+                    (signal, os.getpid()))
   if (simulator.simulation_cfg.current_simulation is not None):
     simulator.simulation_cfg.current_simulation.clean_up()
+  # kill fork()ed procs
+  LocalForker.kill_all()
   sys.exit(13)
 
 signal.signal(signal.SIGINT, handle_int)
