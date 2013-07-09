@@ -168,6 +168,7 @@ class MCSFinder(ControlFlow):
     self._track_iteration_size(total_inputs_pruned)
     self.dag = dag
 
+    self.log("=== Total replays: %d ===" % Replayer.total_replays)
     self._runtime_stats.record_prune_end()
     self.mcs_log_tracker.dump_runtime_stats()
     self.log("Final MCS (%d elements):" % len(self.dag.input_events))
@@ -186,7 +187,6 @@ class MCSFinder(ControlFlow):
 
     if self.mcs_trace_path is not None:
       self.mcs_log_tracker.dump_mcs_trace(self.dag, self)
-    self.log("=== Total replays: %d ===" % Replayer.total_replays)
     return ExitCode(0)
 
   def _ddmin(self, dag, split_ways, precompute_cache=None, label_prefix=(),
