@@ -118,6 +118,9 @@ class MockSocket(object):
     pass
 
 def is_mocked(sock_or_io_worker):
+  if sock_or_io_worker is None:
+    # Gaurd against race conditions
+    return True
   return sock_or_io_worker.fileno() < 0
 
 def sort_sockets(rl, wl, xl):
