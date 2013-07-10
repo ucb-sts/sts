@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pox.lib.addresses import EthAddr, IPAddr
 import time
 import re
 import os
@@ -19,6 +20,7 @@ import errno
 import socket
 import random
 import types
+import struct
 
 # don't use the standard instance - we don't want to be seeded
 true_random = random.Random()
@@ -52,6 +54,12 @@ def mkdir_p(dst):
       pass
     else:
       raise
+
+def random_eth_addr():
+  return EthAddr(struct.pack("Q", true_random.randint(1,0xFF))[:6])
+
+def random_ip_addr():
+  return IPAddr(true_random.randint(0,0xFFFFFFFF))
 
 def address_is_ip(address):
   return re.match("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", address)
