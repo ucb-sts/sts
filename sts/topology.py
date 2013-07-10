@@ -35,6 +35,7 @@ of switches, with one host connected to each switch. For example, with N = 3:
 '''
 
 from sts.fingerprints.messages import DPFingerprint
+from invariant_checker import InvariantChecker
 from entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink, NamespaceHost
 from pox.openflow.software_switch import DpPacketOut, SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
@@ -148,15 +149,18 @@ class PatchPanel(object):
     for host in self.hosts:
       host.addListener(DpPacketOut, self.handle_DpPacketOut)
 
+  def register_interface_pair(self, event):
+    (src_addr, dst_addr) = (event.packet.src, event.packet.dst)
+    if src_addr is not None and dst_addr is not None:
+      InvariantChecker.register_interface_pair(src_addr, dst_addr)
+
   def handle_DpPacketOut(self, event):
+    self.register_interface_pair(event)
     (node, port) = self.get_connected_port(event.node, event.port)
     if type(node) == Host:
       self.deliver_packet(node, event.packet, port)
     else:
       self.forward_packet(node, event.packet, port)
-
-  def get_connected_port(self, node, port): # TODO(sw): is this actually necessary?
-    return self.get_connected_port(node, port)
 
   def forward_packet(self, next_switch, packet, next_port):
     ''' Forward the packet to the given port '''

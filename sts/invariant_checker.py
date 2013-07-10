@@ -22,6 +22,7 @@ import logging
 import collections
 from sts.util.console import msg
 import json
+import time
 from collections import defaultdict
 
 log = logging.getLogger("invariant_checker")
@@ -58,7 +59,7 @@ class InvariantChecker(object):
 
   @staticmethod
   def _maybe_check_liveness(simulation):
-    # Always check liveness if there is a single controllers
+    # Always check liveness if there is a single controller
     if len(simulation.controller_manager.controllers) == 1:
       # TODO(cs): a better conditional would be: are all controllers down?
       return InvariantChecker.check_liveness(simulation)
@@ -97,11 +98,13 @@ class InvariantChecker(object):
     # headerspace/ module instead of computing uniq_port_id here
     from config_parser.openflow_parser import get_uniq_port_id
     access_links = simulation.topology.access_links
-    all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port),get_uniq_port_id(l2.switch, l2.switch_port))
+    all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port), get_uniq_port_id(l2.switch, l2.switch_port))
                   for l1 in access_links
                   for l2 in access_links if l1 != l2 ]
     all_pairs = set(all_pairs)
     return all_pairs
+
+  #TODO(ao): So much refactoring to be done here...
 
   @staticmethod
   def python_check_connectivity(simulation):
@@ -141,6 +144,67 @@ class InvariantChecker(object):
       msg.success("Fully connected!")
     return [ str(p) for p in list(remaining_pairs) ]
 
+  # For check_connectivity: return only unconnected pairs that persist
+  fail_pair_map = {}   # unconnected pair -> timestamp
+  interface_pair_map = {}     # (src_addr, dst_addr) -> timestamp
+  pair_timeout = 3            # TODO(ao): arbitrary
+  
+  @staticmethod
+  def register_interface_pair(src, dst):
+    ''' Register any interface pair that has previously communicated, along with the timestamp '''
+    if src is None or dst is None:
+      raise RuntimeError("Interface to register is None!")
+    interface_pair_map = InvariantChecker.interface_pair_map
+    pair_timeout = InvariantChecker.pair_timeout
+    interface_pair_map[(src, dst)] = time.time()
+    for pair, timestamp in interface_pair_map.items():
+      if (time.time() - timestamp > pair_timeout):
+        del interface_pair_map[pair]
+  
+  @staticmethod
+  def _get_communicated_pairs(simulation):
+    ''' Return pairs that have recently communicated; also remove outdated entries '''
+    from config_parser.openflow_parser import get_uniq_port_id
+    interface_pair_map = InvariantChecker.interface_pair_map
+    pair_timeout = InvariantChecker.pair_timeout
+    communicated_pairs = set()
+    for (src_addr, dst_addr), timestamp in interface_pair_map.items():
+      if (time.time() - timestamp < pair_timeout):
+        interface2access_links = simulation.topology.link_tracker.interface2access_link
+        src_interface, dst_interface = None, None
+        for interface in interface2access_links.keys():
+          if interface.hw_addr == src_addr:
+            src_interface = interface
+          if interface.hw_addr == dst_addr:
+            dst_interface = interface
+        if src_interface is not None and dst_interface is not None:
+          l1 = interface2access_links[src_interface]
+          l2 = interface2access_links[dst_interface]
+          communicated_pair = (get_uniq_port_id(l1.switch, l1.switch_port),
+                               get_uniq_port_id(l2.switch, l2.switch_port))
+          communicated_pairs.add(communicated_pair)
+      else:
+        del interface_pair_map[(src_addr, dst_addr)]
+    return communicated_pairs
+  
+  @staticmethod
+  def _get_fail_pairs(remaining_pairs):
+    ''' Return pairs that exceeded the timeout threshold; also remove outdated entries '''
+    # Register newly unconnected pairs
+    fail_pair_map = InvariantChecker.fail_pair_map
+    pair_timeout = InvariantChecker.pair_timeout
+    for pair in remaining_pairs:
+      if pair not in fail_pair_map.keys():
+        fail_pair_map[pair] = time.time()
+    # Unregister now connected pairs
+    # Also allow previously unconnected pairs that have not exceeded the threshold
+    for pair in fail_pair_map.keys():
+      if pair not in remaining_pairs:
+        del fail_pair_map[pair]
+      elif (time.time() - fail_pair_map[pair]) < pair_timeout:
+        remaining_pairs.remove(pair)
+    return remaining_pairs
+  
   @staticmethod
   def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
@@ -149,7 +213,7 @@ class InvariantChecker(object):
       return down_controllers
 
     # Effectively, run compute physical omega, ignore concrete values of headers, and
-    # check that all pairs can reach eachother
+    # check that all pairs can reach each other
     physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
                                                              simulation.topology.live_links,
                                                              simulation.topology.access_links)
@@ -160,21 +224,31 @@ class InvariantChecker(object):
         connected_pairs.add((start_port, final_port))
     all_pairs = InvariantChecker._get_all_pairs(simulation)
     remaining_pairs = all_pairs - connected_pairs
+    
+    # Ignore partitioned pairs
     partitioned_pairs = check_partitions(simulation.topology.switches,
                                          simulation.topology.live_links,
                                          simulation.topology.access_links)
-    if len(partitioned_pairs) != 0:
-      log.info("Partitioned pairs! %s" % str(partitioned_pairs))
     remaining_pairs -= partitioned_pairs
 
-    # TODO(cs): don't print results here
-    if len(remaining_pairs) > 0:
-      msg.fail("Not all %d pairs are connected! (%d missing)" %
-               (len(all_pairs),len(remaining_pairs)))
-      log.info("remaining_pairs: %s" % (str(remaining_pairs)))
-    else:
+    # Ignore pairs that have not communicated with each other in a while
+    communicated_pairs = InvariantChecker._get_communicated_pairs(simulation)
+    remaining_pairs -= (remaining_pairs - communicated_pairs)
+          
+    # Ignore pairs that have not exceeded the timeout threshold
+    remaining_pairs = InvariantChecker._get_fail_pairs(remaining_pairs)
+
+    fail_pair_map = InvariantChecker.fail_pair_map
+    if len(fail_pair_map) == 0:
       msg.success("Fully connected!")
-    return [ str(p) for p in list(remaining_pairs) ]
+    elif len(remaining_pairs) == 0:
+      msg.fail("%d/%d pairs are not connected, but have not exceeded the violation threshhold" %
+                    (len(fail_pair_map), len(all_pairs)))
+    else:
+      msg.fail("Found %d unconnected pair%s: %s" % (len(remaining_pairs),
+                    "" if len(remaining_pairs)==1 else "s", remaining_pairs))
+      
+    return [ str(p) for p in remaining_pairs ]
 
   @staticmethod
   def python_check_blackholes(simulation):
@@ -311,6 +385,8 @@ class InvariantChecker(object):
 def check_partitions(switches, live_links, access_links):
   # TODO(cs): lifted directly from pox.forwarding.l2_multi. Highly
   # redundant!
+
+  from config_parser.openflow_parser import get_uniq_port_id
 
   # Adjacency map.  [sw1][sw2] -> port from sw1 to sw2
   adjacency = defaultdict(lambda:defaultdict(lambda:None))
