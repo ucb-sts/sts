@@ -432,7 +432,6 @@ class Fuzzer(ControlFlow):
                                 link.end_software_switch.dpid,
                                 link.end_port.port_no))
 
-
     cut_this_round = sever_links()
     repair_links(cut_this_round)
 

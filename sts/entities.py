@@ -598,7 +598,7 @@ class POXController(Controller):
   # non-determinism in POX.
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     super(POXController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
-    self.log.info(" =====>> STARTING POX CONTROLLER <<===== ")
+    self.log.info(" =====> STARTING POX CONTROLLER <===== ")
 
   def start(self):
     '''Start a new POX controller process based on the config's start_cmd
@@ -672,7 +672,7 @@ class POXController(Controller):
 class BigSwitchController(Controller):
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     super(BigSwitchController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
-    self.log.info(" =====>> STARTING BIG SWITCH CONTROLLER <<===== ")
+    self.log.info(" =====> STARTING BIG SWITCH CONTROLLER <===== ")
 
   def kill(self):
     '''Kill the process the controller is running in.'''

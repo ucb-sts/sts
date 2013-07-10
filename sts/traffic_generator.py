@@ -67,7 +67,7 @@ class TrafficGenerator (object):
     else:
       (dest_host, dest_interface) = self._choose_host(dest_host,
                                       [h for h in self.topology.hosts if h != src_host])
-    
+      
     packet = self._packet_generators[packet_type](src_interface, dest_interface,
                                                   payload_content=payload_content)
     src_host.send(src_interface, packet)
