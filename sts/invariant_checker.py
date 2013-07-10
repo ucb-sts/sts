@@ -92,60 +92,9 @@ class InvariantChecker(object):
     loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, simulation.topology.access_links)
     return [ str(l) for l in loops ]
 
-  @staticmethod
-  def _get_all_pairs(simulation):
-    # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
-    # headerspace/ module instead of computing uniq_port_id here
-    from config_parser.openflow_parser import get_uniq_port_id
-    access_links = simulation.topology.access_links
-    all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port), get_uniq_port_id(l2.switch, l2.switch_port))
-                  for l1 in access_links
-                  for l2 in access_links if l1 != l2 ]
-    all_pairs = set(all_pairs)
-    return all_pairs
-
   #TODO(ao): So much refactoring to be done here...
-
-  @staticmethod
-  def python_check_connectivity(simulation):
-    # Warning! depends on python Hassell -- may be really slow!
-    import topology_loader.topology_loader as hsa_topo
-    import headerspace.applications as hsa
-    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
-    if down_controllers != []:
-      return down_controllers
-    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
-    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
-    paths = hsa.find_reachability(NTF, TTF, simulation.topology.access_links)
-    # Paths is: in_port -> [p_node1, p_node2]
-    # Where p_node is a hash:
-    #  "hdr" -> foo
-    #  "port" -> foo
-    #  "visits" -> foo
-    connected_pairs = set()
-    for in_port, p_nodes in paths.iteritems():
-      for p_node in p_nodes:
-        connected_pairs.add((in_port, p_node["port"]))
-    all_pairs = InvariantChecker._get_all_pairs(simulation)
-    remaining_pairs = all_pairs - connected_pairs
-    partitioned_pairs = check_partitions(simulation.topology.switches,
-                                         simulation.topology.live_links,
-                                         simulation.topology.access_links)
-    if len(partitioned_pairs) != 0:
-      log.info("Partitioned pairs! %s" % str(partitioned_pairs))
-    remaining_pairs -= partitioned_pairs
-
-    # TODO(cs): don't print results here
-    if len(remaining_pairs) > 0:
-      msg.fail("Not all %d pairs are connected! (%d missing)" %
-               (len(all_pairs),len(remaining_pairs)))
-      log.info("remaining_pairs: %s" % (str(remaining_pairs)))
-    else:
-      msg.success("Fully connected!")
-    return [ str(p) for p in list(remaining_pairs) ]
-
-  # For check_connectivity: return only unconnected pairs that persist
-  fail_pair_map = {}   # unconnected pair -> timestamp
+  # For check_connectivity and python_check_connectivity: return only unconnected pairs that persist
+  unconnected_pair_map = {}          # unconnected pair -> timestamp
   interface_pair_map = {}     # (src_addr, dst_addr) -> timestamp
   pair_timeout = 3            # TODO(ao): arbitrary
   
@@ -160,6 +109,18 @@ class InvariantChecker(object):
     for pair, timestamp in interface_pair_map.items():
       if (time.time() - timestamp > pair_timeout):
         del interface_pair_map[pair]
+  
+  @staticmethod
+  def _get_all_pairs(simulation):
+    # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
+    # headerspace/ module instead of computing uniq_port_id here
+    from config_parser.openflow_parser import get_uniq_port_id
+    access_links = simulation.topology.access_links
+    all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port), get_uniq_port_id(l2.switch, l2.switch_port))
+                  for l1 in access_links
+                  for l2 in access_links if l1 != l2 ]
+    all_pairs = set(all_pairs)
+    return all_pairs
   
   @staticmethod
   def _get_communicated_pairs(simulation):
@@ -188,22 +149,55 @@ class InvariantChecker(object):
     return communicated_pairs
   
   @staticmethod
-  def _get_fail_pairs(remaining_pairs):
+  def _get_fail_pairs(pairs):
     ''' Return pairs that exceeded the timeout threshold; also remove outdated entries '''
     # Register newly unconnected pairs
-    fail_pair_map = InvariantChecker.fail_pair_map
+    unconnected_pair_map = InvariantChecker.unconnected_pair_map
     pair_timeout = InvariantChecker.pair_timeout
-    for pair in remaining_pairs:
-      if pair not in fail_pair_map.keys():
-        fail_pair_map[pair] = time.time()
+    for pair in pairs:
+      if pair not in unconnected_pair_map.keys():
+        unconnected_pair_map[pair] = time.time()
     # Unregister now connected pairs
     # Also allow previously unconnected pairs that have not exceeded the threshold
-    for pair in fail_pair_map.keys():
-      if pair not in remaining_pairs:
-        del fail_pair_map[pair]
-      elif (time.time() - fail_pair_map[pair]) < pair_timeout:
-        remaining_pairs.remove(pair)
-    return remaining_pairs
+    for pair in unconnected_pair_map.keys():
+      if pair not in pairs:
+        del unconnected_pair_map[pair]
+      elif (time.time() - unconnected_pair_map[pair]) < pair_timeout:
+        pairs.remove(pair)
+    return pairs
+  
+  @staticmethod
+  def _get_unconnected_pairs(simulation, connected_pairs):
+    ''' Return pairs that are persistently unconnected after checking for everything '''
+    all_pairs = InvariantChecker._get_all_pairs(simulation)
+    unconnected_pairs = all_pairs - connected_pairs
+    
+    # Ignore partitioned pairs
+    partitioned_pairs = check_partitions(simulation.topology.switches,
+                                         simulation.topology.live_links,
+                                         simulation.topology.access_links)
+    unconnected_pairs -= partitioned_pairs
+
+    # Ignore pairs that have not communicated with each other in a while
+    communicated_pairs = InvariantChecker._get_communicated_pairs(simulation)
+    unconnected_pairs -= (unconnected_pairs - communicated_pairs)
+          
+    # Ignore pairs that have not exceeded the timeout threshold
+    unconnected_pairs = InvariantChecker._get_fail_pairs(unconnected_pairs)
+    InvariantChecker._check_connectivity_msg(unconnected_pairs, all_pairs)
+    return unconnected_pairs
+  
+  @staticmethod
+  def _check_connectivity_msg(unconnected_pairs, all_pairs):
+    unconnected_pair_map = InvariantChecker.unconnected_pair_map
+    if len(unconnected_pair_map) == 0:
+      msg.success("Fully connected!")
+    elif len(unconnected_pairs) == 0:
+      msg.fail("%d/%d pairs are not connected, but have not exceeded the violation threshhold" %
+                    (len(unconnected_pair_map), len(all_pairs)))
+    else:
+      msg.fail("Found %d unconnected pair%s: %s" % (len(unconnected_pairs),
+                    "" if len(unconnected_pairs)==1 else "s", unconnected_pairs))
   
   @staticmethod
   def check_connectivity(simulation):
@@ -222,33 +216,31 @@ class InvariantChecker(object):
     for start_port, final_location_list in physical_omega.iteritems():
       for _, final_port in final_location_list:
         connected_pairs.add((start_port, final_port))
-    all_pairs = InvariantChecker._get_all_pairs(simulation)
-    remaining_pairs = all_pairs - connected_pairs
-    
-    # Ignore partitioned pairs
-    partitioned_pairs = check_partitions(simulation.topology.switches,
-                                         simulation.topology.live_links,
-                                         simulation.topology.access_links)
-    remaining_pairs -= partitioned_pairs
+    unconnected_pairs = InvariantChecker._get_unconnected_pairs(simulation, connected_pairs)
+    return [ str(pair) for pair in unconnected_pairs ]
 
-    # Ignore pairs that have not communicated with each other in a while
-    communicated_pairs = InvariantChecker._get_communicated_pairs(simulation)
-    remaining_pairs -= (remaining_pairs - communicated_pairs)
-          
-    # Ignore pairs that have not exceeded the timeout threshold
-    remaining_pairs = InvariantChecker._get_fail_pairs(remaining_pairs)
-
-    fail_pair_map = InvariantChecker.fail_pair_map
-    if len(fail_pair_map) == 0:
-      msg.success("Fully connected!")
-    elif len(remaining_pairs) == 0:
-      msg.fail("%d/%d pairs are not connected, but have not exceeded the violation threshhold" %
-                    (len(fail_pair_map), len(all_pairs)))
-    else:
-      msg.fail("Found %d unconnected pair%s: %s" % (len(remaining_pairs),
-                    "" if len(remaining_pairs)==1 else "s", remaining_pairs))
-      
-    return [ str(p) for p in remaining_pairs ]
+  @staticmethod
+  def python_check_connectivity(simulation):
+    # Warning! depends on python Hassell -- may be really slow!
+    import topology_loader.topology_loader as hsa_topo
+    import headerspace.applications as hsa
+    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    if down_controllers != []:
+      return down_controllers
+    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
+    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
+    paths = hsa.find_reachability(NTF, TTF, simulation.topology.access_links)
+    # Paths is: in_port -> [p_node1, p_node2]
+    # Where p_node is a hash:
+    #  "hdr" -> foo
+    #  "port" -> foo
+    #  "visits" -> foo
+    connected_pairs = set()
+    for in_port, p_nodes in paths.iteritems():
+      for p_node in p_nodes:
+        connected_pairs.add((in_port, p_node["port"]))
+    unconnected_pairs = InvariantChecker._get_unconnected_pairs(simulation, connected_pairs)
+    return [ str(pair) for pair in unconnected_pairs ]
 
   @staticmethod
   def python_check_blackholes(simulation):
