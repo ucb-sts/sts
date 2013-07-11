@@ -82,7 +82,8 @@ class ControllerConfig(object):
           self.type = controller_type_map[t]
           break
       else:
-        raise RuntimeError("Controller type not inferred from command line!")
+        # Default to Base Controller class
+        self.type = Controller
     elif isinstance(controller_type, Controller):
       self.type = controller_type
     else:
