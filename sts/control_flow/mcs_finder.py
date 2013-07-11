@@ -334,6 +334,10 @@ class MCSFinder(ControlFlow):
     results_dir = self.replay_log_tracker.get_replay_logger_dir(label)
     (violations, client_runtime_stats) = self.forker.fork("play_forward",
                                                           results_dir)
+    if violations != []:
+      msg.fail("Violations: %s" % str(violations))
+    else:
+      msg.interactive("No correctness violations!")
     self._runtime_stats.merge_client_dict(client_runtime_stats)
     return violations
 
