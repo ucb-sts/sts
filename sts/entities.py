@@ -581,7 +581,7 @@ class Controller(object):
   def restart(self):
     self.kill()
     self.start()
-  
+
   def check_status(self, simulation):
     '''Check whether the actual status of the controller coincides with self.alive. Returns a message
     entailing the details of the status.'''
@@ -654,12 +654,12 @@ class POXController(Controller):
     if self.config.sync:
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
     self.alive = True
-    
+
   def check_status(self, simulation):
     if not self.alive:
       return (True, "OK")
     if not self.process:
-      return (False, "Controller %s: Alive, but no controller process found" % self.cid)      
+      return (False, "Controller %s: Alive, but no controller process found" % self.cid)
     rc = self.process.poll()
     if rc is not None:
       return (False, "Controller %s: Alive, but controller process terminated with return code %d" %
