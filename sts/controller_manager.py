@@ -64,7 +64,6 @@ class ControllerManager(object):
 
   @staticmethod
   def kill_controller(controller):
-    msg.event("Killing controller %s" % str(controller))
     controller.kill()
 
   @staticmethod
