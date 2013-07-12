@@ -97,7 +97,7 @@ class InvariantChecker(object):
   unconnected_pair_map = {}          # unconnected pair -> timestamp
   interface_pair_map = {}     # (src_addr, dst_addr) -> timestamp
   pair_timeout = 3            # TODO(ao): arbitrary
-  
+
   @staticmethod
   def register_interface_pair(src, dst):
     ''' Register any interface pair that has previously communicated, along with the timestamp '''
@@ -109,7 +109,7 @@ class InvariantChecker(object):
     for pair, timestamp in interface_pair_map.items():
       if (time.time() - timestamp > pair_timeout):
         del interface_pair_map[pair]
-  
+
   @staticmethod
   def _get_all_pairs(simulation):
     # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
@@ -121,7 +121,7 @@ class InvariantChecker(object):
                   for l2 in access_links if l1 != l2 ]
     all_pairs = set(all_pairs)
     return all_pairs
-  
+
   @staticmethod
   def _get_communicated_pairs(simulation):
     ''' Return pairs that have recently communicated; also remove outdated entries '''
@@ -147,7 +147,7 @@ class InvariantChecker(object):
       else:
         del interface_pair_map[(src_addr, dst_addr)]
     return communicated_pairs
-  
+
   @staticmethod
   def _get_fail_pairs(pairs):
     ''' Return pairs that exceeded the timeout threshold; also remove outdated entries '''
@@ -165,13 +165,13 @@ class InvariantChecker(object):
       elif (time.time() - unconnected_pair_map[pair]) < pair_timeout:
         pairs.remove(pair)
     return pairs
-  
+
   @staticmethod
   def _get_unconnected_pairs(simulation, connected_pairs):
     ''' Return pairs that are persistently unconnected after checking for everything '''
     all_pairs = InvariantChecker._get_all_pairs(simulation)
     unconnected_pairs = all_pairs - connected_pairs
-    
+
     # Ignore partitioned pairs
     partitioned_pairs = check_partitions(simulation.topology.switches,
                                          simulation.topology.live_links,
@@ -181,12 +181,12 @@ class InvariantChecker(object):
     # Ignore pairs that have not communicated with each other in a while
     communicated_pairs = InvariantChecker._get_communicated_pairs(simulation)
     unconnected_pairs -= (unconnected_pairs - communicated_pairs)
-          
+
     # Ignore pairs that have not exceeded the timeout threshold
     unconnected_pairs = InvariantChecker._get_fail_pairs(unconnected_pairs)
     InvariantChecker._check_connectivity_msg(unconnected_pairs, all_pairs)
     return unconnected_pairs
-  
+
   @staticmethod
   def _check_connectivity_msg(unconnected_pairs, all_pairs):
     unconnected_pair_map = InvariantChecker.unconnected_pair_map
@@ -198,7 +198,7 @@ class InvariantChecker(object):
     else:
       msg.fail("Found %d unconnected pair%s: %s" % (len(unconnected_pairs),
                     "" if len(unconnected_pairs)==1 else "s", unconnected_pairs))
-  
+
   @staticmethod
   def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
