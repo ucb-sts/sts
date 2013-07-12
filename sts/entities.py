@@ -593,10 +593,7 @@ class Controller(object):
     if rc is not None:
       return (False, "Controller %s: Alive, but controller process terminated with return code %d" %
               (self.cid, rc))
-    for switch in simulation.topology.switches:
-      if switch.is_connected_to(self.cid):
-        return (True, "OK")
-    return (False, "Controller %s: Alive, but disconnected from all switches" % self.cid)
+    return (True, "OK")
 
 class POXController(Controller):
   # N.B. controller-specific configuration is optional. The purpose of this
@@ -679,8 +676,8 @@ class BigSwitchController(Controller):
     self.alive = True
 
   def check_status(self, simulation):
-   ''' Don't check process status '''
-   if not self.alive:
+    ''' Don't check process status '''
+    if not self.alive:
       return (True, "OK")
     for switch in simulation.topology.switches:
       if switch.is_connected_to(self.cid):
