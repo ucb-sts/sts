@@ -104,6 +104,9 @@ class EventDagView(object):
   def get_original_index_for_event(self, event):
     return self._parent.get_original_index_for_event(event)
 
+  def get_last_invariant_violation(self):
+    return self._parent.get_last_invariant_violation()
+
   def __len__(self):
     return len(self._events_list)
 
@@ -167,6 +170,7 @@ class EventDag(object):
       host : migrations[0].old_location
       for host, migrations in migrations_per_host(self._events_list).iteritems()
     }
+    self._last_violation = None
 
   @property
   def events(self):
@@ -423,4 +427,11 @@ class EventDag(object):
   def __len__(self):
     return len(self._events_list)
 
-
+  def get_last_invariant_violation(self):
+    if self._last_violation is not None:
+      return self._last_violation
+    for event in reversed(self._events_list):
+      if type(event) == InvariantViolation:
+        self._last_violation = event
+        return event
+    return None

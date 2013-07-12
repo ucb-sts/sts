@@ -1262,6 +1262,8 @@ class InvariantViolation(SpecialEvent):
        in.
     '''
     Event.__init__(self, label=label, round=round, time=time)
+    if len(violations) == 0:
+      raise ValueError("Must have at least one violation string")
     self.violations = [ str(v) for v in violations ]
 
   @staticmethod
@@ -1270,6 +1272,12 @@ class InvariantViolation(SpecialEvent):
     assert_fields_exist(json_hash, 'violations')
     violations = json_hash['violations']
     return InvariantViolation(violations, label=label, round=round, time=time)
+
+  def matches(self, violations):
+    ''' Return whether at least one violation string in violations matches a
+    violation string stored in this event.
+    '''
+    return len(set(violations).intersection(set(self.violations))) > 0
 
 all_special_events = [InvariantViolation]
 

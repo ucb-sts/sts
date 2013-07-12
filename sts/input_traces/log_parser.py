@@ -45,6 +45,11 @@ internal_event_name_to_class = {
   for klass in event.all_internal_events
 }
 
+special_event_name_to_class = {
+  klass.__name__ : klass
+  for klass in event.all_special_events
+}
+
 def check_unique_label(event_label, existing_event_labels):
   '''Check to make sure that event_label is not in existing_event_labels.
   Throw an exception if this invariant does not hold.
@@ -119,6 +124,8 @@ def parse(logfile):
       sanity_check_internal_event(event_labels, dependent_labels,
                                   json_hash)
       event = internal_event_name_to_class[json_hash['class']].from_json(json_hash)
+    elif json_hash['class'] in special_event_name_to_class:
+      event = special_event_name_to_class[json_hash['class']].from_json(json_hash)
     else:
       print "Warning: Unknown class type %s" % json_hash['class']
       continue

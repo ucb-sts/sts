@@ -76,6 +76,9 @@ class MCSFinder(ControlFlow):
     else:
       self.dag = superlog_path_or_dag
 
+    self.bug_signature = self.dag.get_last_invariant_violation()
+    if self.bug_signature is None:
+      raise ValueError("No invariant violation found in dag...")
     self.transform_dag = transform_dag
     # A second log with just our MCS progress log messages
     self._extra_log = extra_log
@@ -143,12 +146,12 @@ class MCSFinder(ControlFlow):
       self._runtime_stats.record_replay_start()
 
       for i in range(0, self.no_violation_verification_runs):
-        violations = self.replay(self.dag, "reproducibility")
-        if violations != []:
+        bug_found = self.replay(self.dag, "reproducibility")
+        if bug_found:
           break
       self._runtime_stats.set_initial_verification_runs_needed(i)
       self._runtime_stats.record_replay_end()
-      if violations == []:
+      if not bug_found:
         msg.fail("Unable to reproduce correctness violation!")
         sys.exit(5)
       self.log("Violation reproduced successfully! Proceeding with pruning")
@@ -179,8 +182,8 @@ class MCSFinder(ControlFlow):
       #  Replaying the final trace achieves two goals:
       #  - verifies that the MCS indeed ends in the violation
       #  - allows us to prune internal events that time out
-      violations = self.replay(self.dag, "final_mcs_trace")
-      if violations == []:
+      bug_found = self.replay(self.dag, "final_mcs_trace")
+      if not bug_found:
         self.log('''Warning! Final MCS did not result in violation.'''
                  ''' Try without timed out events? '''
                  ''' See tools/visualize_event_trace.html for debugging''')
@@ -276,9 +279,9 @@ class MCSFinder(ControlFlow):
     ''' Check if there were violations '''
     # Try no_violation_verification_runs times to see if the bug shows up
     for i in range(0, self.no_violation_verification_runs):
-      violations = self.replay(new_dag, label)
+      bug_found = self.replay(new_dag, label)
 
-      if violations != []:
+      if bug_found:
         # Violation in the subset
         self.log_violation("Violation! Considering %d'th" % subset_index)
         self._runtime_stats.record_violation_found(i)
@@ -334,12 +337,17 @@ class MCSFinder(ControlFlow):
     results_dir = self.replay_log_tracker.get_replay_logger_dir(label)
     (violations, client_runtime_stats) = self.forker.fork("play_forward",
                                                           results_dir)
+    bug_found = False
     if violations != []:
       msg.fail("Violations: %s" % str(violations))
+      if self.bug_signature.matches(violations):
+        bug_found = True
+      else:
+        msg.fail("Bug does not match initial violation fingerprint!")
     else:
       msg.interactive("No correctness violations!")
     self._runtime_stats.merge_client_dict(client_runtime_stats)
-    return violations
+    return bug_found
 
   def _optimize_event_dag(self):
     ''' Employs domain knowledge of event classes to reduce the size of event
@@ -355,8 +363,8 @@ class MCSFinder(ControlFlow):
         self.log("\t** No events pruned for event type %s. Next!" % event_type)
         continue
       pruned_dag = self.dag.input_complement(pruned)
-      violations = self.replay(pruned_dag, "opt_%s" % event_type.__name__)
-      if violations != []:
+      bug_found = self.replay(pruned_dag, "opt_%s" % event_type.__name__)
+      if bug_found:
         self.log("\t** VIOLATION for pruning event type %s! Resizing original dag" % event_type)
         self.dag = pruned_dag
 

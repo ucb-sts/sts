@@ -27,7 +27,7 @@ from config.experiment_config_lib import ControllerConfig
 from sts.control_flow import Replayer, MCSFinder, EfficientMCSFinder
 from sts.topology import FatTree, MeshTopology
 from sts.simulation_state import Simulation, SimulationConfig
-from sts.replay_event import Event, InternalEvent, InputEvent
+from sts.replay_event import Event, InternalEvent, InputEvent, InvariantViolation
 from sts.event_dag import EventDag
 from sts.entities import Host, Controller
 import logging
@@ -37,13 +37,12 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 class MockMCSFinderBase(MCSFinder):
   ''' Overrides self.invariant_check and run_simulation_forward() '''
   def __init__(self, event_dag, mcs):
-    super(MockMCSFinderBase, self).__init__(None, None,
+    super(MockMCSFinderBase, self).__init__(None, event_dag,
                                             invariant_check_name="InvariantChecker.check_liveness")
     # Hack! Give a fake name in config.invariant_checks.name_to_invariant_checks, but
     # but remove it from our dict directly after. This is to prevent
     # sanity check exceptions from being thrown.
     self.invariant_check = self._invariant_check
-    self.dag = event_dag
     self.new_dag = None
     self.mcs = mcs
     self.simulation = None
@@ -82,7 +81,7 @@ class MockInputEvent(InputEvent):
   @property
   def fingerprint(self):
     return self._fingerprint
-  
+
   def proceed(self, simulation):
     return True
 
@@ -97,6 +96,7 @@ class MCSFinderTest(unittest.TestCase):
 
   def basic(self, mcs_finder_type):
     trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
+    trace.append(InvariantViolation(["violation"]))
     dag = EventDag(trace)
     mcs = [trace[0]]
     mcs_finder = mcs_finder_type(dag, mcs)
@@ -116,6 +116,7 @@ class MCSFinderTest(unittest.TestCase):
 
   def straddle(self, mcs_finder_type):
     trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
+    trace.append(InvariantViolation(["violation"]))
     dag = EventDag(trace)
     mcs = [trace[0],trace[5]]
     mcs_finder = mcs_finder_type(dag, mcs)
@@ -135,8 +136,9 @@ class MCSFinderTest(unittest.TestCase):
 
   def all(self, mcs_finder_type):
     trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
+    trace.append(InvariantViolation(["violation"]))
     dag = EventDag(trace)
-    mcs = trace
+    mcs = trace[0:6]
     mcs_finder = mcs_finder_type(dag, mcs)
     try:
       os.makedirs(mcs_results_path)

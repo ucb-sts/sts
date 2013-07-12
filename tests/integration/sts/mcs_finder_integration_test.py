@@ -53,6 +53,9 @@ class ReplayerTest(unittest.TestCase):
     e2 = str('''{"dependent_labels": [], "class": "ControllerFailure",'''
              '''  "controller_id": "c1",  "label": "e2", "time": [0,0], "round": 0}''')
     superlog.write(e2 + '\n')
+    e3 = str('''{"dependent_labels": [], "class": "InvariantViolation",'''
+            '''  "violations": ["c1"], "time": [0,0], "label": "e3"}''')
+    superlog.write(e3 + '\n')
     superlog.close()
 
   def write_simple_cfg(self):
