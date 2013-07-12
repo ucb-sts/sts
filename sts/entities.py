@@ -511,19 +511,19 @@ class NamespaceHost(Host):
     self.io_worker.send(packet.pack())
 
 class Controller(object):
-  '''Encapsulates the state of a running controller.'''
+  ''' Encapsulates the state of a running controller '''
 
   _active_processes = set() # set of processes that are currently running. These are all killed upon signal reception
 
   def _register_proc(self, proc):
-    '''Register a Popen instance that a controller is running in for the cleanup
-    that happens when the simulator receives a signal. This method is idempotent.'''
+    ''' Register a Popen instance that a controller is running in for the cleanup
+    that happens when the simulator receives a signal. This method is idempotent '''
     self._active_processes.add(proc)
 
   def _unregister_proc(self, proc):
-    '''Remove a process from the set of this to be killed when a signal is
+    ''' Remove a process from the set of this to be killed when a signal is
     received. This is for use when the Controller process is stopped. This
-    method is idempotent.'''
+    method is idempotent '''
     self._active_processes.discard(proc)
 
   def __del__(self):
@@ -534,7 +534,7 @@ class Controller(object):
         self.kill() # make sure it is killed if this was started errantly
 
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
-    '''idx is the unique index for the controller used mostly for logging purposes.'''
+    ''' idx is the unique index for the controller used mostly for logging purposes '''
     self.config = controller_config
     self.alive = False
     self.process = None
@@ -545,21 +545,21 @@ class Controller(object):
 
   @property
   def pid(self):
-    '''Return the PID of the Popen instance the controller was started with.'''
+    ''' Return the PID of the Popen instance the controller was started with '''
     return self.process.pid if self.process else None
 
   @property
   def label(self):
-    '''Return the label of this controller. See ControllerConfig for more details.'''
+    ''' Return the label of this controller. See ControllerConfig for more details '''
     return self.config.label
 
   @property
   def cid(self):
-    '''Return the id of this controller. See ControllerConfig for more details.'''
+    ''' Return the id of this controller. See ControllerConfig for more details '''
     return self.config.cid
 
   def kill(self):
-    '''Kill the process the controller is running in.'''
+    ''' Kill the process the controller is running in '''
     msg.event("Killing controller %s" % self.cid)
     kill_procs([self.process])
     if self.config.kill_cmd != "":
@@ -570,9 +570,9 @@ class Controller(object):
     self.process = None
 
   def start(self):
-    '''Start a new controller process based on the config's start_cmd
+    ''' Start a new controller process based on the config's start_cmd
     attribute. Registers the Popen member variable for deletion upon a SIG*
-    received in the simulator process.'''
+    received in the simulator process '''
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
@@ -583,10 +583,16 @@ class Controller(object):
     self.start()
 
   def check_status(self, simulation):
-    '''Check whether the actual status of the controller coincides with self.alive. Returns a message
-    entailing the details of the status.'''
+    ''' Check whether the actual status of the controller coincides with self.alive. Returns a message
+    entailing the details of the status '''
     if not self.alive:
       return (True, "OK")
+    if not self.process:
+      return (False, "Controller %s: Alive, but no controller process found" % self.cid)
+    rc = self.process.poll()
+    if rc is not None:
+      return (False, "Controller %s: Alive, but controller process terminated with return code %d" %
+              (self.cid, rc))
     for switch in simulation.topology.switches:
       if switch.is_connected_to(self.cid):
         return (True, "OK")
@@ -601,9 +607,9 @@ class POXController(Controller):
     self.log.info(" =====> STARTING POX CONTROLLER <===== ")
 
   def start(self):
-    '''Start a new POX controller process based on the config's start_cmd
+    ''' Start a new POX controller process based on the config's start_cmd
     attribute. Registers the Popen member variable for deletion upon a SIG*
-    received in the simulator process.'''
+    received in the simulator process '''
     msg.event("Starting POX controller %s" % (str(self.cid)))
     env = None
 
@@ -655,27 +661,12 @@ class POXController(Controller):
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
     self.alive = True
 
-  def check_status(self, simulation):
-    if not self.alive:
-      return (True, "OK")
-    if not self.process:
-      return (False, "Controller %s: Alive, but no controller process found" % self.cid)
-    rc = self.process.poll()
-    if rc is not None:
-      return (False, "Controller %s: Alive, but controller process terminated with return code %d" %
-              (self.cid, rc))
-    for switch in simulation.topology.switches:
-      if switch.is_connected_to(self.cid):
-        return (True, "OK")
-    return (False, "Controller %s: Alive, but disconnected from all switches" % self.cid)
-
 class BigSwitchController(Controller):
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     super(BigSwitchController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self.log.info(" =====> STARTING BIG SWITCH CONTROLLER <===== ")
 
   def kill(self):
-    '''Kill the process the controller is running in.'''
     msg.event("Killing controller %s" % (str(self.cid)))
     if self.config.kill_cmd != "":
       self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
@@ -686,3 +677,13 @@ class BigSwitchController(Controller):
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self.alive = True
+
+  def check_status(self, simulation):
+   ''' Don't check process status '''
+   if not self.alive:
+      return (True, "OK")
+    for switch in simulation.topology.switches:
+      if switch.is_connected_to(self.cid):
+        return (True, "OK")
+    return (False, "Controller %s: Alive, but disconnected from all switches" % self.cid)
+
