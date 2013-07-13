@@ -281,18 +281,23 @@ see example_pretty_print_config.py for an example.
    timings of different replay runs.
 
    A common workflow:
-     - Run ./simulator.py -c experiments/experiment_name/mcs_config.py
+     - Run `./simulator.py -c experiments/experiment_name/mcs_config.py`
      - Discover that the final MCS does not trigger the bug.
      - Open visualize_trace_timings.html in a web browser.
-     - Load the original trace, experiments/experiment_name/events.trace,
-       as the first timeline.
+     - Load either the original (fuzzed) trace,
+       `experiments/experiment_name/events.trace`,
+       or the first replay of this trace,
+       `experiments/experiment_name_mcs/interreplay_reproducibility*/events.trace`
+       as the first timeline. I have found that it is often better to load the
+       first replay rather than the original fuzzed trace, since this has
+       timing information that matches the other replays much more closely.
      - Load the final replay of the MCS trace,
-       experiments/experiment_name_mcs/interreplay_*_final_mcs_trace/events.trace
+       `experiments/experiment_name_mcs/interreplay_*_final_mcs_trace/events.trace`,
        as the second timeline.
      - Hover over events to see functional equivalence across the traces.
      - Load intermediate replay trace timelines if needed. Intermediate replay
        traces from delta debugging runs can be found in
-       experiments/experiment_name_mcs/interreplay_*
+       `experiments/experiment_name_mcs/interreplay_*`
 
  - ```visualize_2D_trace_timings.html```: A webpage for showing a Lamport time
    diagram of an event trace. Useful for visually spotting the root causes of
