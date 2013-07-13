@@ -527,7 +527,8 @@ class MCSLogTracker(object):
     for extension in ["", ".notimeouts"]:
       output_path = mcs_trace_path + extension
       input_logger = InputLogger()
-      input_logger.open(os.path.dirname(output_path))
+      input_logger.open(os.path.dirname(output_path),
+                        output_filename="mcs.trace")
       for e in dag.events:
         if extension == ".notimeouts" and e.timed_out:
           continue

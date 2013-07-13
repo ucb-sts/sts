@@ -63,9 +63,9 @@ class InputLogger(object):
     self.output = None
     self.output_path = ""
 
-  def open(self, results_dir=None):
+  def open(self, results_dir=None, output_filename="events.trace"):
     if results_dir is not None:
-      self.output_path = results_dir + "/events.trace"
+      self.output_path = results_dir + "/" + output_filename
       self.replay_cfg_path = results_dir + "/replay_config.py"
       self.mcs_cfg_path = results_dir + "/mcs_config.py"
     else:
