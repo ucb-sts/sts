@@ -283,11 +283,11 @@ see example_pretty_print_config.py for an example.
    A common workflow:
      - Run `./simulator.py -c experiments/experiment_name/mcs_config.py`
      - Discover that the final MCS does not trigger the bug.
-     - Open visualize_trace_timings.html in a web browser.
+     - Open `visualize_trace_timings.html` in a web browser.
      - Load either the original (fuzzed) trace,
        `experiments/experiment_name/events.trace`,
        or the first replay of this trace,
-       `experiments/experiment_name_mcs/interreplay_reproducibility*/events.trace`
+       `experiments/experiment_name_mcs/interreplay_reproducibility*/events.trace`,
        as the first timeline. I have found that it is often better to load the
        first replay rather than the original fuzzed trace, since this has
        timing information that matches the other replays much more closely.
