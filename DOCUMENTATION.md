@@ -286,7 +286,8 @@ see example_pretty_print_config.py for an example.
      - Open visualize_trace_timings.html in a web browser.
      - Load the original trace, experiments/experiment_name/events.trace,
        as the first timeline.
-     - Load the MCS trace, experiments/experiment_name_mcs/mcs.trace,
+     - Load the final replay of the MCS trace,
+       experiments/experiment_name_mcs/interreplay_*_final_mcs_trace/events.trace
        as the second timeline.
      - Hover over events to see functional equivalence across the traces.
      - Load intermediate replay trace timelines if needed. Intermediate replay
