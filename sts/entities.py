@@ -676,9 +676,9 @@ class BigSwitchController(Controller):
     self.alive = True
 
   def check_status(self, simulation):
-    ''' Don't check process status '''
     if not self.alive:
       return (True, "OK")
+    # Don't check process status
     for switch in simulation.topology.live_switches:
       if switch.is_connected_to(self.cid):
         return (True, "OK")
