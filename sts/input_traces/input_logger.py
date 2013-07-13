@@ -94,9 +94,7 @@ class InputLogger(object):
 
   def log_input_event(self, event):
     '''
-    Log the event as a json hash. Note that we log dataplane events in a
-    separate pickle log, so we optionally allow a packet parameter to be
-    logged separately.
+    Log the event as a json hash.
     '''
     if not self.output:
       raise Exception("Not opened -- call InputLogger.open")

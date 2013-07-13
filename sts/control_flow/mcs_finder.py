@@ -160,11 +160,13 @@ class MCSFinder(ControlFlow):
 
     self._runtime_stats.record_prune_start()
 
+    # Run optimizations.
     # TODO(cs): Better than a boolean flag: check if
     # log(len(self.dag)) > number of input types to try
     if self.optimized_filtering:
       self._optimize_event_dag()
     precompute_cache = PrecomputeCache()
+
     # Invoke delta debugging
     (dag, total_inputs_pruned) = self._ddmin(self.dag, 2, precompute_cache=precompute_cache)
     # Make sure to track the final iteration size
