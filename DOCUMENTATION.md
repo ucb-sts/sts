@@ -287,12 +287,12 @@ see example_pretty_print_config.py for an example.
      - Load either the original (fuzzed) trace,
        `experiments/experiment_name/events.trace`,
        or the first replay of this trace,
-       `experiments/experiment_name_mcs/interreplay_reproducibility*/events.trace`,
+       `experiments/experiment_name_mcs/interreplay_0_reproducibility/events.trace`,
        as the first timeline. I have found that it is often better to load the
        first replay rather than the original fuzzed trace, since this has
        timing information that matches the other replays much more closely.
      - Load the final replay of the MCS trace,
-       `experiments/experiment_name_mcs/interreplay_*_final_mcs_trace/events.trace`,
+       `experiments/experiment_name_mcs/interreplay_._final_mcs_trace/events.trace`,
        as the second timeline.
      - Hover over events to see functional equivalence across the traces.
      - Load intermediate replay trace timelines if needed. Intermediate replay
