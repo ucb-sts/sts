@@ -51,7 +51,7 @@ class MCSFinder(ControlFlow):
                wait_on_deterministic_values=False,
                no_violation_verification_runs=1,
                optimized_filtering=False, forker=LocalForker(),
-               replay_final_trace=False,
+               replay_final_trace=True,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.mcs_log_tracker = None
@@ -182,7 +182,8 @@ class MCSFinder(ControlFlow):
       #  Replaying the final trace achieves two goals:
       #  - verifies that the MCS indeed ends in the violation
       #  - allows us to prune internal events that time out
-      bug_found = self.replay(self.dag, "final_mcs_trace")
+      bug_found = self.replay(self.dag, "final_mcs_trace",
+                              ignore_runtime_stats=True)
       if not bug_found:
         self.log('''Warning! Final MCS did not result in violation.'''
                  ''' Try without timed out events? '''
@@ -291,7 +292,7 @@ class MCSFinder(ControlFlow):
     self.log_no_violation("No violation in %d'th..." % subset_index)
     return False
 
-  def replay(self, new_dag, label):
+  def replay(self, new_dag, label, ignore_runtime_stats=False):
     # Run the simulation forward
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
@@ -346,7 +347,9 @@ class MCSFinder(ControlFlow):
         msg.fail("Bug does not match initial violation fingerprint!")
     else:
       msg.interactive("No correctness violations!")
-    self._runtime_stats.merge_client_dict(client_runtime_stats)
+
+    if not ignore_runtime_stats:
+      self._runtime_stats.merge_client_dict(client_runtime_stats)
     return bug_found
 
   def _optimize_event_dag(self):
@@ -528,7 +531,6 @@ class MCSLogTracker(object):
           continue
         input_logger.log_input_event(e)
       input_logger.close(control_flow, self.simulation_cfg, skip_mcs_cfg=True)
-
 
 class RuntimeStats(object):
   ''' Tracks statistics and configuration information of the delta debugging runs '''
