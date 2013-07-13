@@ -26,8 +26,8 @@ function initFileUpload(elementId, svg, chart, primaryChart, timeline_type) {
 
       if (timeline_type == "1d"){
         data = applyOffset(data);
-      } 
-      
+      }
+
       timelineCircle(svg, chart, data);
     };
     reader.readAsText(file);
@@ -37,23 +37,23 @@ function initFileUpload(elementId, svg, chart, primaryChart, timeline_type) {
 }
 
 // When an auxiliary chart is loaded, compute an offset in milliseconds from
-// the primary chart. 
+// the primary chart.
 function computeOffset(auxiliaryData, startingTimes) {
   // units are milliseconds
   for (i = 0; i < auxiliaryData.length/6; i++){
     // start each timeline at it's own time, zeroing the time of the first event
-    var min = 10000000000000; 
+    var min = 10000000000000;
     for (j = i*6; j < i*6+5; j++){
       if (auxiliaryData[j]["times"].length > 0){
-        min = Math.min( min, auxiliaryData[j]["times"][0]["starting_time"] ); 
+        min = Math.min( min, auxiliaryData[j]["times"][0]["starting_time"] );
       }
     }
-    startingTimes.push(min);        
+    startingTimes.push(min);
   }
 }
 
 function applyOffset(data) {
-  var startingTimes = []; 
+  var startingTimes = [];
   computeOffset(data, startingTimes);
   for (i = 0; i < data.length/6; i++){ // timeline num
     for (j = i*6; j < i*6+5; j++){ // each row for the corresponding timeline
@@ -71,10 +71,10 @@ function timelineCircle(svg, chart, data) {
 
 }
 
-// appendElementToDOM currently only supports two types of elements: 
+// appendElementToDOM currently only supports two types of elements:
 // file uploads and charts
 function appendElementToDOM(type, element){
-  if (type === "file upload"){ 
+  if (type === "file upload"){
     var p = document.createElement('p');
     var input = document.createElement('input');
     input.setAttribute('type', 'file');
@@ -85,7 +85,7 @@ function appendElementToDOM(type, element){
     var div = document.createElement('div');
     div.setAttribute('id', element);
     document.body.appendChild(div);
-  } 
+  }
 }
 
 function appendToDOM(fileElement, chartElement, timeline_type) {
@@ -97,8 +97,8 @@ function appendToDOM(fileElement, chartElement, timeline_type) {
     }
   }
   else if (timeline_type == "2d"){
-    appendElementToDOM("file upload", fileElement); 
-  }  
+    appendElementToDOM("file upload", fileElement);
+  }
 
   appendElementToDOM("chart", chartElement);
 }
