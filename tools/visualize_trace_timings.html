@@ -1,4 +1,22 @@
 <!doctype html>
+<!--
+This is a webpage for visualizing event traces.
+It's especially useful for debugging non-deterministic replays by comparing the
+timings of different replay runs.
+
+A common workflow:
+  - Run ./simulator.py -c experiments/experiment_name/mcs_config.py
+  - Discover that the final MCS does not trigger the bug.
+  - Open visualize_trace_timings.html in a web browser.
+  - Load the original trace, experiments/experiment_name/events.trace,
+    as the first timeline.
+  - Load the MCS trace, experiments/experiment_name_mcs/mcs.trace,
+    as the second timeline.
+  - Hover over events to see functional equivalence across the traces.
+  - Load intermediate replay trace timelines if needed. Intermediate replay
+    traces from delta debugging runs can be found in
+    experiments/experiment_name_mcs/interreplay_*
+-->
 <html>
 <head>
   <link rel="stylesheet" href="./d3-timeline/css/style.css">
