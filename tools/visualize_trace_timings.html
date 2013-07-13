@@ -7,8 +7,9 @@
   <script src="./d3-timeline/lib/d3.v3.min.js"></script>
   <script src="./d3-timeline/src/d3-timeline.js"></script>
   <script src="./d3-timeline/lib/Tooltip.js"></script>
+  <script src="./visualize_trace_timings_lib.js"></script>
   <script type="text/javascript">
-    // TODO(cs): add legend
+
     var primaryChartLoaded = false;
     var invariantViolations = {"InvariantViolation":true};
     var internalEvents = {"ControlMessageReceive":true,
@@ -18,82 +19,58 @@
                           "DeterministicValue":true,
                           "DataplanePermit":true};
 
+    // determines the number of toggle buttons at the top
+    const numTimelines = 4;
+
     // The key is the timeline index, and the value
-    var data_timeline = {1:[], 2:[]};
+    var data_timeline = {};
     // timeline_num is a counter tracking what chart we are currently loading:
     // the first time we load this is set to 1, and incremented for
     // every subsequent load.
-    var timeline_num = 0; // {1 or 2}
+    var timeline_num = 0;
+    // stores the results for formatData
+    var result_timeline = {};
+    // stores of the fe_id for all events
+    var All_Events_Hash = {};
+    // keeps track of the next available fe_id to be assigned to a new event
+    var new_event_count = 0;
 
     function formatData(data) {
       timeline_num++;
-      if (timeline_num > 2) {
-        console.log("Warning: loaded more than twice. Returning");
-        return
-      }
 
-      internal_times = {1:[], 2:[]};
-      timed_out_times = {1:[], 2:[]};
-      input_times = {1:[], 2:[]};
-      // TODO(cs): assign the color red to violation_times
-      violation_times = {1:[], 2:[]};
-      new_event_times = {1:[], 2:[]};
+      prepData(data, timeline_num);
 
+      processTimelineData(timeline_num, result_timeline);
+
+      return formatDataResult(result_timeline);
+    }
+
+    function prepData(data, timeline_num){
       // Store arrays of raw json strings until both charts are loaded.
       data_timeline[timeline_num] = data.split("\n");
-
-      if (timeline_num == 2) { // process after data for both timelines are entered
-        processTimelineData(1, internal_times[1], timed_out_times[1], input_times[1], violation_times[1], new_event_times[1]);
-        processTimelineData(2, internal_times[2], timed_out_times[2], input_times[2], violation_times[2], new_event_times[2]);
-      }
-      // if both charts haven't been loaded we just return empty data arrays,
-      // which will be rendered harmlessly
-
-      return [{"label": "internal", "times": internal_times[1]},
-              {"label": "input", "times": input_times[1]},
-              {"label": "timed_out", "times": timed_out_times[1]},
-              {"label": "new_internal", "times": new_event_times[1]},
-              {"label": "violation", "times": violation_times[1]},
-              {"label": "", "times": []}, // blank line for spacing
-              {"label": "internal", "times": internal_times[2]},
-              {"label": "input", "times": input_times[2]},
-              {"label": "timed_out", "times": timed_out_times[2]},
-              {"label": "new_internal", "times": new_event_times[2]},
-              {"label": "violation", "times": violation_times[2]}];
+      All_Events_Hash[timeline_num] = [];
+      result_timeline[timeline_num] = { "internal": [], "input": [], "timed out": [], "new internal": [], "violation": []};
     }
 
-    function initFileUpload(elementId, svg, chart, primaryChart) {
-      var upload = document.getElementById(elementId);
-
-      if (typeof window.FileReader === 'undefined') {
-        alert("File API Not Supported");
+    function formatDataResult(result_timeline){
+      var result = [];
+      for (var timeline_id in result_timeline){
+        for (var times in result_timeline[timeline_id]){
+          var s = {};
+          s["label"] = "" + times;
+          s["times"] = result_timeline[timeline_id][times];
+          result.push(s);
+        }
+        var s = {};
+        s["label"] = "";
+        s["times"] = [];
+        result.push(s);
       }
-
-      upload.onchange = function (e) {
-        e.preventDefault();
-
-        var file = upload.files[0],
-            reader = new FileReader();
-
-        reader.onload = function (event) {
-          var data = formatData(event.target.result);
-
-          if (primaryChart) {
-            primaryChartLoaded = true;
-          }
-          if (!primaryChart && primaryChartLoaded) {
-            data = applyOffset(data);
-          }
-
-          timelineCircle(svg, chart, data);
-        };
-        reader.readAsText(file);
-
-        return false;
-      };
+      return result;
     }
 
-    function processTimelineData(timelineNum, internalTimes, timedOutTimes, inputTimes, violationTimes, newEventTimes){
+    function processTimelineData(timelineNum, result_timeline){
+
       var data = data_timeline[timelineNum];
       var start_position = 0;
 
@@ -105,14 +82,19 @@
 
         if (timelineNum == 1) {
           // arbitrary id that is simply its position in the event list of timeline1
-          e_id = i;
+          e_id = new_event_count;
+          new_event_count++;
         } else {
           // id that corresponds to its functionally equivalent event in timeline1
-          e_id = findFunctionallyEquivalentEventID(e, start_position);
+          e_id = findFunctionallyEquivalentEventID(e, start_position, timeline_num);
 
           // update the starting position for the next event (to keep relative ordering correct)
           if (e_id != -1) {
             start_position = e_id+1;
+          } else {
+            // did not find a functionally equivalent event, therefore assign a new fe_id
+            e_id = new_event_count;
+            new_event_count++;
           }
         }
 
@@ -122,20 +104,22 @@
                      "class": e["class"],
                      "fe_id": e_id};
 
+        All_Events_Hash[timeline_num].push(e_id);
+
         // Demultiplex by element["class"] for internal vs. input
         var eventClass = e["class"];
         if (eventClass === "InvariantViolation") {
-          violationTimes.push(point);
+          result_timeline[timeline_num]["violation"].push(point);
         } else if (eventClass in internalEvents)  {
           if ("timed_out" in e && e["timed_out"]) {
-            timedOutTimes.push(point);
+            result_timeline[timeline_num]["timed out"].push(point);
           } else if ("new_internal_event" in e && e["new_internal_event"]) {
-            newEventTimes.push(point);
+            result_timeline[timeline_num]["new internal"].push(point);
           } else {
-            internalTimes.push(point);
+            result_timeline[timeline_num]["internal"].push(point);
           }
         } else {
-          inputTimes.push(point);
+          result_timeline[timeline_num]["input"].push(point);
         }
       }
     }
@@ -153,112 +137,77 @@
     // then e1 must occur between p1 and s1.
     //
     // In other words, the two events should be in the same relative position in the
-    // log. In practice we keep track of relative position by always starting
-    // from startPos and walking through the trace left to right.
-    function findFunctionallyEquivalentEventID(e, startPos){
-      for (i_old = startPos; i_old < data_timeline[1].length-1; i_old++) {
-        var str_old = data_timeline[1][i_old];
-        var e_old = jQuery.parseJSON(str_old);
+    // log. In practice we keep track of relative position by looking for the fe_id
+    // of the event right before, and then searching for an fe_id that is the largest
+    // smaller fe_id than that.
 
-        // using JSON.stringify() to compute .equals() for objects/arrays in fingerprint
-        if (e_old["class"] === e["class"] &&
-            JSON.stringify(e_old["fingerprint"]) === JSON.stringify(e["fingerprint"])) {
-          return i_old;
+    function findFunctionallyEquivalentEventID(e, startPos, timeline_num){
+      for (t_num = 1; t_num < timeline_num; t_num++){
+        for (i_old = startPos; i_old < data_timeline[t_num].length-1; i_old++) {
+          var str_old = data_timeline[t_num][i_old];
+          var e_old = jQuery.parseJSON(str_old);
+
+          // using JSON.stringify() to compute .equals() for objects/arrays in fingerprint
+          if (JSON.stringify(e_old["fingerprint"]) === JSON.stringify(e["fingerprint"])) {
+            return All_Events_Hash[t_num][i_old];
+          }
         }
       }
+
       return -1;
     }
 
   </script>
   <script type="text/javascript">
-    var tooltip = {};
-    var nullData = [
-      {times: []}
-    ];
-    var width = 4000;
-    var charts = [];
-    var svgs = [];
-
-    // When an auxiliary chart is loaded, compute an offset in milliseconds from
-    // the primary chart. Offsets should be subtracted (positive offsets mean
-    // that the secondary chart came after the primary chart)
-    // Precondition: primary chart must be loaded
-    computeOffset = function(auxiliaryData) {
-      // units are milliseconds
-      var primaryBegin = chart1.beginning();
-      var internalTimes = auxiliaryData[0]["times"];
-      if (internalTimes.length < 0) return 0;
-      var secondaryBegin = internalTimes[0]["starting_time"];
-      var offset = secondaryBegin - primaryBegin;
-      return offset;
-    }
-
-    applyOffset = function(data) {
-      var offsetMillis = computeOffset(data);
-      // Apply to both internal and input events
-      for (i = 0; i < 2; i++) {
-        var points = data[i]["times"];
-        for (j = 0; j < points.length; j++) {
-          points[j]["starting_time"] -= offsetMillis;
-          points[j]["ending_time"] -= offsetMillis;
-        }
-      }
-      return data;
-    }
 
     // Mouseover callback
-    showDetails = function(d, i) {
+    showDetails = function(d, i, datum, IDs, g) {
       var content;
       content = '<p class="main">' + d.label + '</span></p>';
       content += '<hr class="tooltip-hr">';
       content += '<p class="main">' + d.class + '</span></p>';
       content += '<p class="main">Time (ms): ' + d.starting_time + '</span></p>';
       tooltip.showTooltip(content, d3.event);
-      // TODO(cs): only show functional equivalence lines when the user mouses
-      // over a dot (triggered in this handler)
+
+        // show functional equivalence lines when the user mouses over the event
+        if (IDs[d.fe_id].length >= 4){
+          for ( i = 0; i < IDs[d.fe_id].length-2; i+=2) {
+            g.append('line')
+              .attr("x1", IDs[d.fe_id][i])
+              .attr("y1", IDs[d.fe_id][i+1])
+              .attr("x2", IDs[d.fe_id][i+2])
+              .attr("y2", IDs[d.fe_id][i+3])
+              .style("stroke","rgb(255,0,0)");
+          }
+        }
+
     };
 
     // Mouseout callback
-    hideDetails = function(d, i) {
+    hideDetails = function(d, i, datum, IDs, g) {
       tooltip.hideTooltip();
+
+        // remove functional equivalence lines after the user mouses over the event
+        lines = g.selectAll("line");
+        lastElement = lines[0].length-1;
+        for ( i = 0; i < IDs[d.fe_id].length/2; i++){
+          lines[0][lastElement-i].remove();
+        }
+
     };
 
-    function timelineCircle(svg, chart, data) {
-      svg.datum(data).call(chart);
-    }
-
-    function appendToDOM(chartElement, fileElement1, fileElement2) {
-      // the order in which elements are currently displayed
-      appendElementToDOM("file upload", fileElement1); 
-      appendElementToDOM("file upload", fileElement2); 
-      appendElementToDOM("chart", chartElement);
-    }
-
-    // appendElementToDOM currently only supports two types of elements: 
-    // file uploads and charts
-    function appendElementToDOM(type, element){
-      if (type === "file upload"){ 
-        var p = document.createElement('p');
-        var input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        input.setAttribute('id', element);
-        p.appendChild(input);
-        document.body.appendChild(p);
-      } else if (type === "chart"){
-        var div = document.createElement('div');
-        div.setAttribute('id', element);
-        document.body.appendChild(div);
-      } 
-    }
 
     function appendChart(data) {
       var index = charts.length;
       var chartElement = "timeline" + index;
-      var fileElement1 = "fileinput" + index;
-      var fileElement2 = "fileinput" + (index+1);
-      appendToDOM(chartElement, fileElement1, fileElement2);
-      
-      charts.push(d3.timeline()
+      var fileElements = [];
+      for ( i = 0; i < numTimelines; i++){
+        var file = "fileinput" + (index + i);
+        fileElements[i]=file;
+      }
+      appendToDOM(fileElements, chartElement, "1d");
+
+      charts.push(d3.timeline("1d")
         .stack()
         .tickFormat(
           {format: d3.time.format("%M:%S:%L"),
@@ -270,15 +219,13 @@
         .mouseover(showDetails)
         .mouseout(hideDetails));
       svgs.push(d3.select("#" + chartElement).insert("svg").attr("width", width));
+
       timelineCircle(svgs[index], charts[index], data);
-      initFileUpload(fileElement1, svgs[index], charts[index], true);
-      initFileUpload(fileElement2, svgs[index], charts[index], true);
+      for (i = 0; i < fileElements.length; i++){
+        initFileUpload(fileElements[i], svgs[index], charts[index], true, "1d");
+      }
     }
 
-    window.onload = function() {
-      tooltip = Tooltip("vis-tooltip", 230);
-      appendChart(nullData);
-    }
   </script>
 </head>
 <body>

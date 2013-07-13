@@ -5,8 +5,9 @@
   <!--<script src="http://code.jquery.com/jquery-latest.min.js"></script>-->
   <script src="./d3-timeline/lib/jquery-1.7.2.min.js"></script>
   <script src="./d3-timeline/lib/d3.v3.min.js"></script>
-  <script src="./d3-timeline/src/d3-timeline-2D.js"></script>
+  <script src="./d3-timeline/src/d3-timeline.js"></script>
   <script src="./d3-timeline/lib/Tooltip.js"></script>
+  <script src="./visualize_trace_timings_lib.js"></script>
   <script type="text/javascript">
 
     var primaryChartLoaded = false;
@@ -18,17 +19,18 @@
                           "DeterministicValue":true,
                           "DataplanePermit":true};
 
-    var timeDelay = 6; // chosen arbitrarily 
+    // determines the number of toggle buttons at the top
+    const numTimelines = 1;
+
+    var timedelayms = 6; // chosen arbitrarily
 
     function formatData(data) {
-      // Split by \n into raw json strings 
+      // Split by \n into raw json strings
       var split = data.split("\n");
 
-      var entities = {"controllers":{}, "switches":{}, "hosts":{}};
-
       // find all controllers, switches, and hosts in data
-      findEntities(split, entities);
-      
+      var entities = findEntities(split);
+
       for (i = 0; i < split.length-1; i++) {
         var str = split[i];
         var e = jQuery.parseJSON(str);
@@ -37,7 +39,7 @@
                      "ending_time": epochMillis,
                      "label": e["label"],
                      "class": e["class"],
-                     "SR_id": i};
+                     "sr_id": i};
 
         processEvent(e, point, entities);
       }
@@ -45,129 +47,83 @@
       return formatDataResult(entities);
     }
 
-    function initFileUpload(elementId, svg, chart, primaryChart) {
-      var upload = document.getElementById(elementId);
-
-      if (typeof window.FileReader === 'undefined') {
-        alert("File API Not Supported");
-      }
-
-      upload.onchange = function (e) {
-        e.preventDefault();
-
-        var file = upload.files[0],
-            reader = new FileReader();
-
-        reader.onload = function (event) {
-          var data = formatData(event.target.result);
-          
-          timelineCircle(svg, chart, data);
-        };
-        reader.readAsText(file);
-
-        return false;
-      };
-    }
-
-    function findEntities(data, entities){
-      listOfControllers = []; 
-      listOfSwitches = [];      
-      listOfHosts = []; 
+    function findEntities(data){
+      var objEntities = {"controllers":{}, "switches":{}, "hosts":{}};
 
       for (i = 0; i < data.length-1; i++) {
         var str = data[i];
         var e = jQuery.parseJSON(str);
 
         if (e.class === "ControllerStateChange"){
-          if ( !(e["controller_id"] in listOfControllers)){
-            listOfControllers.push(e["controller_id"]);
+          if ( !(e["controller_id"] in objEntities["controllers"]) ){
+            objEntities["controllers"][e["controller_id"]] = [];
           }
         }
         else if (e.class === "ControlMessageSend" || e.class === "ControlMessageReceive"){
-          if ( !(e["dpid"] in listOfSwitches) ){
-            listOfSwitches.push(e["dpid"]);
+          if ( !(e["dpid"] in objEntities["switches"]) ){
+            objEntities["switches"][e["dpid"]] = [];
           }
-          if ( !(e["controller_id"] in listOfControllers)){
-            listOfControllers.push(e["controller_id"]);
+          if ( !(e["controller_id"] in objEntities["controllers"]) ){
+            objEntities["controllers"][e["controller_id"]] = [];
           }
-        } 
-        else if ((e.class === "TrafficInjection" || e.class === "HostMigration" ) && 
-                  !(e["host_id"] in entities["hosts"])){
-          if ( !(e["host_id"] in listOfHosts) ){
-            listOfHosts.push(e["host_id"]);
+        }
+        else if ((e.class === "TrafficInjection" || e.class === "HostMigration" ) ){
+          if ( !(e["host_id"] in objEntities["hosts"]) ){
+            objEntities["hosts"][e["host_id"]] = [];
           }
         }
       }
 
-      orderEntities(listOfControllers, listOfSwitches, listOfHosts); 
-      updateEntities(listOfControllers, listOfSwitches, listOfHosts, entities);
-    }
-
-    function orderEntities(listOfControllers, listOfSwitches, listOfHosts){
-      listOfControllers.sort(function(a,b){return a - b});
-      listOfSwitches.sort(function(a,b){return a - b}); 
-      listOfHosts.sort(function(a,b){return a - b});
-    }
-
-    function updateEntities(listOfControllers, listOfSwitches, listOfHosts, entities){
-      for (i = 0; i < listOfControllers.length; i++){
-        entities["controllers"][listOfControllers[i]] = []; 
-      }  
-      for (i = 0; i < listOfSwitches.length; i++){
-        entities["switches"][listOfSwitches[i]] = []; 
-      }
-      for (i = 0; i < listOfHosts.length; i++){
-        entities["hosts"][listOfHosts[i]] = []; 
-      } 
+      return objEntities;
     }
 
     function processEvent(e, point, entities, i){
-      // Demultiplex by element["class"] for displaying events on corresponding entities
+      // Demultiplex by e["class"] for displaying events on corresponding entities
       var eventClass = e["class"];
 
-        // display event on all controllers and switches 
-        if (eventClass === "ConnectToControllers") { 
+        // display event on all controllers and switches
+        if (eventClass === "ConnectToControllers") {
           for (var id in entities["controllers"]){
-            addEvent("controllers", id, point, entities); 
+            addEvent("controllers", id, point, entities);
           }
           for (var id in entities["switches"]){
-            addEvent("switches", id, point, entities); 
+            addEvent("switches", id, point, entities);
           }
-        } 
+        }
 
-        // display event on corresponding controller  
-        else if (eventClass === "ControllerStateChange"){ 
+        // display event on corresponding controller
+        else if (eventClass === "ControllerStateChange"){
           addEvent("controllers", e["controller_id"], point, entities);
-        } 
+        }
 
-        // display event on corresponding controller and switch 
-        else if (eventClass === "ControlMessageSend" || eventClass === "ControlMessageReceive"){ 
+        // display event on corresponding controller and switch
+        else if (eventClass === "ControlMessageSend" || eventClass === "ControlMessageReceive"){
           // include a 6ms visual lag for messages to reach recipient
-          epochMillisDelay = point["starting_time"] + (eventClass === "ControlMessageSend" ? timeDelay : -timeDelay);
+          epochMillisDelay = point["starting_time"] + (eventClass === "ControlMessageSend" ? timedelayms : -timedelayms);
           var pointDelay = {"starting_time": epochMillisDelay,
                             "ending_time": epochMillisDelay,
                             "label": e["label"],
                             "class": eventClass,
-                            "SR_id": point["SR_id"]};
+                            "sr_id": point["sr_id"]};
 
-          addEvent("switches", e["dpid"], point, entities); 
-          addEvent("controllers", e["controller_id"], pointDelay, entities); 
+          addEvent("switches", e["dpid"], point, entities);
+          addEvent("controllers", e["controller_id"], pointDelay, entities);
         }
 
         // display event on corresponding controller
         else if (eventClass === "ControllerFailure" || eventClass === "ControllerRecovery"){
-          addEvent("controllers", e["fingerprint"][1], point, entities); 
-        } 
+          addEvent("controllers", e["fingerprint"][1], point, entities);
+        }
 
         // display event on corresponding switch
-        else if (eventClass === "DataplaneDrop"){ 
+        else if (eventClass === "DataplaneDrop"){
           addEvent("switches", e["fingerprint"][2], point, entities);
-        } 
+        }
 
         // currently ignored
-        else if (eventClass === "DataplanePermit"){ 
+        else if (eventClass === "DataplanePermit"){
 
-        } 
+        }
 
         // display event on corresponding switch
         else if (eventClass === "ControlChannelBlock" || eventClass === "ControlChannelUnblock"){
@@ -178,56 +134,51 @@
         else if ( eventClass === "LinkFailure" || eventClass === "LinkRecovery"){
           addEvent("switches", e["fingerprint"][1], point, entities);
           addEvent("switches", e["fingerprint"][3], point, entities);
-        } 
+        }
 
         // display event on corresponding switch
         else if ( eventClass == "SwitchFailure" || eventClass === "SwitchRecovery"){
           addEvent("switches", e["fingerprint"][1], point, entities);
         }
 
-        // display event on corresponding host      
-        else if (eventClass === "TrafficInjection"){ 
+        // display event on corresponding host
+        else if (eventClass === "TrafficInjection"){
           addEvent("hosts", e["host_id"], point, entities);
-        } 
+        }
 
         // display event on corresponding host and switches
-        else if (eventClass === "HostMigration"){ 
+        else if (eventClass === "HostMigration"){
           addEvent("hosts", e["host_id"], point, entities);
-        }   
+        }
 
     }
 
-    // push event on to corresponding entity's timeline 
+    // push event on to corresponding entity's timeline
     function addEvent(type, id, point, entities){
       entities[type][id].push(point);
     }
 
     // format results appropriately, in the order of controllers, switches, then hosts
     function formatDataResult(entities){
-      var result = []; 
+      var result = [];
       for (var ent in entities){
-        for (var id in entities[ent]){
-          var s = {}; 
-          s["label"] = "" + ent + " " + id; 
-          s["times"] = entities[ent][id];
-          result.push(s); 
+        // get a list of sorted keys such that order is preserved during the display
+        var list = Object.keys(entities[ent]).sort(function(a,b){return a - b});
+        for (i = 0; i < list.length; i++ ){
+          var s = {};
+          s["label"] = "" + ent + " " + list[i];
+          s["times"] = entities[ent][list[i]];
+          result.push(s);
         }
-      } 
-      return result;  
+      }
+      return result;
     }
 
   </script>
   <script type="text/javascript">
-    var tooltip = {};
-    var nullData = [
-      {times: []}
-    ];
-    var width = 3000; // changes width of timeline
-    var charts = [];
-    var svgs = [];
 
     // Mouseover callback
-    showDetails = function(d, i) {
+    showDetails = function(d, i, datum, IDs, g) {
       var content;
       content = '<p class="main">' + d.label + '</span></p>';
       content += '<hr class="tooltip-hr">';
@@ -237,49 +188,22 @@
     };
 
     // Mouseout callback
-    hideDetails = function(d, i) {
+    hideDetails = function(d, i, datum, IDs, g) {
       tooltip.hideTooltip();
     };
-
-    function timelineCircle(svg, chart, data) {
-      svg.datum(data).call(chart);
-    }
-
-    function appendToDOM(chartElement, fileElement) {
-      // the order in which elements are currently displayed
-      appendElementToDOM("file upload", fileElement); 
-      appendElementToDOM("chart", chartElement);
-    }
-
-    // appendElementToDOM currently only supports two types of elements: 
-    // file uploads and charts
-    function appendElementToDOM(type, element){
-      if (type === "file upload"){ 
-        var p = document.createElement('p');
-        var input = document.createElement('input');
-        input.setAttribute('type', 'file');
-        input.setAttribute('id', element);
-        p.appendChild(input);
-        document.body.appendChild(p);
-      } else if (type === "chart"){
-        var div = document.createElement('div');
-        div.setAttribute('id', element);
-        document.body.appendChild(div);
-      } 
-    }
 
     function appendChart(data) {
       var index = charts.length;
       var chartElement = "timeline" + index;
       var fileElement = "fileinput" + index;
-      appendToDOM(chartElement, fileElement);
+      appendToDOM(fileElement, chartElement, "2d");
 
-      charts.push(d3.timeline()
+      charts.push(d3.timeline("2d")
         .stack()
         .tickFormat(
           {format: d3.time.format("%M:%S:%L"),
           tickTime: d3.time.seconds,
-          tickNumber: 3,  
+          tickNumber: 3,
           tickSize: 30})
         .rotateTicks(45)
         .display("circle") // toggle between rectangles and circles
@@ -287,13 +211,10 @@
         .mouseout(hideDetails));
       svgs.push(d3.select("#" + chartElement).insert("svg").attr("width", width));
       timelineCircle(svgs[index], charts[index], data);
-      initFileUpload(fileElement, svgs[index], charts[index], true);
+      initFileUpload(fileElement, svgs[index], charts[index], true, "2d");
     }
 
-    window.onload = function() {
-      tooltip = Tooltip("vis-tooltip", 230);
-      appendChart(nullData);
-    }
+
   </script>
 </head>
 <body>
