@@ -57,7 +57,7 @@ class MockMCSFinderBase(MCSFinder):
         return []
     return ["violation"]
 
-  def replay(self, new_dag, hook=None):
+  def replay(self, new_dag, hook=None, ignore_runtime_stats=False):
     self.new_dag = new_dag
     return self.invariant_check(new_dag)
 
