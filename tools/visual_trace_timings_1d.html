@@ -20,26 +20,26 @@
                           "DataplanePermit":true};
 
     // determines the number of toggle buttons at the top
-    const numTimelines = 4; 
+    const numTimelines = 4;
 
     // The key is the timeline index, and the value
     var data_timeline = {};
     // timeline_num is a counter tracking what chart we are currently loading:
     // the first time we load this is set to 1, and incremented for
     // every subsequent load.
-    var timeline_num = 0; 
+    var timeline_num = 0;
     // stores the results for formatData
     var result_timeline = {};
     // stores of the fe_id for all events
-    var All_Events_Hash = {};  
+    var All_Events_Hash = {};
     // keeps track of the next available fe_id to be assigned to a new event
     var new_event_count = 0;
-    
+
     function formatData(data) {
       timeline_num++;
 
-      prepData(data, timeline_num); 
-      
+      prepData(data, timeline_num);
+
       processTimelineData(timeline_num, result_timeline);
 
       return formatDataResult(result_timeline);
@@ -49,19 +49,19 @@
       // Store arrays of raw json strings until both charts are loaded.
       data_timeline[timeline_num] = data.split("\n");
       All_Events_Hash[timeline_num] = [];
-      result_timeline[timeline_num] = { "internal": [], "input": [], "timed out": [], "new internal": [], "violation": []}; 
+      result_timeline[timeline_num] = { "internal": [], "input": [], "timed out": [], "new internal": [], "violation": []};
     }
 
     function formatDataResult(result_timeline){
-      var result = []; 
+      var result = [];
       for (var timeline_id in result_timeline){
         for (var times in result_timeline[timeline_id]){
-          var s = {}; 
-          s["label"] = "" + times; 
+          var s = {};
+          s["label"] = "" + times;
           s["times"] = result_timeline[timeline_id][times];
-          result.push(s); 
+          result.push(s);
         }
-        var s = {}; 
+        var s = {};
         s["label"] = "";
         s["times"] = [];
         result.push(s);
@@ -91,10 +91,10 @@
           // update the starting position for the next event (to keep relative ordering correct)
           if (e_id != -1) {
             start_position = e_id+1;
-          } else { 
+          } else {
             // did not find a functionally equivalent event, therefore assign a new fe_id
             e_id = new_event_count;
-            new_event_count++; 
+            new_event_count++;
           }
         }
 
@@ -112,11 +112,11 @@
           result_timeline[timeline_num]["violation"].push(point);
         } else if (eventClass in internalEvents)  {
           if ("timed_out" in e && e["timed_out"]) {
-            result_timeline[timeline_num]["timed out"].push(point); 
+            result_timeline[timeline_num]["timed out"].push(point);
           } else if ("new_internal_event" in e && e["new_internal_event"]) {
-            result_timeline[timeline_num]["new internal"].push(point); 
+            result_timeline[timeline_num]["new internal"].push(point);
           } else {
-            result_timeline[timeline_num]["internal"].push(point); 
+            result_timeline[timeline_num]["internal"].push(point);
           }
         } else {
           result_timeline[timeline_num]["input"].push(point);
@@ -137,9 +137,9 @@
     // then e1 must occur between p1 and s1.
     //
     // In other words, the two events should be in the same relative position in the
-    // log. In practice we keep track of relative position by looking for the fe_id 
+    // log. In practice we keep track of relative position by looking for the fe_id
     // of the event right before, and then searching for an fe_id that is the largest
-    // smaller fe_id than that. 
+    // smaller fe_id than that.
 
     function findFunctionallyEquivalentEventID(e, startPos, timeline_num){
       for (t_num = 1; t_num < timeline_num; t_num++){
@@ -180,7 +180,7 @@
               .style("stroke","rgb(255,0,0)");
           }
         }
-      
+
     };
 
     // Mouseout callback
@@ -188,14 +188,14 @@
       tooltip.hideTooltip();
 
         // remove functional equivalence lines after the user mouses over the event
-        lines = g.selectAll("line"); 
-        lastElement = lines[0].length-1; 
+        lines = g.selectAll("line");
+        lastElement = lines[0].length-1;
         for ( i = 0; i < IDs[d.fe_id].length/2; i++){
           lines[0][lastElement-i].remove();
         }
-      
+
     };
-  
+
 
     function appendChart(data) {
       var index = charts.length;
@@ -220,7 +220,7 @@
         .mouseout(hideDetails));
       svgs.push(d3.select("#" + chartElement).insert("svg").attr("width", width));
 
-      timelineCircle(svgs[index], charts[index], data);   
+      timelineCircle(svgs[index], charts[index], data);
       for (i = 0; i < fileElements.length; i++){
         initFileUpload(fileElements[i], svgs[index], charts[index], true, "1d");
       }

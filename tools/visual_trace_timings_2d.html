@@ -20,17 +20,17 @@
                           "DataplanePermit":true};
 
     // determines the number of toggle buttons at the top
-    const numTimelines = 1; 
+    const numTimelines = 1;
 
-    var timedelayms = 6; // chosen arbitrarily 
+    var timedelayms = 6; // chosen arbitrarily
 
     function formatData(data) {
-      // Split by \n into raw json strings 
+      // Split by \n into raw json strings
       var split = data.split("\n");
 
       // find all controllers, switches, and hosts in data
       var entities = findEntities(split);
-      
+
       for (i = 0; i < split.length-1; i++) {
         var str = split[i];
         var e = jQuery.parseJSON(str);
@@ -48,7 +48,7 @@
     }
 
     function findEntities(data){
-      var objEntities = {"controllers":{}, "switches":{}, "hosts":{}}; 
+      var objEntities = {"controllers":{}, "switches":{}, "hosts":{}};
 
       for (i = 0; i < data.length-1; i++) {
         var str = data[i];
@@ -56,17 +56,17 @@
 
         if (e.class === "ControllerStateChange"){
           if ( !(e["controller_id"] in objEntities["controllers"]) ){
-            objEntities["controllers"][e["controller_id"]] = []; 
+            objEntities["controllers"][e["controller_id"]] = [];
           }
         }
         else if (e.class === "ControlMessageSend" || e.class === "ControlMessageReceive"){
           if ( !(e["dpid"] in objEntities["switches"]) ){
-            objEntities["switches"][e["dpid"]] = []; 
+            objEntities["switches"][e["dpid"]] = [];
           }
           if ( !(e["controller_id"] in objEntities["controllers"]) ){
-            objEntities["controllers"][e["controller_id"]] = []; 
+            objEntities["controllers"][e["controller_id"]] = [];
           }
-        } 
+        }
         else if ((e.class === "TrafficInjection" || e.class === "HostMigration" ) ){
           if ( !(e["host_id"] in objEntities["hosts"]) ){
             objEntities["hosts"][e["host_id"]] = [];
@@ -81,23 +81,23 @@
       // Demultiplex by e["class"] for displaying events on corresponding entities
       var eventClass = e["class"];
 
-        // display event on all controllers and switches 
-        if (eventClass === "ConnectToControllers") { 
+        // display event on all controllers and switches
+        if (eventClass === "ConnectToControllers") {
           for (var id in entities["controllers"]){
-            addEvent("controllers", id, point, entities); 
+            addEvent("controllers", id, point, entities);
           }
           for (var id in entities["switches"]){
-            addEvent("switches", id, point, entities); 
+            addEvent("switches", id, point, entities);
           }
-        } 
+        }
 
-        // display event on corresponding controller  
-        else if (eventClass === "ControllerStateChange"){ 
+        // display event on corresponding controller
+        else if (eventClass === "ControllerStateChange"){
           addEvent("controllers", e["controller_id"], point, entities);
-        } 
+        }
 
-        // display event on corresponding controller and switch 
-        else if (eventClass === "ControlMessageSend" || eventClass === "ControlMessageReceive"){ 
+        // display event on corresponding controller and switch
+        else if (eventClass === "ControlMessageSend" || eventClass === "ControlMessageReceive"){
           // include a 6ms visual lag for messages to reach recipient
           epochMillisDelay = point["starting_time"] + (eventClass === "ControlMessageSend" ? timedelayms : -timedelayms);
           var pointDelay = {"starting_time": epochMillisDelay,
@@ -106,24 +106,24 @@
                             "class": eventClass,
                             "sr_id": point["sr_id"]};
 
-          addEvent("switches", e["dpid"], point, entities); 
-          addEvent("controllers", e["controller_id"], pointDelay, entities); 
+          addEvent("switches", e["dpid"], point, entities);
+          addEvent("controllers", e["controller_id"], pointDelay, entities);
         }
 
         // display event on corresponding controller
         else if (eventClass === "ControllerFailure" || eventClass === "ControllerRecovery"){
-          addEvent("controllers", e["fingerprint"][1], point, entities); 
-        } 
+          addEvent("controllers", e["fingerprint"][1], point, entities);
+        }
 
         // display event on corresponding switch
-        else if (eventClass === "DataplaneDrop"){ 
+        else if (eventClass === "DataplaneDrop"){
           addEvent("switches", e["fingerprint"][2], point, entities);
-        } 
+        }
 
         // currently ignored
-        else if (eventClass === "DataplanePermit"){ 
+        else if (eventClass === "DataplanePermit"){
 
-        } 
+        }
 
         // display event on corresponding switch
         else if (eventClass === "ControlChannelBlock" || eventClass === "ControlChannelUnblock"){
@@ -134,44 +134,44 @@
         else if ( eventClass === "LinkFailure" || eventClass === "LinkRecovery"){
           addEvent("switches", e["fingerprint"][1], point, entities);
           addEvent("switches", e["fingerprint"][3], point, entities);
-        } 
+        }
 
         // display event on corresponding switch
         else if ( eventClass == "SwitchFailure" || eventClass === "SwitchRecovery"){
           addEvent("switches", e["fingerprint"][1], point, entities);
         }
 
-        // display event on corresponding host      
-        else if (eventClass === "TrafficInjection"){ 
+        // display event on corresponding host
+        else if (eventClass === "TrafficInjection"){
           addEvent("hosts", e["host_id"], point, entities);
-        } 
+        }
 
         // display event on corresponding host and switches
-        else if (eventClass === "HostMigration"){ 
+        else if (eventClass === "HostMigration"){
           addEvent("hosts", e["host_id"], point, entities);
-        }   
+        }
 
     }
 
-    // push event on to corresponding entity's timeline 
+    // push event on to corresponding entity's timeline
     function addEvent(type, id, point, entities){
       entities[type][id].push(point);
     }
 
     // format results appropriately, in the order of controllers, switches, then hosts
     function formatDataResult(entities){
-      var result = []; 
+      var result = [];
       for (var ent in entities){
         // get a list of sorted keys such that order is preserved during the display
         var list = Object.keys(entities[ent]).sort(function(a,b){return a - b});
         for (i = 0; i < list.length; i++ ){
-          var s = {}; 
-          s["label"] = "" + ent + " " + list[i]; 
+          var s = {};
+          s["label"] = "" + ent + " " + list[i];
           s["times"] = entities[ent][list[i]];
-          result.push(s); 
+          result.push(s);
         }
-      } 
-      return result;  
+      }
+      return result;
     }
 
   </script>
@@ -203,7 +203,7 @@
         .tickFormat(
           {format: d3.time.format("%M:%S:%L"),
           tickTime: d3.time.seconds,
-          tickNumber: 3,  
+          tickNumber: 3,
           tickSize: 30})
         .rotateTicks(45)
         .display("circle") // toggle between rectangles and circles
@@ -214,7 +214,7 @@
       initFileUpload(fileElement, svgs[index], charts[index], true, "2d");
     }
 
-    
+
   </script>
 </head>
 <body>
