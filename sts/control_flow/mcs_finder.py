@@ -187,7 +187,7 @@ class MCSFinder(ControlFlow):
       if not bug_found:
         self.log('''Warning! Final MCS did not result in violation.'''
                  ''' Try without timed out events? '''
-                 ''' See tools/visualize_event_trace.html for debugging''')
+                 ''' See tools/visualize_trace_timings.html for debugging''')
 
     if self.mcs_trace_path is not None:
       self.mcs_log_tracker.dump_mcs_trace(self.dag, self)

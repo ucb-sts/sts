@@ -276,5 +276,11 @@ see example_pretty_print_config.py for an example.
    occurs. Pass command line arguments as an argument, e.g. `$ run.sh
    ./simulator.py ...`
 
- - ```visualize_event_trace.html```: A webpage for visualizing event traces.
-   Especially useful for debugging non-deterministic replays.
+ - ```visualize_trace_timings.html```: A webpage for visualizing event traces.
+   Especially useful for debugging non-deterministic replays by comparing the
+   timing of multiple replays. Intermediate replay traces from delta debugging runs
+   can be found in experiments/experiment_name/interreplay_*
+
+ - ```visualize_2D_trace_timings.html```: A webpage for showing a Lamport time
+   diagram of an event trace. Useful for visually spotting the root causes of
+   race conditions and other nasty bugs.
