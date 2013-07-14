@@ -331,7 +331,7 @@ class MCSFinder(ControlFlow):
         if simulation is not None:
           simulation.clean_up()
       test_serialize_response(violations, self._runtime_stats.client_dict())
-      timed_out_internal = [ e.label for e in new_dag if e.timed_out ]
+      timed_out_internal = [ e.label for e in new_dag.events if e.timed_out ]
       return (violations, self._runtime_stats.client_dict(), timed_out_internal)
 
     # TODO(cs): once play_forward() is no longer a closure, register it only once
