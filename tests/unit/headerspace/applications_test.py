@@ -34,6 +34,8 @@ except ImportError:
   traceback.print_exc()
   submodule_loaded = False
 
+hassel_c_loaded = os.path.exists("./sts/hassel/hassel-c/gen")
+
 class MockAccessLink(object):
   def __init__(self, switch, switch_port):
     self.switch = switch
@@ -73,6 +75,8 @@ class applications_test(unittest.TestCase):
     self.assertTrue(loops != [])
 
   def test_hassel_c_loop(self):
+    if not hassel_c_loaded:
+      return
     (switches, network_links) = self._create_loopy_network()
     (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(switches, network_links)
     access_links =  [ MockAccessLink(sw, sw.ports[2]) for sw in switches ]
@@ -80,6 +84,8 @@ class applications_test(unittest.TestCase):
     self.assertTrue(loops != [])
 
   def test_hassel_c_no_loop(self):
+    if not hassel_c_loaded:
+      return
     (switches, network_links) = self._create_loopy_network(cut_loop=True)
     (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(switches, network_links)
     access_links = [ MockAccessLink(sw, sw.ports[2]) for sw in switches ]
