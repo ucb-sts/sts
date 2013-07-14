@@ -18,10 +18,7 @@ This file creates the GUI application window in a separate thread
 '''
 from sts.gui.view import TopologyView
 
-import struct
 import sys
-import getopt
-import os
 import logging
 from threading import Thread
 from PyQt4 import QtGui, QtCore

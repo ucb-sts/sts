@@ -17,16 +17,12 @@
 import unittest
 import sys
 import os.path
-import itertools
-from copy import copy
-import types
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 from sts.topology import *
 from sts.traffic_generator import *
 from pox.lib.ioworker.io_worker import RecocoIOLoop
-from pox.openflow.software_switch import SoftwareSwitch
 from pox.lib.graph.graph import Graph
 from sts.entities import Host, HostInterface
 
@@ -69,7 +65,7 @@ class topology_test(unittest.TestCase):
     access_sw_port_pairs = []
 
     for switch in mesh.switches:
-      for port_no, port in switch.ports.iteritems():
+      for _, port in switch.ports.iteritems():
         # TODO: abuse of dynamic types... get_connected_port is a field
         (other_node, other_port) = mesh.get_connected_port(switch, port)
         if type(other_node) == Host:

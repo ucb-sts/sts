@@ -23,19 +23,18 @@ find the minimal causal sequence (MCS) of a failure.
 from sts.util.console import msg, color
 from sts.util.convenience import timestamp_string, mkdir_p, ExitCode
 from sts.util.rpc_forker import LocalForker, test_serialize_response
-from sts.util.precompute_cache import PrecomputeCache, PrecomputePowerSetCache
+from sts.util.precompute_cache import PrecomputeCache
 from sts.replay_event import *
 from sts.event_dag import EventDag, split_list
 import sts.input_traces.log_parser as log_parser
 from sts.input_traces.input_logger import InputLogger
-from sts.control_flow.base import ControlFlow, ReplaySyncCallback
+from sts.control_flow.base import ControlFlow
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.peeker import Peeker
 from config.invariant_checks import name_to_invariant_check
 
-from collections import defaultdict, Counter
+from collections import Counter
 import copy
-import itertools
 import sys
 import time
 import random

@@ -16,13 +16,9 @@
 
 from sts.fingerprints.messages import *
 from sts.replay_event import *
-from pox.openflow.software_switch import DpPacketOut
 import logging
 import time
-import math
-from sys import maxint
 from collections import defaultdict
-from sts.util.convenience import find_index
 log = logging.getLogger("event_dag")
 
 def split_list(l, split_ways):
@@ -219,7 +215,7 @@ class EventDag(object):
         inputs.append(e.failure)
         inputs.append(e.recovery)
       else:
-         inputs.append(e)
+        inputs.append(e)
     inputs.sort(key=lambda e: self._event2idx[e])
     return inputs
 
@@ -372,7 +368,7 @@ class EventDag(object):
                        [e for e in events_list if e not in self._event2idx])
 
     result = []
-    for i, successor in enumerate(events_list):
+    for _, successor in enumerate(events_list):
       orig_successor_idx = self._event2idx[successor]
       while len(inputs) > 0 and orig_successor_idx > self._event2idx[inputs[0]]:
         # If the current successor did in fact come after the next input in the

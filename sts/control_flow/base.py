@@ -119,7 +119,7 @@ class ReplaySyncCallback(STSSyncCallback, EventMixin):
       self.log.info("Flushing %d pending state changes" %
                     num_pending_state_changes)
     self._pending_state_changes = Counter()
-    for cid, ack in self.cid2ack.iteritems():
+    for _, ack in self.cid2ack.iteritems():
       ack()
     self.cid2ack = {}
 

@@ -16,12 +16,8 @@
 import unittest
 import sys
 import os
-import itertools
-from copy import copy
-import types
-import tempfile
 
-from sts.syncproto.base import SyncMessage, SyncTime, SyncProtocolSpeaker
+from sts.syncproto.base import SyncMessage, SyncTime
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
@@ -37,6 +33,7 @@ class MockIOWorker(object):
 
 class SyncTimeTest(unittest.TestCase):
   def test_basic(self):
+    # TODO(cs): test something
     t = SyncTime(**{ "seconds": 1347830756, "microSeconds": 474865})
 
 class SyncMessageTest(unittest.TestCase):
@@ -45,6 +42,7 @@ class SyncMessageTest(unittest.TestCase):
         "xid":1,"messageClass":"StateChange" }
 
   def test_basic(self):
+    # TODO(cs): test something
     m = SyncMessage(**self.basic_hash)
 
   def changed_hash(self, **changes):

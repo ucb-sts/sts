@@ -18,14 +18,10 @@
 import unittest
 import sys
 import os.path
-import itertools
-from copy import copy
-import types
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 from sts.topology import *
-from pox.openflow.software_switch import SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
 
 submodule_loaded = True

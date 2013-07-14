@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import binascii
-
 from sts.fingerprints.base import Fingerprint
 from pox.openflow.libopenflow_01 import *
 from pox.lib.packet.ethernet import *
@@ -22,17 +20,17 @@ from pox.lib.packet.lldp import *
 from pox.lib.packet.arp import *
 from pox.lib.packet.ipv4 import *
 try:
-   import config_parser.openflow_parser as hsa
+  import config_parser.openflow_parser as hsa
 except ImportError:
-   class NeedSubmodule(object):
-     def _need_submodule():
-       raise RuntimeError('''Need to load the hassel submodule:\n '''
-                          ''' $ git submodule init \n'''
-                          ''' $ git submodule update ''')
-     def format(self, *args): self._need_submodule()
-     def ofp_match_to_hsa_match(): self._need_submodule()
+  class NeedSubmodule(object):
+    def _need_submodule(self):
+      raise RuntimeError('''Need to load the hassel submodule:\n '''
+                         ''' $ git submodule init \n'''
+                         ''' $ git submodule update ''')
+    def format(self, *args): self._need_submodule()
+    def ofp_match_to_hsa_match(self): self._need_submodule()
 
-   hsa = NeedSubmodule()
+  hsa = NeedSubmodule()
 
 def process_data(msg):
   if msg.data == b'':
@@ -42,7 +40,7 @@ def process_data(msg):
     return DPFingerprint.from_pkt(dp_packet)
 
 def process_actions(msg):
-  return tuple("output(%d)" % a.port if isinstance(a, ofp_action_output) else str(type(action)) for a in msg.actions)
+  return tuple("output(%d)" % a.port if isinstance(a, ofp_action_output) else str(type(a)) for a in msg.actions)
 
 class OFFingerprint(Fingerprint):
   ''' Fingerprints for openflow messages '''

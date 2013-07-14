@@ -39,7 +39,6 @@ import struct
 import re
 import pickle
 
-from pox.lib.addresses import EthAddr
 from os import geteuid
 from exceptions import EnvironmentError
 from platform import system

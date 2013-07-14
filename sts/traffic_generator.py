@@ -20,7 +20,6 @@ from pox.lib.packet.icmp import *
 from util.convenience import random_eth_addr, random_ip_addr
 from sts.dataplane_traces.trace import DataplaneEvent
 import random
-import itertools
 
 class TrafficGenerator (object):
   '''

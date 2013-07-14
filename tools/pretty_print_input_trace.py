@@ -2,7 +2,6 @@
 
 # note: must be invoked from the top-level sts directory
 
-import json
 import time
 import argparse
 import os
@@ -48,7 +47,7 @@ def _timestamp_to_string(timestamp):
   return with_micro
 
 def abs_time_printer(event):
- print _timestamp_to_string(event.time)
+  print _timestamp_to_string(event.time)
 
 def event_delim_printer(_):
   print "--------------------------------------------------------------------"
@@ -71,15 +70,15 @@ class Stats:
     if isinstance(event, replay_events.InputEvent):
       event_name = str(event.__class__.__name__)
       if event_name in self.input_events.keys():
-	      self.input_events[event_name] += 1
+        self.input_events[event_name] += 1
       else:
-	      self.input_events[event_name] = 1
+        self.input_events[event_name] = 1
     else:
       event_name = str(event.__class__.__name__)
       if event_name in self.internal_events.keys():
-	      self.internal_events[event_name] += 1
+        self.internal_events[event_name] += 1
       else:
-	      self.internal_events[event_name] = 1
+        self.internal_events[event_name] = 1
 
   @property
   def input_event_count(self):

@@ -19,7 +19,7 @@ from collections import Counter
 
 from sts.event_dag import EventDag
 from sts.control_flow.replayer import Replayer
-from sts.replay_event import Event, InternalEvent, InputEvent, WaitTime
+from sts.replay_event import InternalEvent
 
 log = logging.getLogger("sts")
 

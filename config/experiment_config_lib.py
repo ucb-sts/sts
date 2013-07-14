@@ -13,13 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import namedtuple
 import itertools
 import os
-import string
 import sys
-import socket
-import random
 import threading
 import subprocess
 import logging

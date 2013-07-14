@@ -16,7 +16,6 @@
 import unittest
 import sys
 import os
-import itertools
 import time
 from threading import Thread
 import logging
@@ -31,7 +30,6 @@ class MultiplexerTest(unittest.TestCase):
 
   def setup_server(self, address):
     import socket
-    import os
     mux_select = ServerMultiplexedSelect()
     ServerMockSocket.bind_called = False
     listener = ServerMockSocket(socket.AF_UNIX, socket.SOCK_STREAM,
@@ -47,6 +45,7 @@ class MultiplexerTest(unittest.TestCase):
     socket = connect_socket_with_backoff(address=address)
     io_worker = io_master.create_worker_for_socket(socket)
     io_master.set_true_io_worker(io_worker)
+    # TODO(cs): unused variable demux
     demux = STSSocketDemultiplexer(io_worker, address)
     mock_socks = []
     for i in xrange(num_socks):
@@ -95,7 +94,6 @@ class MultiplexerTest(unittest.TestCase):
       t = Thread(target=self.setup_client, args=(3,address,), name="MainThread")
       t.start()
       (mux_select, listener) = self.setup_server(address)
-      mock_socks = []
       for i in xrange(len(self.client_messages)):
         self.wait_for_next_accept(listener, mux_select)
         mock_sock = listener.accept()[0]

@@ -16,12 +16,8 @@
 import unittest
 import sys
 import os
-import itertools
-from copy import copy
-import types
-import tempfile
 
-from tests.unit.sts.sync_connection_test import MockIOWorker, SyncMessageTest
+from tests.unit.sts.syncproto.base_test import MockIOWorker, SyncMessageTest
 from sts.syncproto.base import SyncTime
 from sts.syncproto.sts_syncer import STSSyncProtocolSpeaker
 
@@ -41,6 +37,7 @@ class STSSyncProtocolSpeakerTest(unittest.TestCase):
     state_master = MockStateMaster()
     worker = MockIOWorker()
     controller = "c1"
+    # TODO(cs): unused variable speaker
     speaker = STSSyncProtocolSpeaker(controller=controller, state_master=state_master, json_io_worker=worker)
 
     worker.receive(h)

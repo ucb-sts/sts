@@ -112,6 +112,8 @@ class DumbEventScheduler(EventSchedulerBase):
     log.debug("Waiting for %s (maximum wait time: %.0f ms)" %
           ( str(event).replace("\n", ""), self.epsilon_seconds * 1000) )
 
+    now = time.time()
+    end = now  + self.epsilon_seconds 
     proceed = False
     while True:
       now = time.time()

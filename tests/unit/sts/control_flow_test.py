@@ -16,20 +16,13 @@
 import unittest
 import sys
 import os
-import itertools
-from copy import copy
-import types
 import signal
-import tempfile
 
 from config.experiment_config_lib import ControllerConfig
-from sts.control_flow import Replayer, MCSFinder, EfficientMCSFinder
+from sts.control_flow import Replayer
 from sts.topology import FatTree, BufferedPatchPanel, MeshTopology
-from sts.simulation_state import Simulation, SimulationConfig
-from sts.replay_event import Event, InternalEvent, InputEvent
-from sts.event_dag import EventDag
-from sts.entities import Host, Controller
-import logging
+from sts.simulation_state import SimulationConfig
+from sts.entities import Host
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 

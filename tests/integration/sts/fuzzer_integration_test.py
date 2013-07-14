@@ -18,10 +18,6 @@
 import unittest
 import sys
 import os
-import itertools
-from copy import copy
-import types
-import tempfile
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 

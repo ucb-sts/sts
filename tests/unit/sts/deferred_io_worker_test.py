@@ -25,7 +25,6 @@ import unittest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), *itertools.repeat("..", 3)))
 
-from pox.lib.mock_socket import MockSocket
 from pox.lib.ioworker.io_worker import IOWorker
 from sts.util.deferred_io import DeferredIOWorker
 

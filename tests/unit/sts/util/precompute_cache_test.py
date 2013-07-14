@@ -16,9 +16,6 @@
 import unittest
 import sys
 import os.path
-import itertools
-from copy import copy
-import types
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 

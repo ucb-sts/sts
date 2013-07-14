@@ -16,23 +16,14 @@
 import unittest
 import sys
 import os
-import itertools
-from copy import copy
-import types
 import signal
-import tempfile
 
 from sts.control_flow.peeker import *
 # TODO: move Mock internal events to lib
 from tests.unit.sts.event_dag_test import MockInternalEvent
 from tests.unit.sts.mcs_finder_test import MockInputEvent
-from config.experiment_config_lib import ControllerConfig
-from sts.control_flow import Replayer, MCSFinder
-from sts.topology import FatTree, MeshTopology
-from sts.simulation_state import Simulation, SimulationConfig
-from sts.replay_event import Event, InternalEvent, InputEvent
+from sts.replay_event import InternalEvent 
 from sts.event_dag import EventDag
-from sts.entities import Host, Controller
 import logging
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")

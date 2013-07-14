@@ -21,8 +21,7 @@ control flow type for running the simulation forward.
 
 from sts.util.tabular import Tabular
 from sts.util.procutils import printlock
-from sts.topology import BufferedPatchPanel
-from sts.util.console import msg, color
+from sts.util.console import color
 from sts.replay_event import *
 from sts.util.convenience import find
 from sts.traffic_generator import TrafficGenerator
@@ -33,6 +32,7 @@ from pox.lib.packet.icmp import *
 import pox.openflow.libopenflow_01 as of
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
+from sts.invariant_checker import InvariantChecker
 
 log = logging.getLogger("interactive")
 
@@ -55,7 +55,7 @@ class STSCommandArg(object):
 
   def arg_help(self):
     if self.help_msg:
-      return help_msg
+      return self.help_msg
     elif self._values:
       return "one of %s" % (", ".join(map(lambda x: str(x), self.values())))
 

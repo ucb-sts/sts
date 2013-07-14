@@ -298,8 +298,8 @@ class LinkTracker(object):
     if port is None:
       port = self.find_unused_port(switch)
     link = AccessLink(host, interface, switch, port)
-    self.port2access_link[port] = new_access_link
-    self.interface2access_link[interface] = new_access_link
+    self.port2access_link[port] = link
+    self.interface2access_link[interface] = link
     return link
 
   def remove_access_link(self, host, switch):
@@ -342,7 +342,7 @@ class LinkTracker(object):
 
   def find_unused_port(self, switch):
     ''' Find a switch's unused port; if no such port exists, create a new one '''
-    for port_number, port in switch.ports.items():
+    for _, port in switch.ports.items():
       if port not in self.port2internal_link.keys() and \
         port not in self.port2access_link.keys():
         return port

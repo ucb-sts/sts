@@ -72,7 +72,7 @@ def port_used(address='127.0.0.1', port=6633):
     s.listen(1)
     s.close()
     return False
-  except Exception, e:
+  except Exception:
     # TODO(cs): catch specific errors
     return True
 
@@ -95,7 +95,7 @@ def find_port(port_spec):
     port_gen = port_spec
 
   gen = port_gen()
-  for attempt in range(0,100):
+  for _ in range(0,100):
     candidate = gen.next()
     if not port_used(port=candidate):
       return candidate

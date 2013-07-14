@@ -25,7 +25,6 @@ Three control flow types for running the simulation forward.
 from sts.control_flow.interactive import Interactive
 from sts.topology import BufferedPatchPanel
 from sts.traffic_generator import TrafficGenerator
-from sts.util.console import msg
 from sts.replay_event import *
 from pox.lib.util import TimeoutError
 from config.invariant_checks import name_to_invariant_check
@@ -35,7 +34,6 @@ from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 import os
 import re
 import shutil
-import select
 import signal
 import sys
 import time
@@ -220,13 +218,13 @@ class Fuzzer(ControlFlow):
               self._send_initialization_packets(send_to_self=True)
               sent_self_packets = True
             elif self.logical_time > self.initialization_rounds:
-               # All-to-all mode
-               if (self.logical_time % self._all_to_all_interval) == 0:
-                  self._send_initialization_packets(send_to_self=False)
-                  self._all_to_all_iterations += 1
-                  if self._all_to_all_iterations > len(self.simulation.topology.hosts):
-                     log.info("Done initializing")
-                     self._pending_all_to_all = False
+              # All-to-all mode
+              if (self.logical_time % self._all_to_all_interval) == 0:
+                self._send_initialization_packets(send_to_self=False)
+                self._all_to_all_iterations += 1
+                if self._all_to_all_iterations > len(self.simulation.topology.hosts):
+                  log.info("Done initializing")
+                  self._pending_all_to_all = False
             self.check_dataplane(pass_through=True)
 
           msg.event("Round %d completed." % self.logical_time)

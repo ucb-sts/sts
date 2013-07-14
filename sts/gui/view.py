@@ -16,16 +16,9 @@
 '''
 Graphical representation of STS topology switch, host and link entities
 '''
-from sts.entities import Host as STSHost, HostInterface as STSHostInterface, \
-                         FuzzSoftwareSwitch as STSSwitch, AccessLink as STSAccessLink, \
-                         Link as STSNetworkLink
-from sts.gui.entities import GuiNode, GuiHost, GuiSwitch, GuiLink
-from pox.lib.addresses import IPAddr, EthAddr
-from pox.openflow.libopenflow_01 import ofp_phy_port
+from sts.gui.entities import GuiHost, GuiSwitch, GuiLink
 
-import os
 import logging
-import math
 import json
 from random import randint
 from threading import Timer
@@ -291,7 +284,7 @@ class STSSyncer:
       dpid = max(self.dpid2switch.keys()) + 1
     num_ports = 2
     switch = self.sts_topology.create_switch(dpid, num_ports)
-    self.add_switch(dpid)
+    self.add_switch(switch)
 
   def remove_switch(self, dpid):
     '''
@@ -549,6 +542,7 @@ class STSSyncer:
     dpid = info["dpid"]
     numports = info["numports"]
     position = info["position"]
+    # TODO(cs): unused variable sts_switch
     sts_switch = self.sts_topology.create_switch(dpid, numports)
     self.add_switch(dpid, position)
 
@@ -563,5 +557,6 @@ class STSSyncer:
     to_switch_dpid = info["to_switch_dpid"]
     sts_from_switch = self.sts_topology.dpid2switch[from_switch_dpid]
     sts_to_switch = self.sts_topology.dpid2switch[to_switch_dpid]
+    # TODO(cs): unused variable sts_link
     sts_link = self.sts_topology.create_network_link(sts_from_switch, None, sts_to_switch, None)
     self.add_network_link(from_switch_dpid, to_switch_dpid)

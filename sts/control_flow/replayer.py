@@ -20,7 +20,7 @@ control flow for running the simulation forward.
 '''
 
 from sts.control_flow.interactive import Interactive
-from sts.control_flow.event_scheduler import DumbEventScheduler, EventScheduler
+from sts.control_flow.event_scheduler import EventScheduler
 from sts.replay_event import *
 from sts.event_dag import EventDag
 import sts.input_traces.log_parser as log_parser
@@ -30,9 +30,6 @@ from sts.util.convenience import find, find_index
 from sts.topology import BufferedPatchPanel
 
 import signal
-import sys
-import time
-import random
 import logging
 
 log = logging.getLogger("Replayer")
@@ -154,8 +151,6 @@ class Replayer(ControlFlow):
     if post_bootstrap_hook is not None:
       post_bootstrap_hook()
 
-    old_interrupt = None
-
     def interrupt(sgn, frame):
       msg.interactive("Interrupting replayer, dropping to console (press ^C again to terminate)")
       signal.signal(signal.SIGINT, self.old_interrupt)
@@ -183,7 +178,7 @@ class Replayer(ControlFlow):
           if self.logical_time != event.round:
             self.logical_time = event.round
             self.increment_round()
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt:
           interactive = Interactive(self.simulation_cfg,
                                     input_logger=self._input_logger)
           interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))

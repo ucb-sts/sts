@@ -39,7 +39,6 @@ from sts.entities import Link
 from sts.god_scheduler import PendingReceive, PendingSend
 from sts.dataplane_traces.trace import DataplaneEvent
 from sts.fingerprints.messages import *
-from invariant_checker import InvariantChecker
 from config.invariant_checks import name_to_invariant_check
 import itertools
 import abc

@@ -21,7 +21,6 @@ from entities import *
 import logging
 import collections
 from sts.util.console import msg
-import json
 import time
 from collections import defaultdict
 
@@ -319,6 +318,7 @@ class InvariantChecker(object):
   @staticmethod
   def compute_controller_omega(controller_snapshot, live_switches, live_links, edge_links):
     import topology_loader.topology_loader as hsa_topo
+    import headerspace.applications as hsa
     name_tf_pairs = hsa_topo.tf_pairs_from_snapshot(controller_snapshot, live_switches)
     # Frenetic doesn't store any link or host information.
     # No virtualization though, so we can assume the same TTF. TODO(cs): for now...
