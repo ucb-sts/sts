@@ -186,10 +186,20 @@ class MCSFinder(ControlFlow):
       bug_found = self.replay(self.dag, "final_mcs_trace",
                               ignore_runtime_stats=True)
       if not bug_found:
-        self.log('''Warning! Final MCS did not result in violation.'''
-                 ''' Try without timed out events? '''
-                 ''' See tools/visualize_trace_timings.html for debugging''')
+        self.log('''Warning: MCS did not result in violation. Trying replay '''
+                 '''again without timed out events.''')
+        # TODO(cs): always replay the MCS without timeouts, since the console
+        # output will be significantly cleaner?
+        no_timeouts = self.dag.filter_timeouts()
+        bug_found = self.replay(no_timeouts, "final_mcs_no_timed_out_events",
+                                ignore_runtime_stats=True)
+        if not bug_found:
+          self.log('''Warning! Final MCS did not result in violation, even '''
+                   ''' after ignoring timed out internal events. '''
+                   ''' See tools/visualize_trace_timings.html for debugging''')
 
+    # N.B. dumping the MCS trace must occur after the final replay trace,
+    # since we need to infer which events will time out for events.trace.notimeouts
     if self.mcs_trace_path is not None:
       self.mcs_log_tracker.dump_mcs_trace(self.dag, self)
     return ExitCode(0)
