@@ -122,6 +122,10 @@ class Replayer(ControlFlow):
   def increment_round(self):
     msg.event(color.CYAN + ("Round %d" % self.logical_time) + color.WHITE)
 
+  def init_results(self, results_dir):
+    if self._input_logger:
+      self._input_logger.open(results_dir)
+
   def simulate(self, post_bootstrap_hook=None):
     ''' Caller *must* call simulation.clean_up() '''
     Replayer.total_replays += 1

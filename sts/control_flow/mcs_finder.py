@@ -304,11 +304,11 @@ class MCSFinder(ControlFlow):
       # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
       ReplayLogTracker.create_replay_logger_dir(results_dir)
       input_logger = InputLogger()
-      input_logger.open(results_dir)
       replayer = Replayer(self.simulation_cfg, new_dag,
                           wait_on_deterministic_values=self.wait_on_deterministic_values,
                           input_logger=input_logger,
                           **self.kwargs)
+      replayer.init_results(results_dir)
       violations = []
       simulation = None
       try:
