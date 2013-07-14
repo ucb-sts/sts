@@ -332,14 +332,18 @@ class MCSFinder(ControlFlow):
         if simulation is not None:
           simulation.clean_up()
       test_serialize_response(violations, self._runtime_stats.client_dict())
-      return (violations, self._runtime_stats.client_dict())
+      timed_out_internal = [ e.label for e in new_dag if e.timed_out ]
+      return (violations, self._runtime_stats.client_dict(), timed_out_internal)
 
     # TODO(cs): once play_forward() is no longer a closure, register it only once
     self.forker.register_task("play_forward", play_forward)
 
     results_dir = self.replay_log_tracker.get_replay_logger_dir(label)
-    (violations, client_runtime_stats) = self.forker.fork("play_forward",
+    (violations, client_runtime_stats,
+                 timed_out_internal) = self.forker.fork("play_forward",
                                                           results_dir)
+    new_dag.set_events_as_timed_out(timed_out_internal)
+
     bug_found = False
     if violations != []:
       msg.fail("Violations: %s" % str(violations))
@@ -352,6 +356,7 @@ class MCSFinder(ControlFlow):
 
     if not ignore_runtime_stats:
       self._runtime_stats.merge_client_dict(client_runtime_stats)
+
     return bug_found
 
   def _optimize_event_dag(self):

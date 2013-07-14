@@ -107,6 +107,9 @@ class EventDagView(object):
   def get_last_invariant_violation(self):
     return self._parent.get_last_invariant_violation()
 
+  def set_events_as_timed_out(self, timed_out_event_labels):
+    return self._parent.set_events_as_timed_out(timed_out_event_labels)
+
   def __len__(self):
     return len(self._events_list)
 
@@ -185,6 +188,11 @@ class EventDag(object):
   @property
   def atomic_input_events(self):
     return self._atomic_input_events(self.input_events)
+
+  def _get_event(self, label):
+    if label not in self._label2event:
+      raise ValueError("Unknown label %s" % str(label))
+    return self._label2event[label]
 
   def _atomic_input_events(self, inputs):
     # TODO(cs): memoize?
@@ -435,3 +443,10 @@ class EventDag(object):
         self._last_violation = event
         return event
     return None
+
+  def set_events_as_timed_out(self, timed_out_event_labels):
+    for event in self._events_list:
+      event.timed_out = False
+
+    for label in timed_out_event_labels:
+      self._get_event(label).timed_out = True
