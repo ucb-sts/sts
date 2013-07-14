@@ -294,7 +294,8 @@ see example_pretty_print_config.py for an example.
      - Load the final replay of the MCS trace,
        `experiments/experiment_name_mcs/interreplay_._final_mcs_trace/events.trace`,
        as the second timeline.
-     - Hover over events to see functional equivalence across the traces.
+     - Hover over events to further information about them, including functional equivalence
+       with events in the other traces.
      - Load intermediate replay trace timelines if needed. Intermediate replay
        traces from delta debugging runs can be found in
        `experiments/experiment_name_mcs/interreplay_*`
