@@ -24,12 +24,11 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 class MockIOWorker(object):
   def __init__(self):
     self.sends = []
-    self.on_json_received = None
+    self.on_message_received = None
   def send(self, msg):
     self.sends.append(msg)
   def receive(self, msg):
-    self.on_json_received(self, msg)
-
+    self.on_message_received(msg)
 
 class SyncTimeTest(unittest.TestCase):
   def test_basic(self):

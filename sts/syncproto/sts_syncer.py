@@ -139,9 +139,9 @@ class STSSyncConnectionManager(object):
 
 class STSSyncCallback(object):
   """ override with your favorite functionality """
-  def state_change(self, type, controller, time, fingerprint, name, value):
+  def state_change(self, type, xid, controller, time, fingerprint, name, value):
     log.info("{}: controller: {} time: {} fingerprint: {} name: {} value: {}"\
              .format(type, controller, time, fingerprint, name, value))
-  def get_deterministic_value(self, controller, name):
+  def get_deterministic_value(self, controller, name, xid):
     if name == "gettimeofday":
       return SyncTime.now()
