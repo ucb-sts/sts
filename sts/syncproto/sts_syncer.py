@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This is STS's end of the sync protocol. Listens to all controller-specific
-# syncers and dispatches messages to STS handlers.
+'''
+This is STS's end of the sync protocol. Listens to all controller-specific
+syncers and dispatches messages to STS handlers.
+'''
 
 from sts.syncproto.base import SyncProtocolSpeaker, SyncMessage, SyncTime, SyncIODelegate
 
