@@ -90,7 +90,6 @@ function appendElementToDOM(type, element){
 
 function appendToDOM(fileElement, chartElement, timeline_type) {
   // the order in which elements are currently displayed
-
   if (timeline_type == "1d"){
     for (i = 0; i < fileElement.length; i++){
       appendElementToDOM("file upload", fileElement[i]);
@@ -108,5 +107,62 @@ window.onload = function() {
   appendChart(nullData);
 }
 
+// Mouseover callback
+showDetails = function(d, i, datum, IDs, g, timeline_type) {
+  var content;
+  content = '<p class="main">' + d.label + '</span></p>';
+  content += '<hr class="tooltip-hr">';
+  content += '<p class="main">' + d.class + '</span></p>';
+  content += '<p class="main">Time (ms): ' + d.starting_time + '</span></p>';
+  tooltip.showTooltip(content, d3.event);
+
+  if (timeline_type == "1d"){
+    // show functional equivalence lines when the user mouses over the event
+    if (IDs[d.fe_id].length >= 4){
+      for ( i = 0; i < IDs[d.fe_id].length-2; i+=2) {
+        g.append('line')
+          .attr("x1", IDs[d.fe_id][i])
+          .attr("y1", IDs[d.fe_id][i+1])
+          .attr("x2", IDs[d.fe_id][i+2])
+          .attr("y2", IDs[d.fe_id][i+3])
+          .style("stroke","rgb(255,0,0)");
+      }
+    }
+  }
+};
+
+// Mouseout callback
+hideDetails = function(d, i, datum, IDs, g, timeline_type) {
+  tooltip.hideTooltip();
+
+  if (timeline_type == "1d"){
+    // remove functional equivalence lines after the user mouses over the event
+    lines = g.selectAll("line");
+    lastElement = lines[0].length-1;
+    for ( i = 0; i < IDs[d.fe_id].length/2; i++){
+      lines[0][lastElement-i].remove();
+    }
+  }
+};
+
+function pushChart(data, index, fileElement, chartElement, timeline_type){
+  charts.push(d3.timeline(timeline_type)
+    .stack()
+    .tickFormat(
+      {format: d3.time.format("%M:%S:%L"),
+      tickTime: d3.time.seconds,
+      tickNumber: 3,
+      tickSize: 30})
+    .rotateTicks(45)
+    .display("circle") // toggle between rectangles and circles
+    .mouseover(showDetails)
+    .mouseout(hideDetails));
+  svgs.push(d3.select("#" + chartElement).insert("svg").attr("width", width));
+  timelineCircle(svgs[index], charts[index], data);
+
+  for (i = 0; i < fileElement.length; i++){
+    initFileUpload(fileElement[i], svgs[index], charts[index], true, timeline_type);
+  }
+}
 
 

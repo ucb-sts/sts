@@ -129,10 +129,10 @@
               hover(d, index, datum);
             })
             .on("mouseover", function (d, i) {
-              mouseover(d, i, datum, IDs, g); 
+              mouseover(d, i, datum, IDs, g, timeline_type); 
             })
             .on("mouseout", function (d, i) {
-              mouseout(d, i, datum, IDs, g); 
+              mouseout(d, i, datum, IDs, g, timeline_type); 
             })
             .on("click", function (d, i) {
               click(d, index, datum);

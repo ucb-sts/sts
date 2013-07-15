@@ -159,9 +159,10 @@ with the way we're setting event.replay_time.
       }
     }
 
-    // findFunctionallyEquivalentEventID takes an event from timeline2 and
-    // returns the ID of its functional equivalent in timeline1, or -1 if no
-    // functional equivalent exists.
+    // findFunctionallyEquivalentEventID takes an event from timeline_num and
+    // returns the ID of its functional equivalent in the first loaded timeline, 
+    // or -1 if no functional equivalent event exists. Comparisons are always 
+    // made to the original loaded trace. 
     //
     // An event e2 from a replay run is functionally equivalent to an event e1 from
     // the original run iff their fingerprints are the same, and:
@@ -195,44 +196,8 @@ with the way we're setting event.replay_time.
   </script>
   <script type="text/javascript">
 
-    // Mouseover callback
-    showDetails = function(d, i, datum, IDs, g) {
-      var content;
-      content = '<p class="main">' + d.label + '</span></p>';
-      content += '<hr class="tooltip-hr">';
-      content += '<p class="main">' + d.class + '</span></p>';
-      content += '<p class="main">Time (ms): ' + d.starting_time + '</span></p>';
-      tooltip.showTooltip(content, d3.event);
-
-        // show functional equivalence lines when the user mouses over the event
-        if (IDs[d.fe_id].length >= 4){
-          for ( i = 0; i < IDs[d.fe_id].length-2; i+=2) {
-            g.append('line')
-              .attr("x1", IDs[d.fe_id][i])
-              .attr("y1", IDs[d.fe_id][i+1])
-              .attr("x2", IDs[d.fe_id][i+2])
-              .attr("y2", IDs[d.fe_id][i+3])
-              .style("stroke","rgb(255,0,0)");
-          }
-        }
-
-    };
-
-    // Mouseout callback
-    hideDetails = function(d, i, datum, IDs, g) {
-      tooltip.hideTooltip();
-
-        // remove functional equivalence lines after the user mouses over the event
-        lines = g.selectAll("line");
-        lastElement = lines[0].length-1;
-        for ( i = 0; i < IDs[d.fe_id].length/2; i++){
-          lines[0][lastElement-i].remove();
-        }
-
-    };
-
-
     function appendChart(data) {
+      var timeline_type = "1d";
       var index = charts.length;
       var chartElement = "timeline" + index;
       var fileElements = [];
@@ -240,25 +205,8 @@ with the way we're setting event.replay_time.
         var file = "fileinput" + (index + i);
         fileElements[i]=file;
       }
-      appendToDOM(fileElements, chartElement, "1d");
-
-      charts.push(d3.timeline("1d")
-        .stack()
-        .tickFormat(
-          {format: d3.time.format("%M:%S:%L"),
-          tickTime: d3.time.seconds,
-          tickNumber: 5,
-          tickSize: 30})
-        .rotateTicks(45)
-        .display("circle") // toggle between rectangles and circles
-        .mouseover(showDetails)
-        .mouseout(hideDetails));
-      svgs.push(d3.select("#" + chartElement).insert("svg").attr("width", width));
-
-      timelineCircle(svgs[index], charts[index], data);
-      for (i = 0; i < fileElements.length; i++){
-        initFileUpload(fileElements[i], svgs[index], charts[index], true, "1d");
-      }
+      appendToDOM(fileElements, chartElement, timeline_type);
+      pushChart(data, index, fileElements, chartElement, timeline_type);
     }
 
   </script>

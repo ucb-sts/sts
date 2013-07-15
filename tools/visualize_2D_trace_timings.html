@@ -82,11 +82,22 @@ visualize_2D_trace_timings.html:165
             objEntities["controllers"][e["controller_id"]] = [];
           }
         }
-        else if ((e.class === "TrafficInjection" || e.class === "HostMigration" ) ){
+        else if (e.class === "ControllerFailure" || e.class === "ControllerRecovery"){
+          if ( !(e["fingerprint"][1] in objEntities["controllers"]) ){
+            objEntities["controllers"][e["fingerprint"][1]] = [];
+          }
+        }
+        else if (e.class === "TrafficInjection" || e.class === "HostMigration"){
           if ( !(e["host_id"] in objEntities["hosts"]) ){
             objEntities["hosts"][e["host_id"]] = [];
           }
+        }        
+        else if (e.class === "DataplaneDrop"){
+          if ( !(e["fingerprint"][2] in objEntities["switches"]) ){
+            objEntities["switches"][e["fingerprint"][2]] = [];
+          }
         }
+
       }
 
       return objEntities;
@@ -192,43 +203,14 @@ visualize_2D_trace_timings.html:165
   </script>
   <script type="text/javascript">
 
-    // Mouseover callback
-    showDetails = function(d, i, datum, IDs, g) {
-      var content;
-      content = '<p class="main">' + d.label + '</span></p>';
-      content += '<hr class="tooltip-hr">';
-      content += '<p class="main">' + d.class + '</span></p>';
-      content += '<p class="main">Time (ms): ' + d.starting_time + '</span></p>';
-      tooltip.showTooltip(content, d3.event);
-    };
-
-    // Mouseout callback
-    hideDetails = function(d, i, datum, IDs, g) {
-      tooltip.hideTooltip();
-    };
-
     function appendChart(data) {
+      var timeline_type = "2d"
       var index = charts.length;
       var chartElement = "timeline" + index;
-      var fileElement = "fileinput" + index;
-      appendToDOM(fileElement, chartElement, "2d");
-
-      charts.push(d3.timeline("2d")
-        .stack()
-        .tickFormat(
-          {format: d3.time.format("%M:%S:%L"),
-          tickTime: d3.time.seconds,
-          tickNumber: 3,
-          tickSize: 30})
-        .rotateTicks(45)
-        .display("circle") // toggle between rectangles and circles
-        .mouseover(showDetails)
-        .mouseout(hideDetails));
-      svgs.push(d3.select("#" + chartElement).insert("svg").attr("width", width));
-      timelineCircle(svgs[index], charts[index], data);
-      initFileUpload(fileElement, svgs[index], charts[index], true, "2d");
+      var fileElement = ["fileinput" + index ];
+      appendToDOM(fileElement, chartElement, timeline_type);
+      pushChart(data, index, fileElement, chartElement, timeline_type);
     }
-
 
   </script>
 </head>
