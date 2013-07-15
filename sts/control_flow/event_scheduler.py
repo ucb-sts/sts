@@ -113,7 +113,7 @@ class DumbEventScheduler(EventSchedulerBase):
           ( str(event).replace("\n", ""), self.epsilon_seconds * 1000) )
 
     now = time.time()
-    end = now  + self.epsilon_seconds 
+    end = now  + self.epsilon_seconds
     proceed = False
     while True:
       now = time.time()
@@ -129,7 +129,7 @@ class DumbEventScheduler(EventSchedulerBase):
     else:
       event.timed_out = True
       self.stats.event_timed_out(event)
-    event.time = SyncTime.now()
+    event.replay_time = SyncTime.now()
     self._log_event(event)
     self.last_event = event
 
@@ -165,8 +165,6 @@ class EventScheduler(EventSchedulerBase):
     elif isinstance(event, InternalEvent):
       self.wait_for_internal(event)
     self.update_event_time(event)
-    # Set event.time to now for the replay log
-    event.time = SyncTime.now()
     self._log_event(event)
 
   def inject_input(self, event):
@@ -215,7 +213,7 @@ class EventScheduler(EventSchedulerBase):
     else:
       event.timed_out = True
       self.stats.event_timed_out(event)
-    event.time = SyncTime.now()
+    event.replay_time = SyncTime.now()
 
   def update_event_time(self, event):
     """ update our bearing on where we currently our in the timeline """
@@ -233,5 +231,8 @@ class EventScheduler(EventSchedulerBase):
     to_wait = rec_delta - real_delta
     if to_wait > 10000:
       raise RuntimeError("to_wait %d ms is way too big for event %s" %
+                         (to_wait, str(event)))
+    if to_wait < 0:
+      raise RuntimeError("Wait time %d is negative for event %s" %
                          (to_wait, str(event)))
     return max(to_wait, 0)

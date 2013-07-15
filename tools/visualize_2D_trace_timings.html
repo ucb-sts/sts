@@ -45,7 +45,11 @@ visualize_2D_trace_timings.html:165
       for (i = 0; i < split.length-1; i++) {
         var str = split[i];
         var e = jQuery.parseJSON(str);
-        var epochMillis = (e["time"][0] * 1000) + (e["time"][1] / 1000);
+        var time_key = "time";
+        if ("replay_time" in e) {
+          time_key = "replay_time";
+        }
+        var epochMillis = (e[time_key][0] * 1000) + (e[time_key][1] / 1000);
         var point = {"starting_time": epochMillis,
                      "ending_time": epochMillis,
                      "label": e["label"],
