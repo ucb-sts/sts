@@ -138,12 +138,12 @@ visualize_2D_trace_timings.html:165
 
         // display event on corresponding controller
         else if (eventClass === "ControllerFailure" || eventClass === "ControllerRecovery"){
-          addEvent("controllers", e["fingerprint"][1], point, entities);
+          addEvent("controllers", e["controller_id"], point, entities);
         }
 
         // display event on corresponding switch
         else if (eventClass === "DataplaneDrop"){
-          addEvent("switches", e["fingerprint"][2], point, entities);
+          addEvent("switches", e["dpid"], point, entities);
         }
 
         // currently ignored
@@ -153,18 +153,18 @@ visualize_2D_trace_timings.html:165
 
         // display event on corresponding switch
         else if (eventClass === "ControlChannelBlock" || eventClass === "ControlChannelUnblock"){
-          addEvent("switches", e["fingerprint"][1], point, entities);
+          addEvent("switches", e["dpid"], point, entities);
         }
 
         // display event on corresponding switches
         else if ( eventClass === "LinkFailure" || eventClass === "LinkRecovery"){
-          addEvent("switches", e["fingerprint"][1], point, entities);
-          addEvent("switches", e["fingerprint"][3], point, entities);
+          addEvent("switches", e["start_dpid"], point, entities);
+          addEvent("switches", e["end_dpid"], point, entities);
         }
 
         // display event on corresponding switch
         else if ( eventClass == "SwitchFailure" || eventClass === "SwitchRecovery"){
-          addEvent("switches", e["fingerprint"][1], point, entities);
+          addEvent("switches", e["dpid"], point, entities);
         }
 
         // display event on corresponding host
