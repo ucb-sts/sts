@@ -69,7 +69,8 @@ visualize_2D_trace_timings.html:165
         var str = data[i];
         var e = jQuery.parseJSON(str);
 
-        if (e.class === "ControllerStateChange"){
+        if (e.class === "ControllerStateChange" || e.class === "ControllerFailure" 
+            || e.class === "ControllerRecovery"){
           if ( !(e["controller_id"] in objEntities["controllers"]) ){
             objEntities["controllers"][e["controller_id"]] = [];
           }
@@ -82,19 +83,17 @@ visualize_2D_trace_timings.html:165
             objEntities["controllers"][e["controller_id"]] = [];
           }
         }
-        else if (e.class === "ControllerFailure" || e.class === "ControllerRecovery"){
-          if ( !(e["fingerprint"][1] in objEntities["controllers"]) ){
-            objEntities["controllers"][e["fingerprint"][1]] = [];
-          }
-        }
         else if (e.class === "TrafficInjection" || e.class === "HostMigration"){
           if ( !(e["host_id"] in objEntities["hosts"]) ){
             objEntities["hosts"][e["host_id"]] = [];
           }
         }        
         else if (e.class === "DataplaneDrop"){
-          if ( !(e["fingerprint"][2] in objEntities["switches"]) ){
-            objEntities["switches"][e["fingerprint"][2]] = [];
+          if ( !(e["dpid"] in objEntities["switches"]) ){
+            objEntities["switches"][e["dpid"]] = [];
+          }
+          if ( !(e["host_id"] in objEntities["hosts"]) ){
+            objEntities["hosts"][e["host_id"]] = [];
           }
         }
 
@@ -143,7 +142,12 @@ visualize_2D_trace_timings.html:165
 
         // display event on corresponding switch
         else if (eventClass === "DataplaneDrop"){
-          addEvent("switches", e["dpid"], point, entities);
+          if ("dpid" in e){ 
+            addEvent("switches", e["dpid"], point, entities);
+          } 
+          else if ("host_id" in e) {
+            addEvent("hosts", e["host_id"], point, entities);
+          }
         }
 
         // currently ignored
