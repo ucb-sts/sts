@@ -50,7 +50,7 @@ class Replayer(ControlFlow):
 
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
                print_buffers=True, wait_on_deterministic_values=False,
-               default_dp_permit=False, fail_to_interactive=False,
+               default_dp_permit=False, fail_to_interactive=False, end_in_interactive=False,
                input_logger=None, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
@@ -83,6 +83,7 @@ class Replayer(ControlFlow):
     self.unexpected_state_changes = []
     self.early_state_changes = []
     self.event_scheduler_stats = None
+    self.end_in_interactive = end_in_interactive
     self.fail_to_interactive = fail_to_interactive
     self._input_logger = input_logger
 
@@ -193,6 +194,10 @@ class Replayer(ControlFlow):
       msg.event(color.B_BLUE+"Event Stats: %s" % str(event_scheduler.stats))
       if self.default_dp_permit:
         msg.event(color.B_BLUE+"DataplaneDrop Stats: %s" % str(self.dp_checker.stats))
+    if self.end_in_interactive:
+      interactive = Interactive(self.simulation_cfg,
+          input_logger=self._input_logger)
+      interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
 
   def _check_early_state_changes(self, dag, current_index, input):
     ''' Check whether any pending state change that were supposed to come
