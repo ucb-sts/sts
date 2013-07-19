@@ -501,7 +501,7 @@ class ReplayLogTracker(object):
   @staticmethod
   def create_replay_logger_dir(results_dir):
     mkdir_p(results_dir)
-    with file(results_dir + "__init__.py", 'a'):
+    with file(results_dir + "/__init__.py", 'a'):
       pass
 
 class MCSLogTracker(object):
