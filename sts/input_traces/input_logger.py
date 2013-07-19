@@ -29,10 +29,12 @@ from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
 from sts.control_flow import Replayer
 from sts.simulation_state import SimulationConfig
+from sts.input_traces.input_logger import InputLogger
 
 simulation_config = %s
 
 control_flow = Replayer(simulation_config, "%s",
+                        input_logger=InputLogger(),
                         wait_on_deterministic_values=%s)
 # Invariant check: %s
 '''
