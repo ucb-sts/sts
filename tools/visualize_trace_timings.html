@@ -27,8 +27,12 @@ jquery [slider](http://jqueryui.com/slider/) and redrawing the chart.
 TODO(cs): allow the user filter out certain event types.
 
 TODO(cs): newly recorded traces (as of July 14th, 2013) produce an error
-"-infinity not a valid x position for circle". This must have something to do
-with the way we're setting event.replay_time.
+"-infinity not a valid x position for circle". It also ends up using a huge
+amount of CPU until Chrome ends up killing the tab -- infinite loop?
+This might have something to do with the way we're setting event.replay_time.
+See:
+  experiments/nox_mesh_4_loop_reproducibility/interreplay_41_l_5/events.trace
+for an example that reproduces this behavior.
 -->
 <html>
 <head>
