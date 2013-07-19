@@ -494,14 +494,15 @@ class ReplayLogTracker(object):
     self.count = 0
 
   def get_replay_logger_dir(self, label):
-    dst = os.path.join(self.results_dir, "interreplay_%d_%s" % (self.count, label.replace("/", ".")))
+    dst = os.path.join(self.results_dir, "interreplay_%d_%s" % (self.count, label.replace("/", "_")))
     self.count += 1
     return dst
 
   @staticmethod
   def create_replay_logger_dir(results_dir):
     mkdir_p(results_dir)
-
+    with file(results_dir + "__init__.py", 'a'):
+      pass
 
 class MCSLogTracker(object):
   ''' Logs intermedate and final MCS results that are the outcome(s) of delta
@@ -529,8 +530,8 @@ class MCSLogTracker(object):
       # Only dump if MCS decreases in size
       self.min_size = len(dag.events)
       self.count += 1
-      dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self.count, label.replace("/", ".")))
-      mkdir_p(dst)
+      dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self.count, label.replace("/", "_")))
+      ReplayLogTracker.create_replay_logger_dir(dst)
       self.dump_mcs_trace(dag, control_flow, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
       self.dump_runtime_stats(os.path.join(dst,
           os.path.basename(self.runtime_stats.runtime_stats_file)))
