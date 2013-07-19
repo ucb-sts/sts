@@ -106,8 +106,8 @@ class EventDagView(object):
   def set_events_as_timed_out(self, timed_out_event_labels):
     return self._parent.set_events_as_timed_out(timed_out_event_labels)
 
-def filter_timeouts(self):
-    return self._parent.filter_timeouts(events_list=self._events_list):
+  def filter_timeouts(self):
+    return self._parent.filter_timeouts(events_list=self._events_list)
 
   def __len__(self):
     return len(self._events_list)
