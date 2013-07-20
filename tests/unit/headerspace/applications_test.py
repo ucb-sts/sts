@@ -45,51 +45,48 @@ class applications_test(unittest.TestCase):
   def _create_loopy_network(self, cut_loop=False):
     # by default OpenFlow ignores rules that outputs packets over the same
     # port they came in on, so we need to create a 3-switch topology.
-    switch1 = create_switch(1, 2)
+    topo = MeshTopology()
+    switch1 = topo.switches[0]
+    switch2 = topo.switches[1]
+    switch3 = topo.switches[2]
     if not cut_loop:
       flow_mod1 = ofp_flow_mod(match=ofp_match(in_port=2, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
       switch1.table.process_flow_mod(flow_mod1)
     flow_mod1_in = ofp_flow_mod(match=ofp_match(in_port=3, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
     switch1.table.process_flow_mod(flow_mod1_in)
-    switch2 = create_switch(2, 2)
     flow_mod2 = ofp_flow_mod(match=ofp_match(in_port=1, nw_src="1.2.3.4"), action=ofp_action_output(port=2))
     flow_mod2_in = ofp_flow_mod(match=ofp_match(in_port=3, nw_src="1.2.3.4"), action=ofp_action_output(port=2))
     switch2.table.process_flow_mod(flow_mod2)
     switch2.table.process_flow_mod(flow_mod2_in)
-    switch3 = create_switch(3, 2)
     flow_mod3 = ofp_flow_mod(match=ofp_match(in_port=2, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
     flow_mod3_in = ofp_flow_mod(match=ofp_match(in_port=3, nw_src="1.2.3.4"), action=ofp_action_output(port=1))
     switch3.table.process_flow_mod(flow_mod3)
     switch3.table.process_flow_mod(flow_mod3_in)
-    switches = [switch1, switch2, switch3]
-    network_links = [Link(switch1, switch1.ports[1], switch2, switch2.ports[1]),
-                     Link(switch2, switch2.ports[2], switch3, switch3.ports[2]),
-                     Link(switch3, switch3.ports[1], switch1, switch1.ports[2])]
-    return (switches, network_links)
+    return topo
 
   def test_python_loop(self):
-    (switches, network_links) = self._create_loopy_network()
-    NTF = hsa_topo.generate_NTF(switches)
-    TTF = hsa_topo.generate_TTF(network_links)
-    loops = hsa.detect_loop(NTF, TTF, switches)
+    topo = self._create_loopy_network()
+    NTF = hsa_topo.generate_NTF(topo.switches)
+    TTF = hsa_topo.generate_TTF(topo.network_links)
+    loops = hsa.detect_loop(NTF, TTF, topo.switches)
     self.assertTrue(loops != [])
 
   def test_hassel_c_loop(self):
     if not hassel_c_loaded:
       return
-    (switches, network_links) = self._create_loopy_network()
-    (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(switches, network_links)
-    access_links =  [ MockAccessLink(sw, sw.ports[2]) for sw in switches ]
-    loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, access_links)
+    topo = self._create_loopy_network()
+    (name_tf_pairs, TTF) = InvariantChecker\
+                            ._get_transfer_functions(topo.switches, topo.network_links)
+    loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, topo.access_links)
     self.assertTrue(loops != [])
 
   def test_hassel_c_no_loop(self):
     if not hassel_c_loaded:
       return
-    (switches, network_links) = self._create_loopy_network(cut_loop=True)
-    (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(switches, network_links)
-    access_links = [ MockAccessLink(sw, sw.ports[2]) for sw in switches ]
-    loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, access_links)
+    topo = self._create_loopy_network(cut_loop=True)
+    (name_tf_pairs, TTF) = InvariantChecker\
+                            ._get_transfer_functions(topo.switches, topo.network_links)
+    loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, topo.access_links)
     self.assertTrue(loops == [])
 
   def test_blackhole(self):
