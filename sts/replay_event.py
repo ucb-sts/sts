@@ -848,8 +848,6 @@ class DataplaneDrop(InputEvent):
     fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
                              self.fingerprint[2], self.fingerprint[3])
     del fields['_fingerprint']
-    fields['host_id'] = host_id
-    fields['dpid'] = dpid
     return json.dumps(fields)
 
 # TODO(cs): Temporary hack until we figure out determinism
