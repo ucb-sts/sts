@@ -788,12 +788,14 @@ class ControlChannelUnblock(InputEvent):
 class DataplaneDrop(InputEvent):
   ''' Removes an in-flight dataplane packet with the given fingerprint from
   the network. '''
-  def __init__(self, fingerprint, label=None, round=-1, time=None,
-               passive=True):
+  def __init__(self, fingerprint, label=None, host_id=None, dpid=None, round=-1, time=None, passive=True):
     '''
     Parameters:
      - label: a unique label for this event. Internal event labels begin with 'i'
        and input event labels begin with 'e'.
+     - host_id: unique integer label identifying the host that generated the
+       packet.
+     - dpid: unique integer identifier of the switch.
      - time: the timestamp of when this event occured. Stored as a tuple:
        [seconds since unix epoch, microseconds].
      - round: optional integer. Indicates what simulation round this event occured
@@ -811,6 +813,8 @@ class DataplaneDrop(InputEvent):
     self._fingerprint = fingerprint
     # TODO(cs): passive is a bit of a hack, but this was easier.
     self.passive = passive
+    self.host_id = host_id
+    self.dpid = dpid
 
   def proceed(self, simulation):
     # Handled by control_flow.replayer.DataplaneChecker
@@ -844,6 +848,8 @@ class DataplaneDrop(InputEvent):
     fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
                              self.fingerprint[2], self.fingerprint[3])
     del fields['_fingerprint']
+    fields['host_id'] = host_id
+    fields['dpid'] = dpid
     return json.dumps(fields)
 
 # TODO(cs): Temporary hack until we figure out determinism

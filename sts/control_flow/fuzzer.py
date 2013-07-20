@@ -318,12 +318,12 @@ class Fuzzer(ControlFlow):
         self._log_input_event(DataplanePermit(dp_event.fingerprint))
       elif self.random.random() < self.params.dataplane_drop_rate:
         self.simulation.patch_panel.drop_dp_event(dp_event)
-        self._log_input_event(DataplaneDrop(dp_event.fingerprint))
+        self._log_input_event(DataplaneDrop(dp_event.fingerprint,host_id=host.id,dpid=switch.dpid))
       elif not self.simulation.topology.ok_to_send(dp_event):
         # Switches have very small buffers! drop it on the floor if the link
         # is down
         self.simulation.patch_panel.drop_dp_event(dp_event)
-        self._log_input_event(DataplaneDrop(dp_event.fingerprint))
+        self._log_input_event(DataplaneDrop(dp_event.fingerprint,host_id=host.id,dpid=switch.dpid))
       else:
         self.simulation.patch_panel.permit_dp_event(dp_event)
         self._log_input_event(DataplanePermit(dp_event.fingerprint))
