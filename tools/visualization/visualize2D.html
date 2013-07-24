@@ -1,0 +1,48 @@
+<!doctype html>
+<!--
+This is a webpage for showing a Lamport time diagram of an event trace.
+It's useful for visually spotting the root causes of
+race conditions and other nasty bugs.
+-->
+<html>
+  <head>
+    <link rel="stylesheet" href="./visualize.css">
+    <link rel="stylesheet" href="./assets/d3-timeline/css/style.css">
+    <script src="./assets/d3-timeline/lib/jquery-1.7.2.min.js"></script>
+    <script src="./assets/d3-timeline/lib/d3.v3.min.js"></script>
+    <script src="./assets/d3-timeline/src/d3-timeline.js"></script>
+    <script src="./assets/Tooltip.js"></script>
+    <script src="./visualize.js"></script>
+    <script type="text/javascript">
+
+      $(function() {
+        window.onload = function() {
+          setTimelineType("2d");
+          setInitialTraceCount(1);
+          setTooltip();
+          appendTimeline();
+          for (var i=0; i<globals.initialTraceCount; i++) {
+            appendFileUploader();
+          }
+        }
+      });
+
+    </script>
+  </head>
+  <body>
+    <div id="welcome-container">
+      <p id="title"> Welcome to STS Visualization Tool (2D)! </p>
+      <p id="overview">
+        This is a webpage for visualizing event traces. It's especially useful for debugging 
+        non-deterministic replays by comparing the timings of different replay runs.
+      </p>
+      <hr>
+    </div>
+    <div id="data-container">
+      <div id="tuner-container"></div>
+      <div id="uploader-container"></div>
+      <div id="timeline-container"></div>
+    </div>
+  </body>
+</html>
+

@@ -1,0 +1,72 @@
+<!doctype html>
+<!--
+This is a webpage for visualizing event traces. It's especially useful for debugging
+non-deterministic replays by comparing the timings of different replay runs.
+
+A common workflow:
+  - Run ./simulator.py -c experiments/experiment_name/mcs_config.py
+  - Discover that the final MCS does not trigger the bug.
+  - Open visualize_trace_timings.html in a web browser.
+  - Load the original trace, experiments/experiment_name/events.trace,
+    as the first timeline.
+  - Load the MCS trace, experiments/experiment_name_mcs/mcs.trace,
+    as the second timeline.
+  - Hover over events to see functional equivalence across the traces.
+  - Load intermediate replay trace timelines if needed. Intermediate replay
+    traces from delta debugging runs can be found in
+    experiments/experiment_name_mcs/interreplay_*
+
+TODO(cs): integrate our current hacked version of d3-timeline.js into the
+public version so we can pull down updates.
+
+TODO(cs): dynamically change the scale of the x-axis. Should just involve
+changing the width parameter in visualize_trace_timings_lib.js (perhaps with a
+jquery [slider](http://jqueryui.com/slider/) and redrawing the chart.
+
+TODO(cs): allow the user filter out certain event types.
+
+TODO(cs): newly recorded traces (as of July 14th, 2013) produce an error
+"-infinity not a valid x position for circle". This must have something to do
+with the way we're setting event.replay_time.
+-->
+<html>
+  <head>
+    <link rel="stylesheet" href="./visualize.css">
+    <link rel="stylesheet" href="./assets/d3-timeline/css/style.css">
+    <script src="./assets/jquery-ui/lib/jquery-1.9.1.js"></script>
+    <script src="./assets/d3-timeline/lib/d3.v3.min.js"></script>
+    <script src="./assets/d3-timeline/src/d3-timeline.js"></script>
+    <script src="./assets/Tooltip.js"></script>
+    <script src="./visualize.js"></script>
+    <script type="text/javascript">
+
+    $(function() {
+      window.onload = function() {
+        setTimelineType("1d");
+        setTooltip();
+        appendTimeline();
+        appendButtons();
+        for (var i=0; i<globals.initialTraceCount; i++) {
+          appendFileUploader();
+        }
+      }
+    });
+
+    </script>
+  </head>
+  <body>
+    <div id="welcome-container">
+      <p id="title"> Welcome to STS Visualization Tool (1D)! </p>
+      <p id="overview">
+        This is a webpage for visualizing event traces. It's especially useful for debugging 
+        non-deterministic replays by comparing the timings of different replay runs.
+      </p>
+      <hr>
+    </div>
+    <div id="data-container">
+      <div id="tuner-container"></div>
+      <div id="uploader-container"></div>
+      <div id="timeline-container"></div>
+    </div>
+  </body>
+</html>

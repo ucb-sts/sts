@@ -11,7 +11,6 @@ function Tooltip(tooltipId, width){
   function showTooltip(content, event) {
     $("#"+tooltipId).html(content);
     $("#"+tooltipId).show();
-
     updatePosition(event);
   }
 
@@ -47,3 +46,4 @@ function Tooltip(tooltipId, width){
     updatePosition: updatePosition
   }
 }
+
