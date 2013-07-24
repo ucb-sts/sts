@@ -3,33 +3,27 @@
   margin-right:20px;
   margin-bottom:30px;
 }
+
 #uploader-container{
   margin-top:20px;
 }
+
 #tuner-container{
   margin-left:10px;
 }
+
 #title{
   font-size:25px;
   font-family:"Trebuchet MS";
 }
+
 #overview{
   font-size:16px;
   font-family:"Trebuchet MS";
   color:#777777;
   line-height:140%;
 }
-#zoom-slider{
-  display: inline-block;
-  margin-left: 20px;
-  width: 100px;
-  font-size: 10px;
-}
-.ui-slider .ui-slider-handle{
-  height: 10px;
-  width: 10px;
-  border: 2px solid #AAAAAA;
-}
+
 .uploader{
   display:block;
   margin-bottom:20px;

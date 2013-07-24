@@ -33,7 +33,7 @@ with the way we're setting event.replay_time.
   <head>
     <link rel="stylesheet" href="./visualize.css">
     <link rel="stylesheet" href="./assets/d3-timeline/css/style.css">
-    <script src="./assets/jquery-ui/lib/jquery-1.9.1.js"></script>
+    <script src="./assets/d3-timeline/lib/jquery-1.7.2.min.js"></script>
     <script src="./assets/d3-timeline/lib/d3.v3.min.js"></script>
     <script src="./assets/d3-timeline/src/d3-timeline.js"></script>
     <script src="./assets/Tooltip.js"></script>
@@ -45,7 +45,7 @@ with the way we're setting event.replay_time.
         setTimelineType("1d");
         setTooltip();
         appendTimeline();
-        appendButtons();
+        appendPlusMinusButtons();
         for (var i=0; i<globals.initialTraceCount; i++) {
           appendFileUploader();
         }
@@ -70,3 +70,4 @@ with the way we're setting event.replay_time.
     </div>
   </body>
 </html>
+

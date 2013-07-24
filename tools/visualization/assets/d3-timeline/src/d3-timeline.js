@@ -45,18 +45,19 @@
 
     function timeline (gParent)
     {
-      var g = gParent.append("g");
-      var gParentSize = gParent[0][0].getBoundingClientRect();
-      var gParentItem = d3.select(gParent[0][0]);
-      var yAxisMapping = {},
+      var g = gParent.append("g"),
+          gParentSize = gParent[0][0].getBoundingClientRect(),
+          gParentItem = d3.select(gParent[0][0]),
+          yAxisMapping = {},
           maxStack = 1,
           minTime = 0,
           maxTime = 0;
-      var xScale = null;
-      var scaleFactor = null;
-      var legendHeight = 0;   // keep track of the last drawn entity's position in the graph to appropriately display the legend
-      var IDs = {};           // 1D : functionally equivalent event pairs
+          xScale = null,
+          scaleFactor = null,
+          legendHeight = 0,   // keep track of the last drawn entity's position in the graph to appropriately display the legend
+          IDs = {};           // 1D : functionally equivalent event pairs
                               // 2D : send/receive control message event pairs
+
       clearCanvas();
       setWidth();
       setHeight();
@@ -337,15 +338,15 @@
         // if both are set, do nothing
       }
 
-      function clearCanvas(){
+      function clearCanvas() {
         d3.selectAll("g.axis").remove();
         d3.selectAll("circle").remove();
         d3.selectAll("line").remove(); 
         d3.selectAll("text").remove();
       }
 
-      // clear canvase and reset all relevant variables 
-      function reset(){
+      // clear canvas and reset all relevant variables 
+      function reset() {
         clearCanvas();
         yAxisMapping = {};
         maxStack = 1;

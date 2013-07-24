@@ -8,7 +8,7 @@ var globals = {
   timelineType: "1d",          // "1d" or "2d"
   timeline: null,
   tooltip: null,
-  uploaders: [],
+  traceCount: 0
 }
 
 function setTimelineType(type)
@@ -45,8 +45,9 @@ function appendTimeline()
   $("#timeline-container").append(
     $("<div>", {
       id: "timeline"
-    }));
-  setTimeline(globals.timelineType);
+    })
+  );
+  setTimeline();
   d3.select("#timeline").insert("svg")
                         .attr("height", 3000)
                         .attr("width", globals.baseTimelineWidth);
@@ -59,23 +60,23 @@ function appendFileUploader()
   var uploader = $("<input>", {
                    type: "file",
                    class: "uploader",
-                   id: "uploader"+globals.uploaders.length,
+                   id: "uploader"+globals.traceCount,
                  }).appendTo("#uploader-container");
   initializeFileUploader();
-  globals.uploaders.push(uploader);
+  globals.traceCount++;
 }
 
 // Remove a file uploader from DOM
 function removeFileUploader()
 {
-  $("#uploader"+(globals.uploaders.length-1)).remove();
-  globals.uploaders.pop();
+  $("#uploader"+(globals.traceCount-1)).remove();
+  globals.traceCount--;
 }
 
 // Set callbacks for the latest file uploader
 function initializeFileUploader()
 {
-  var index = globals.uploaders.length;
+  var index = globals.traceCount;
   var uploader = document.getElementById("uploader"+index);
   uploader.onchange = (function (e)
   {
@@ -87,8 +88,7 @@ function initializeFileUploader()
       reader.onload = function (e) {
         var data = null;
         if (globals.timelineType == "1d") {
-          data = formatData(event.target.result);
-          data = applyOffset(data);
+          data = formatData1D(event.target.result);
         } else if (globals.timelineType == "2d") {
           data = formatData2D(event.target.result);
         } else {
@@ -101,7 +101,7 @@ function initializeFileUploader()
 }
 
 // Append buttons that change the number of file uploaders to DOM
-function appendButtons()
+function appendPlusMinusButtons()
 {
   $("<input>", {
     type: "button",
@@ -119,15 +119,16 @@ function appendButtons()
  *                   Library functions                 *
  *-----------------------------------------------------*/
 
-function setTimeline(type)
+function setTimeline()
 {
-  var t = d3.timeline(type)
+  var t = d3.timeline(globals.timelineType)
     .stack()
-    .tickFormat(
-      {format: d3.time.format("%M:%S:%L"),
+    .tickFormat({
+      format: d3.time.format("%M:%S:%L"),
       tickTime: d3.time.seconds,
       tickNumber: 3,
-      tickSize: 30})
+      tickSize: 30
+     })
     .rotateTicks(45)
     .display("circle") // toggle between rectangles and circles
     .mouseover(showDetails)
@@ -137,7 +138,7 @@ function setTimeline(type)
 
 function drawBlankTimeline() {
   drawData([
-    {times: []}
+    { times: [] }
   ]);
 }
 
@@ -150,7 +151,8 @@ function setTooltip() {
 }
 
 // Mouseover callback for each timeline event 
-function showDetails(d, i, datum, IDs) {
+function showDetails(d, i, datum, IDs)
+{
   var content = '<p class="main">' + d.label + '</span></p>';
   content += '<hr class="tooltip-hr">';
   content += '<p class="main">' + d.class + '</span></p>';
@@ -159,7 +161,7 @@ function showDetails(d, i, datum, IDs) {
   if (globals.timelineType == "1d") {
     // show functional equivalence lines when the user mouses over the event
     if (IDs[d.fe_id].length >= 4) {
-      for (i = 0; i < IDs[d.fe_id].length-2; i += 2) {
+      for (var i = 0; i < IDs[d.fe_id].length-2; i += 2) {
         d3.select("#timeline svg").append('line')
           .attr("x1", IDs[d.fe_id][i])
           .attr("y1", IDs[d.fe_id][i+1])
@@ -169,33 +171,36 @@ function showDetails(d, i, datum, IDs) {
       }
     }
   }
-};
+}
 
 // Mouseout callback for each timeline event 
-function hideDetails (d, i, datum, IDs) {
+function hideDetails (d, i, datum, IDs)
+{
   globals.tooltip.hideTooltip();
   if (globals.timelineType == "1d") {
     // remove functional equivalence lines after the user mouses over the event
     lines = d3.select("#timeline svg").selectAll("line");
     lastElement = lines[0].length-1;
-    for (i = 0; i < IDs[d.fe_id].length/2; i++) {
+    for (var i = 0; i < IDs[d.fe_id].length/2; i++) {
       // TODO: this causes TypeError: 'undefined' is not a function 
       lines[0][lastElement-i].remove();
     }
   }
-};
+}
 
 /*-----------------------------------------------------*
  *                 Data utility functions              *
  *-----------------------------------------------------*/
 
-var invariantViolations = {"InvariantViolation":true};
-var internalEvents = {"ControlMessageReceive":true,
-                      "ControlMessageSend":true,
-                      "ConnectToControllers":true,
-                      "ControllerStateChange":true,
-                      "DeterministicValue":true,
-                      "DataplanePermit":true};
+var invariantViolations = { "InvariantViolation" : true };
+var internalEvents = {
+  "ControlMessageReceive" : true,
+  "ControlMessageSend"    : true,
+  "ConnectToControllers"  : true,
+  "ControllerStateChange" : true,
+  "DeterministicValue"    : true,
+  "DataplanePermit"       : true
+};
 
 // The key is the timeline index, and the value
 var data_timeline = {};
@@ -211,21 +216,24 @@ var All_Events_Hash = {};
 var new_event_count = 0;
 var timedelayms = 6; // chosen arbitrarily
 
-function formatData(data) {
+function formatData1D(data)
+{
   timeline_num++;
   prepData(data, timeline_num);
   processTimelineData(timeline_num, result_timeline);
-  return formatDataResult(result_timeline);
+  return formatDataResult1D(result_timeline);
 }
 
-function prepData(data, timeline_num) {
+function prepData(data, timeline_num)
+{
   // Store arrays of raw json strings until both charts are loaded.
   data_timeline[timeline_num] = data.split("\n");
   All_Events_Hash[timeline_num] = [];
   result_timeline[timeline_num] = { "internal": [], "input": [], "timed out": [], "new internal": [], "violation": []};
 }
 
-function formatDataResult(result_timeline) {
+function formatDataResult1D(result_timeline)
+{
   var result = [];
   for (var timeline_id in result_timeline) {
     for (var times in result_timeline[timeline_id]) {
@@ -239,13 +247,45 @@ function formatDataResult(result_timeline) {
     s["times"] = [];
     result.push(s);
   }
-  return result;
+  return applyOffset(result);
 }
 
-function processTimelineData(timelineNum, result_timeline) {
+// When an auxiliary chart is loaded, apply an offset in milliseconds from the primary chart.
+function applyOffset(data)
+{
+  var startingTimes = [];
+  computeOffset(data, startingTimes);
+  for (var i = 0; i < data.length/6; i++) { // timeline num
+    for (var j = i*6; j < i*6+5; j++) { // each row for the corresponding timeline
+      for (var k = 0; k < data[j]["times"].length; k++) { // each event in the row
+        data[j]["times"][k]["starting_time"] -= startingTimes[i];
+        data[j]["times"][k]["ending_time"] -= startingTimes[i];
+      }
+    }
+  }
+  return data;
+}
+
+function computeOffset(auxiliaryData, startingTimes)
+{
+  // units are milliseconds
+  for (var i = 0; i < auxiliaryData.length/6; i++) {
+    // start each timeline at it's own time, zeroing the time of the first event
+    var min = Number.MAX_VALUE;
+    for (var j = i*6; j < i*6+5; j++) {
+      if (auxiliaryData[j]["times"].length > 0) {
+        min = Math.min( min, auxiliaryData[j]["times"][0]["starting_time"] );
+      }
+    }
+    startingTimes.push(min);
+  }
+}
+
+function processTimelineData(timelineNum, result_timeline)
+{
   var data = data_timeline[timelineNum];
   var start_position = 0;
-  for (i = 0; i < data.length-1; i++) {
+  for (var i = 0; i < data.length-1; i++) {
     var str = data[i];
     var e = jQuery.parseJSON(str);
     var time_key = "time";
@@ -294,29 +334,29 @@ function processTimelineData(timelineNum, result_timeline) {
   }
 }
 
-
-
-// findFunctionallyEquivalentEventID takes an event from timeline_num and
-// returns the ID of its functional equivalent in the first loaded timeline, 
-// or -1 if no functional equivalent event exists. Comparisons are always 
-// made to the original loaded trace. 
-//
-// An event e2 from a replay run is functionally equivalent to an event e1 from
-// the original run iff their fingerprints are the same, and:
-//  - let p2 denote the predecessor of e2
-//  - let s2 denote the successor of e2
-//  - let p1 denote p2's functional equivalent from the original run
-//  - let s1 denote s2's functional equivalent from the original run
-// then e1 must occur between p1 and s1.
-//
-// In other words, the two events should be in the same relative position in the
-// log. In practice we keep track of relative position by looking for the fe_id
-// of the event right before, and then searching for an fe_id that is the largest
-// smaller fe_id than that.
-
-function findFunctionallyEquivalentEventID(e, startPos, timeline_num) {
-  for (t_num = 1; t_num < timeline_num; t_num++) {
-    for (i_old = startPos; i_old < data_timeline[t_num].length-1; i_old++) {
+/* 
+ * findFunctionallyEquivalentEventID takes an event from timeline_num and
+ * returns the ID of its functional equivalent in the first loaded timeline, 
+ * or -1 if no functional equivalent event exists. Comparisons are always 
+ * made to the original loaded trace. 
+ * 
+ * An event e2 from a replay run is functionally equivalent to an event e1 from
+ * the original run iff their fingerprints are the same, and:
+ *  - let p2 denote the predecessor of e2
+ *  - let s2 denote the successor of e2
+ *  - let p1 denote p2's functional equivalent from the original run
+ *  - let s1 denote s2's functional equivalent from the original run
+ * then e1 must occur between p1 and s1.
+ * 
+ * In other words, the two events should be in the same relative position in the
+ * log. In practice we keep track of relative position by looking for the fe_id
+ * of the event right before, and then searching for an fe_id that is the largest
+ * smaller fe_id than that.
+ */
+function findFunctionallyEquivalentEventID(e, startPos, timeline_num)
+{
+  for (var t_num = 1; t_num < timeline_num; t_num++) {
+    for (var i_old = startPos; i_old < data_timeline[t_num].length-1; i_old++) {
       var str_old = data_timeline[t_num][i_old];
       var e_old = jQuery.parseJSON(str_old);
       // using JSON.stringify() to compute .equals() for objects/arrays in fingerprint
@@ -328,42 +368,11 @@ function findFunctionallyEquivalentEventID(e, startPos, timeline_num) {
   return -1;
 }
 
-/*
- * When an auxiliary chart is loaded, compute an offset in milliseconds from
- * the primary chart.
- */
-function computeOffset(auxiliaryData, startingTimes) {
-  // units are milliseconds
-  for (i = 0; i < auxiliaryData.length/6; i++) {
-    // start each timeline at it's own time, zeroing the time of the first event
-    var min = 10000000000000;
-    for (j = i*6; j < i*6+5; j++) {
-      if (auxiliaryData[j]["times"].length > 0) {
-        min = Math.min( min, auxiliaryData[j]["times"][0]["starting_time"] );
-      }
-    }
-    startingTimes.push(min);
-  }
-}
-
-function applyOffset(data) {
-  var startingTimes = [];
-  computeOffset(data, startingTimes);
-  for (i = 0; i < data.length/6; i++) { // timeline num
-    for (j = i*6; j < i*6+5; j++) { // each row for the corresponding timeline
-      for (k = 0; k < data[j]["times"].length; k++) { // each event in the row
-        data[j]["times"][k]["starting_time"] -= startingTimes[i];
-        data[j]["times"][k]["ending_time"] -= startingTimes[i];
-      }
-    }
-  }
-  return data;
-}
-
-function formatData2D(data) {
+function formatData2D(data)
+{
   var split = data.split("\n");
   var entities = findEntities(split);
-  for (i = 0; i < split.length-1; i++) {
+  for (var i = 0; i < split.length-1; i++) {
     var str = split[i];
     var e = jQuery.parseJSON(str);
     var time_key = "time";
@@ -382,120 +391,145 @@ function formatData2D(data) {
 }
 
 // Find all controllers, switches, and hosts in data
-function findEntities(data) {
-  var objEntities = {"controllers":{}, "switches":{}, "hosts":{}};
-  for (i = 0; i < data.length-1; i++) {
-    var str = data[i];
-    var e = jQuery.parseJSON(str);
-    if (e.class === "ControllerStateChange" || e.class === "ControllerFailure" 
-        || e.class === "ControllerRecovery") {
-      if ( !(e["controller_id"] in objEntities["controllers"]) ) {
-        objEntities["controllers"][e["controller_id"]] = [];
-      }
+function findEntities(data)
+{
+  var entities = {"controllers":{}, "switches":{}, "hosts":{}};
+  for (var i = 0; i < data.length-1; i++) {
+    var e = jQuery.parseJSON(data[i]);
+    var eventHandlerMap = {
+      "ControllerStateChange" : [findController],
+      "ControllerFailure"     : [findController],
+      "ControllerRecovery"    : [findController],
+      "ControlMessageSend"    : [findController, findSwitch],
+      "ControlMessageReceive" : [findController, findSwitch],
+      "TrafficInjection"      : [findHost],
+      "HostMigration"         : [findHost],
+      "DataplaneDrop"         : [findSwitch, findHost]
     }
-    else if (e.class === "ControlMessageSend" || e.class === "ControlMessageReceive") {
-      if ( !(e["dpid"] in objEntities["switches"]) ) {
-        objEntities["switches"][e["dpid"]] = [];
-      }
-      if ( !(e["controller_id"] in objEntities["controllers"]) ) {
-        objEntities["controllers"][e["controller_id"]] = [];
-      }
-    }
-    else if (e.class === "TrafficInjection" || e.class === "HostMigration") {
-      if ( !(e["host_id"] in objEntities["hosts"]) ) {
-        objEntities["hosts"][e["host_id"]] = [];
-      }
-    }        
-    else if (e.class === "DataplaneDrop") {
-      if ( !(e["dpid"] in objEntities["switches"]) ) {
-        objEntities["switches"][e["dpid"]] = [];
-      }
-      if ( !(e["host_id"] in objEntities["hosts"]) ) {
-        objEntities["hosts"][e["host_id"]] = [];
-      }
+    if (e.class in eventHandlerMap) {
+      var eventHandlers = eventHandlerMap[e.class];
+      for (var j = 0; j < eventHandlers.length; j++) {
+        eventHandlers[j]();
+      } 
     }
   }
-  return objEntities;
+
+  function findController() {
+    if (!(e["controller_id"] in entities["controllers"])) {
+      entities["controllers"][e["controller_id"]] = [];
+    }
+  }
+
+  function findSwitch() {
+    if (!(e["dpid"] in entities["switches"])) {
+      entities["switches"][e["dpid"]] = [];
+    }
+  }
+
+  function findHost() {
+    if (!(e["host_id"] in entities["hosts"])) {
+      entities["hosts"][e["host_id"]] = [];
+    }
+  }
+  return entities;
 }
 
-function processEvent(e, point, entities, i) {
+function processEvent(e, point, entities, i)
+{
   // Demultiplex by e["class"] for displaying events on corresponding entities
   var eventClass = e["class"];
+  var eventHandlerMap = {
+    "ConnectToControllers"     : processConnectToControllers,
+    "ControllerStateChange"    : processControllerStateChange,
+    "ControllerFailure"        : processControllerFailureRecovery,
+    "ControllerRecovery"       : processControllerFailureRecovery,
+    "ControllerChannelBlock"   : processControllerChannelBlockUnblock,
+    "ControllerChannelUnblock" : processControllerChannelBlockUnblock,
+    "ControlMessageSend"       : processControlMessageSendReceive,
+    "ControlMessageReceive"    : processControlMessageSendReceive,
+    "LinkFailure"              : processLinkFailureRecovery,
+    "LinkRecovery"             : processLinkFailureRecovery,
+    "TrafficInjection"         : processTrafficInjection,
+    "HostMigration"            : processHostMigration,
+    "DataplaneDrop"            : processDataplaneDrop,
+    "DataplanePermit"          : processDataplanePermit
+  } 
+  if (eventClass in eventHandlerMap) {
+    eventHandlerMap[eventClass]();
+  }
 
-    // display event on all controllers and switches
-    if (eventClass === "ConnectToControllers") {
-      for (var id in entities["controllers"]) {
-        addEvent("controllers", id, point, entities);
-      }
-      for (var id in entities["switches"]) {
-        addEvent("switches", id, point, entities);
-      }
+  // Display event on all controllers and switches
+  function processConnectToControllers() {
+    for (var id in entities["controllers"]) {
+      addEvent("controllers", id, point, entities);
     }
-
-    // display event on corresponding controller
-    else if (eventClass === "ControllerStateChange") {
-      addEvent("controllers", e["controller_id"], point, entities);
+    for (var id in entities["switches"]) {
+      addEvent("switches", id, point, entities);
     }
+  }
 
-    // display event on corresponding controller and switch
-    else if (eventClass === "ControlMessageSend" || eventClass === "ControlMessageReceive") {
-      // include a 6ms visual lag for messages to reach recipient
-      epochMillisDelay = point["starting_time"] + (eventClass === "ControlMessageSend" ? timedelayms : -timedelayms);
-      var pointDelay = {"starting_time": epochMillisDelay,
-                        "ending_time": epochMillisDelay,
-                        "label": e["label"],
-                        "class": eventClass,
-                        "sr_id": point["sr_id"]};
+  // Display event on corresponding controller
+  function processControllerStateChange() {
+    addEvent("controllers", e["controller_id"], point, entities);
+  }
 
+  // Display event on corresponding controller and switch
+  function processControlMessageSendReceive() {
+    // Include a 6ms visual lag for messages to reach recipient
+    epochMillisDelay = point["starting_time"] + (eventClass === "ControlMessageSend" ? timedelayms : -timedelayms);
+    var pointDelay = {"starting_time": epochMillisDelay,
+                      "ending_time": epochMillisDelay,
+                      "label": e["label"],
+                      "class": eventClass,
+                      "sr_id": point["sr_id"]};
+
+    addEvent("switches", e["dpid"], point, entities);
+    addEvent("controllers", e["controller_id"], pointDelay, entities);
+  }
+
+  // Display event on corresponding controller
+  function processControllerFailureRecovery() {
+    addEvent("controllers", e["controller_id"], point, entities);
+  }
+
+  // Display event on corresponding switch
+  function processDataplaneDrop() { 
+    if ("dpid" in e) { 
       addEvent("switches", e["dpid"], point, entities);
-      addEvent("controllers", e["controller_id"], pointDelay, entities);
-    }
-
-    // display event on corresponding controller
-    else if (eventClass === "ControllerFailure" || eventClass === "ControllerRecovery") {
-      addEvent("controllers", e["controller_id"], point, entities);
-    }
-
-    // display event on corresponding switch
-    else if (eventClass === "DataplaneDrop") {
-      if ("dpid" in e) { 
-        addEvent("switches", e["dpid"], point, entities);
-      } 
-      else if ("host_id" in e) {
-        addEvent("hosts", e["host_id"], point, entities);
-      }
-    }
-
-    // currently ignored
-    else if (eventClass === "DataplanePermit") {
-
-    }
-
-    // display event on corresponding switch
-    else if (eventClass === "ControlChannelBlock" || eventClass === "ControlChannelUnblock") {
-      addEvent("switches", e["dpid"], point, entities);
-    }
-
-    // display event on corresponding switches
-    else if ( eventClass === "LinkFailure" || eventClass === "LinkRecovery") {
-      addEvent("switches", e["start_dpid"], point, entities);
-      addEvent("switches", e["end_dpid"], point, entities);
-    }
-
-    // display event on corresponding switch
-    else if ( eventClass == "SwitchFailure" || eventClass === "SwitchRecovery") {
-      addEvent("switches", e["dpid"], point, entities);
-    }
-
-    // display event on corresponding host
-    else if (eventClass === "TrafficInjection") {
+    } 
+    else if ("host_id" in e) {
       addEvent("hosts", e["host_id"], point, entities);
     }
+  }
 
-    // display event on corresponding host and switches
-    else if (eventClass === "HostMigration") {
-      addEvent("hosts", e["host_id"], point, entities);
-    }
+  // Currently ignored
+  function processDataplanePermit() {}
+
+  // Display event on corresponding switch
+  function processControllerChannelBlockUnblock() {
+    addEvent("switches", e["dpid"], point, entities);
+  }
+
+  // Display event on corresponding switches
+  function processLinkFailureRecovery() {
+    addEvent("switches", e["start_dpid"], point, entities);
+    addEvent("switches", e["end_dpid"], point, entities);
+  }
+
+  // Display event on corresponding switch
+  function processSwitchFailureRecovery() { 
+    addEvent("switches", e["dpid"], point, entities);
+  }
+
+  // Display event on corresponding host
+  function processTrafficInjection() {
+    addEvent("hosts", e["host_id"], point, entities);
+  }
+
+  // Display event on corresponding host and switches
+  function processHostMigration() {
+    addEvent("hosts", e["host_id"], point, entities);
+  }
 }
 
 // Push event on to corresponding entity's timeline
@@ -504,12 +538,13 @@ function addEvent(type, id, point, entities) {
 }
 
 // Format results appropriately, in the order of controllers, switches, then hosts
-function formatDataResult2D(entities) {
+function formatDataResult2D(entities)
+{
   var result = [];
   for (var ent in entities) {
     // get a list of sorted keys such that order is preserved during the display
     var list = Object.keys(entities[ent]).sort(function(a,b) {return a - b});
-    for (i = 0; i < list.length; i++ ) {
+    for (var i = 0; i < list.length; i++ ) {
       var s = {};
       s["label"] = "" + ent + " " + list[i];
       s["times"] = entities[ent][list[i]];
