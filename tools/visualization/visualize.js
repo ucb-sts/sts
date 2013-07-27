@@ -181,8 +181,7 @@ function hideDetails (d, i, datum, IDs)
     // remove functional equivalence lines after the user mouses over the event
     lines = d3.select("#timeline svg").selectAll("line");
     lastElement = lines[0].length-1;
-    for (var i = 0; i < IDs[d.fe_id].length/2; i++) {
-      // TODO: this causes TypeError: 'undefined' is not a function 
+    for (var i = 0; i < IDs[d.fe_id].length/2-1; i++) {
       lines[0][lastElement-i].remove();
     }
   }
