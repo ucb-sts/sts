@@ -114,7 +114,7 @@ Check out this
 
 For more information about the research behind sts, see our
 [short](http://www.eecs.berkeley.edu/~rcs/research/sts_short.pdf) or
-[long](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf) paper draft  or our
+[long](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf) paper draft or our
 talk
 [slides](http://www.eecs.berkeley.edu/~rcs/research/selectiverecall.pptx).
 
