@@ -196,7 +196,7 @@ class MCSFinder(ControlFlow):
         if not bug_found:
           self.log('''Warning! Final MCS did not result in violation, even '''
                    ''' after ignoring timed out internal events. '''
-                   ''' See tools/visualize_trace_timings.html for debugging''')
+                   ''' See tools/visualize1D.html for debugging''')
 
     # N.B. dumping the MCS trace must occur after the final replay trace,
     # since we need to infer which events will time out for events.trace.notimeouts

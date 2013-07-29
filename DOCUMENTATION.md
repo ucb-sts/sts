@@ -276,14 +276,14 @@ see example_pretty_print_config.py for an example.
    occurs. Pass command line arguments as an argument, e.g. `$ run.sh
    ./simulator.py ...`
 
- - ```visualize_trace_timings.html```: A webpage for visualizing event traces.
-   Especially useful for debugging non-deterministic replays by comparing the
-   timings of different replay runs.
+ - ```visualize1D.html```: A webpage for visualizing event traces. Especially
+   useful for debugging non-deterministic replays by comparing the timings of
+   different replay runs.
 
    A common workflow:
      - Run `./simulator.py -c experiments/experiment_name/mcs_config.py`
      - Discover that the final MCS does not trigger the bug.
-     - Open `visualize_trace_timings.html` in a web browser.
+     - Open `visualize1D.html` in a web browser.
      - Load either the original (fuzzed) trace,
        `experiments/experiment_name/events.trace`,
        or the first replay of this trace,
@@ -300,6 +300,6 @@ see example_pretty_print_config.py for an example.
        traces from delta debugging runs can be found in
        `experiments/experiment_name_mcs/interreplay_*`
 
- - ```visualize_2D_trace_timings.html```: A webpage for showing a Lamport time
-   diagram of an event trace. Useful for visually spotting the root causes of
-   race conditions and other nasty bugs.
+ - ```visualize2D.html```: A webpage for showing a Lamport time diagram of an
+   event trace. Useful for visually spotting the root causes of race conditions
+   and other nasty bugs.
