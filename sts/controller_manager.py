@@ -69,7 +69,7 @@ class ControllerManager(object):
   @staticmethod
   def reboot_controller(controller):
     msg.event("Restarting controller %s" % str(controller))
-    controller.start()
+    controller.restart()
 
   def check_controller_status(self, simulation):
     controllers_with_problems = []

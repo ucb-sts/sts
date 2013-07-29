@@ -19,6 +19,7 @@ import sys
 import threading
 import subprocess
 import logging
+import re
 from sts.util.convenience import address_is_ip, find_port
 from sts.entities import Controller, POXController, BigSwitchController
 
@@ -33,11 +34,13 @@ class ControllerConfig(object):
   _port_gen = itertools.count(6633)
   _controller_count_gen = itertools.count(1)
   _controller_labels = set()
+  _controller_addresses = []
+  _address_retriever = None
 
-  def __init__(self, start_cmd="", kill_cmd="", address="127.0.0.1", port=None,
-               additional_ports={}, cwd=None, sync=None, controller_type=None,
-               label=None, config_file=None, config_template=None,
-               try_new_ports=False, get_address_cmd=None):
+  def __init__(self, start_cmd="", kill_cmd="", restart_cmd="", address="127.0.0.1",
+               port=None, additional_ports={}, cwd=None, sync=None, controller_type=None,
+               label=None, config_file=None, config_template=None, try_new_ports=False,
+               get_address_cmd=None):
     '''
     Store metadata for the controller.
       - start_cmd: command that starts a controller or a set of controllers,
@@ -52,7 +55,24 @@ class ControllerConfig(object):
       raise RuntimeError("Must specify boot parameters.")
     self.start_cmd = start_cmd
     self.kill_cmd = kill_cmd
+    self.restart_cmd = restart_cmd
 
+    # Set label
+    if label is None:
+      label = "c%s" % str(self._controller_count_gen.next())
+    if label in self._controller_labels:
+      raise ValueError("Label %s already registered!" % label)
+    self._controller_labels.add(label)
+    self.label = label
+
+    # Set index
+    match = re.search("c(\d+)", self.label)
+    if match:
+      self.index = int(match.groups()[0]) 
+    else:
+      self.index = None
+
+    # Set address and port
     self.address = address
     if address_is_ip(address) or address == "localhost":
       # Normal TCP socket
@@ -99,31 +119,38 @@ class ControllerConfig(object):
         \n""" % (self.start_cmd) )
 
     self.sync = sync
-    if label:
-      label = label
-    else:
-      label = "c"+str(self._controller_count_gen.next())
-    if label in self._controller_labels:
-      raise ValueError("Label %s already registered!" % label)
-    self._controller_labels.add(label)
-    self.label = label
 
     self.config_file = config_file
     self.config_template = config_template
     self.additional_ports = additional_ports
 
   def get_address(self, get_address_cmd, cwd):
+    '''
+    In the event of having to start a controller without the knowledge of its IP address a priori,
+    periodically attempt to retrieve the IP from the output of get_address_cmd. If multiple controller
+    instances are launched in this case, only the designated address retriever makes such attempts.
+    '''
     if get_address_cmd is None:
-      raise RuntimeError("Controller address \"__address__\" cannot be resolved!")
-    p = subprocess.Popen(get_address_cmd, shell=True, stdout=subprocess.PIPE, cwd=cwd)
-    new_address = p.communicate()[0]
-    new_address = new_address.strip()
-    if address_is_ip(new_address) or new_address == "localhost":
-      log.debug("Found real controller address: %s!" % new_address)
-      self.address = new_address
+      raise RuntimeError("Controller address cannot be resolved!")
+    if len(self._controller_addresses) == 0:
+      # If another controller instance is already retrieving address, back off and wait
+      if self._address_retriever is None or self._address_retriever == self.label:
+        ControllerConfig._address_retriever = self.label
+        p = subprocess.Popen(get_address_cmd, shell=True, stdout=subprocess.PIPE, cwd=cwd)
+        new_addresses = p.communicate()[0].strip()
+        new_addresses = re.split("\s+", new_addresses)
+        new_addresses = [a for a in new_addresses if address_is_ip(a)]
+        self._controller_addresses.extend(new_addresses)
+      if len(self._controller_addresses) == 0:
+        log.warn("Controller address not found... Keep trying.")
+        threading.Timer(5.0, self.get_address, args=[get_address_cmd, cwd]).start()
+        return
+    if self.index is not None and self.index <= len(self._controller_addresses):
+      self.address = self._controller_addresses[self.index-1]
       self._server_info = (self.address, self.port)
+      log.info("Found controller address for %s: %s!" % (self.label, self.address))
     else:
-      threading.Timer(5.0, self.get_address, args=[get_address_cmd, cwd]).start()
+      raise RuntimeError("No IP address resolved for controller %s!" % self.label)
 
   @property
   def cid(self):
@@ -148,6 +175,10 @@ class ControllerConfig(object):
   @property
   def expanded_kill_cmd(self):
     return map(self._expand_vars, self.kill_cmd.split())
+
+  @property
+  def expanded_restart_cmd(self):
+    return map(self._expand_vars, self.restart_cmd.split())
 
   def generate_config_file(self, target_dir):
     if self.config_file is None:

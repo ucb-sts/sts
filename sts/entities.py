@@ -578,8 +578,8 @@ class Controller(object):
     self.alive = True
 
   def restart(self):
-    self.kill()
-    self.start()
+    if not self.alive:
+      self.start()
 
   def check_status(self, simulation):
     ''' Check whether the actual status of the controller coincides with self.alive. Returns a message
@@ -673,6 +673,14 @@ class BigSwitchController(Controller):
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self.alive = True
+
+  def restart(self):
+    if not self.alive:
+      if self.config.restart_cmd == "":
+        raise RuntimeError("No command found to restart controller %s!" % self.label)
+      self.log.info("Relaunching controller %s: %s" % (self.label, " ".join(self.config.expanded_restart_cmd)))
+      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+      self.alive = True
 
   def check_status(self, simulation):
     if not self.alive:

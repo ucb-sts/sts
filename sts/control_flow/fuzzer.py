@@ -463,7 +463,7 @@ class Fuzzer(ControlFlow):
         if controller in crashed_this_round:
           continue
         if self.random.random() < self.params.controller_recovery_rate:
-          controller.start()
+          controller.restart()
           self._log_input_event(ControllerRecovery(controller.cid))
 
     crashed_this_round = crash_controllers()
