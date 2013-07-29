@@ -355,10 +355,10 @@ class Host (EventMixin):
   @property
   def dpid(self):
     # Hack
-    return self.name
+    return self.hid
 
   def __str__(self):
-    return self.name
+    return "%s (%d)" % (self.name, self.hid)
 
   def __repr__(self):
     return "Host(%d)" % self.hid

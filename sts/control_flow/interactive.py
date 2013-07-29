@@ -578,7 +578,9 @@ class Interactive(ControlFlow):
     if not dp_event:
       return
     self.simulation.patch_panel.drop_dp_event(dp_event)
-    self._log_input_event(DataplaneDrop(dp_event.fingerprint,host_id=host.id,dpid=switch.dpid))
+    self._log_input_event(DataplaneDrop(dp_event.fingerprint,
+                                        host_id=dp_event.get_host_id(),
+                                        dpid=dp_event.get_switch_id()))
 
   def dataplane_delay(self, event=None):
     dp_event = self._select_dataplane_event(event)

@@ -794,8 +794,8 @@ class DataplaneDrop(InputEvent):
      - label: a unique label for this event. Internal event labels begin with 'i'
        and input event labels begin with 'e'.
      - host_id: unique integer label identifying the host that generated the
-       packet.
-     - dpid: unique integer identifier of the switch.
+       packet. May be None.
+     - dpid: unique integer identifier of the switch. May be None.
      - time: the timestamp of when this event occured. Stored as a tuple:
        [seconds since unix epoch, microseconds].
      - round: optional integer. Indicates what simulation round this event occured
