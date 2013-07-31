@@ -112,20 +112,20 @@ class GodScheduler(EventMixin):
     else:
       conn.allow_message_send(message)
 
-  # TODO(cs): make this a factory method that returns DefferedOFConnection objects
+  # TODO(cs): make this a factory method that returns DeferredOFConnection objects
   # with bound god_scheduler.insert() method. (much cleaner API + separation of concerns)
   def insert_pending_receipt(self, dpid, controller_id, ofp_message, conn):
-    ''' Called by DefferedOFConnection to insert messages into our buffer '''
+    ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
     conn_message = (conn, ofp_message)
     pending_receive = PendingReceive(dpid, controller_id, fingerprint)
     self.pendingreceive2conn_messages[pending_receive].append(conn_message)
     self.raiseEventNoErrors(PendingMessage(pending_receive))
 
-  # TODO(cs): make this a factory method that returns DefferedOFConnection objects
+  # TODO(cs): make this a factory method that returns DeferredOFConnection objects
   # with bound god_scheduler.insert() method. (much cleaner API + separation of concerns)
   def insert_pending_send(self, dpid, controller_id, ofp_message, conn):
-    ''' Called by DefferedOFConnection to insert messages into our buffer '''
+    ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
     conn_message = (conn, ofp_message)
     pending_send = PendingSend(dpid, controller_id, fingerprint)
