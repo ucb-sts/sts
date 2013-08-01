@@ -272,7 +272,9 @@ class InvariantChecker(object):
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
-    return [ str(b) for b in blackholes ]
+    blackholes = [ str(b) for b in blackholes ]
+    blackholes = list(set(blackholes))
+    return blackholes 
 
   @staticmethod
   def check_correspondence(simulation):
