@@ -134,7 +134,7 @@ class DumbEventScheduler(EventSchedulerBase):
     self.last_event = event
 
 class EventScheduler(EventSchedulerBase):
-  '''an EventWatchers schedules events. It controls their admission, and
+  '''An EventWatcher schedules events. It controls their admission and
   any post-event delay '''
 
   kwargs = set(['speedup', 'delay_input_events', 'initial_wait',
