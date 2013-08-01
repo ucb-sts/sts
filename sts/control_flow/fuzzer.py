@@ -27,6 +27,7 @@ from sts.topology import BufferedPatchPanel
 from sts.traffic_generator import TrafficGenerator
 from sts.replay_event import *
 from pox.lib.util import TimeoutError
+from pox.lib.packet.lldp import *
 from config.invariant_checks import name_to_invariant_check
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
@@ -312,8 +313,10 @@ class Fuzzer(ControlFlow):
 
   def check_dataplane(self, pass_through=False):
     ''' Decide whether to delay, drop, or deliver packets '''
+    def is_lldp(pkt):
+      return type(pkt.next) == lldp
     for dp_event in self.simulation.patch_panel.queued_dataplane_events:
-      if pass_through:
+      if pass_through or is_lldp(dp_event.packet):
         self.simulation.patch_panel.permit_dp_event(dp_event)
         self._log_input_event(DataplanePermit(dp_event.fingerprint))
       elif self.random.random() < self.params.dataplane_drop_rate:
