@@ -1,6 +1,15 @@
 from sts.invariant_checker import InvariantChecker
 import sys
 
+def check_everything(simulation):
+  checks = [ InvariantChecker.check_liveness, InvariantChecker.check_loops,
+             InvariantChecker.python_check_blackholes, InvariantChecker.check_connectivity ]
+  for check in checks:
+    result = check(simulation)
+    if result != []:
+      return result
+  return []
+
 def bail_on_connectivity(simulation):
   result = InvariantChecker.check_connectivity(simulation)
   if not result:
@@ -30,6 +39,7 @@ def check_for_loops_blackholes(simulation):
 
 # Note: make sure to add new custom invariant checks to this dictionary!
 name_to_invariant_check = {
+  "check_everything" : check_everything,
   "check_for_loops_or_connectivity" : check_for_loops_or_connectivity,
   "check_for_loops_blackholes_or_connectivity" : check_for_loops_blackholes_or_connectivity,
   "check_for_loops_blackholes" : check_for_loops_blackholes,
