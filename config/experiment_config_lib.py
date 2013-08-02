@@ -16,7 +16,6 @@
 import itertools
 import os
 import sys
-import threading
 import subprocess
 import logging
 import re
@@ -36,6 +35,7 @@ class ControllerConfig(object):
   _controller_labels = set()
   _controller_addresses = []
   _address_retriever = None
+  _max_address_retrieval_attempts = 5
 
   def __init__(self, start_cmd="", kill_cmd="", restart_cmd="", address="127.0.0.1",
                port=None, additional_ports={}, cwd=None, sync=None, controller_type=None,
@@ -65,7 +65,7 @@ class ControllerConfig(object):
     self._controller_labels.add(label)
     self.label = label
 
-    # Set index
+    # Set index, for assigning IP addresses in the case of multiple controllers
     match = re.search("c(\d+)", self.label)
     if match:
       self.index = int(match.groups()[0]) 
@@ -132,7 +132,7 @@ class ControllerConfig(object):
     '''
     if get_address_cmd is None:
       raise RuntimeError("Controller address cannot be resolved!")
-    if len(self._controller_addresses) == 0:
+    for _ in range(self._max_address_retrieval_attempts):
       # If another controller instance is already retrieving address, back off and wait
       if self._address_retriever is None or self._address_retriever == self.label:
         ControllerConfig._address_retriever = self.label
@@ -141,10 +141,13 @@ class ControllerConfig(object):
         new_addresses = re.split("\s+", new_addresses)
         new_addresses = [a for a in new_addresses if address_is_ip(a)]
         self._controller_addresses.extend(new_addresses)
-      if len(self._controller_addresses) == 0:
-        log.warn("Controller address not found... Keep trying.")
-        threading.Timer(5.0, self.get_address, args=[get_address_cmd, cwd]).start()
-        return
+      if len(self._controller_addresses) != 0:
+        break
+      log.warn("Controller addresses not found... Keep trying.")
+      time.sleep(5.0)
+    else:
+      raise RuntimeError("Cannot retrieve controller IP addresses after %d attempts!" %
+                           self._max_address_retrieval_attempts)
     if self.index is not None and self.index <= len(self._controller_addresses):
       self.address = self._controller_addresses[self.index-1]
       self._server_info = (self.address, self.port)
