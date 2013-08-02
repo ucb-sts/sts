@@ -93,7 +93,6 @@ class InvariantChecker(object):
 
   #TODO(ao): So much refactoring to be done here...
   # For check_connectivity and python_check_connectivity: return only unconnected pairs that persist
-  unconnected_pair_map = {}          # unconnected pair -> timestamp
   interface_pair_map = {}     # (src_addr, dst_addr) -> timestamp
   pair_timeout = 3            # TODO(ao): arbitrary
 
@@ -148,24 +147,6 @@ class InvariantChecker(object):
     return communicated_pairs
 
   @staticmethod
-  def _get_fail_pairs(pairs):
-    ''' Return pairs that exceeded the timeout threshold; also remove outdated entries '''
-    # Register newly unconnected pairs
-    unconnected_pair_map = InvariantChecker.unconnected_pair_map
-    pair_timeout = InvariantChecker.pair_timeout
-    for pair in pairs:
-      if pair not in unconnected_pair_map.keys():
-        unconnected_pair_map[pair] = time.time()
-    # Unregister now connected pairs
-    # Also allow previously unconnected pairs that have not exceeded the threshold
-    for pair in unconnected_pair_map.keys():
-      if pair not in pairs:
-        del unconnected_pair_map[pair]
-      elif (time.time() - unconnected_pair_map[pair]) < pair_timeout:
-        pairs.remove(pair)
-    return pairs
-
-  @staticmethod
   def _get_unconnected_pairs(simulation, connected_pairs):
     ''' Return pairs that are persistently unconnected after checking for everything '''
     all_pairs = InvariantChecker._get_all_pairs(simulation)
@@ -181,19 +162,13 @@ class InvariantChecker(object):
     communicated_pairs = InvariantChecker._get_communicated_pairs(simulation)
     unconnected_pairs -= (unconnected_pairs - communicated_pairs)
 
-    # Ignore pairs that have not exceeded the timeout threshold
-    unconnected_pairs = InvariantChecker._get_fail_pairs(unconnected_pairs)
     InvariantChecker._check_connectivity_msg(unconnected_pairs, all_pairs)
     return unconnected_pairs
 
   @staticmethod
   def _check_connectivity_msg(unconnected_pairs, all_pairs):
-    unconnected_pair_map = InvariantChecker.unconnected_pair_map
-    if len(unconnected_pair_map) == 0:
+    if len(unconnected_pairs) == 0:
       msg.success("Fully connected!")
-    elif len(unconnected_pairs) == 0:
-      msg.fail("%d/%d pairs are not connected, but have not exceeded the violation threshhold" %
-                    (len(unconnected_pair_map), len(all_pairs)))
     else:
       msg.fail("Found %d unconnected pair%s: %s" % (len(unconnected_pairs),
                     "" if len(unconnected_pairs)==1 else "s", unconnected_pairs))
