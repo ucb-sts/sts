@@ -657,15 +657,18 @@ class CheckInvariants(InputEvent):
   def proceed(self, simulation):
     try:
       violations = self.invariant_check(simulation)
+      violation_tracker = simulation.violation_tracker
+      violation_tracker.register(violations) 
+      persistent_violations = violation_tracker.persistent_violations
     except NameError as e:
       raise ValueError('''Closures are unsupported for invariant check '''
                        '''functions.\n Use dynamic imports inside of your '''
                        '''invariant check code and define all globals '''
                        '''locally.\n NameError: %s''' % str(e))
 
-    if violations != []:
+    if persistent_violations != []:
       msg.fail("The following correctness violations occurred!: %s"
-               % str(violations))
+               % str(persistent_violations))
       if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
         raise KeyboardInterrupt("fail to interactive")
     else:

@@ -32,6 +32,7 @@ from sts.controller_manager import ControllerManager
 from sts.util.deferred_io import DeferredIOWorker
 from sts.god_scheduler import GodScheduler
 from sts.topology import *
+from sts.violation_tracker import ViolationTracker
 from sts.syncproto.sts_syncer import STSSyncConnectionManager
 import sts.snapshot as snapshot
 from sts.util.socket_mux.base import MultiplexedSelect
@@ -60,7 +61,8 @@ class SimulationConfig(object):
                patch_panel_class=BufferedPatchPanel,
                dataplane_trace=None,
                snapshot_service=None,
-               multiplex_sockets=False):
+               multiplex_sockets=False,
+               violation_tracker=ViolationTracker()):
     '''
     Constructor parameters:
       topology_class    => a sts.topology.Topology class (not object!)
@@ -95,6 +97,7 @@ class SimulationConfig(object):
     self.snapshot_service = snapshot_service
     self.current_simulation = None
     self.multiplex_sockets = multiplex_sockets
+    self.violation_tracker = violation_tracker
 
   def bootstrap(self, sync_callback):
     '''Return a simulation object encapsulating the state of
@@ -158,7 +161,8 @@ class SimulationConfig(object):
 
     simulation = Simulation(topology, controller_manager, dataplane_trace,
                             god_scheduler, io_master, patch_panel,
-                            sync_callback, self.multiplex_sockets)
+                            sync_callback, self.multiplex_sockets,
+                            self.violation_tracker)
     self.current_simulation = simulation
     return simulation
 
@@ -187,8 +191,8 @@ class Simulation(object):
     - Dataplane Trace (pending dataplane messages)
   '''
   def __init__(self, topology, controller_manager, dataplane_trace,
-               god_scheduler, io_master, patch_panel,
-               controller_sync_callback, multiplex_sockets):
+               god_scheduler, io_master, patch_panel, controller_sync_callback,
+               multiplex_sockets, violation_tracker):
     self.topology = topology
     self.controller_manager = controller_manager
     self.dataplane_trace = dataplane_trace
@@ -197,6 +201,7 @@ class Simulation(object):
     self.patch_panel = patch_panel
     self.controller_sync_callback = controller_sync_callback
     self.multiplex_sockets = multiplex_sockets
+    self.violation_tracker = violation_tracker
     self.exit_code = 0
 
   def set_exit_code(self, code):

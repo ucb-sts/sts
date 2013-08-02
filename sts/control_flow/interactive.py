@@ -527,7 +527,10 @@ class Interactive(ControlFlow):
       message = "Blackholes: "
     else:
       log.warn("Unknown invariant kind...")
-    msg.interactive(message + str(result))
+    violation_tracker = self.simulation.violation_tracker
+    violation_tracker.register(result) 
+    persistent_violations = violation_tracker.persistent_violations
+    msg.interactive(message + str(persistent_violations))
     if result != []:
       self._log_input_event(InvariantViolation(result))
 
