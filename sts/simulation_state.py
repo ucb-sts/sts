@@ -32,7 +32,7 @@ from sts.controller_manager import ControllerManager
 from sts.util.deferred_io import DeferredIOWorker
 from sts.god_scheduler import GodScheduler
 from sts.topology import *
-from sts.violation_tracker import ViolationTracker
+from sts.invariant_checker import ViolationTracker
 from sts.syncproto.sts_syncer import STSSyncConnectionManager
 import sts.snapshot as snapshot
 from sts.util.socket_mux.base import MultiplexedSelect
@@ -62,7 +62,7 @@ class SimulationConfig(object):
                dataplane_trace=None,
                snapshot_service=None,
                multiplex_sockets=False,
-               violation_tracker=ViolationTracker()):
+               violation_count_threshold=None):
     '''
     Constructor parameters:
       topology_class    => a sts.topology.Topology class (not object!)
@@ -89,15 +89,15 @@ class SimulationConfig(object):
     self._topology_params = topology_params
     self._patch_panel_class = patch_panel_class
     self._dataplane_trace_path = dataplane_trace
+    self._violation_count_threshold = violation_count_threshold
+
     # TODO(cs): is the snapshot service stateful?
     if snapshot_service is None:
       # For snapshotting the controller's view of the network configuration
       snapshot_service = snapshot.get_snapshotservice(controller_configs)
-
     self.snapshot_service = snapshot_service
     self.current_simulation = None
     self.multiplex_sockets = multiplex_sockets
-    self.violation_tracker = violation_tracker
 
   def bootstrap(self, sync_callback):
     '''Return a simulation object encapsulating the state of
@@ -158,11 +158,15 @@ class SimulationConfig(object):
     dataplane_trace = None
     if self._dataplane_trace_path is not None:
       dataplane_trace = Trace(self._dataplane_trace_path, topology)
+    if self._violation_count_threshold is not None:
+      violation_tracker = ViolationTracker(self._violation_count_threshold)
+    else:
+      violation_tracker = ViolationTracker()
 
     simulation = Simulation(topology, controller_manager, dataplane_trace,
                             god_scheduler, io_master, patch_panel,
                             sync_callback, self.multiplex_sockets,
-                            self.violation_tracker)
+                            violation_tracker)
     self.current_simulation = simulation
     return simulation
 

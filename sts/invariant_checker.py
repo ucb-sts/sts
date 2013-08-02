@@ -427,3 +427,33 @@ def check_partitions(switches, live_links, access_links):
       partioned_pairs.add((id1,id2))
   return partioned_pairs
 
+class ViolationTracker(object):
+  '''
+  Tracks all invariant violations and decides whether each one is transient or persistent
+  '''
+
+  def __init__(self, count_threshold=5):
+    self.count_threshold = count_threshold
+    self.violation2count = {}
+
+  def register(self, violations):
+    # First, unregister violations that expire
+    for v in self.violation2count.keys():
+      if v not in violations:
+        msg.success("Violation %s turns out to be transient!" % v)
+        del self.violation2count[v]
+    # Now, register violations observed this round 
+    for v in violations:
+      if v in self.violation2count.keys():
+        self.violation2count[v] += 1
+      else:
+        self.violation2count[v] = 1
+      msg.fail("Violation encountered %d time(s): %s" % (self.violation2count[v], v))
+ 
+  def is_persistent(self, violation):
+    return self.violation2count[violation] >= self.count_threshold
+
+  @property
+  def persistent_violations(self):
+    return [ v for v in self.violation2count.keys() if self.is_persistent(v) ]
+
