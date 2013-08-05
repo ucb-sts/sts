@@ -93,7 +93,7 @@ def check_legacy_format(json_hash):
       type(json_hash.controller_id) == list):
     # TODO(cs): translate rather than throwing up
     raise ValueError("Legacy controller id. Should be a string label: %s" % json_hash.controller_id)
-  if not hasattr(json_hash, 'round'):
+  if "round" not in json_hash.keys():
     # Insert a dummy round number
     json_hash['round'] = -1
 

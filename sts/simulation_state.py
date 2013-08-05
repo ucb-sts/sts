@@ -62,7 +62,7 @@ class SimulationConfig(object):
                dataplane_trace=None,
                snapshot_service=None,
                multiplex_sockets=False,
-               violation_count_threshold=None):
+               violation_persistence_threshold=None):
     '''
     Constructor parameters:
       topology_class    => a sts.topology.Topology class (not object!)
@@ -73,6 +73,9 @@ class SimulationConfig(object):
       patch_panel_class => a sts.topology.PatchPanel class (not object!)
       dataplane_trace   => a path to a dataplane trace file
                            (e.g. dataplane_traces/ping_pong_same_subnet.trace)
+      violation_persistence_threshold => number of logical time units to observe a
+                                         violation before we declare that it is
+                                         persistent
       switch_init_sleep_seconds => number of seconds to wait for switches to
                                    connect to controllers before starting the
                                    simulation. Defaults to False (no wait).
@@ -89,7 +92,7 @@ class SimulationConfig(object):
     self._topology_params = topology_params
     self._patch_panel_class = patch_panel_class
     self._dataplane_trace_path = dataplane_trace
-    self._violation_count_threshold = violation_count_threshold
+    self._violation_persistence_threshold = violation_persistence_threshold
 
     # TODO(cs): is the snapshot service stateful?
     if snapshot_service is None:
@@ -158,8 +161,8 @@ class SimulationConfig(object):
     dataplane_trace = None
     if self._dataplane_trace_path is not None:
       dataplane_trace = Trace(self._dataplane_trace_path, topology)
-    if self._violation_count_threshold is not None:
-      violation_tracker = ViolationTracker(self._violation_count_threshold)
+    if self._violation_persistence_threshold is not None:
+      violation_tracker = ViolationTracker(self._violation_persistence_threshold)
     else:
       violation_tracker = ViolationTracker()
 

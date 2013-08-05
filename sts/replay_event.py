@@ -657,9 +657,8 @@ class CheckInvariants(InputEvent):
   def proceed(self, simulation):
     try:
       violations = self.invariant_check(simulation)
-      violation_tracker = simulation.violation_tracker
-      violation_tracker.register(violations) 
-      persistent_violations = violation_tracker.persistent_violations
+      simulation.violation_tracker.track(violations, self.round)
+      persistent_violations = simulation.violation_tracker.persistent_violations
     except NameError as e:
       raise ValueError('''Closures are unsupported for invariant check '''
                        '''functions.\n Use dynamic imports inside of your '''

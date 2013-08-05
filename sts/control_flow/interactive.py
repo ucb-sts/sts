@@ -502,34 +502,33 @@ class Interactive(ControlFlow):
 
   def invariant_check(self, kind):
     if kind == "omega" or kind == "o":
-      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_correspondence"))
+      self._log_input_event(CheckInvariants(round=self.logical_time, invariant_check_name="InvariantChecker.check_correspondence"))
       result = InvariantChecker.check_correspondence(self.simulation)
       message = "Controllers with miscorrepondence: "
     elif kind == "connectivity" or kind == "c":
-      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_connectivity"))
+      self._log_input_event(CheckInvariants(round=self.logical_time, invariant_check_name="InvariantChecker.check_connectivity"))
       result = InvariantChecker.check_connectivity(self.simulation)
       message = "Disconnected host pairs: "
     elif kind == "python_connectivity" or kind == "pc":
-      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.python_check_connectivity"))
+      self._log_input_event(CheckInvariants(round=self.logical_time, invariant_check_name="InvariantChecker.python_check_connectivity"))
       result = InvariantChecker.python_check_connectivity(self.simulation)
       message = "Disconnected host pairs: "
     elif kind == "loops" or kind == "lo":
-      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_loops"))
+      self._log_input_event(CheckInvariants(round=self.logical_time, invariant_check_name="InvariantChecker.check_loops"))
       result = InvariantChecker.python_check_loops(self.simulation)
       message = "Loops: "
     elif kind == "liveness" or kind == "li":
-      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_liveness"))
+      self._log_input_event(CheckInvariants(round=self.logical_time, invariant_check_name="InvariantChecker.check_liveness"))
       result = InvariantChecker.check_liveness(self.simulation)
       message = "Crashed controllers: "
     elif kind == "blackholes" or kind == "bl":
-      self._log_input_event(CheckInvariants(invariant_check_name="InvariantChecker.check_blackholes"))
+      self._log_input_event(CheckInvariants(round=self.logical_time, invariant_check_name="InvariantChecker.check_blackholes"))
       result = InvariantChecker.python_check_blackholes(self.simulation)
       message = "Blackholes: "
     else:
       log.warn("Unknown invariant kind...")
-    violation_tracker = self.simulation.violation_tracker
-    violation_tracker.register(result) 
-    persistent_violations = violation_tracker.persistent_violations
+    self.simulation.violation_tracker.track(result, self.logical_time)
+    persistent_violations = self.simulation.violation_tracker.persistent_violations
     msg.interactive(message + str(persistent_violations))
     if result != []:
       self._log_input_event(InvariantViolation(result))

@@ -162,11 +162,11 @@ class InvariantChecker(object):
     communicated_pairs = InvariantChecker._get_communicated_pairs(simulation)
     unconnected_pairs -= (unconnected_pairs - communicated_pairs)
 
-    InvariantChecker._check_connectivity_msg(unconnected_pairs, all_pairs)
+    InvariantChecker._check_connectivity_msg(unconnected_pairs)
     return unconnected_pairs
 
   @staticmethod
-  def _check_connectivity_msg(unconnected_pairs, all_pairs):
+  def _check_connectivity_msg(unconnected_pairs):
     if len(unconnected_pairs) == 0:
       msg.success("Fully connected!")
     else:
@@ -432,28 +432,43 @@ class ViolationTracker(object):
   Tracks all invariant violations and decides whether each one is transient or persistent
   '''
 
-  def __init__(self, count_threshold=5):
-    self.count_threshold = count_threshold
-    self.violation2count = {}
+  def __init__(self, persistence_threshold=50):
+    '''
+    persistence_threshold: number of logical time units a violation must persist before
+      we declare that it is a persistent violation
+    violation2time: key is the violation signature (string), and value is a two-tuple
+      (start_time, end_time), where start_time is the logical time at which the violation
+      is first observed, and end time that at which the violation is last observed
+    '''
+    self.persistence_threshold = persistence_threshold
+    self.violation2time = {}
 
-  def register(self, violations):
-    # First, unregister violations that expire
-    for v in self.violation2count.keys():
+  def track(self, violations, logical_time):
+    # First, untrack violations that expire
+    for v in self.violation2time.keys():
       if v not in violations:
         msg.success("Violation %s turns out to be transient!" % v)
-        del self.violation2count[v]
-    # Now, register violations observed this round 
+        del self.violation2time[v]
+    # Now, track violations observed this round 
     for v in violations:
-      if v in self.violation2count.keys():
-        self.violation2count[v] += 1
+      if v not in self.violation2time.keys():
+        self.violation2time[v] = (logical_time, logical_time)
       else:
-        self.violation2count[v] = 1
-      msg.fail("Violation encountered %d time(s): %s" % (self.violation2count[v], v))
+        start_time = self.violation2time[v][0]
+        end_time = logical_time
+        self.violation2time[v] = (start_time, end_time)
+        msg.fail("Violation encountered again after %d steps: %s" %
+                  (end_time - start_time, v))
  
   def is_persistent(self, violation):
-    return self.violation2count[violation] >= self.count_threshold
+    (start_time, end_time) = self.violation2time[violation]
+    return end_time - start_time > self.persistence_threshold 
+
+  @property
+  def violations(self):
+    return self.violation2time.keys()
 
   @property
   def persistent_violations(self):
-    return [ v for v in self.violation2count.keys() if self.is_persistent(v) ]
+    return [ v for v in self.violation2time.keys() if self.is_persistent(v) ]
 

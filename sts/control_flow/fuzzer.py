@@ -280,12 +280,12 @@ class Fuzzer(ControlFlow):
       # long
       def do_invariant_check():
         if self.log_invariant_checks:
-          self._log_input_event(CheckInvariants(invariant_check_name=self.invariant_check_name))
+          self._log_input_event(CheckInvariants(round=self.logical_time,
+                                 invariant_check_name=self.invariant_check_name))
 
         violations = self.invariant_check(self.simulation)
-        violation_tracker = self.simulation.violation_tracker
-        violation_tracker.register(violations) 
-        persistent_violations = violation_tracker.persistent_violations
+        self.simulation.violation_tracker.track(violations, self.logical_time)
+        persistent_violations = self.simulation.violation_tracker.persistent_violations
 
         if persistent_violations != []:
           msg.fail("The following controllers had correctness violations!: %s"
