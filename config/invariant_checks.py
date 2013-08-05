@@ -2,8 +2,8 @@ from sts.invariant_checker import InvariantChecker
 import sys
 
 def check_everything(simulation):
-  checks = [ InvariantChecker.check_liveness, InvariantChecker.check_loops,
-             InvariantChecker.python_check_blackholes, InvariantChecker.check_connectivity ]
+  checks = [ InvariantChecker.check_loops, InvariantChecker.python_check_blackholes,
+             InvariantChecker.check_connectivity ]
   for check in checks:
     result = check(simulation)
     if result != []:
