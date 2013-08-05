@@ -172,9 +172,9 @@ def get_snapshotservice(controller_configs):
   # TODO(cs): allow for heterogenous controllers?
   if controller_configs != [] and controller_configs[0].sync:
     snapshotService = SyncProtoSnapshotService()
-  elif controller_configs != [] and controller_configs[0].type == POXController:
+  elif controller_configs != [] and controller_configs[0].controller_class == POXController:
     snapshotService = PoxSnapshotService()
-  elif controller_configs != [] and controller_configs[0].type == BigSwitchController:
+  elif controller_configs != [] and controller_configs[0].controller_class == BigSwitchController:
     snapshotService = BigSwitchSnapshotService()
   else:
     # We default snapshotService to POX

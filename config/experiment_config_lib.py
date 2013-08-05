@@ -92,20 +92,19 @@ class ControllerConfig(object):
       self.port = None
       self._server_info = address
 
+    self.controller_type = controller_type
     if controller_type is None:
       for t in controller_type_map.keys():
         if t in self.start_cmd:
-          self.type = controller_type_map[t]
+          self.controller_class = controller_type_map[t]
           break
       else:
         # Default to Base Controller class
-        self.type = Controller
-    elif isinstance(controller_type, Controller):
-      self.type = controller_type
+        self.controller_class = Controller
     else:
       if controller_type not in controller_type_map.keys():
         raise RuntimeError("Unknown controller type: %s" % controller_type)
-      self.type = controller_type_map[controller_type]
+      self.controller_class = controller_type_map[controller_type]
 
     self.cwd = cwd
     if not cwd:
@@ -192,7 +191,7 @@ class ControllerConfig(object):
         out_file.write(self._expand_vars(in_file.read()))
 
   def __repr__(self):
-    attributes = ("start_cmd", "address", "port", "cwd", "sync")
+    attributes = ("start_cmd", "kill_cmd", "restart_cmd", "label", "address", "port", "cwd", "controller_type", "sync")
 
     pairs = ( (attr, getattr(self, attr)) for attr in attributes)
     quoted = ( "%s=%s" % (attr, repr(value)) for (attr, value) in pairs if value)

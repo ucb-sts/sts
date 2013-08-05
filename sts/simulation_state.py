@@ -127,7 +127,7 @@ class SimulationConfig(object):
       # Boot the controllers
       controllers = []
       for c in self.controller_configs:
-        controller = c.type(c, sync_connection_manager, self.snapshot_service)
+        controller = c.controller_class(c, sync_connection_manager, self.snapshot_service)
         controller.start()
         log.info("Launched controller c%s: %s [PID %d]" %
                  (str(c.cid), " ".join(c.expanded_start_cmd), controller.pid))
