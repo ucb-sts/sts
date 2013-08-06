@@ -438,7 +438,7 @@ class EventDag(object):
     if self._last_violation is not None:
       return self._last_violation
     for event in reversed(self._events_list):
-      if type(event) == InvariantViolation:
+      if type(event) == InvariantViolation and event.persistent == True:
         self._last_violation = event
         return event
     return None

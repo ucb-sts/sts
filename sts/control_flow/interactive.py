@@ -529,9 +529,15 @@ class Interactive(ControlFlow):
       log.warn("Unknown invariant kind...")
     self.simulation.violation_tracker.track(result, self.logical_time)
     persistent_violations = self.simulation.violation_tracker.persistent_violations
-    msg.interactive(message + str(persistent_violations))
-    if result != []:
-      self._log_input_event(InvariantViolation(result))
+    transient_violations = list(set(result) - set(persistent_violations))
+
+    msg.interactive(message + str(result))
+    if transient_violations != []:
+      self._log_input_event(InvariantViolation(transient_violations))
+    if persistent_violations != []:
+      msg.fail("Persistent violations detected!: %s"
+               % str(persistent_violations))
+      self._log_input_event(InvariantViolation(persistent_violations, persistent=True))
 
   def dataplane_trace_feed(self):
     if self.simulation.dataplane_trace:
