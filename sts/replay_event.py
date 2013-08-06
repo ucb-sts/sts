@@ -1277,7 +1277,8 @@ class InvariantViolation(SpecialEvent):
     (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'violations')
     violations = json_hash['violations']
-    return InvariantViolation(violations, label=label, round=round, time=time)
+    persistent = json_hash['persistent']
+    return InvariantViolation(violations, label=label, round=round, time=time, persistent=persistent)
 
   def matches(self, violations):
     ''' Return whether at least one violation string in violations matches a
