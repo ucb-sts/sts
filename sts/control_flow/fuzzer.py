@@ -300,7 +300,7 @@ class Fuzzer(ControlFlow):
           if self.halt_on_violation:
             return True
         else:
-          msg.interactive("No correctness violations!")
+          msg.interactive("No persistent correctness violations!")
       return do_invariant_check()
 
   def maybe_inject_trace_event(self):

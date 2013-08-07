@@ -666,12 +666,12 @@ class CheckInvariants(InputEvent):
                        '''locally.\n NameError: %s''' % str(e))
     if violations != []:
       msg.fail("The following correctness violations have occurred: %s" % str(violations))
-      if persistent_violations != []:
-        msg.fail("Persistent violations detected!: %s" % str(persistent_violations))
-        if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
-          raise KeyboardInterrupt("fail to interactive")
+    if persistent_violations != []:
+      msg.fail("Persistent violations detected!: %s" % str(persistent_violations))
+      if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
+        raise KeyboardInterrupt("fail to interactive")
     else:
-      msg.interactive("No correctness violations!")
+      msg.interactive("No persistent correctness violations!")
     return True
 
   def to_json(self):

@@ -37,9 +37,9 @@ class ControllerConfig(object):
   _address_retriever = None
   _max_address_retrieval_attempts = 5
 
-  def __init__(self, start_cmd="", kill_cmd="", restart_cmd="", address="127.0.0.1",
-               port=None, additional_ports={}, cwd=None, sync=None, controller_type=None,
-               label=None, config_file=None, config_template=None, try_new_ports=False,
+  def __init__(self, start_cmd="", address="127.0.0.1", port=None, additional_ports={},
+               cwd=None, sync=None, controller_type=None, label=None, config_file=None,
+               config_template=None, try_new_ports=False, kill_cmd="", restart_cmd="",
                get_address_cmd=None):
     '''
     Store metadata for the controller.
