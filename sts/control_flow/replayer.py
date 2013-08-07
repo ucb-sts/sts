@@ -49,9 +49,9 @@ class Replayer(ControlFlow):
   time_epsilon_microseconds = 500
 
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
-               print_buffers=True, wait_on_deterministic_values=False,
-               default_dp_permit=False, fail_to_interactive=False, end_in_interactive=False,
-               input_logger=None, **kwargs):
+               print_buffers=True, wait_on_deterministic_values=False, default_dp_permit=False,
+               fail_to_interactive=False, fail_to_interactive_on_persistent_violations=False,
+               end_in_interactive=False, input_logger=None, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -85,6 +85,8 @@ class Replayer(ControlFlow):
     self.event_scheduler_stats = None
     self.end_in_interactive = end_in_interactive
     self.fail_to_interactive = fail_to_interactive
+    self.fail_to_interactive_on_persistent_violations =\
+      fail_to_interactive_on_persistent_violations
     self._input_logger = input_logger
 
     if create_event_scheduler:
@@ -135,6 +137,8 @@ class Replayer(ControlFlow):
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     # TODO(aw): remove this hack
     self.simulation.fail_to_interactive = self.fail_to_interactive
+    self.simulation.fail_to_interactive_on_persistent_violations =\
+      self.fail_to_interactive_on_persistent_violations
     self.logical_time = 0
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
     if self.print_buffers_flag:
