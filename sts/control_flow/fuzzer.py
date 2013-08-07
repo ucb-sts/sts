@@ -318,25 +318,24 @@ class Fuzzer(ControlFlow):
     ''' Decide whether to delay, drop, or deliver packets '''
     def is_lldp(pkt):
       return type(pkt.next) == lldp
+    def drop(dp_event):
+      self.simulation.patch_panel.drop_dp_event(dp_event)
+      self._log_input_event(DataplaneDrop(dp_event.fingerprint,
+                                          host_id=dp_event.get_host_id(),
+                                          dpid=dp_event.get_switch_id()))
+    def permit(dp_event):
+      self.simulation.patch_panel.permit_dp_event(dp_event)
+      self._log_input_event(DataplanePermit(dp_event.fingerprint))
+
     for dp_event in self.simulation.patch_panel.queued_dataplane_events:
-      if pass_through or is_lldp(dp_event.packet):
-        self.simulation.patch_panel.permit_dp_event(dp_event)
-        self._log_input_event(DataplanePermit(dp_event.fingerprint))
-      elif self.random.random() < self.params.dataplane_drop_rate:
-        self.simulation.patch_panel.drop_dp_event(dp_event)
-        self._log_input_event(DataplaneDrop(dp_event.fingerprint,
-                                            host_id=dp_event.get_host_id(),
-                                            dpid=dp_event.get_switch_id()))
+      if pass_through:
+        permit(dp_event)
       elif not self.simulation.topology.ok_to_send(dp_event):
-        # Switches have very small buffers! drop it on the floor if the link
-        # is down
-        self.simulation.patch_panel.drop_dp_event(dp_event)
-        self._log_input_event(DataplaneDrop(dp_event.fingerprint,
-                                            host_id=dp_event.get_host_id(),
-                                            dpid=dp_event.get_switch_id()))
+        drop(dp_event)
+      elif (self.random.random() >= self.params.dataplane_drop_rate) or is_lldp(dp_event.packet):
+        permit(dp_event)
       else:
-        self.simulation.patch_panel.permit_dp_event(dp_event)
-        self._log_input_event(DataplanePermit(dp_event.fingerprint))
+        drop(dp_event)
 
     # TODO(cs): temporary hack until we have determinism figured out
     if self.mock_link_discovery and self.random.random() < self.params.link_discovery_rate:
