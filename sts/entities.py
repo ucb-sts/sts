@@ -679,7 +679,7 @@ class BigSwitchController(Controller):
       if self.config.restart_cmd == "":
         raise RuntimeError("No command found to restart controller %s!" % self.label)
       self.log.info("Relaunching controller %s: %s" % (self.label, " ".join(self.config.expanded_restart_cmd)))
-      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_restart_cmd, self.config.cwd)
       self.alive = True
 
   def check_status(self, simulation):
