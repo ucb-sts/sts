@@ -286,11 +286,17 @@ class Fuzzer(ControlFlow):
         violations = self.invariant_check(self.simulation)
         self.simulation.violation_tracker.track(violations, self.logical_time)
         persistent_violations = self.simulation.violation_tracker.persistent_violations
+        transient_violations = list(set(violations) - set(persistent_violations))
 
+        if violations != []:
+          msg.fail("The following correctness violations have occurred: %s"
+                   % str(violations))
+        if transient_violations != []:
+          self._log_input_event(InvariantViolation(transient_violations))
         if persistent_violations != []:
-          msg.fail("The following controllers had correctness violations!: %s"
+          msg.fail("Persistent violations detected!: %s"
                    % str(persistent_violations))
-          self._log_input_event(InvariantViolation(persistent_violations))
+          self._log_input_event(InvariantViolation(persistent_violations, persistent=True))
           if self.halt_on_violation:
             return True
         else:

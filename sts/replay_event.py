@@ -664,12 +664,12 @@ class CheckInvariants(InputEvent):
                        '''functions.\n Use dynamic imports inside of your '''
                        '''invariant check code and define all globals '''
                        '''locally.\n NameError: %s''' % str(e))
-
-    if persistent_violations != []:
-      msg.fail("The following correctness violations occurred!: %s"
-               % str(persistent_violations))
-      if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
-        raise KeyboardInterrupt("fail to interactive")
+    if violations != []:
+      msg.fail("The following correctness violations have occurred: %s" % str(violations))
+      if persistent_violations != []:
+        msg.fail("Persistent violations detected!: %s" % str(persistent_violations))
+        if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
+          raise KeyboardInterrupt("fail to interactive")
     else:
       msg.interactive("No correctness violations!")
     return True
@@ -1253,7 +1253,7 @@ class SpecialEvent(Event):
 
 class InvariantViolation(SpecialEvent):
   ''' Class for logging violations as json dicts '''
-  def __init__(self, violations, label=None, round=-1, time=None):
+  def __init__(self, violations, label=None, round=-1, time=None, persistent=False):
     '''
     Parameters:
      - violations: an array of strings specifying the invariant violation
@@ -1270,13 +1270,15 @@ class InvariantViolation(SpecialEvent):
     if len(violations) == 0:
       raise ValueError("Must have at least one violation string")
     self.violations = [ str(v) for v in violations ]
+    self.persistent = persistent
 
   @staticmethod
   def from_json(json_hash):
     (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist(json_hash, 'violations')
     violations = json_hash['violations']
-    return InvariantViolation(violations, label=label, round=round, time=time)
+    persistent = json_hash['persistent']
+    return InvariantViolation(violations, label=label, round=round, time=time, persistent=persistent)
 
   def matches(self, violations):
     ''' Return whether at least one violation string in violations matches a
