@@ -62,7 +62,8 @@ class SimulationConfig(object):
                dataplane_trace=None,
                snapshot_service=None,
                multiplex_sockets=False,
-               violation_persistence_threshold=None):
+               violation_persistence_threshold=None,
+               kill_controllers_on_exit=True):
     '''
     Constructor parameters:
       topology_class    => a sts.topology.Topology class (not object!)
@@ -93,6 +94,7 @@ class SimulationConfig(object):
     self._patch_panel_class = patch_panel_class
     self._dataplane_trace_path = dataplane_trace
     self._violation_persistence_threshold = violation_persistence_threshold
+    self._kill_controllers_on_exit = kill_controllers_on_exit
 
     # TODO(cs): is the snapshot service stateful?
     if snapshot_service is None:
@@ -169,7 +171,7 @@ class SimulationConfig(object):
     simulation = Simulation(topology, controller_manager, dataplane_trace,
                             god_scheduler, io_master, patch_panel,
                             sync_callback, self.multiplex_sockets,
-                            violation_tracker)
+                            violation_tracker, self._kill_controllers_on_exit)
     self.current_simulation = simulation
     return simulation
 
@@ -182,10 +184,11 @@ class SimulationConfig(object):
             '''                 topology_class=%s,\n'''
             '''                 topology_params="%s",\n'''
             '''                 patch_panel_class=%s,\n'''
-            '''                 multiplex_sockets=%s)''' %
+            '''                 multiplex_sockets=%s,\n'''
+            '''                 kill_controllers_on_exit=%s)''' %
             (str(self.controller_configs),self._topology_class.__name__,
              self._topology_params, self._patch_panel_class.__name__,
-             str(self.multiplex_sockets)))
+             str(self.multiplex_sockets), str(self._kill_controllers_on_exit)))
 
 class Simulation(object):
   '''
@@ -199,7 +202,7 @@ class Simulation(object):
   '''
   def __init__(self, topology, controller_manager, dataplane_trace,
                god_scheduler, io_master, patch_panel, controller_sync_callback,
-               multiplex_sockets, violation_tracker):
+               multiplex_sockets, violation_tracker, kill_controllers_on_exit):
     self.topology = topology
     self.controller_manager = controller_manager
     self.controller_manager.set_simulation(self)
@@ -210,6 +213,7 @@ class Simulation(object):
     self.controller_sync_callback = controller_sync_callback
     self.multiplex_sockets = multiplex_sockets
     self.violation_tracker = violation_tracker
+    self._kill_controllers_on_exit = kill_controllers_on_exit
     self.exit_code = 0
 
   def set_exit_code(self, code):
@@ -235,7 +239,7 @@ class Simulation(object):
     sockets, IOLoop object) are cleaned before the next time we
     bootstrap'''
     # kill controllers
-    if self.controller_manager is not None:
+    if self.controller_manager is not None and self._kill_controllers_on_exit:
       self.controller_manager.kill_all()
 
     # Garbage collect sockets
