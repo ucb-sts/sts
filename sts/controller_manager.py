@@ -81,7 +81,7 @@ class ControllerManager(object):
     for c in self.controllers:
       (ok, msg) = c.check_status(self.simulation)
       if not ok:
-        self.alive = False
+        c.alive = False
         controllers_with_problems.append((c, msg))
     return controllers_with_problems
 
