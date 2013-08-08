@@ -50,7 +50,7 @@ class ReplayerTest(unittest.TestCase):
              '''  "controller_id": "c1",  "label": "e2", "time": [0,0], "round": 0}''')
     superlog.write(e2 + '\n')
     e3 = str('''{"dependent_labels": [], "class": "InvariantViolation",'''
-            '''  "violations": ["c1"], "time": [0,0], "label": "e3"}''')
+            '''  "violations": ["c1"], "persistent": true, "time": [0,0], "label": "e3"}''')
     superlog.write(e3 + '\n')
     superlog.close()
 

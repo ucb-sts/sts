@@ -87,7 +87,7 @@ class MCSFinderTest(unittest.TestCase):
 
   def basic(self, mcs_finder_type):
     trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
-    trace.append(InvariantViolation(["violation"]))
+    trace.append(InvariantViolation(["violation"], persistent=True))
     dag = EventDag(trace)
     mcs = [trace[0]]
     mcs_finder = mcs_finder_type(dag, mcs)
@@ -107,7 +107,7 @@ class MCSFinderTest(unittest.TestCase):
 
   def straddle(self, mcs_finder_type):
     trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
-    trace.append(InvariantViolation(["violation"]))
+    trace.append(InvariantViolation(["violation"], persistent=True))
     dag = EventDag(trace)
     mcs = [trace[0],trace[5]]
     mcs_finder = mcs_finder_type(dag, mcs)
@@ -127,7 +127,7 @@ class MCSFinderTest(unittest.TestCase):
 
   def all(self, mcs_finder_type):
     trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
-    trace.append(InvariantViolation(["violation"]))
+    trace.append(InvariantViolation(["violation"], persistent=True))
     dag = EventDag(trace)
     mcs = trace[0:6]
     mcs_finder = mcs_finder_type(dag, mcs)
