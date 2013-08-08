@@ -434,7 +434,7 @@ class ControllerRecovery(InputEvent):
     (label, time, round) = extract_label_time(json_hash)
     assert_fields_exist('controller_id')
     controller_id = json_hash['controller_id']
-    return ControllerFailure(controller_id, round=round, label=label, time=time)
+    return ControllerRecovery(controller_id, round=round, label=label, time=time)
 
   @property
   def fingerprint(self):
