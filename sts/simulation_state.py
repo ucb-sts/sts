@@ -202,6 +202,7 @@ class Simulation(object):
                multiplex_sockets, violation_tracker):
     self.topology = topology
     self.controller_manager = controller_manager
+    self.controller_manager.set_simulation(self)
     self.dataplane_trace = dataplane_trace
     self.god_scheduler = god_scheduler
     self._io_master = io_master

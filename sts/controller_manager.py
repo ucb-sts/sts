@@ -20,11 +20,15 @@ from sts.util.console import msg
 
 class ControllerManager(object):
   ''' Encapsulate a list of controllers objects '''
-  def __init__(self, controllers):
+  def __init__(self, controllers, simulation=None):
     self.cid2controller = {
       controller.cid : controller
       for controller in controllers
     }
+    self.simulation = simulation
+
+  def set_simulation(self, simulation):
+    self.simulation = simulation
 
   @property
   def controller_configs(self):
@@ -38,11 +42,13 @@ class ControllerManager(object):
 
   @property
   def live_controllers(self):
+    self.check_controller_status()
     alive = [controller for controller in self.controllers if controller.alive]
     return set(alive)
 
   @property
   def down_controllers(self):
+    self.check_controller_status()
     down = [controller for controller in self.controllers if not controller.alive]
     return set(down)
 
@@ -68,16 +74,14 @@ class ControllerManager(object):
 
   @staticmethod
   def reboot_controller(controller):
-    msg.event("Restarting controller %s" % str(controller))
     controller.restart()
 
-  def check_controller_status(self, simulation):
+  def check_controller_status(self):
     controllers_with_problems = []
-    live = list(self.live_controllers)
-    live.sort(key=lambda c: c.cid)
-    for c in live:
-      (rc, msg) = c.check_status(simulation)
-      if not rc:
-        c.alive = False
+    for c in self.controllers:
+      (ok, msg) = c.check_status(self.simulation)
+      if not ok:
+        self.alive = False
         controllers_with_problems.append((c, msg))
     return controllers_with_problems
+
