@@ -58,18 +58,10 @@ class InvariantChecker(object):
     return dead_controllers
 
   @staticmethod
-  def _maybe_check_liveness(simulation):
-    # Always check liveness if there is a single controller
-    if len(simulation.controller_manager.controllers) == 1:
-      # TODO(cs): a better conditional would be: are all controllers down?
-      return InvariantChecker.check_liveness(simulation)
-    return []
-
-  @staticmethod
   def python_check_loops(simulation):
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    down_controllers = InvariantChecker.check_liveness(simulation)
     if down_controllers != []:
       return down_controllers
     # Warning! depends on python Hassell -- may be really slow!
@@ -82,7 +74,7 @@ class InvariantChecker(object):
   @staticmethod
   def check_loops(simulation):
     import headerspace.applications as hsa
-    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    down_controllers = InvariantChecker.check_liveness(simulation)
     if down_controllers != []:
       return down_controllers
 
@@ -177,7 +169,7 @@ class InvariantChecker(object):
   @staticmethod
   def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
-    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    down_controllers = InvariantChecker.check_liveness(simulation)
     if down_controllers != []:
       return down_controllers
 
@@ -199,7 +191,7 @@ class InvariantChecker(object):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    down_controllers = InvariantChecker.check_liveness(simulation)
     if down_controllers != []:
       return down_controllers
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
@@ -242,7 +234,7 @@ class InvariantChecker(object):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    down_controllers = InvariantChecker.check_liveness(simulation)
     if down_controllers != []:
       return down_controllers
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
@@ -255,7 +247,7 @@ class InvariantChecker(object):
   @staticmethod
   def check_correspondence(simulation):
     ''' Return if there were any policy-violations '''
-    down_controllers = InvariantChecker._maybe_check_liveness(simulation)
+    down_controllers = InvariantChecker.check_liveness(simulation)
     if down_controllers != []:
       return down_controllers
 
