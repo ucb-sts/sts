@@ -399,8 +399,8 @@ class Fuzzer(ControlFlow):
 
     def restart_switches(crashed_this_round):
       # Make sure we don't try to connect to dead controllers
-      down_controller_ids = map(lambda c: c.cid,
-                                self.simulation.controller_manager.down_controllers)
+      self.simulation.controller_manager.check_controller_status()
+      down_controller_ids = [ c.cid for c in self.simulation.controller_manager.down_controllers ]
 
       for software_switch in list(self.simulation.topology.failed_switches):
         if software_switch in crashed_this_round:

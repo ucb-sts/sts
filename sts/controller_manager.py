@@ -16,6 +16,7 @@
 
 ''' Convenience object for encapsulating and interacting with Controller processes '''
 
+from sts.entities import ControllerState
 from sts.util.console import msg
 
 class ControllerManager(object):
@@ -42,14 +43,12 @@ class ControllerManager(object):
 
   @property
   def live_controllers(self):
-    self.check_controller_status()
-    alive = [controller for controller in self.controllers if controller.alive]
+    alive = [controller for controller in self.controllers if controller.state == ControllerState.ALIVE]
     return set(alive)
 
   @property
   def down_controllers(self):
-    self.check_controller_status()
-    down = [controller for controller in self.controllers if not controller.alive]
+    down = [controller for controller in self.controllers if controller.state == ControllerState.DEAD]
     return set(down)
 
   def get_controller_by_label(self, label):
@@ -80,8 +79,10 @@ class ControllerManager(object):
     controllers_with_problems = []
     for c in self.controllers:
       (ok, msg) = c.check_status(self.simulation)
-      if not ok:
-        c.alive = False
+      if ok and c.state == ControllerState.STARTING:
+        c.state = ControllerState.ALIVE
+      if not ok and c.state != ControllerState.STARTING:
+        c.state = ControllerState.DEAD
         controllers_with_problems.append((c, msg))
     return controllers_with_problems
 
