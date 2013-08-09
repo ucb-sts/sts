@@ -19,6 +19,7 @@ import sys
 import subprocess
 import logging
 import re
+import time
 from sts.util.convenience import address_is_ip, find_port
 from sts.entities import Controller, POXController, BigSwitchController
 
@@ -40,7 +41,7 @@ class ControllerConfig(object):
   def __init__(self, start_cmd="", address="127.0.0.1", port=None, additional_ports={},
                cwd=None, sync=None, controller_type=None, label=None, config_file=None,
                config_template=None, try_new_ports=False, kill_cmd="", restart_cmd="",
-               get_address_cmd=None):
+               check_status_cmd="", get_address_cmd=""):
     '''
     Store metadata for the controller.
       - start_cmd: command that starts a controller or a set of controllers,
@@ -56,6 +57,7 @@ class ControllerConfig(object):
     self.start_cmd = start_cmd
     self.kill_cmd = kill_cmd
     self.restart_cmd = restart_cmd
+    self.check_status_cmd = check_status_cmd
 
     # Set label
     if label is None:
@@ -129,14 +131,15 @@ class ControllerConfig(object):
     periodically attempt to retrieve the IP from the output of get_address_cmd. If multiple controller
     instances are launched in this case, only the designated address retriever makes such attempts.
     '''
-    if get_address_cmd is None:
+    if get_address_cmd is "":
       raise RuntimeError("Controller address cannot be resolved!")
     for _ in range(self._max_address_retrieval_attempts):
       # If another controller instance is already retrieving address, back off and wait
       if self._address_retriever is None or self._address_retriever == self.label:
         ControllerConfig._address_retriever = self.label
         p = subprocess.Popen(get_address_cmd, shell=True, stdout=subprocess.PIPE, cwd=cwd)
-        new_addresses = p.communicate()[0].strip()
+        (new_addresses, _) = p.communicate()
+        new_addresses = new_addresses.strip()
         new_addresses = re.split("\s+", new_addresses)
         new_addresses = [a for a in new_addresses if address_is_ip(a)]
         self._controller_addresses.extend(new_addresses)
@@ -181,6 +184,10 @@ class ControllerConfig(object):
   @property
   def expanded_restart_cmd(self):
     return map(self._expand_vars, self.restart_cmd.split())
+
+  @property
+  def expanded_check_status_cmd(self):
+    return map(self._expand_vars, self.check_status_cmd.split())
 
   def generate_config_file(self, target_dir):
     if self.config_file is None:

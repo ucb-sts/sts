@@ -291,6 +291,8 @@ class Fuzzer(ControlFlow):
         if violations != []:
           msg.fail("The following correctness violations have occurred: %s"
                    % str(violations))
+        else:
+          msg.interactive("No correctness violations!")
         if transient_violations != []:
           self._log_input_event(InvariantViolation(transient_violations))
         if persistent_violations != []:
@@ -299,8 +301,6 @@ class Fuzzer(ControlFlow):
           self._log_input_event(InvariantViolation(persistent_violations, persistent=True))
           if self.halt_on_violation:
             return True
-        else:
-          msg.interactive("No persistent correctness violations!")
       return do_invariant_check()
 
   def maybe_inject_trace_event(self):
@@ -399,13 +399,15 @@ class Fuzzer(ControlFlow):
 
     def restart_switches(crashed_this_round):
       # Make sure we don't try to connect to dead controllers
-      self.simulation.controller_manager.check_controller_status()
-      down_controller_ids = [ c.cid for c in self.simulation.controller_manager.down_controllers ]
+      down_controller_ids = None
 
       for software_switch in list(self.simulation.topology.failed_switches):
         if software_switch in crashed_this_round:
           continue
         if self.random.random() < self.params.switch_recovery_rate:
+          if down_controller_ids is None:
+            self.simulation.controller_manager.check_controller_status()
+            down_controller_ids = [ c.cid for c in self.simulation.controller_manager.down_controllers ]
           connected = self.simulation.topology\
                           .recover_switch(software_switch,
                                           down_controller_ids=down_controller_ids)

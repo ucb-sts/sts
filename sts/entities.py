@@ -551,7 +551,7 @@ class Controller(object):
   @property
   def pid(self):
     ''' Return the PID of the Popen instance the controller was started with '''
-    return self.process.pid if self.process else None
+    return self.process.pid if self.process else -1
 
   @property
   def label(self):
@@ -584,6 +584,8 @@ class Controller(object):
     if self.state != ControllerState.DEAD:
       self.log.warn("Starting controller %s when it is not dead!" % self.label)
       return
+    if self.config.start_cmd == "":
+      raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
@@ -668,6 +670,8 @@ class POXController(Controller):
       else:
         self.log.warn("Could not find pox ext dir in %s. Cannot check/link in sync module" % pox_ext_dir)
 
+    if self.config.start_cmd == "":
+      raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
     self._register_proc(self.process)
@@ -684,17 +688,22 @@ class BigSwitchController(Controller):
     if self.state != ControllerState.ALIVE:
       self.log.warn("Killing controller %s when controller is not alive!" % self.label)
       return
-    if self.config.kill_cmd != "":
-      self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
-      popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd, self.config.cwd)
+    if self.config.kill_cmd == "":
+      raise RuntimeError("No command found to kill controller %s!" % self.label)
+    self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
+    p = popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd, self.config.cwd)
+    p.wait()
     self.state = ControllerState.DEAD
 
   def start(self):
     if self.state != ControllerState.DEAD:
       self.log.warn("Starting controller %s when controller is not dead!" % self.label)
       return
+    if self.config.start_cmd == "":
+      raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
-    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+    p = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+    p.wait()
     self.state = ControllerState.STARTING
 
   def restart(self):
@@ -704,14 +713,24 @@ class BigSwitchController(Controller):
     if self.config.restart_cmd == "":
       raise RuntimeError("No command found to restart controller %s!" % self.label)
     self.log.info("Relaunching controller %s: %s" % (self.label, " ".join(self.config.expanded_restart_cmd)))
-    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_restart_cmd, self.config.cwd)
+    p = popen_filtered("[%s]" % self.label, self.config.expanded_restart_cmd, self.config.cwd)
+    p.wait()
     self.state = ControllerState.STARTING
 
   def check_status(self, simulation):
-    if self.state == ControllerState.DEAD:
+    if self.state == ControllerState.STARTING:
       return (True, "OK")
-    for switch in simulation.topology.live_switches:
-      if switch.is_connected_to(self.cid):
-        return (True, "OK")
-    return (False, "Controller %s: Alive, but disconnected from all live switches" % self.cid)
+    # Retrieve status from script
+    if self.config.check_status_cmd == "":
+      raise RuntimeError("No command found to check status of controller %s!" % self.label)
+    self.log.info("Checking status of controller %s: %s" % (self.label, " ".join(self.config.expanded_check_status_cmd)))
+    p = popen_filtered("[%s]" % self.label, self.config.expanded_check_status_cmd, self.config.cwd, redirect_output=False)
+    (out, _) = p.communicate()
+    # Actual state is whether remote process exists
+    actual_state = ControllerState.ALIVE if ("start" in out) else ControllerState.DEAD
+    if self.state == ControllerState.DEAD and actual_state == ControllerState.ALIVE:
+      return (False, "Dead, but controller process exists!")
+    if self.state == ControllerState.ALIVE and actual_state == ControllerState.DEAD:
+      return (False, "Alive, but no controller process found!")
+    return (True, "OK")
 
