@@ -55,34 +55,43 @@ class InvariantChecker(object):
       log.info("No live controllers left")
       dead_controllers = list(simulation.controller_manager.down_controllers)
     dead_controllers = [ c.label for c in dead_controllers ]
+    dead_controllers = list(set(dead_controllers))
     return dead_controllers
 
   @staticmethod
-  def python_check_loops(simulation):
+  def python_check_loops(simulation, check_liveness_first=True):
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    down_controllers = InvariantChecker.check_liveness(simulation)
-    if len(simulation.controller_manager.live_controllers) == 0:
-      return down_controllers
+    violations = []
+    if check_liveness_first:
+      down_controllers = InvariantChecker.check_liveness(simulation)
+      if len(simulation.controller_manager.live_controllers) == 0:
+        return down_controllers
+      violations = down_controllers
     # Warning! depends on python Hassell -- may be really slow!
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     loops = hsa.detect_loop(NTF, TTF, simulation.topology.live_switches)
-    loops = [ str(l) for l in loops ]
-    return down_controllers + loops
+    violations += [ str(l) for l in loops ]
+    violations = list(set(violations))
+    return violations
 
   @staticmethod
-  def check_loops(simulation):
+  def check_loops(simulation, check_liveness_first=True):
     import headerspace.applications as hsa
-    down_controllers = InvariantChecker.check_liveness(simulation)
-    if len(simulation.controller_manager.live_controllers) == 0:
-      return down_controllers
+    violations = []
+    if check_liveness_first:
+      down_controllers = InvariantChecker.check_liveness(simulation)
+      if len(simulation.controller_manager.live_controllers) == 0:
+        return down_controllers
+      violations = down_controllers
     live_switches = simulation.topology.live_switches
     live_links = simulation.topology.live_links
     (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(live_switches, live_links)
     loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, simulation.topology.access_links)
-    loops = [ str(l) for l in loops ]
-    return down_controllers + loops
+    violations += [ str(l) for l in loops ]
+    violations = list(set(violations))
+    return violations
 
   #TODO(ao): So much refactoring to be done here...
   # For check_connectivity and python_check_connectivity: return only unconnected pairs that persist
@@ -167,11 +176,14 @@ class InvariantChecker(object):
                     "" if len(unconnected_pairs)==1 else "s", unconnected_pairs))
 
   @staticmethod
-  def check_connectivity(simulation):
+  def check_connectivity(simulation, check_liveness_first=True):
     ''' Return any pairs that couldn't reach each other '''
-    down_controllers = InvariantChecker.check_liveness(simulation)
-    if len(simulation.controller_manager.live_controllers) == 0:
-      return down_controllers
+    violations = []
+    if check_liveness_first:
+      down_controllers = InvariantChecker.check_liveness(simulation)
+      if len(simulation.controller_manager.live_controllers) == 0:
+        return down_controllers
+      violations = down_controllers
     # Effectively, run compute physical omega, ignore concrete values of headers, and
     # check that all pairs can reach each other
     physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
@@ -183,17 +195,21 @@ class InvariantChecker(object):
       for _, final_port in final_location_list:
         connected_pairs.add((start_port, final_port))
     unconnected_pairs = InvariantChecker._get_unconnected_pairs(simulation, connected_pairs)
-    unconnected_pairs = [ str(pair) for pair in unconnected_pairs ]
-    return down_controllers + unconnected_pairs
+    violations += [ str(pair) for pair in unconnected_pairs ]
+    violations = list(set(violations))
+    return violations
 
   @staticmethod
-  def python_check_connectivity(simulation):
+  def python_check_connectivity(simulation, check_liveness_first=True):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    down_controllers = InvariantChecker.check_liveness(simulation)
-    if len(simulation.controller_manager.live_controllers) == 0:
-      return down_controllers
+    violations = []
+    if check_liveness_first:
+      down_controllers = InvariantChecker.check_liveness(simulation)
+      if len(simulation.controller_manager.live_controllers) == 0:
+        return down_controllers
+      violations = down_controllers
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     paths = hsa.find_reachability(NTF, TTF, simulation.topology.access_links)
@@ -207,11 +223,12 @@ class InvariantChecker(object):
       for p_node in p_nodes:
         connected_pairs.add((in_port, p_node["port"]))
     unconnected_pairs = InvariantChecker._get_unconnected_pairs(simulation, connected_pairs)
-    unconnected_pairs = [ str(pair) for pair in unconnected_pairs ]
-    return down_controllers + unconnected_pairs
+    violations += [ str(pair) for pair in unconnected_pairs ]
+    violations = list(set(violations))
+    return violations
 
   @staticmethod
-  def python_check_blackholes(simulation):
+  def python_check_blackholes(simulation, check_liveness_first=True):
     '''Do any switches:
          - send packets into a down link?
          - drop packets that are supposed to go out their in_port?
@@ -235,24 +252,28 @@ class InvariantChecker(object):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    down_controllers = InvariantChecker.check_liveness(simulation)
-    if len(simulation.controller_manager.live_controllers) == 0:
-      return down_controllers
+    violations = []
+    if check_liveness_first:
+      down_controllers = InvariantChecker.check_liveness(simulation)
+      if len(simulation.controller_manager.live_controllers) == 0:
+        return down_controllers
+      violations = down_controllers
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
-    blackholes = [ str(b) for b in blackholes ]
-    blackholes = list(set(blackholes))
-    return down_controllers + blackholes
+    violations = [ str(b) for b in blackholes ]
+    violations = list(set(violations))
+    return violations
 
   @staticmethod
-  def check_correspondence(simulation):
+  def check_correspondence(simulation, check_liveness_first=True):
     ''' Return if there were any policy-violations '''
-    down_controllers = InvariantChecker.check_liveness(simulation)
-    if len(simulation.controller_manager.live_controllers) == 0:
-      return down_controllers
-    controllers_with_violations = down_controllers
-
+    controllers_with_violations = []
+    if check_liveness_first:
+      down_controllers = InvariantChecker.check_liveness(simulation)
+      if len(simulation.controller_manager.live_controllers) == 0:
+        return down_controllers
+      controllers_with_violations = down_controllers
     log.debug("Snapshotting live controllers...")
     for controller in simulation.controller_manager.live_controllers:
       controller_snapshot = controller.snapshot_service.fetchSnapshot(controller)
@@ -271,6 +292,7 @@ class InvariantChecker(object):
       violations = InvariantChecker.infer_policy_violations(physical_omega, controller_omega)
       if violations:
         controllers_with_violations.append(controller)
+    controllers_with_violations = list(set(controllers_with_violations))
     return controllers_with_violations
 
   # --------------------------------------------------------------#

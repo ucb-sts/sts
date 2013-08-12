@@ -2,14 +2,21 @@ from sts.invariant_checker import InvariantChecker
 import sys
 
 def check_everything(simulation):
-  result = []
+  # Check liveness once at the beginning
+  # If there are no more live controllers, stop
+  violations = []
+  down_controllers = InvariantChecker.check_liveness(simulation)
+  if len(simulation.controller_manager.live_controllers) == 0:
+    return down_controllers
+  violations = down_controllers
+  # Check other invariants without checking liveness
   checks = [ InvariantChecker.check_loops,
              InvariantChecker.python_check_blackholes,
              InvariantChecker.check_connectivity ]
   for check in checks:
-    result += check(simulation)
-  result = list(set(result))
-  return result
+    violations += check(simulation, check_liveness_first=False)
+  violations = list(set(violations))
+  return violations
 
 def bail_on_connectivity(simulation):
   result = InvariantChecker.check_connectivity(simulation)
