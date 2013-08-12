@@ -2,13 +2,14 @@ from sts.invariant_checker import InvariantChecker
 import sys
 
 def check_everything(simulation):
-  checks = [ InvariantChecker.check_loops, InvariantChecker.python_check_blackholes,
+  result = []
+  checks = [ InvariantChecker.check_loops,
+             InvariantChecker.python_check_blackholes,
              InvariantChecker.check_connectivity ]
   for check in checks:
-    result = check(simulation)
-    if result != []:
-      return result
-  return []
+    result += check(simulation)
+  result = list(set(result))
+  return result
 
 def bail_on_connectivity(simulation):
   result = InvariantChecker.check_connectivity(simulation)
