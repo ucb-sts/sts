@@ -198,7 +198,7 @@ class ControllerConfig(object):
         out_file.write(self._expand_vars(in_file.read()))
 
   def __repr__(self):
-    attributes = ("start_cmd", "kill_cmd", "restart_cmd", "label", "address", "port", "cwd", "controller_type", "sync")
+    attributes = ("start_cmd", "label", "address", "port", "cwd", "controller_type", "sync", "kill_cmd", "restart_cmd", "check_status_cmd")
 
     pairs = ( (attr, getattr(self, attr)) for attr in attributes)
     quoted = ( "%s=%s" % (attr, repr(value)) for (attr, value) in pairs if value)
