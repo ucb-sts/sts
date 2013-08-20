@@ -62,34 +62,26 @@ class InvariantChecker(object):
   def python_check_loops(simulation, check_liveness_first=True):
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    violations = []
-    if check_liveness_first:
-      down_controllers = InvariantChecker.check_liveness(simulation)
-      if len(simulation.controller_manager.live_controllers) == 0:
-        return down_controllers
-      violations = down_controllers
+    if check_liveness_first and all_controllers_down(simulation):
+      return simulation.controller_manager.cids
     # Warning! depends on python Hassell -- may be really slow!
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     loops = hsa.detect_loop(NTF, TTF, simulation.topology.live_switches)
-    violations += [ str(l) for l in loops ]
+    violations = [ str(l) for l in loops ]
     violations = list(set(violations))
     return violations
 
   @staticmethod
   def check_loops(simulation, check_liveness_first=True):
     import headerspace.applications as hsa
-    violations = []
-    if check_liveness_first:
-      down_controllers = InvariantChecker.check_liveness(simulation)
-      if len(simulation.controller_manager.live_controllers) == 0:
-        return down_controllers
-      violations = down_controllers
+    if check_liveness_first and all_controllers_down(simulation):
+      return simulation.controller_manager.cids
     live_switches = simulation.topology.live_switches
     live_links = simulation.topology.live_links
     (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(live_switches, live_links)
     loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, simulation.topology.access_links)
-    violations += [ str(l) for l in loops ]
+    violations = [ str(l) for l in loops ]
     violations = list(set(violations))
     return violations
 
@@ -178,12 +170,8 @@ class InvariantChecker(object):
   @staticmethod
   def check_connectivity(simulation, check_liveness_first=True):
     ''' Return any pairs that couldn't reach each other '''
-    violations = []
-    if check_liveness_first:
-      down_controllers = InvariantChecker.check_liveness(simulation)
-      if len(simulation.controller_manager.live_controllers) == 0:
-        return down_controllers
-      violations = down_controllers
+    if check_liveness_first and all_controllers_down(simulation):
+      return simulation.controller_manager.cids
     # Effectively, run compute physical omega, ignore concrete values of headers, and
     # check that all pairs can reach each other
     physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
@@ -195,7 +183,7 @@ class InvariantChecker(object):
       for _, final_port in final_location_list:
         connected_pairs.add((start_port, final_port))
     unconnected_pairs = InvariantChecker._get_unconnected_pairs(simulation, connected_pairs)
-    violations += [ str(pair) for pair in unconnected_pairs ]
+    violations = [ str(pair) for pair in unconnected_pairs ]
     violations = list(set(violations))
     return violations
 
@@ -204,12 +192,8 @@ class InvariantChecker(object):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    violations = []
-    if check_liveness_first:
-      down_controllers = InvariantChecker.check_liveness(simulation)
-      if len(simulation.controller_manager.live_controllers) == 0:
-        return down_controllers
-      violations = down_controllers
+    if check_liveness_first and all_controllers_down(simulation):
+      return simulation.controller_manager.cids
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     paths = hsa.find_reachability(NTF, TTF, simulation.topology.access_links)
@@ -223,7 +207,7 @@ class InvariantChecker(object):
       for p_node in p_nodes:
         connected_pairs.add((in_port, p_node["port"]))
     unconnected_pairs = InvariantChecker._get_unconnected_pairs(simulation, connected_pairs)
-    violations += [ str(pair) for pair in unconnected_pairs ]
+    violations = [ str(pair) for pair in unconnected_pairs ]
     violations = list(set(violations))
     return violations
 
@@ -252,12 +236,8 @@ class InvariantChecker(object):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    violations = []
-    if check_liveness_first:
-      down_controllers = InvariantChecker.check_liveness(simulation)
-      if len(simulation.controller_manager.live_controllers) == 0:
-        return down_controllers
-      violations = down_controllers
+    if check_liveness_first and all_controllers_down(simulation):
+      return simulation.controller_manager.cids
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
@@ -268,13 +248,10 @@ class InvariantChecker(object):
   @staticmethod
   def check_correspondence(simulation, check_liveness_first=True):
     ''' Return if there were any policy-violations '''
-    controllers_with_violations = []
-    if check_liveness_first:
-      down_controllers = InvariantChecker.check_liveness(simulation)
-      if len(simulation.controller_manager.live_controllers) == 0:
-        return down_controllers
-      controllers_with_violations = down_controllers
+    if check_liveness_first and all_controllers_down(simulation):
+      return simulation.controller_manager.cids
     log.debug("Snapshotting live controllers...")
+    controllers_with_violations = []
     for controller in simulation.controller_manager.live_controllers:
       controller_snapshot = controller.snapshot_service.fetchSnapshot(controller)
       log.debug("Computing physical omega...")
@@ -294,6 +271,11 @@ class InvariantChecker(object):
         controllers_with_violations.append(controller)
     controllers_with_violations = list(set(controllers_with_violations))
     return controllers_with_violations
+
+  @staticmethod
+  def all_controllers_down(simulation):
+    simulation.controller_manager.check_controller_status()
+    return len(simulation.controller_manager.live_controllers) == 0
 
   # --------------------------------------------------------------#
   #                    HSA utilities                              #

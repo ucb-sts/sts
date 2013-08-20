@@ -42,6 +42,10 @@ class ControllerManager(object):
     return cs
 
   @property
+  def cids(self):
+    return self.cid2controller.keys().sort()
+
+  @property
   def live_controllers(self):
     alive = [controller for controller in self.controllers if controller.state == ControllerState.ALIVE]
     return set(alive)
