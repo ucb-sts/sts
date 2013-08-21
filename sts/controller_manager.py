@@ -43,17 +43,24 @@ class ControllerManager(object):
 
   @property
   def cids(self):
-    return self.cid2controller.keys().sort()
+    ids = self.cid2controller.keys()
+    ids.sort()
+    return ids
 
   @property
   def live_controllers(self):
+    self.check_controller_status()
     alive = [controller for controller in self.controllers if controller.state == ControllerState.ALIVE]
     return set(alive)
 
   @property
   def down_controllers(self):
+    self.check_controller_status()
     down = [controller for controller in self.controllers if controller.state == ControllerState.DEAD]
     return set(down)
+
+  def all_controllers_down(self):
+    return len(self.live_controllers) == 0
 
   def get_controller_by_label(self, label):
     for c in self.cid2controller.values():

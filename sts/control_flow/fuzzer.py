@@ -350,8 +350,9 @@ class Fuzzer(ControlFlow):
       attrs = [link.start_software_switch.dpid, link.start_port.port_no,
                link.end_software_switch.dpid, link.end_port.port_no]
       # Send it to a random controller
-      if self.simulation.controller_manager.live_controllers != []:
-        c = self.random.choice(list(self.simulation.controller_manager.live_controllers))
+      live_controllers = self.simulation.controller_manager.live_controllers
+      if live_controllers != []:
+        c = self.random.choice(list(live_controllers))
         c.sync_connection.send_link_notification(attrs)
         self._log_input_event(LinkDiscovery(c.cid, attrs))
 
@@ -406,7 +407,6 @@ class Fuzzer(ControlFlow):
           continue
         if self.random.random() < self.params.switch_recovery_rate:
           if down_controller_ids is None:
-            self.simulation.controller_manager.check_controller_status()
             down_controller_ids = [ c.cid for c in self.simulation.controller_manager.down_controllers ]
           connected = self.simulation.topology\
                           .recover_switch(software_switch,
