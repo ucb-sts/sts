@@ -41,6 +41,7 @@ import random
 import logging
 import json
 import os
+import re
 
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
@@ -75,9 +76,28 @@ class MCSFinder(ControlFlow):
     else:
       self.dag = superlog_path_or_dag
 
-    self.bug_signature = self.dag.get_last_invariant_violation()
-    if self.bug_signature is None:
+    last_invariant_violation = self.dag.get_last_invariant_violation()
+    if last_invariant_violation is None:
       raise ValueError("No invariant violation found in dag...")
+    violations = last_invariant_violation.violations
+    if len(violations) > 1:
+      self.bug_signature = None
+      while self.bug_signature is None:
+        msg.interactive("\n------------------------------------------\n")
+        msg.interactive("Multiple violations detected! Choose one for MCS Finding:")
+        for i, violation in enumerate(violations):
+          msg.interactive("  [%d] %s" % (i+1, violation))
+        violation_index = msg.raw_input("> ")
+        if re.match("^\d+$", violation_index) is None or\
+           int(violation_index) < 1 or\
+           int(violation_index) > len(violations):
+          msg.fail("Must provide an integer between 1 and %d!" % len(violations))
+          continue
+        self.bug_signature = violations[int(violation_index)-1]
+    else:
+      self.bug_signature = violations[0]
+    msg.success("\nBug signature to match is %s. Proceeding with MCS finding!\n" % self.bug_signature)
+
     self.transform_dag = transform_dag
     # A second log with just our MCS progress log messages
     self._extra_log = extra_log
@@ -356,7 +376,7 @@ class MCSFinder(ControlFlow):
     bug_found = False
     if violations != []:
       msg.fail("Violations: %s" % str(violations))
-      if self.bug_signature.matches(violations):
+      if self.bug_signature in violations:
         bug_found = True
       else:
         msg.fail("Bug does not match initial violation fingerprint!")

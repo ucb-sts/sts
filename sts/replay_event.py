@@ -1283,12 +1283,6 @@ class InvariantViolation(SpecialEvent):
     persistent = json_hash['persistent']
     return InvariantViolation(violations, label=label, round=round, time=time, persistent=persistent)
 
-  def matches(self, violations):
-    ''' Return whether at least one violation string in violations matches a
-    violation string stored in this event.
-    '''
-    return len(set(violations).intersection(set(self.violations))) > 0
-
 all_special_events = [InvariantViolation]
 
 all_events = all_input_events + all_internal_events + all_special_events
