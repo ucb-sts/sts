@@ -572,6 +572,7 @@ class RuntimeStats(object):
   ''' Tracks statistics and configuration information of the delta debugging runs '''
   def __init__(self, runtime_stats_path):
     self._runtime_stats_path = runtime_stats_path
+    # { delta debugging replay # -> count of remaining events }
     self.iteration_size = {}
     # { verification attempt # -> count of times violation was found at this # }
     self.violation_found_in_run = Counter()
@@ -597,7 +598,10 @@ class RuntimeStats(object):
     self.config = ""
     self.total_replays = 0
     self.total_inputs_replayed = 0
+    # { % of inferred fingerprints that were ambiguous ->
+    #   # of replays where this % occurred }
     self.ambiguous_counts = {}
+    # { class of event -> # occurences of ambiguity }
     self.ambiguous_events = {}
 
   def write_runtime_stats(self):
