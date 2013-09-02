@@ -255,7 +255,7 @@ There are many useful tools in the tools/ subdirectory:
  - ```clean.sh```: Removes all extraneous files, e.g. .pyc files.
 
  - ```check_trace_for_violation.sh```: Given a path to an events.trace file,
-   checks whether an invariant violation occurred in the trace. 
+   checks whether an invariant violation occurred in the trace.
 
  - ```pretty_print_input_trace.py```: Print an events.trace file in human
    readable format. This script's output is highly configurable.
@@ -276,7 +276,7 @@ see example_pretty_print_config.py for an example.
    occurs. Pass command line arguments as an argument, e.g. `$ run.sh
    ./simulator.py ...`
 
- - ```visualize1D.html```: A webpage for visualizing event traces. Especially
+ - ```visualization/visualize1D.html```: A webpage for visualizing event traces. Especially
    useful for debugging non-deterministic replays by comparing the timings of
    different replay runs.
 
@@ -300,6 +300,6 @@ see example_pretty_print_config.py for an example.
        traces from delta debugging runs can be found in
        `experiments/experiment_name_mcs/interreplay_*`
 
- - ```visualize2D.html```: A webpage for showing a Lamport time diagram of an
+ - ```visualization/visualize2D.html```: A webpage for showing a Lamport time diagram of an
    event trace. Useful for visually spotting the root causes of race conditions
    and other nasty bugs.
