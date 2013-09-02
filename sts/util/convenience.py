@@ -21,6 +21,10 @@ import socket
 import random
 import types
 import struct
+import shutil
+
+import logging
+log = logging.getLogger("util")
 
 # don't use the standard instance - we don't want to be seeded
 true_random = random.Random()
@@ -54,6 +58,20 @@ def mkdir_p(dst):
       pass
     else:
       raise
+
+def rm_rf(dst):
+  if os.path.exists(dst):
+    shutil.rmtree(dst)
+
+def create_clean_python_dir(results_dir):
+  if os.path.exists(results_dir):
+    log.warn("Results dir %s already exists. Overwriting.." %
+             results_dir)
+  log.info("Wiping and creating %s" % results_dir)
+  rm_rf(results_dir)
+  mkdir_p(results_dir)
+  with file(results_dir + "/__init__.py", 'a'):
+    pass
 
 def random_eth_addr():
   return EthAddr(struct.pack("Q", true_random.randint(1,0xFF))[:6])

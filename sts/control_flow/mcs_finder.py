@@ -21,7 +21,7 @@ find the minimal causal sequence (MCS) of a failure.
 '''
 
 from sts.util.console import msg, color
-from sts.util.convenience import timestamp_string, mkdir_p, ExitCode
+from sts.util.convenience import timestamp_string, ExitCode, create_clean_python_dir
 from sts.util.rpc_forker import LocalForker, test_serialize_response
 from sts.util.precompute_cache import PrecomputeCache
 from sts.replay_event import *
@@ -47,7 +47,7 @@ class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
                invariant_check_name=None,
                transform_dag=None, end_wait_seconds=0.5,
-               mcs_trace_path=None, extra_log=None, runtime_stats_file=None,
+               mcs_trace_path=None, extra_log=None, runtime_stats_path=None,
                wait_on_deterministic_values=False,
                no_violation_verification_runs=1,
                optimized_filtering=False, forker=LocalForker(),
@@ -106,7 +106,7 @@ class MCSFinder(ControlFlow):
     self.wait_on_deterministic_values = wait_on_deterministic_values
     # `no' means "number"
     self.no_violation_verification_runs = no_violation_verification_runs
-    self._runtime_stats = RuntimeStats(runtime_stats_file)
+    self._runtime_stats = RuntimeStats(runtime_stats_path)
     # Whether to try alternate trace splitting techiques besides splitting by time.
     self.optimized_filtering = optimized_filtering
     self.forker = forker
@@ -134,10 +134,13 @@ class MCSFinder(ControlFlow):
       self._extra_log.flush()
 
   def init_results(self, results_dir):
+    ''' Precondition: results_dir exists, and is clean (preferably
+    initialized by experiments/setup.py).'''
     if self._extra_log is None:
       self._extra_log = open("%s/mcs_finder.log" % results_dir, "w")
-    if self._runtime_stats.runtime_stats_file is None:
-      self._runtime_stats.runtime_stats_file = "%s/runtime_stats.json" % results_dir
+    if self._runtime_stats.get_runtime_stats_path() is None:
+      runtime_stats_path = "%s/runtime_stats.json" % results_dir
+      self._runtime_stats.set_runtime_stats_path(runtime_stats_path)
     if self.mcs_trace_path is None:
       self.mcs_trace_path = "%s/mcs.trace" % results_dir
     # TODO(cs): assumes that transform dag is a peeker, not some other
@@ -148,6 +151,7 @@ class MCSFinder(ControlFlow):
                                          self.simulation_cfg, peeker_exists)
     self.replay_log_tracker = ReplayLogTracker(results_dir)
 
+  # N.B. always called within a child process.
   def simulate(self, check_reproducability=True):
     self._runtime_stats.set_dag_stats(self.dag)
 
@@ -332,7 +336,7 @@ class MCSFinder(ControlFlow):
       # TODO(cs): need to serialize the parameters to Replayer rather than
       # wrapping them in a closure... otherwise, can't use RemoteForker
       # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
-      ReplayLogTracker.create_replay_logger_dir(results_dir)
+      create_clean_python_dir(results_dir)
       input_logger = InputLogger()
       replayer = Replayer(self.simulation_cfg, new_dag,
                           wait_on_deterministic_values=self.wait_on_deterministic_values,
@@ -518,12 +522,6 @@ class ReplayLogTracker(object):
     self.count += 1
     return dst
 
-  @staticmethod
-  def create_replay_logger_dir(results_dir):
-    mkdir_p(results_dir)
-    with file(results_dir + "/__init__.py", 'a'):
-      pass
-
 class MCSLogTracker(object):
   ''' Logs intermedate and final MCS results that are the outcome(s) of delta
   debugging'''
@@ -537,10 +535,10 @@ class MCSLogTracker(object):
     self.min_size = sys.maxint
     self.count = 0
 
-  def dump_runtime_stats(self, runtime_stats_file=None):
-    runtime_stats = self.runtime_stats.clone()
-    if runtime_stats_file is not None:
-      runtime_stats.runtime_stats_file = runtime_stats_file
+  def dump_runtime_stats(self, runtime_stats_path=None):
+    # We clone runtime_stats b/c the runtime_stats_path changes in the case
+    # of dumping intermediate MCS runtime stats.
+    runtime_stats = self.runtime_stats.clone(runtime_stats_path)
     runtime_stats.set_peeker(self.peeker_exists)
     runtime_stats.set_config(str(self.simulation_cfg))
     runtime_stats.write_runtime_stats()
@@ -551,10 +549,10 @@ class MCSLogTracker(object):
       self.min_size = len(dag.events)
       self.count += 1
       dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self.count, label.replace("/", "_")))
-      ReplayLogTracker.create_replay_logger_dir(dst)
+      create_clean_python_dir(dst)
       self.dump_mcs_trace(dag, control_flow, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
       self.dump_runtime_stats(os.path.join(dst,
-          os.path.basename(self.runtime_stats.runtime_stats_file)))
+          os.path.basename(self.runtime_stats.get_runtime_stats_path())))
 
   def dump_mcs_trace(self, dag, control_flow, mcs_trace_path=None):
     if mcs_trace_path is None:
@@ -572,8 +570,8 @@ class MCSLogTracker(object):
 
 class RuntimeStats(object):
   ''' Tracks statistics and configuration information of the delta debugging runs '''
-  def __init__(self, runtime_stats_file):
-    self.runtime_stats_file = runtime_stats_file
+  def __init__(self, runtime_stats_path):
+    self._runtime_stats_path = runtime_stats_path
     self.iteration_size = {}
     self.violation_found_in_run = Counter()
     # { replay iteration -> [string representations new internal events] }
@@ -605,10 +603,15 @@ class RuntimeStats(object):
     # Now write contents to a file
     now = timestamp_string()
 
-    if self.runtime_stats_file is None:
-      self.runtime_stats_file = "runtime_stats/" + now + ".json"
+    if self._runtime_stats_path is None:
+      # TODO(cs): race condition if multiple MCS processes are running
+      self._runtime_stats_path = "runtime_stats/" + now + ".json"
 
-    with file(self.runtime_stats_file, "w") as output:
+    if os.path.exists(self._runtime_stats_path):
+      raise RuntimeError("Runtime stats file %s already exists.." %
+              self._runtime_stats_path)
+
+    with file(self._runtime_stats_path, "w") as output:
       json_string = json.dumps(self.__dict__, sort_keys=True, indent=2,
                                separators=(',', ': '))
       output.write(json_string)
@@ -643,6 +646,12 @@ class RuntimeStats(object):
   def set_config(self, config):
     self.config = config
 
+  def set_runtime_stats_path(self, runtime_stats_path):
+    self._runtime_stats_path = runtime_stats_path
+
+  def get_runtime_stats_path(self):
+    return self._runtime_stats_path
+
   def record_iteration_size(self, iteration_size):
     self.iteration_size[Replayer.total_replays] = iteration_size
 
@@ -668,8 +677,14 @@ class RuntimeStats(object):
     self.ambiguous_counts = dict(Peeker.ambiguous_counts)
     self.ambiguous_events = dict(Peeker.ambiguous_events)
 
-  def clone(self):
-    return copy.deepcopy(self)
+  # N.B. always invoked within a child process.
+  def clone(self, runtime_stats_path):
+    clone = copy.deepcopy(self)
+    # If runtime_stats_path is None, this is the main MCS run. Otherwise
+    # we are dumping intermediate MCS results.
+    if runtime_stats_path is not None:
+      clone.set_runtime_stats_path(runtime_stats_path)
+    return clone
 
   def client_dict(self):
     ''' Return a serializable dict '''
