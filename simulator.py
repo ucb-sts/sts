@@ -82,14 +82,14 @@ except ImportError as e:
   except ImportError:
     raise e
 
-# Set up the experiment results directories
-experiment_setup.setup_experiment(args, config)
-
 # Load log configuration
 if args.log_config:
   logging.config.fileConfig(args.log_config)
 else:
   logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
+
+# Set up the experiment results directories
+experiment_setup.setup_experiment(args, config)
 
 # Simulator controls the simulation
 if hasattr(config, 'control_flow'):
