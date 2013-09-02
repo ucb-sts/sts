@@ -573,6 +573,7 @@ class RuntimeStats(object):
   def __init__(self, runtime_stats_path):
     self._runtime_stats_path = runtime_stats_path
     self.iteration_size = {}
+    # { verification attempt # -> count of times violation was found at this # }
     self.violation_found_in_run = Counter()
     # { replay iteration -> [string representations new internal events] }
     self.new_internal_events = {}
