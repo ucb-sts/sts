@@ -51,7 +51,7 @@ class MCSFinder(ControlFlow):
                wait_on_deterministic_values=False,
                no_violation_verification_runs=1,
                optimized_filtering=False, forker=LocalForker(),
-               replay_final_trace=True,
+               replay_final_trace=True, strict_assertion_checking=False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     self.mcs_log_tracker = None
@@ -111,6 +111,7 @@ class MCSFinder(ControlFlow):
     self.optimized_filtering = optimized_filtering
     self.forker = forker
     self.replay_final_trace = replay_final_trace
+    self.strict_assertion_checking = strict_assertion_checking
 
   def log(self, s):
     ''' Output a message to both self._log and self._extra_log '''
@@ -364,7 +365,8 @@ class MCSFinder(ControlFlow):
         input_logger.close(replayer, self.simulation_cfg, skip_mcs_cfg=True)
         if simulation is not None:
           simulation.clean_up()
-      test_serialize_response(violations, self._runtime_stats.client_dict())
+      if self.strict_assertion_checking:
+        test_serialize_response(violations, self._runtime_stats.client_dict())
       timed_out_internal = [ e.label for e in new_dag.events if e.timed_out ]
       return (violations, self._runtime_stats.client_dict(), timed_out_internal)
 

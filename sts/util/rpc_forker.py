@@ -64,8 +64,9 @@ class Forker(object):
   #  - parent returns result to caller.
   __metaclass__ = ABCMeta
 
-  def __init__(self):
+  def __init__(self, strict_assertion_checking=False):
     self._task_registry = TaskRegistry()
+    self.strict_assertion_checking = strict_assertion_checking
 
   @abstractmethod
   def register_task(self, task_name, code_block):
@@ -95,7 +96,8 @@ class Forker(object):
     # Called within the parent process
     child_url = "http://" + str(ip) + ":" + str(port) + "/"
     log.debug("Invoking task %s on child %s" % (task_name, child_url,))
-    test_serialize_request(task_name, *args)
+    if self.strict_assertion_checking:
+      test_serialize_request(task_name, *args)
     proxy = xmlrpclib.ServerProxy(child_url, allow_none=True)
     def invoke_child():
       try:
