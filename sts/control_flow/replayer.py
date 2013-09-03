@@ -42,9 +42,6 @@ class Replayer(ControlFlow):
   constructor of this class, which will pass them on to the EventScheduler object it creates.
   '''
 
-  # Runtime stats:
-  total_replays = 0
-  total_inputs_replayed = 0
   # Interpolated time parameter. *not* the event scheduling epsilon:
   time_epsilon_microseconds = 500
 
@@ -131,8 +128,6 @@ class Replayer(ControlFlow):
 
   def simulate(self, post_bootstrap_hook=None):
     ''' Caller *must* call simulation.clean_up() '''
-    Replayer.total_replays += 1
-    Replayer.total_inputs_replayed += len(self.dag.input_events)
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     # TODO(aw): remove this hack

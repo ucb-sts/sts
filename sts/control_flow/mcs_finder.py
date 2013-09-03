@@ -54,6 +54,9 @@ class MCSFinder(ControlFlow):
                replay_final_trace=True, strict_assertion_checking=False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
+    # number of subsequences delta debugging has examined so far, for
+    # distingushing runtime stats from different intermediate runs.
+    self.subsequence_id = 0
     self.mcs_log_tracker = None
     self.replay_log_tracker = None
     self.mcs_trace_path = mcs_trace_path
@@ -106,7 +109,7 @@ class MCSFinder(ControlFlow):
     self.wait_on_deterministic_values = wait_on_deterministic_values
     # `no' means "number"
     self.no_violation_verification_runs = no_violation_verification_runs
-    self._runtime_stats = RuntimeStats(runtime_stats_path)
+    self._runtime_stats = RuntimeStats(self.subsequence_id, runtime_stats_path=runtime_stats_path)
     # Whether to try alternate trace splitting techiques besides splitting by time.
     self.optimized_filtering = optimized_filtering
     self.forker = forker
@@ -170,7 +173,8 @@ class MCSFinder(ControlFlow):
       self._runtime_stats.record_replay_start()
 
       for i in range(0, self.no_violation_verification_runs):
-        bug_found = self.replay(self.dag, "reproducibility")
+        bug_found = self.replay(self.dag, "reproducibility",
+                                ignore_runtime_stats=True)
         if bug_found:
           break
       self._runtime_stats.set_initial_verification_runs_needed(i)
@@ -179,8 +183,6 @@ class MCSFinder(ControlFlow):
         msg.fail("Unable to reproduce correctness violation!")
         sys.exit(5)
       self.log("Violation reproduced successfully! Proceeding with pruning")
-      Replayer.total_replays = 0
-      Replayer.total_inputs_replayed = 0
 
     self._runtime_stats.record_prune_start()
 
@@ -197,7 +199,7 @@ class MCSFinder(ControlFlow):
     self._track_iteration_size(total_inputs_pruned)
     self.dag = dag
 
-    self.log("=== Total replays: %d ===" % Replayer.total_replays)
+    self.log("=== Total replays: %d ===" % self._runtime_stats.total_replays)
     self._runtime_stats.record_prune_end()
     self.mcs_log_tracker.dump_runtime_stats()
     self.log("Final MCS (%d elements):" % len(self.dag.input_events))
@@ -336,6 +338,8 @@ class MCSFinder(ControlFlow):
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
 
+    self._runtime_stats.record_replay_stats(len(new_dag.input_events))
+
     # N.B. this function is run as a child process.
     def play_forward(results_dir, subsequence_id):
       # TODO(cs): need to serialize the parameters to Replayer rather than
@@ -348,6 +352,7 @@ class MCSFinder(ControlFlow):
                           input_logger=input_logger,
                           **self.kwargs)
       replayer.init_results(results_dir)
+      self._runtime_stats = RuntimeStats(subsequence_id)
       violations = []
       simulation = None
       try:
@@ -376,11 +381,12 @@ class MCSFinder(ControlFlow):
 
     # TODO(cs): once play_forward() is no longer a closure, register it only once
     self.forker.register_task("play_forward", play_forward)
-
     results_dir = self.replay_log_tracker.get_replay_logger_dir(label)
+    self.subsequence_id += 1
     (violations, client_runtime_stats,
                  timed_out_internal) = self.forker.fork("play_forward",
-                                                          results_dir)
+                                                        results_dir,
+                                                        self.subsequence_id)
     new_dag.set_events_as_timed_out(timed_out_internal)
 
     bug_found = False
@@ -537,18 +543,22 @@ class MCSLogTracker(object):
                simulation_cfg, peeker_exists):
     self.results_dir = results_dir
     self.mcs_trace_path = mcs_trace_path
-    self.runtime_stats = runtime_stats
     self.simulation_cfg = simulation_cfg
     self.peeker_exists = peeker_exists
     self.min_size = sys.maxint
     self.count = 0
+    self.runtime_stats = runtime_stats
+    self.runtime_stats.set_peeker(self.peeker_exists)
+    self.runtime_stats.set_config(str(self.simulation_cfg))
 
   def dump_runtime_stats(self, runtime_stats_path=None):
     # We clone runtime_stats b/c the runtime_stats_path changes in the case
     # of dumping intermediate MCS runtime stats.
     runtime_stats = self.runtime_stats.clone(runtime_stats_path)
-    runtime_stats.set_peeker(self.peeker_exists)
-    runtime_stats.set_config(str(self.simulation_cfg))
+    # TODO(cs): assumes that Peeker is the transformer, and that Peeker is run
+    # only in the parent process.
+    runtime_stats.ambiguous_counts = dict(Peeker.ambiguous_counts)
+    runtime_stats.ambiguous_events = dict(Peeker.ambiguous_events)
     runtime_stats.write_runtime_stats()
 
   def maybe_dump_intermediate_mcs(self, dag, label, control_flow):
@@ -578,9 +588,21 @@ class MCSLogTracker(object):
 
 class RuntimeStats(object):
   ''' Tracks statistics and configuration information of the delta debugging runs '''
-  def __init__(self, runtime_stats_path):
+
+  child_fields = ['iteration_size', 'violation_found_in_run', 'new_internal_events',
+                  'early_internal_events', 'timed_out_events', 'matched_events']
+  child_counters = ['violation_found_in_run']
+
+  def __init__(self, subsequence_id, runtime_stats_path=None):
+    ''' runtime_stats_path should only be None if the stats of this replay run
+    are only intermediate (to be aggregated into overall stats) and not dumped
+    to disk. '''
+    # subsequence_id will be 0 for the parent process, and non-zero for all
+    # child processes.
+    self.subsequence_id = subsequence_id
     self._runtime_stats_path = runtime_stats_path
-    # { delta debugging replay # -> count of remaining events }
+    # -------------------- Stats set by child processes  -------------------- #
+    # { delta debugging subseqence # -> count of remaining events }
     self.iteration_size = {}
     # { verification attempt # -> count of times violation was found at this # }
     self.violation_found_in_run = Counter()
@@ -593,6 +615,7 @@ class RuntimeStats(object):
     self.timed_out_events = {}
     # { replay iteration -> { event type -> successful matches } }
     self.matched_events = {}
+    # -------------------- Stats set by parent process -------------------- #
     self.total_inputs = 0
     self.total_events = 0
     self.original_duration_seconds = 0
@@ -629,6 +652,23 @@ class RuntimeStats(object):
                                separators=(',', ': '))
       output.write(json_string)
 
+  def set_runtime_stats_path(self, runtime_stats_path):
+    self._runtime_stats_path = runtime_stats_path
+
+  def get_runtime_stats_path(self):
+    return self._runtime_stats_path
+
+  # N.B. always invoked within a child process.
+  def clone(self, runtime_stats_path):
+    clone = copy.deepcopy(self)
+    # If runtime_stats_path is None, this is the main MCS run. Otherwise
+    # we are dumping intermediate MCS results.
+    if runtime_stats_path is not None:
+      clone.set_runtime_stats_path(runtime_stats_path)
+    return clone
+
+  # -------------------- Stats set by parent process -------------------- #
+
   def set_dag_stats(self, dag):
     self.total_inputs = len(dag.input_events)
     self.total_events = len(dag)
@@ -659,57 +699,44 @@ class RuntimeStats(object):
   def set_config(self, config):
     self.config = config
 
-  def set_runtime_stats_path(self, runtime_stats_path):
-    self._runtime_stats_path = runtime_stats_path
+  def record_replay_stats(self, number_inputs_replayed):
+    ''' Should be invoked once for every replay '''
+    self.total_replays += 1
+    self.total_inputs_replayed += number_inputs_replayed
 
-  def get_runtime_stats_path(self):
-    return self._runtime_stats_path
+  # -------------------- Stats set by child processes  -------------------- #
 
   def record_iteration_size(self, iteration_size):
-    self.iteration_size[Replayer.total_replays] = iteration_size
+    self.iteration_size[self.subsequence_id] = iteration_size
 
   def record_violation_found(self, verification_iteration):
+    if type(self.violation_found_in_run) != Counter:
+      self.violation_found_in_run = Counter(self.violation_found_in_run)
     self.violation_found_in_run[verification_iteration] += 1
 
   def record_new_internal_events(self, new_internal_events):
-    self.new_internal_events[Replayer.total_replays] = new_internal_events
+    self.new_internal_events[self.subsequence_id] = new_internal_events
 
   def record_early_internal_events(self, early_internal_events):
-    self.early_internal_events[Replayer.total_replays] = early_internal_events
+    self.early_internal_events[self.subsequence_id] = early_internal_events
 
   def record_timed_out_events(self, timed_out_events):
-    self.timed_out_events[Replayer.total_replays] = timed_out_events
+    self.timed_out_events[self.subsequence_id] = timed_out_events
 
   def record_matched_events(self, matched_events):
-    self.matched_events[Replayer.total_replays] = matched_events
+    self.matched_events[self.subsequence_id] = matched_events
 
-  def record_global_stats(self):
-    self.total_replays = Replayer.total_replays
-    self.total_inputs_replayed = Replayer.total_inputs_replayed
-    # TODO(cs): assumes that Peeker is the dag transformer
-    self.ambiguous_counts = dict(Peeker.ambiguous_counts)
-    self.ambiguous_events = dict(Peeker.ambiguous_events)
-
-  # N.B. always invoked within a child process.
-  def clone(self, runtime_stats_path):
-    clone = copy.deepcopy(self)
-    # If runtime_stats_path is None, this is the main MCS run. Otherwise
-    # we are dumping intermediate MCS results.
-    if runtime_stats_path is not None:
-      clone.set_runtime_stats_path(runtime_stats_path)
-    return clone
+  # -------------------- RPC helper methods -------------------- #
 
   def client_dict(self):
     ''' Return a serializable dict '''
     # Only include relevent fields for parent
     d = {}
-    self.record_global_stats()
-    for field in ['new_internal_events', 'early_internal_events',
-                  'timed_out_events', 'matched_events', 'total_replays',
-                  'total_inputs_replayed', 'ambiguous_counts',
-                  'ambiguous_events']:
+    for field in RuntimeStats.child_fields:
       v = getattr(self, field)
       # xmlrpclib doesn't allow non-string keys
+      if type(v) == Counter:
+        v = dict(v)
       if type(v) == dict:
         v = dict((str(key), value) for key, value in v.items())
       d[field] = v
@@ -721,6 +748,9 @@ class RuntimeStats(object):
         field = int(field)
       except:
         pass
+      if field in RuntimeStats.child_counters:
+        for k, count in value.iteritems():
+          getattr(self, field)[k] += count
       if type(value) == dict:
         setattr(self, field, dict(getattr(self, field).items() + value.items()))
       elif type(value) == int:

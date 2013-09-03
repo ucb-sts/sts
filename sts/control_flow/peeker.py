@@ -23,6 +23,10 @@ from sts.replay_event import InternalEvent
 
 log = logging.getLogger("sts")
 
+# TODO(cs): peek() runs this should run as subprocesses to cope with memory
+# constraints, as in mcs_finder. We would need to refactor the class variables
+# (convert them to RPC return values, as in client_stats_dict()) below to enable this.
+
 class Peeker(object):
   # { % of inferred fingerprints that were ambiguous ->
   #   # of replays where this % occurred }
