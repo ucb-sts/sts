@@ -152,7 +152,7 @@ class MCSFinder(ControlFlow):
                                          self.simulation_cfg, peeker_exists)
     self.replay_log_tracker = ReplayLogTracker(results_dir)
 
-  # N.B. always called within a child process.
+  # N.B. only called in the parent process.
   def simulate(self, check_reproducability=True):
     self._runtime_stats.set_dag_stats(self.dag)
 
@@ -229,6 +229,7 @@ class MCSFinder(ControlFlow):
       self.mcs_log_tracker.dump_mcs_trace(self.dag, self)
     return ExitCode(0)
 
+  # N.B. always called within a child process.
   def _ddmin(self, dag, split_ways, precompute_cache=None, label_prefix=(),
              total_inputs_pruned=0):
     # This is the delta-debugging algorithm from:
@@ -309,9 +310,11 @@ class MCSFinder(ControlFlow):
                          total_inputs_pruned=total_inputs_pruned)
     return (dag, total_inputs_pruned)
 
+  # N.B. always called within a child process.
   def _track_iteration_size(self, total_inputs_pruned):
     self._runtime_stats.record_iteration_size(len(self.dag.input_events) - total_inputs_pruned)
 
+  # N.B. always called within a child process.
   def _check_violation(self, new_dag, subset_index, label):
     ''' Check if there were violations '''
     # Try no_violation_verification_runs times to see if the bug shows up
@@ -333,7 +336,8 @@ class MCSFinder(ControlFlow):
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
 
-    def play_forward(results_dir):
+    # N.B. this function is run as a child process.
+    def play_forward(results_dir, subsequence_id):
       # TODO(cs): need to serialize the parameters to Replayer rather than
       # wrapping them in a closure... otherwise, can't use RemoteForker
       # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
@@ -413,6 +417,7 @@ class MCSFinder(ControlFlow):
         self.log("\t** VIOLATION for pruning event type %s! Resizing original dag" % event_type)
         self.dag = pruned_dag
 
+  # N.B. always called within a child process.
   def _track_new_internal_events(self, simulation, replayer):
     ''' Pre: simulation must have been run through a replay'''
     # We always check against internal events that were buffered at the end of
@@ -446,6 +451,7 @@ class EfficientMCSFinder(MCSFinder):
      http://www.st.cs.uni-saarland.de/publications/files/zeller-esec-1999.pdf
   Section 4
   '''
+  # N.B. always called within a child process.
   def _ddmin(self, dag, carryover_inputs, precompute_cache=None,
              recursion_level=0, label_prefix=(), total_inputs_pruned=0):
     ''' carryover_inputs is the variable "r" from the paper. '''
