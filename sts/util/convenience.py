@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pox.openflow.software_switch import OFConnection
 from pox.lib.addresses import EthAddr, IPAddr
 import time
 import re
@@ -22,6 +23,7 @@ import random
 import types
 import struct
 import shutil
+import base64
 
 import logging
 log = logging.getLogger("util")
@@ -126,3 +128,16 @@ def find_ports(**kwargs):
 class ExitCode(object):
   def __init__(self, exit_code):
     self.exit_code = exit_code
+
+def base64_encode(packet):
+  if hasattr(packet, "pack"):
+    packet = packet.pack()
+  # base 64 occasionally adds extraneous newlines: bit.ly/aRTmNu
+  return base64.b64encode(packet).replace("\n", "")
+
+def base64_decode(data):
+  return base64.b64decode(data)
+
+def base64_decode_openflow(data):
+  (msg, packet_length) = OFConnection.parse_of_packet(base64_decode(data))
+  return msg

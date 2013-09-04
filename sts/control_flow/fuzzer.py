@@ -29,6 +29,7 @@ from sts.replay_event import *
 from pox.lib.util import TimeoutError
 from pox.lib.packet.lldp import *
 from config.invariant_checks import name_to_invariant_check
+from sts.util.convenience import base64_encode
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -260,17 +261,22 @@ class Fuzzer(ControlFlow):
       self._send_initialization_packet(host, send_to_self=send_to_self)
 
   def _print_buffers(self):
-    buffered_events = []
-    log.debug("Pending Message Receives:")
-    for p in self.simulation.god_scheduler.pending_receives():
-      log.debug("- %s", p)
-      event = ControlMessageReceive(p.dpid, p.controller_id, p.fingerprint)
-      buffered_events.append(event)
+    # TODO(cs): this needs to grab keys and values (since we need to extract
+    # the base 64 encoded OF packets) rather than just PendingReceive tuples.
+    # It also needs to  grab both pending sends and pending receives.
 
-    # Note that there shouldn't be any pending state changes in record mode
+    #buffered_events = []
+    #log.debug("Pending Message Receives:")
+    #for p in self.simulation.god_scheduler.pending_receives():
+    #  log.debug("- %s", p)
+    #  event = ControlMessageReceive(p.dpid, p.controller_id, p.fingerprint, b64_packet=p.b64_packet)
+    #  buffered_events.append(event)
 
-    if self._input_logger is not None:
-      self._input_logger.dump_buffered_events(buffered_events)
+    ## Note that there shouldn't be any pending state changes in record mode
+
+    #if self._input_logger is not None:
+    #  self._input_logger.dump_buffered_events(buffered_events)
+    pass
 
   def maybe_check_invariant(self):
     if (self.check_interval is not None and
@@ -375,17 +381,21 @@ class Fuzzer(ControlFlow):
       # TODO(cs): this is a really dumb way to fuzz packet receipt scheduling
       if (self.random.random() < self.params.ofp_message_receipt_rate or
           pass_through):
-        self.simulation.god_scheduler.schedule(pending_receipt)
+        message = self.simulation.god_scheduler.schedule(pending_receipt)
+        b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                     pending_receipt.controller_id,
-                                                    pending_receipt.fingerprint))
+                                                    pending_receipt.fingerprint,
+                                                    b64_packet=b64_packet))
     for pending_send in self.simulation.god_scheduler.pending_sends():
       if (self.random.random() < self.params.ofp_message_send_rate or
           pass_through):
-        self.simulation.god_scheduler.schedule(pending_send)
+        message = self.simulation.god_scheduler.schedule(pending_send)
+        b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageSend(pending_send.dpid,
                                                  pending_send.controller_id,
-                                                 pending_send.fingerprint))
+                                                 pending_send.fingerprint,
+                                                 b64_packet=b64_packet))
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''

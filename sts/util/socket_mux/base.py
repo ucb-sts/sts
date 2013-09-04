@@ -19,8 +19,8 @@ import select
 import socket
 import logging
 import errno
-import base64
 import threading
+import base64
 
 log = logging.getLogger("sock_mux")
 

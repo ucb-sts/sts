@@ -16,7 +16,6 @@
 from base import *
 from itertools import count
 import logging
-import base64
 
 log = logging.getLogger("sts_sock_mux")
 
@@ -39,7 +38,7 @@ class STSSocketDemultiplexer(SocketDemultiplexer):
     if sock_id not in self.id2socket:
       raise ValueError("Unknown socket id %d" % sock_id)
     sock = self.id2socket[sock_id]
-    raw_data = base64.b64decode(json_hash['data'])
+    raw_data = base64_decode(json_hash['data'])
     sock.append_read(raw_data)
 
   def add_new_socket(self, new_socket):

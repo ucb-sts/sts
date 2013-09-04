@@ -18,15 +18,17 @@ from collections import defaultdict, namedtuple
 from sts.fingerprints.messages import *
 import sts.replay_event
 from pox.lib.revent import Event, EventMixin
+from sts.util.convenience import base64_encode
 import logging
 log = logging.getLogger("god_scheduler")
 
 class PendingMessage(Event):
-  def __init__(self, pending_message, send_event=False):
+  def __init__(self, pending_message, b64_packet, send_event=False):
     # TODO(cs): boolean flag is ugly. Should use subclasses, but EventMixin
     # doesn't support addListener() on super/subclasses.
     super(PendingMessage, self).__init__()
     self.pending_message = pending_message
+    self.b64_packet = b64_packet
     self.send_event = send_event
 
 # TODO(cs): move me to another file?
@@ -60,7 +62,8 @@ class GodScheduler(EventMixin):
 
     replay_event = replay_event_class(pending_message.dpid,
                                       pending_message.controller_id,
-                                      pending_message.fingerprint)
+                                      pending_message.fingerprint,
+                                      b64_packet=message_event.b64_packet)
     self.passed_through_events.append(replay_event)
 
   def set_pass_through(self):
@@ -111,6 +114,7 @@ class GodScheduler(EventMixin):
       conn.allow_message_receipt(message)
     else:
       conn.allow_message_send(message)
+    return message
 
   # TODO(cs): make this a factory method that returns DeferredOFConnection objects
   # with bound god_scheduler.insert() method. (much cleaner API + separation of concerns)
@@ -120,7 +124,8 @@ class GodScheduler(EventMixin):
     conn_message = (conn, ofp_message)
     pending_receive = PendingReceive(dpid, controller_id, fingerprint)
     self.pendingreceive2conn_messages[pending_receive].append(conn_message)
-    self.raiseEventNoErrors(PendingMessage(pending_receive))
+    b64_packet = base64_encode(ofp_message)
+    self.raiseEventNoErrors(PendingMessage(pending_receive, b64_packet))
 
   # TODO(cs): make this a factory method that returns DeferredOFConnection objects
   # with bound god_scheduler.insert() method. (much cleaner API + separation of concerns)
@@ -130,7 +135,8 @@ class GodScheduler(EventMixin):
     conn_message = (conn, ofp_message)
     pending_send = PendingSend(dpid, controller_id, fingerprint)
     self.pendingsend2conn_messages[pending_send].append(conn_message)
-    self.raiseEventNoErrors(PendingMessage(pending_send, send_event=True))
+    b64_packet = base64_encode(ofp_message)
+    self.raiseEventNoErrors(PendingMessage(pending_send, b64_packet, send_event=True))
 
   def pending_receives(self):
     ''' Return the message receipts which are waiting to be scheduled '''

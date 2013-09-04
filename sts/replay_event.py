@@ -904,11 +904,12 @@ class ControlMessageBase(InternalEvent):
   Logged whenever the GodScheduler decides to allow a switch to receive or
   send an openflow packet.
   '''
-  def __init__(self, dpid, controller_id, fingerprint, label=None, round=-1, time=None, timeout_disallowed=False):
+  def __init__(self, dpid, controller_id, fingerprint, b64_packet="", label=None, round=-1, time=None, timeout_disallowed=False):
     '''
     Parameters:
      - dpid: unique integer identifier of the switch.
      - controller_id: unique string label for the controller.
+     - b64_packet: base64 encoded packed openflow message.
      - label: a unique label for this event. Internal event labels begin with 'i'
        and input event labels begin with 'e'.
      - time: the timestamp of when this event occured. Stored as a tuple:
@@ -923,6 +924,7 @@ class ControlMessageBase(InternalEvent):
     super(ControlMessageBase, self).__init__(label=label, round=round, time=time, timeout_disallowed=timeout_disallowed)
     self.dpid = dpid
     self.controller_id = controller_id
+    self.b64_packet = b64_packet
     if type(fingerprint) == list:
       fingerprint = (fingerprint[0], OFFingerprint(fingerprint[1]),
                      fingerprint[2], tuple(fingerprint[3]))
@@ -954,6 +956,7 @@ class ControlMessageReceive(ControlMessageBase):
 
   @property
   def pending_receive(self):
+    # TODO(cs): inefficient to keep reconrstructing this tuple.
     return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
 
   def __str__(self):
@@ -966,7 +969,10 @@ class ControlMessageReceive(ControlMessageBase):
     dpid = json_hash['dpid']
     controller_id = json_hash['controller_id']
     fingerprint = json_hash['fingerprint']
-    return ControlMessageReceive(dpid, controller_id, fingerprint,
+    b64_packet = ""
+    if 'b64_packet' in json_hash:
+      b64_packet = json_hash['b64_packet']
+    return ControlMessageReceive(dpid, controller_id, fingerprint, b64_packet=b64_packet,
             round=round, label=label, time=time, timeout_disallowed=timeout_disallowed)
 
 class ControlMessageSend(ControlMessageBase):
@@ -983,6 +989,7 @@ class ControlMessageSend(ControlMessageBase):
 
   @property
   def pending_send(self):
+    # TODO(cs): inefficient to keep reconrstructing this tuple.
     return PendingSend(self.dpid, self.controller_id, self.fingerprint[1])
 
   def __str__(self):
@@ -995,7 +1002,12 @@ class ControlMessageSend(ControlMessageBase):
     dpid = json_hash['dpid']
     controller_id = json_hash['controller_id']
     fingerprint = json_hash['fingerprint']
-    return ControlMessageSend(dpid, controller_id, fingerprint, round=round, label=label, time=time, timeout_disallowed=timeout_disallowed)
+    b64_packet = ""
+    if 'b64_packet' in json_hash:
+      b64_packet = json_hash['b64_packet']
+    return ControlMessageSend(dpid, controller_id, fingerprint, round=round,
+                              b64_packet=b64_packet, label=label, time=time,
+                              timeout_disallowed=timeout_disallowed)
 
 # TODO(cs): move me?
 class PendingStateChange(namedtuple('PendingStateChange',
