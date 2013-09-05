@@ -232,8 +232,8 @@ class EventScheduler(EventSchedulerBase):
     if to_wait > 10000:
       raise RuntimeError("to_wait %f ms is way too big for event %s" %
                          (to_wait, str(event)))
-    # -0.01 to account for floating point error
-    if to_wait < -0.01:
+    # -0.03 to account for floating point error
+    if to_wait < -0.03:
       raise RuntimeError("Wait time %f is negative for event %s" %
                          (to_wait, str(event)))
     return max(to_wait, 0)
