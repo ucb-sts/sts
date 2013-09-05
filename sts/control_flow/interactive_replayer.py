@@ -31,12 +31,11 @@ specifically help them to:
 # TODO(cs): automatically print formatted tables showing those traces, just as I did
 # on paper while tracking down the root cause of the NOX loop.
 
-from sts.controller_manager import ControllerManager
+from sts.control_flow.base import *
 from sts.control_flow.interactive import *
 import sts.input_traces.log_parser as log_parser
 from sts.replay_event import *
 from sts.event_dag import EventDag
-from sts.entities import ConnectionlessOFConnection
 from sts.util.console import msg
 
 import logging
@@ -95,26 +94,8 @@ class InteractiveReplayer(Interactive):
     # event, inject next pending event, examining total pending events
     # remaining.
     if self.mock_controllers:
-      def boot_controllers(controller_configs, snapshot_service,
-                           sync_connection_manager):
-
-        class MockControllerManager(object):
-          def __init__(self, controller_configs):
-            self.controller_configs = controller_configs
-          def set_simulation(self, simulation): pass
-          def kill_all(self): pass
-
-        return MockControllerManager(controller_configs)
-
-      def connect_to_controllers(simulation):
-        def create_connection(controller_config, software_switch):
-          return ConnectionlessOFConnection(controller_config.cid,
-                                            software_switch.dpid)
-        simulation.topology.connect_to_controllers(simulation.controller_manager.controller_configs,
-                                                   create_connection=create_connection)
-
-      Interactive.simulate(self, boot_controllers=boot_controllers,
-                           connect_to_controllers=connect_to_controllers,
+      Interactive.simulate(self, boot_controllers=boot_mock_controllers,
+                           connect_to_controllers=connect_to_mock_controllers,
                            bound_objects=bound_objects)
     else: # not self.mock_controllers
       Interactive.simulate(self, simulation=simulation, bound_objects=bound_objects)
