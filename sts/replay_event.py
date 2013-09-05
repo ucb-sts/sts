@@ -34,6 +34,7 @@ The format of other additional fields is documented in
 each event's __init__() method.
 '''
 
+from sts.util.convenience import base64_decode_openflow
 from sts.util.console import msg
 from sts.entities import Link
 from sts.god_scheduler import PendingReceive, PendingSend
@@ -958,6 +959,12 @@ class ControlMessageReceive(ControlMessageBase):
   def pending_receive(self):
     # TODO(cs): inefficient to keep reconrstructing this tuple.
     return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
+
+  def manually_inject(self, simulation):
+    pkt = base64_decode_openflow(self.b64_packet)
+    switch = simulation.topology.get_switch(self.dpid)
+    conn = switch.get_connection(self.controller_id)
+    conn.read(pkt)
 
   def __str__(self):
     return "ControlMessageReceive:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())

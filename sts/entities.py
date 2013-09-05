@@ -80,6 +80,40 @@ class DeferredOFConnection(OFConnection):
     ''' Allow message actually be sent to the controller '''
     super(DeferredOFConnection, self).send(ofp_message)
 
+class ConnectionlessOFConnection(object):
+  ''' For use with InteractiveReplayer, where controllers are mocked out, and
+  events are replayed to headless switches.'''
+  def __init__(self, cid, dpid):
+    self.cid = cid
+    self.dpid = dpid
+    self.on_message_received = None
+    OFConnection.ID += 1
+    self.ID = OFConnection.ID
+
+  @property
+  def closed(self):
+    return False
+
+  def close(self):
+    pass
+
+  def get_controller_id(self):
+    return self.cid
+
+  def set_message_handler(self, handler):
+    self.on_message_handler = handler
+
+  def send(self, ofp_message):
+    ''' Into the abyss you go!'''
+    pass
+
+  # N.B. different interface than OFConnection. It's OK, since we don't actually
+  # use io_workers -- this is only invoked by
+  # ControlMessageReceive.manually_inject()
+  def read (self, ofp_message):
+    self.on_message_handler(self, ofp_message)
+
+
 class FuzzSoftwareSwitch (NXSoftwareSwitch):
   """
   A mock switch implementation for testing purposes. Can simulate dropping dead.

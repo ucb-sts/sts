@@ -14,6 +14,7 @@
 
 
 from base import *
+from sts.util.convenience import base64_decode
 from itertools import count
 import logging
 

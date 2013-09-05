@@ -19,6 +19,7 @@ control flow type for running the simulation forward.
     checking for invariants at the users' discretion
 '''
 
+from sts.simulation_state import default_boot_controllers
 from sts.util.tabular import Tabular
 from sts.util.procutils import printlock
 from sts.util.console import color
@@ -259,15 +260,23 @@ class Interactive(ControlFlow):
       self._input_logger.log_input_event(event, **kws)
 
   def init_results(self, results_dir):
-    self._input_logger.open(results_dir)
+    if self._input_logger is not None:
+      self._input_logger.open(results_dir)
 
-  def simulate(self, simulation=None, bound_objects=()):
+  def default_connect_to_controllers(self, simulation):
+    simulation.connect_to_controllers()
+    self._log_input_event(ConnectToControllers())
+
+  def simulate(self, simulation=None, boot_controllers=default_boot_controllers,
+               connect_to_controllers=None,
+               bound_objects=()):
     if simulation is None:
-      self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
-
-      # Always connect to controllers explicitly
-      self.simulation.connect_to_controllers()
-      self._log_input_event(ConnectToControllers())
+      self.simulation = self.simulation_cfg.bootstrap(self.sync_callback,
+                                                      boot_controllers=boot_controllers)
+      if connect_to_controllers is None:
+        self.default_connect_to_controllers()
+      else:
+        connect_to_controllers(self.simulation)
     else:
       self.simulation = simulation
 

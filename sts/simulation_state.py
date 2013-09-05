@@ -13,9 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/usr/bin/env python
-# Nom nom nom nom
-
 '''
 Encapsulates the state of the simulation, including:
   - The controllers
@@ -45,6 +42,17 @@ import logging
 import time
 
 log = logging.getLogger("simulation")
+
+def default_boot_controllers(controller_configs, snapshot_service, sync_connection_manager):
+  # Boot the controllers
+  controllers = []
+  for c in controller_configs:
+    controller = c.controller_class(c, sync_connection_manager, snapshot_service)
+    controller.start()
+    log.info("Launched controller c%s: %s [PID %d]" %
+             (str(c.cid), " ".join(c.expanded_start_cmd), controller.pid))
+    controllers.append(controller)
+  return ControllerManager(controllers)
 
 class SimulationConfig(object):
   """
@@ -104,7 +112,7 @@ class SimulationConfig(object):
     self.current_simulation = None
     self.multiplex_sockets = multiplex_sockets
 
-  def bootstrap(self, sync_callback):
+  def bootstrap(self, sync_callback, boot_controllers=default_boot_controllers):
     '''Return a simulation object encapsulating the state of
        the system in its initial starting point:
        - boots controllers
@@ -128,17 +136,6 @@ class SimulationConfig(object):
       msg.set_io_master(_io_master)
       return _io_master
 
-    def boot_controllers(sync_connection_manager):
-      # Boot the controllers
-      controllers = []
-      for c in self.controller_configs:
-        controller = c.controller_class(c, sync_connection_manager, self.snapshot_service)
-        controller.start()
-        log.info("Launched controller c%s: %s [PID %d]" %
-                 (str(c.cid), " ".join(c.expanded_start_cmd), controller.pid))
-        controllers.append(controller)
-      return ControllerManager(controllers)
-
     def instantiate_topology(create_io_worker):
       '''construct a clean topology object from topology_class and
       topology_params'''
@@ -155,7 +152,9 @@ class SimulationConfig(object):
     io_master = initialize_io_loop()
     sync_connection_manager = STSSyncConnectionManager(io_master,
                                                        sync_callback)
-    controller_manager = boot_controllers(sync_connection_manager)
+    controller_manager = boot_controllers(self.controller_configs,
+                                          self.snapshot_service,
+                                          sync_connection_manager)
     topology = instantiate_topology(io_master.create_worker_for_socket)
     patch_panel = self._patch_panel_class(topology.switches, topology.hosts,
                                           topology.get_connected_port)

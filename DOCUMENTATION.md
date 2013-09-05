@@ -17,7 +17,7 @@ simulation object, and allows the control flow to access relevant state.
 
 ### Control Flow
 
-STS has four modes of operation. Each of these are split into separate
+STS has five modes of operation. Each of these are split into separate
 modules, each of which can be found under sts/control_flow/.
 
 #### Interactive
@@ -73,6 +73,19 @@ runs each Replay in a separate process, and returns the results via XMLRPC.
 See sts/util/rpc_forker.py for the mechanics of forking.
 
 The runtime statistics of MCSFinder are stored in a dictionary and logged to a json file.
+
+#### InteractiveReplayer
+
+Given an event trace (possibly minimized by MCSFinder), InteractiveReplayer
+allows you to interactively step through the trace (a la OFRewind) in order to
+understand the conditions that triggered a bug. This is helpful for:
+  - visualizing the network topology
+  - tracing the series of link/switch failures/recoveries
+  - tracing the series of host migrations
+  - tracing the series of flow_mods
+  - perturbing the original event sequence by adding / removing inputs
+    interactively
+  - ...
 
 ### Experiment Results
 

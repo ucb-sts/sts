@@ -22,6 +22,10 @@ from sts.syncproto.base import SyncTime
 from sts.util.convenience import timestamp_string
 import sts.dataplane_traces.trace_generator as tg
 
+# N.B. invoking replay_config.py should not overwrite the original
+# events.trace, since experiments/setup.py automatically creates a new
+# experiments subdirectory based on the name of the config file.
+
 # TODO(cs): need to copy some optional params from Fuzzer ctor to Replayer
 # ctor
 replay_config_template = '''
@@ -36,6 +40,22 @@ simulation_config = %s
 control_flow = Replayer(simulation_config, "%s",
                         input_logger=InputLogger(),
                         wait_on_deterministic_values=%s)
+# Invariant check: %s
+'''
+
+# TODO(cs): add input_logger to interactive_replayer in case they want to
+# perturb the inputs?
+interactive_replay_config_template = '''
+from config.experiment_config_lib import ControllerConfig
+from sts.topology import *
+from sts.control_flow import InteractiveReplayer
+from sts.simulation_state import SimulationConfig
+from sts.input_traces.input_logger import InputLogger
+
+simulation_config = %s
+
+control_flow = InteractiveReplayer(simulation_config, "%s")
+# wait_on_deterministic_values=%s
 # Invariant check: %s
 '''
 
@@ -70,6 +90,7 @@ class InputLogger(object):
       self.output_path = results_dir + "/" + output_filename
       self.replay_cfg_path = results_dir + "/replay_config.py"
       self.mcs_cfg_path = results_dir + "/mcs_config.py"
+      self.interactive_replay_cfg_path = results_dir + "/interactive_replay_config.py"
     else:
       now = timestamp_string()
       self.output_path = "input_traces/" + now + ".trace"
@@ -77,6 +98,7 @@ class InputLogger(object):
 
       self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
       self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
+      self.interactive_replay_cfg_path = "./config/" + basename.replace(".trace", "") + "_interactive.py"
 
     self.output = open(self.output_path, 'w')
 
@@ -119,7 +141,8 @@ class InputLogger(object):
     self.output.close()
 
     # Write the config files
-    path_templates = [(self.replay_cfg_path, replay_config_template)]
+    path_templates = [(self.replay_cfg_path, replay_config_template),
+                      (self.interactive_replay_cfg_path, interactive_replay_config_template)]
     if not skip_mcs_cfg:
       path_templates.append((self.mcs_cfg_path, mcs_config_template))
 
