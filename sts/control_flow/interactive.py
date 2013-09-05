@@ -236,12 +236,17 @@ class Interactive(ControlFlow):
   Presents an interactive prompt for injecting events and
   checking for invariants at the users' discretion
   '''
-  def __init__(self, simulation_cfg, input_logger=None):
+  def __init__(self, simulation_cfg, input_logger=None,
+               pass_through_of_messages=True):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
     self.logical_time = 0
     self._input_logger = input_logger
     self.traffic_generator = TrafficGenerator(random.Random())
+    # TODO(cs): we don't actually have a way to support pass_through=False, in
+    # a reasonable way -- the user has no (easy) way to examine and route
+    # GodScheduler's pending_receives and pending_sends.
+    self.pass_through_of_messages = pass_through_of_messages
     # TODO(cs): future feature: allow the user to interactively choose the order
     # events occur for each round, whether to delay, drop packets, fail nodes,
     # etc.
@@ -279,6 +284,9 @@ class Interactive(ControlFlow):
         connect_to_controllers(self.simulation)
     else:
       self.simulation = simulation
+
+    if self.pass_through_of_messages:
+      self.simulation.god_scheduler.set_pass_through()
 
     self._forwarded_this_step = 0
     self.traffic_generator.set_topology(self.simulation.topology)

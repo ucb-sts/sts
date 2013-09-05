@@ -70,7 +70,7 @@ class GodScheduler(EventMixin):
     ''' Cause all message receipts to pass through immediately without being
     buffered'''
     self.passed_through_events = []
-    self.addListener(PendingMessage, self._pass_through_receive_handler)
+    self.addListener(PendingMessage, self._pass_through_handler)
 
   def unset_pass_through(self):
     '''Unset pass through mode, and return any events that were passed through
