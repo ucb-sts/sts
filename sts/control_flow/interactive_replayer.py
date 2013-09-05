@@ -23,6 +23,7 @@ specifically help them to:
   - trace the series of link/switch failures/recoveries
   - trace the series of host migrations
   - trace the series of flow_mods
+  - trace the series of traffic injections
   - perturb the original event sequence by adding / removing inputs
     interactively
   - trace the series of link discoveries (TBD)

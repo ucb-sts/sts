@@ -83,6 +83,7 @@ understand the conditions that triggered a bug. This is helpful for:
   - tracing the series of link/switch failures/recoveries
   - tracing the series of host migrations
   - tracing the series of flow_mods
+  - tracing the series of traffic injections
   - perturbing the original event sequence by adding / removing inputs
     interactively
   - ...
