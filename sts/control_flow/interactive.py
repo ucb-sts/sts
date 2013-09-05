@@ -274,7 +274,7 @@ class Interactive(ControlFlow):
       self.simulation = self.simulation_cfg.bootstrap(self.sync_callback,
                                                       boot_controllers=boot_controllers)
       if connect_to_controllers is None:
-        self.default_connect_to_controllers()
+        self.default_connect_to_controllers(self.simulation)
       else:
         connect_to_controllers(self.simulation)
     else:
