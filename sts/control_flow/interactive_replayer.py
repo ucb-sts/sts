@@ -85,7 +85,6 @@ class InteractiveReplayer(Interactive):
     # non-mocked controllers.
 
     if self.mock_controllers:
-      # TODO(cs): turn off controller params in simulation_cfg?
       self.event_list = [ e for e in self.event_list
                           if type(e) in InteractiveReplayer.supported_input_events or
                              type(e) in InteractiveReplayer.supported_internal_events ]
