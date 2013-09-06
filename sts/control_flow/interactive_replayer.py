@@ -94,11 +94,11 @@ class InteractiveReplayer(Interactive):
     # event, inject next pending event, examining total pending events
     # remaining.
     if self.mock_controllers:
-      Interactive.simulate(self, boot_controllers=boot_mock_controllers,
+      return Interactive.simulate(self, boot_controllers=boot_mock_controllers,
                            connect_to_controllers=connect_to_mock_controllers,
                            bound_objects=bound_objects)
     else: # not self.mock_controllers
-      Interactive.simulate(self, simulation=simulation, bound_objects=bound_objects)
+      return Interactive.simulate(self, simulation=simulation, bound_objects=bound_objects)
 
   def default_command(self):
     return "next"
