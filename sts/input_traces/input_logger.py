@@ -59,6 +59,20 @@ control_flow = InteractiveReplayer(simulation_config, "%s")
 # Invariant check: %s
 '''
 
+openflow_replay_config_template = '''
+from config.experiment_config_lib import ControllerConfig
+from sts.topology import *
+from sts.control_flow import OpenFlowReplayer
+from sts.simulation_state import SimulationConfig
+from sts.input_traces.input_logger import InputLogger
+
+simulation_config = %s
+
+control_flow = OpenFlowReplayer(simulation_config, "%s")
+# wait_on_deterministic_values=%s
+# Invariant check: %s
+'''
+
 mcs_config_template = '''
 from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
@@ -91,6 +105,7 @@ class InputLogger(object):
       self.replay_cfg_path = results_dir + "/replay_config.py"
       self.mcs_cfg_path = results_dir + "/mcs_config.py"
       self.interactive_replay_cfg_path = results_dir + "/interactive_replay_config.py"
+      self.openflow_replay_cfg_path = results_dir + "/openflow_replay_config.py"
     else:
       now = timestamp_string()
       self.output_path = "input_traces/" + now + ".trace"
@@ -99,6 +114,7 @@ class InputLogger(object):
       self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
       self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
       self.interactive_replay_cfg_path = "./config/" + basename.replace(".trace", "") + "_interactive.py"
+      self.openflow_replay_cfg_path = "./config/" + basename.replace(".trace", "") + "_openflow.py"
 
     self.output = open(self.output_path, 'w')
 
@@ -142,7 +158,8 @@ class InputLogger(object):
 
     # Write the config files
     path_templates = [(self.replay_cfg_path, replay_config_template),
-                      (self.interactive_replay_cfg_path, interactive_replay_config_template)]
+                      (self.interactive_replay_cfg_path, interactive_replay_config_template),
+                      (self.openflow_replay_cfg_path, openflow_replay_config_template)]
     if not skip_mcs_cfg:
       path_templates.append((self.mcs_cfg_path, mcs_config_template))
 

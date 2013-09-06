@@ -20,3 +20,4 @@ from sts.control_flow.peeker import Peeker
 from sts.control_flow.replayer import *
 from sts.control_flow.fuzzer import *
 from sts.control_flow.mcs_finder import *
+from sts.control_flow.openflow_replayer import *
