@@ -71,7 +71,7 @@ class OpenFlowReplayer(ControlFlow):
 
     self.event_list = [ e for e in self.event_list
                         if type(e) == ControlMessageReceive
-                        and type(e.packet) != ofp_packet_out ]
+                        and type(e.get_packet()) != ofp_packet_out ]
 
   def simulate(self):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback,
@@ -89,12 +89,12 @@ class OpenFlowReplayer(ControlFlow):
     # remove all flow entries that currently match it to filter overlapping
     # flow_mods from earlier in the event_list.
     relevent_flow_mods = []
-    all_flow_mods = [e for e in self.event_list if type(e.packet) == ofp_flow_mod]
+    all_flow_mods = [e for e in self.event_list if type(e.get_packet()) == ofp_flow_mod]
     for last_event in reversed(all_flow_mods):
       switch = self.simulation.topology.get_switch(last_event.dpid)
-      if switch.table.matching_entries(last_event.packet.match) != []:
+      if switch.table.matching_entries(last_event.get_packet().match) != []:
         relevent_flow_mods.append(last_event)
-        switch.table.remove_matching_entries(last_event.packet.match)
+        switch.table.remove_matching_entries(last_event.get_packet().match)
 
     # Now print them in the forward direction.
     msg.interactive("Filtered flow mods:")

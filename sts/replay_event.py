@@ -926,7 +926,6 @@ class ControlMessageBase(InternalEvent):
     self.dpid = dpid
     self.controller_id = controller_id
     self.b64_packet = b64_packet
-    self.packet = base64_decode_openflow(self.b64_packet)
     if type(fingerprint) == list:
       fingerprint = (fingerprint[0], OFFingerprint(fingerprint[1]),
                      fingerprint[2], tuple(fingerprint[3]))
@@ -935,6 +934,12 @@ class ControlMessageBase(InternalEvent):
                      dpid, controller_id)
 
     self._fingerprint = fingerprint
+
+  def get_packet(self):
+    # Avoid serialization exceptions, but we still want to memoize.
+    if not hasattr(self, "_packet"):
+      self._packet = base64_decode_openflow(self.b64_packet)
+    return self._packet
 
   @property
   def fingerprint(self):
@@ -964,7 +969,7 @@ class ControlMessageReceive(ControlMessageBase):
   def manually_inject(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
     conn = switch.get_connection(self.controller_id)
-    conn.read(self.packet)
+    conn.read(self.get_packet())
 
   def __str__(self):
     return "ControlMessageReceive:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
