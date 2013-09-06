@@ -926,6 +926,7 @@ class ControlMessageBase(InternalEvent):
     self.dpid = dpid
     self.controller_id = controller_id
     self.b64_packet = b64_packet
+    self.packet = base64_decode_openflow(self.b64_packet)
     if type(fingerprint) == list:
       fingerprint = (fingerprint[0], OFFingerprint(fingerprint[1]),
                      fingerprint[2], tuple(fingerprint[3]))
@@ -961,10 +962,9 @@ class ControlMessageReceive(ControlMessageBase):
     return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
 
   def manually_inject(self, simulation):
-    pkt = base64_decode_openflow(self.b64_packet)
     switch = simulation.topology.get_switch(self.dpid)
     conn = switch.get_connection(self.controller_id)
-    conn.read(pkt)
+    conn.read(self.packet)
 
   def __str__(self):
     return "ControlMessageReceive:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
@@ -980,7 +980,7 @@ class ControlMessageReceive(ControlMessageBase):
     if 'b64_packet' in json_hash:
       b64_packet = json_hash['b64_packet']
     return ControlMessageReceive(dpid, controller_id, fingerprint, b64_packet=b64_packet,
-            round=round, label=label, time=time, timeout_disallowed=timeout_disallowed)
+                                 round=round, label=label, time=time, timeout_disallowed=timeout_disallowed)
 
 class ControlMessageSend(ControlMessageBase):
   '''
