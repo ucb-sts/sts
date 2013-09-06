@@ -151,6 +151,8 @@ class MultiplexedSelect(IOMaster):
     self.true_io_workers.append(true_io_worker)
 
   def ready_to_read(self, sock_or_io_worker):
+    if sock_or_io_worker is None:
+      return False
     fileno = sock_or_io_worker.fileno()
     if fileno >= 0:
       raise ValueError("Not a MockSocket!")
