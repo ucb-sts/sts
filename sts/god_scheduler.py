@@ -97,6 +97,7 @@ class GodScheduler(EventMixin):
     Cause the switch to process the pending message associated with
     the fingerprint and controller connection.
     '''
+    # TODO(cs): test whether this actually works! not sure about namedtuples..
     receive = type(pending_message) == PendingReceive
     if receive:
       if not self.message_receipt_waiting(pending_message):
