@@ -261,22 +261,23 @@ class Fuzzer(ControlFlow):
       self._send_initialization_packet(host, send_to_self=send_to_self)
 
   def _print_buffers(self):
-    # TODO(cs): this needs to grab keys and values (since we need to extract
-    # the base 64 encoded OF packets) rather than just PendingReceive tuples.
-    # It also needs to  grab both pending sends and pending receives.
+    # TODO(cs): this method should also be added to Interactive.
+    # Note that there shouldn't be any pending state changes in record mode,
+    # only pending message sends/receives.
+    buffered_events = []
+    log.info("Pending Messages:")
+    for event_type, pending2conn_messages in [
+            (ControlMessageReceive, self.simulation.god_scheduler.pendingreceive2conn_messages),
+            (ControlMessageSend, self.simulation.god_scheduler.pendingsend2conn_messages)]:
+      for p, conn_messages in pending2conn_messages.iteritems():
+        log.info("- %r", p)
+        for _, ofp_message in conn_messages:
+          b64_packet = base64_encode(ofp_message)
+          event = event_type(p.dpid, p.controller_id, p.fingerprint, b64_packet=b64_packet)
+          buffered_events.append(event)
 
-    #buffered_events = []
-    #log.debug("Pending Message Receives:")
-    #for p in self.simulation.god_scheduler.pending_receives():
-    #  log.debug("- %s", p)
-    #  event = ControlMessageReceive(p.dpid, p.controller_id, p.fingerprint, b64_packet=p.b64_packet)
-    #  buffered_events.append(event)
-
-    ## Note that there shouldn't be any pending state changes in record mode
-
-    #if self._input_logger is not None:
-    #  self._input_logger.dump_buffered_events(buffered_events)
-    pass
+    if self._input_logger is not None:
+      self._input_logger.dump_buffered_events(buffered_events)
 
   def maybe_check_invariant(self):
     if (self.check_interval is not None and
