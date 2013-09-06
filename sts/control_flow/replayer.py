@@ -48,7 +48,8 @@ class Replayer(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
                print_buffers=True, wait_on_deterministic_values=False, default_dp_permit=False,
                fail_to_interactive=False, fail_to_interactive_on_persistent_violations=False,
-               end_in_interactive=False, input_logger=None, **kwargs):
+               end_in_interactive=False, input_logger=None,
+               allow_unexpected_messages=True, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -85,6 +86,10 @@ class Replayer(ControlFlow):
     self.fail_to_interactive_on_persistent_violations =\
       fail_to_interactive_on_persistent_violations
     self._input_logger = input_logger
+    self.allow_unexpected_messages = allow_unexpected_messages
+    # How many logical rounds to peek ahead when deciding if a message is
+    # expected or not.
+    self.expected_message_round_window = 3
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -171,6 +176,7 @@ class Replayer(ControlFlow):
           if isinstance(event, InputEvent):
             self._check_early_state_changes(dag, i, event)
           self._check_new_state_changes(dag, i)
+          self._check_unexpected_messages(dag, i)
           # TODO(cs): quasi race-condition here. If unexpected state change
           # happens *while* we're waiting for event, we basically have a
           # deadlock (if controller logging is set to blocking) until the
@@ -236,6 +242,44 @@ class Replayer(ControlFlow):
         self._log_input_event(log_event)
         self.unexpected_state_changes.append(repr(state_change))
         self.sync_callback.ack_pending_state_change(state_change)
+
+  def _check_unexpected_messages(self, dag, current_index):
+    ''' If throughout replay we observe new messages that weren't in the
+    original trace, we (usually) want to let them through. This is especially true
+    for messages that are related to timers, such as LLDP, since timings will
+    often change during replay, and we don't want to unnecessarily change the
+    controller's behavior. '''
+    if not self.allow_unexpected_messages:
+      return
+    # TODO(cs): experiment with only letting LLDP/echos through, rather than
+    # all unexpected messages. Compare resulting executions using visualization tool.
+
+    # First, build a set of expected ControlMessageSends/Receives fingerprints
+    # within the next expected_message_round_window rounds.
+    start_round = dag.events[current_index].round
+    expected_receive_fingerprints = set()
+    expected_send_fingerprints = set()
+    for i in xrange(current_index, len(dag.events)):
+      event = dag.events[i]
+      if event.round - start_round > self.expected_message_round_window:
+        break
+      if type(event) == ControlMessageReceive:
+        (_, of_fingerprint, dpid, cid) = event.fingerprint
+        expected_receive_fingerprints.add((of_fingerprint, dpid, cid))
+      if type(event) == ControlMessageSend:
+        (_, of_fingerprint, dpid, cid) = event.fingerprint
+        expected_send_fingerprints.add((of_fingerprint, dpid, cid))
+
+    # Now check pending messages.
+    for event_fingerprints, messages in [
+         (expected_receive_fingerprints, self.simulation.god_scheduler.pending_receives()),
+         (expected_send_fingerprints, self.simulation.god_scheduler.pending_sends())]:
+      for pending_message in messages:
+        fingerprint = (pending_message.fingerprint,
+                       pending_message.dpid,
+                       pending_message.controller_id)
+        if fingerprint not in expected_fingerprints:
+          self.simulation.god_scheduler.schedule(pending_message)
 
 # --- Note: use DataplaneChecker at your own risk. I have observed it fail to
 #     reproduce a bug that was reproducible with dataplane timeouts.
