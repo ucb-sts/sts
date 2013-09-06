@@ -26,7 +26,7 @@ from sts.event_dag import EventDag
 import sts.input_traces.log_parser as log_parser
 from sts.util.console import color
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
-from sts.util.convenience import find, find_index
+from sts.util.convenience import find, find_index, base64_encode
 from sts.topology import BufferedPatchPanel
 
 import signal
@@ -78,6 +78,8 @@ class Replayer(ControlFlow):
 
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
+    # String repesentations of unexpected state changes we've passed through, for
+    # statistics purposes.
     self.unexpected_state_changes = []
     self.early_state_changes = []
     self.event_scheduler_stats = None
@@ -90,6 +92,9 @@ class Replayer(ControlFlow):
     # How many logical rounds to peek ahead when deciding if a message is
     # expected or not.
     self.expected_message_round_window = 3
+    # String repesentations of unexpected messages we've passed through, for
+    # statistics purposes.
+    self.passed_unexpected_messages = []
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -279,7 +284,17 @@ class Replayer(ControlFlow):
                        pending_message.dpid,
                        pending_message.controller_id)
         if fingerprint not in expected_fingerprints:
-          self.simulation.god_scheduler.schedule(pending_message)
+          message = self.simulation.god_scheduler.schedule(pending_message)
+          b64_packet = base64_encode(message)
+          # Monkeypatch a "new internal event" marker to be logged to the JSON trace
+          # (All fields picked up by event.to_json())
+          event_type = ControlMessageReceive if type(pending_message) == PendingReceive else ControlMessageSend
+          log_event = event_type(pending_message.dpid, pending_message.controller_id,
+                                 pending_message.fingerprint, b64_packet=b64_packet)
+          log_event.new_internal_event = True
+          log_event.replay_time = SyncTime.now()
+          self.passed_unexpected_messages.append(repr(log_event))
+          self._log_input_event(log_event)
 
 # --- Note: use DataplaneChecker at your own risk. I have observed it fail to
 #     reproduce a bug that was reproducible with dataplane timeouts.

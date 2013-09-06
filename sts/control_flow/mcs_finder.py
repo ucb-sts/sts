@@ -435,14 +435,15 @@ class MCSFinder(ControlFlow):
     prev_buffered_receives = set([ e.pending_receive for e in
                                    [ f for f in EventDag(log_parser.parse_path(path)).events
                                      if type(f) == ControlMessageReceive ] ])
-    new_message_receipts = []
+    buffered_message_receipts = []
     for p in simulation.god_scheduler.pending_receives():
       if p not in prev_buffered_receives:
-        new_message_receipts.append(repr(p))
+        buffered_message_receipts.append(repr(p))
       else:
         prev_buffered_receives.remove(p)
-    new_state_changes = replayer.unexpected_state_changes
-    new_internal_events = new_state_changes + new_message_receipts
+
+    self._runtime_stats.record_buffered_message_receipts(buffered_message_receipts)
+    new_internal_events = replayer.unexpected_state_changes + replayer.passed_unexpected_messages
     self._runtime_stats.record_new_internal_events(new_internal_events)
     self._runtime_stats.record_early_internal_events(replayer.early_state_changes)
     self._runtime_stats.record_timed_out_events(dict(replayer.event_scheduler_stats.event2timeouts))
@@ -590,7 +591,8 @@ class RuntimeStats(object):
   ''' Tracks statistics and configuration information of the delta debugging runs '''
 
   child_fields = ['iteration_size', 'violation_found_in_run', 'new_internal_events',
-                  'early_internal_events', 'timed_out_events', 'matched_events']
+                  'early_internal_events', 'timed_out_events',
+                  'matched_events', 'buffered_message_receipts']
   child_counters = ['violation_found_in_run']
 
   def __init__(self, subsequence_id, runtime_stats_path=None):
@@ -608,6 +610,8 @@ class RuntimeStats(object):
     self.violation_found_in_run = Counter()
     # { replay iteration -> [string representations new internal events] }
     self.new_internal_events = {}
+    # { replay iteration -> [string representations messages buffered at end of run] }
+    self.buffered_message_receipts = {}
     # { replay iteration -> [string representations internal events that
     #                        violated causality] }
     self.early_internal_events = {}
@@ -713,6 +717,9 @@ class RuntimeStats(object):
     if type(self.violation_found_in_run) != Counter:
       self.violation_found_in_run = Counter(self.violation_found_in_run)
     self.violation_found_in_run[verification_iteration] += 1
+
+  def record_buffered_message_receipts(self, buffered_message_receipts):
+    self.buffered_message_receipts[self.subsequence_id] = buffered_message_receipts
 
   def record_new_internal_events(self, new_internal_events):
     self.new_internal_events[self.subsequence_id] = new_internal_events
