@@ -1,3 +1,7 @@
 [submodule "sts/hassel"]
 	path = sts/hassel
 	url = git@bitbucket.org:colin_scott/hassel-sts.git
+
+[submodule "tools/d3-timeline"]
+	path = tools/d3-timeline
+	url = git@github.com:jiahuang/d3-timeline.git
