@@ -514,7 +514,8 @@ class Controller(object):
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
-    self.state = ControllerState.STARTING
+    self.state = ControllerState.ALIVE
+
 
   def restart(self):
     if self.state != ControllerState.DEAD:
@@ -534,6 +535,7 @@ class Controller(object):
       return (False, "Controller %s: Alive, but controller process terminated with return code %d" %
               (self.cid, rc))
     return (True, "OK")
+
 
 class POXController(Controller):
   # N.B. controller-specific configuration is optional. The purpose of this
