@@ -23,11 +23,11 @@ import time
 from sts.util.convenience import address_is_ip, find_port
 from sts.entities import Controller, POXController, BigSwitchController
 
-log = logging.getLogger("controller-config") 
+log = logging.getLogger("controller-config")
 
 controller_type_map = {
   "pox": POXController,
-  "bsc": BigSwitchController
+  "bsc": BigSwitchController,
 }
 
 class ControllerConfig(object):
@@ -50,7 +50,7 @@ class ControllerConfig(object):
           followed by a list of command line tokens as arguments
       - address, port: controller socket info to listen for switches on
       - controller_type: controller vendor, specified by the corresponding Controller
-          class itself, or a string chosen from one of the keys in controller_type_map 
+          class itself, or a string chosen from one of the keys in controller_type_map
     '''
     if start_cmd == "":
       raise RuntimeError("Must specify boot parameters.")
@@ -70,7 +70,7 @@ class ControllerConfig(object):
     # Set index, for assigning IP addresses in the case of multiple controllers
     match = re.search("c(\d+)", self.label)
     if match:
-      self.index = int(match.groups()[0]) 
+      self.index = int(match.groups()[0])
     else:
       self.index = None
 
@@ -176,7 +176,7 @@ class ControllerConfig(object):
   @property
   def expanded_start_cmd(self):
     return map(self._expand_vars, self.start_cmd.split())
-  
+
   @property
   def expanded_kill_cmd(self):
     return map(self._expand_vars, self.kill_cmd.split())
