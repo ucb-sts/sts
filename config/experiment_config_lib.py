@@ -20,7 +20,7 @@ import subprocess
 import logging
 import re
 import time
-from sts.util.convenience import address_is_ip, find_port
+from sts.util.convenience import address_is_ip, find_port, IPAddressSpace
 from sts.entities import Controller, POXController, BigSwitchController
 
 log = logging.getLogger("controller-config")
@@ -37,7 +37,6 @@ class ControllerConfig(object):
   _controller_addresses = []
   _address_retriever = None
   _max_address_retrieval_attempts = 5
-  _claimed_controller_addresses = set()
 
   def __init__(self, start_cmd="", address="127.0.0.1", port=None, additional_ports={},
                cwd=None, sync=None, controller_type=None, label=None, config_file=None,
@@ -86,9 +85,9 @@ class ControllerConfig(object):
     if address == "__address__":
       address = self.get_address(get_address_cmd, cwd)
     elif address == "auto":
-      address = ControllerConfig.find_unclaimed_address()
+      address = IPAddressSpace.find_unclaimed_address()
     self.address = address
-    ControllerConfig._claimed_controller_addresses.add(address)
+    IPAddressSpace.register_address(address)
 
     if address_is_ip(address) or address == "localhost":
       # Normal TCP socket
@@ -214,16 +213,3 @@ class ControllerConfig(object):
     quoted = ( "%s=%s" % (attr, repr(value)) for (attr, value) in pairs if value)
 
     return self.__class__.__name__  + "(" + ", ".join(quoted) + ")"
-
-  @staticmethod
-  def find_unclaimed_address(ip_prefix="192.168.1"):
-    ''' Find an unclaimed IP address in the given /24 range. '''
-    host_octect = 2
-    address = "%s.%d" % (ip_prefix, host_octect)
-    while host_octect <= 255 and address not in ControllerConfig._claimed_controller_addresses:
-      host_octect += 1
-      address = "%s.%d" % (ip_prefix, host_octect)
-
-    if address in ControllerConfig._claimed_controller_addresses:
-      raise RuntimeError("Out of IP address in prefix %s" % ip_prefix)
-    return address

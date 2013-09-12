@@ -141,3 +141,30 @@ def base64_decode(data):
 def base64_decode_openflow(data):
   (msg, packet_length) = OFConnection.parse_of_packet(base64_decode(data))
   return msg
+
+class IPAddressSpace(object):
+  _claimed_addresses = set()
+
+  @staticmethod
+  def register_address(address):
+    if address in IPAddressSpace._claimed_addresses:
+      raise ValueError("Address %s already claimed" % address)
+    IPAddressSpace._claimed_addresses.add(address)
+
+  @staticmethod
+  def find_unclaimed_address(ip_prefix="192.168.1"):
+    ''' Find an unclaimed IP address in the given /24 range (may be specified
+        as a full IP address for convenience).
+    '''
+    octects = ip_prefix.split(".")
+    if len(octects) == 4:
+      ip_prefix = ".".join(octects[0:3])
+    host_octect = 2
+    address = "%s.%d" % (ip_prefix, host_octect)
+    while host_octect <= 255 and address in IPAddressSpace._claimed_addresses:
+      host_octect += 1
+      address = "%s.%d" % (ip_prefix, host_octect)
+
+    if address in IPAddressSpace._claimed_addresses:
+      raise RuntimeError("Out of IP addresses in prefix %s" % ip_prefix)
+    return address
