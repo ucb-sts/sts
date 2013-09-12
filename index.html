@@ -110,6 +110,12 @@ $ (cd sts/hassel/hassel-c &amp;&amp; make -j)
 <pre><code>$ sudo pip install pytrie
 </code></pre>
 
+<p>If your control software supports distribution, you may need to compile POX's pcap library to enable interposition on messages sent between controllers:</p>
+
+<pre><code>$ sudo apt-get install libpcap-dev
+$ (cd pox/pox/lib/pxcap/pxcap_c &amp;&amp; sudo python setup.py build &amp;&amp; sudo python setup.py install)
+</code></pre>
+
 <p>Finally, interactive mode depends on the readline module:</p>
 
 <pre><code>$ sudo pip install readline
