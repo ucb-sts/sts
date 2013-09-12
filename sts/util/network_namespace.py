@@ -69,7 +69,6 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
 
     # create a veth pair and set the host end to be promiscuous
     subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
-    # TODO(cs): do we want promiscuous mode for controllers?
     subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
     # Our end of the veth pair
     subprocess.check_call(['ip','link','set',host_device,'up'])
@@ -80,18 +79,6 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
   except subprocess.CalledProcessError:
     raise # TODO raise a more informative exception
 
-  # make the host-side (STS-side) socket
-  # do this before unshare/fork to make failure/cleanup easier
-  # Make sure we aren't monkeypatched first:
-  if hasattr(socket, "_old_socket"):
-    raise RuntimeError("MonkeyPatched socket! Bailing")
-  s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, ETH_P_ALL)
-  # Make sure the buffers are big enough to fit at least one full ethernet
-  # packet
-  s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192)
-  s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
-  s.bind((host_device, ETH_P_ALL))
-  s.setblocking(0) # set non-blocking
 
   # all else should have succeeded, so now we fork and unshare for the guest
   # TODO(cs): use popen_filtered here?
@@ -102,8 +89,6 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
   try:
     subprocess.check_call(['ip', 'link', 'set', guest_device, 'netns', str(guest.pid)])
   except subprocess.CalledProcessError:
-    # Failed to push down guest side of veth pair
-    s.close()
     raise # TODO raise a more informative exception
 
   # Bring up the interface on the guest.
@@ -117,7 +102,23 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
   guest.stdin.write(cmd + "\n")
 
   guest_eth_addr = get_eth_address_for_interface(guest_device)
-  return (s, guest, guest_eth_addr)
+  return (guest, guest_eth_addr, host_device)
+
+def bind_raw_socket(host_device, blocking=0):
+  # make the host-side (STS-side) socket
+  # do this before unshare/fork to make failure/cleanup easier
+  # Make sure we aren't monkeypatched first:
+  if hasattr(socket, "_old_socket"):
+    raise RuntimeError("MonkeyPatched socket! Bailing")
+  s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, ETH_P_ALL)
+  # Make sure the buffers are big enough to fit at least one full ethernet
+  # packet
+  s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192)
+  s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
+  s.bind((host_device, ETH_P_ALL))
+  s.setblocking(blocking)
+  return s
+
 
 def get_eth_address_for_interface(ifname):
   '''Returns an EthAddr object from the interface specified by the argument.

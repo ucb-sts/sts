@@ -28,7 +28,7 @@ import pox.lib.packet.ethernet as eth
 from pox.lib.addresses import EthAddr, IPAddr
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
-from sts.util.network_namespace import launch_namespace
+from sts.util.network_namespace import launch_namespace, bind_raw_socket
 from sts.util.convenience import IPAddressSpace
 
 from itertools import count
@@ -402,7 +402,8 @@ class NamespaceHost(Host):
       The default is "xterm", which opens up a new terminal window.
     '''
     self.hid = self._hids.next()
-    (self.socket, self.guest, guest_eth_addr) = launch_namespace(cmd, ip_addr_str, self.hid)
+    (self.guest, guest_eth_addr, host_device) = launch_namespace(cmd, ip_addr_str, self.hid)
+    self.socket = bind_raw_socket(host_device)
     # Set up an io worker for our end of the socket
     self.io_worker = create_io_worker(self.socket)
     self.io_worker.set_receive_handler(self.send)
@@ -515,7 +516,7 @@ class Controller(object):
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     if self.config.launch_in_network_namespace:
-      (self.raw_socket, self.process, _) = \
+      (self.process, _, _) = \
           launch_namespace(" ".join(self.config.expanded_start_cmd),
                            self.config.address, self.cid,
                            host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address))
@@ -608,7 +609,7 @@ class POXController(Controller):
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     if self.config.launch_in_network_namespace:
-      (self.raw_socket, self.process, _) = \
+      (self.process, _, _) = \
           launch_namespace(" ".join(self.config.expanded_start_cmd),
                            self.config.address, self.cid,
                            host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address),
