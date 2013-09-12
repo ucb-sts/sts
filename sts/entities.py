@@ -29,6 +29,7 @@ from pox.lib.addresses import EthAddr, IPAddr
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
 from sts.util.network_namespace import launch_namespace
+from sts.util.convenience import IPAddressSpace
 
 from itertools import count
 import logging
@@ -471,6 +472,8 @@ class Controller(object):
     self.sync_connection = None
     self.snapshot_service = snapshot_service
     self.log = logging.getLogger("Controller")
+    # For network namespaces only:
+    self.raw_socket = None
 
   @property
   def pid(self):
@@ -511,10 +514,15 @@ class Controller(object):
     if self.config.start_cmd == "":
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
-    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+    if self.config.launch_in_network_namespace:
+      (self.raw_socket, self.process, _) = \
+          launch_namespace(" ".join(self.config.expanded_start_cmd),
+                           self.config.address, self.cid,
+                           host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address))
+    else:
+      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
     self.state = ControllerState.ALIVE
-
 
   def restart(self):
     if self.state != ControllerState.DEAD:
@@ -599,7 +607,14 @@ class POXController(Controller):
     if self.config.start_cmd == "":
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
-    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
+    if self.config.launch_in_network_namespace:
+      (self.raw_socket, self.process, _) = \
+          launch_namespace(" ".join(self.config.expanded_start_cmd),
+                           self.config.address, self.cid,
+                           host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address),
+                           cwd=self.config.cwd, env=env)
+    else:
+      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
     self._register_proc(self.process)
     if self.config.sync:
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
