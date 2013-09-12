@@ -401,8 +401,7 @@ class NamespaceHost(Host):
       The default is "xterm", which opens up a new terminal window.
     '''
     self.hid = self._hids.next()
-    (self.socket, self.guest, self.guest_eth_addr, self.guest_device) = \
-        launch_namespace(cmd, ip_addr_str, self.hid)
+    (self.socket, self.guest, guest_eth_addr) = launch_namespace(cmd, ip_addr_str, self.hid)
     # Set up an io worker for our end of the socket
     self.io_worker = create_io_worker(self.socket)
     self.io_worker.set_receive_handler(self.send)
