@@ -37,6 +37,7 @@ class ControllerConfig(object):
   _controller_addresses = []
   _address_retriever = None
   _max_address_retrieval_attempts = 5
+  _claimed_controller_addresses = set()
 
   def __init__(self, start_cmd="", address="127.0.0.1", port=None, additional_ports={},
                cwd=None, sync=None, controller_type=None, label=None, config_file=None,
@@ -45,11 +46,18 @@ class ControllerConfig(object):
     '''
     Store metadata for the controller.
       - start_cmd: command that starts a controller or a set of controllers,
-          followed by a list of command line tokens as arguments
+          followed by a list of command line tokens as arguments. You may make
+          use of two macros: __address__ expands to some available IP address
+          for the controller, and __port__ expands to some available (OpenFlow) port.
       - kill_cmd: command that kills a controller or a set of controllers,
           followed by a list of command line tokens as arguments
-      - address, port: controller socket info to listen for switches on
-      - controller_type: controller vendor, specified by the corresponding Controller
+      - address, port: controller socket info for listening to OpenFlow
+        connections from switches. address may be specified as "auto" to automatically find a
+        non-localhost IP address in the range 192.168.1.0/24, or "__address__" to use
+        get_address_cmd to choose an address.
+      - get_address_cmd: an optional bash command that returns an address for
+        the controller to bind to.
+      - controller_type: controller type, specified by the corresponding Controller
           class itself, or a string chosen from one of the keys in controller_type_map
     '''
     if start_cmd == "":
@@ -74,8 +82,14 @@ class ControllerConfig(object):
     else:
       self.index = None
 
-    # Set address and port
+    # Set address.
+    if address == "__address__":
+      address = self.get_address(get_address_cmd, cwd)
+    elif address == "auto":
+      address = ControllerConfig.find_unclaimed_address()
     self.address = address
+    ControllerConfig._claimed_controller_addresses.add(address)
+
     if address_is_ip(address) or address == "localhost":
       # Normal TCP socket
       if not port:
@@ -84,11 +98,6 @@ class ControllerConfig(object):
         port = find_port(xrange(port, port+2000))
       self.port = port
       self._server_info = (self.address, port)
-    elif address == "__address__":
-      if not port:
-        port = self._port_gen.next()
-      self.port = port
-      self.get_address(get_address_cmd, cwd)
     else:
       # Unix domain socket
       self.port = None
@@ -150,12 +159,13 @@ class ControllerConfig(object):
     else:
       raise RuntimeError("Cannot retrieve controller IP addresses after %d attempts!" %
                            self._max_address_retrieval_attempts)
+    address = None
     if self.index is not None and self.index <= len(self._controller_addresses):
-      self.address = self._controller_addresses[self.index-1]
-      self._server_info = (self.address, self.port)
+      address = self._controller_addresses[self.index-1]
       log.info("Found controller address for %s: %s!" % (self.label, self.address))
     else:
       raise RuntimeError("No IP address resolved for controller %s!" % self.label)
+    return address
 
   @property
   def cid(self):
@@ -204,3 +214,16 @@ class ControllerConfig(object):
     quoted = ( "%s=%s" % (attr, repr(value)) for (attr, value) in pairs if value)
 
     return self.__class__.__name__  + "(" + ", ".join(quoted) + ")"
+
+  @staticmethod
+  def find_unclaimed_address(ip_prefix="192.168.1"):
+    ''' Find an unclaimed IP address in the given /24 range. '''
+    host_octect = 2
+    address = "%s.%d" % (ip_prefix, host_octect)
+    while host_octect <= 255 and address not in ControllerConfig._claimed_controller_addresses:
+      host_octect += 1
+      address = "%s.%d" % (ip_prefix, host_octect)
+
+    if address in ControllerConfig._claimed_controller_addresses:
+      raise RuntimeError("Out of IP address in prefix %s" % ip_prefix)
+    return address
