@@ -28,6 +28,7 @@ except ImportError:
                          ''' $ git submodule init \n'''
                          ''' $ git submodule update ''')
     def format(self, *args): self._need_submodule()
+    def hs_format(self, *args): self._need_submodule()
     def ofp_match_to_hsa_match(self): self._need_submodule()
 
   hsa = NeedSubmodule()
