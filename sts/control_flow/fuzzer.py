@@ -30,6 +30,7 @@ from pox.lib.util import TimeoutError
 from pox.lib.packet.lldp import *
 from config.invariant_checks import name_to_invariant_check
 from sts.util.convenience import base64_encode
+from sts.entities import FuzzSoftwareSwitch
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -321,6 +322,7 @@ class Fuzzer(ControlFlow):
     self.check_dataplane()
     self.check_tcp_connections()
     self.check_pending_messages()
+    self.check_pending_commands()
     self.check_switch_crashes()
     self.check_link_failures()
     self.fuzz_traffic()
@@ -397,6 +399,15 @@ class Fuzzer(ControlFlow):
                                                  pending_send.controller_id,
                                                  pending_send.fingerprint,
                                                  b64_packet=b64_packet))
+
+  def check_pending_commands(self):
+    ofp_cmd_process_rate = 1
+    for switch in self.simulation.topology.switches:
+      assert(isinstance(switch, FuzzSoftwareSwitch))
+      if (self.random.random() < ofp_cmd_process_rate):
+        if switch.has_pending_commands():
+          switch.process_command()
+
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
