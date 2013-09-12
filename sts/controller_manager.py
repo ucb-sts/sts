@@ -42,13 +42,6 @@ class ControllerManager(object):
     return cs
 
   @property
-  def remote_controllers(self):
-    # N.B. includes local controllers in network namespaces or VMs.
-    # TODO(cs): does not currently support BigSwitchControllers (which do not
-    # set self.guest_device).
-    return [ c for c in self.controllers if c.guest_device is not None ]
-
-  @property
   def cids(self):
     ids = self.cid2controller.keys()
     ids.sort()
@@ -104,39 +97,3 @@ class ControllerManager(object):
         controllers_with_problems.append((c, msg))
     return controllers_with_problems
 
-
-class ControllerPatchPanel(object):
-  '''
-  When multiple controllers are managing the network, we need to interpose on the
-  messages sent between controllers, for at least two reasons:
-    - interposition will allow us to simulate important failure modes, e.g.
-      by delaying or dropping heartbeat messages.
-    - interposition mitigates non-determinism during replay, as we have
-      better control over message arrival.
-
-  Note that wiring the distributed controllers to route through the
-  patch panel is a separate task (specific to each controller), and is
-  not implemented here. We assume here that the controllers route through
-  interfaces on this machine.
-  '''
-  # TODO(cs): implement fingerprints for all control messages (e.g. Cassandra,
-  # VRRP).
-  pass
-
-# TODO(cs): the distinction between Local/Remote may not be necessary. The
-# main difference seems to be that the RemoteControllerPatchPanel must only
-# use one (or two?) interfaces, and possibly tunnels, to multiplex between the
-# controllers. It's not clear to me whether that difference is fundamental.
-
-class LocalControllerPatchPanel(object):
-  ''' For cases when all controllers are run on this machine, either in
-  virtual machines or network namepaces. '''
-  # TODO(cs): implement buffering. Do I need io_workers?
-  def __init__(self):
-    pass
-
-  def register_host_veth(self, guest_eth_addr, guest_device_name, raw_socket=None):
-    ''' raw_socket may be None, as in the case of a controller VM '''
-    # TODO(cs): use libpcap rather than raw sockets? Would make it much easier
-    # to filter out OpenFlow connections.
-    pass

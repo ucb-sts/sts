@@ -472,10 +472,6 @@ class Controller(object):
     self.sync_connection = None
     self.snapshot_service = snapshot_service
     self.log = logging.getLogger("Controller")
-    # For network namespaces only:
-    self.raw_socket = None
-    self.guest_eth_addr = None
-    self.guest_device = None
 
   @property
   def pid(self):
@@ -516,18 +512,10 @@ class Controller(object):
     if self.config.start_cmd == "":
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
-    if self.config.launch_in_network_namespace:
-      # TODO(cs): choose an IP address for the namespace's interace.
-      # TODO(cs): does it make sense to poll the guest namespace process in check_status
-      # and __del__? It will always be up -- it's the namespace's controller
-      # (child process) we want to kill and restart.
-      (self.raw_socket, self.process, self.guest_eth_addr, self.guest_device) = \
-          launch_namespace(" ".join(self.config.expanded_start_cmd),
-                           self.config.address, self.cid)
-    else:
-      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
     self.state = ControllerState.ALIVE
+
 
   def restart(self):
     if self.state != ControllerState.DEAD:
@@ -612,14 +600,7 @@ class POXController(Controller):
     if self.config.start_cmd == "":
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
-    if self.config.launch_in_network_namespace:
-      # TODO(cs): will the bash environment work across network namespaces
-      # (in particular, after `unshare` is invoked)?
-      (self.raw_socket, self.process, self.guest_eth_addr, self.guest_device) = \
-          launch_namespace(" ".join(self.config.expanded_start_cmd), self.config.address, self.cid,
-                           cwd=self.config.cwd, env=env)
-    else:
-      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
+    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
     self._register_proc(self.process)
     if self.config.sync:
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
