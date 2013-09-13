@@ -90,6 +90,7 @@ class ControllerConfig(object):
     if address == "__address__":
       address = self.get_address(get_address_cmd, cwd)
     elif address == "auto":
+      # TODO(cs): need to add support for auto to the sync uri.
       address = IPAddressSpace.find_unclaimed_address()
     self.address = address
     IPAddressSpace.register_address(address)
