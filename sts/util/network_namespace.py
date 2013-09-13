@@ -133,29 +133,24 @@ def bind_pcap(host_device, filter_string=""):
   Note that this method spawns a new thread! This will certainly be
   changed in the future to run as an io_worker in io_master.
   '''
-  import pox.lib.pxpcap as pxpcap
-  if not pxpcap.enabled:
-    raise RuntimeError('''You need to compile POX's pxpcap library:\n'''
-                       '''$ (cd pox/pox/lib/pxcap/pxcap_c && python setup.py build)''')
-  buffered_pcap = BufferedPCap()
-  p = pxpcap.PCap(start=False, filter=filter_string,
-                  callback=buffered_pcap.pcap_callback)
-  p.open(device=host_device, promiscuous=True)
-  p.start(addListeners=False)
-  buffered_pcap.set_pcap(p)
-  return buffered_pcap
+  return BufferedPCap(host_device, filter_string)
 
 class BufferedPCap(object):
   ''' Thread-safe PCap wrapper that buffers all incoming packets in a
   thread-safe queue. '''
-  def __init__(self):
+  def __init__(self, host_device, filter_string):
     self._read_queue = Queue.Queue()
-    self.pcap = None
-
-  def set_pcap(self, pcap):
+    import pox.lib.pxpcap as pxpcap
+    if not pxpcap.enabled:
+      raise RuntimeError('''You need to compile POX's pxpcap library:\n'''
+                         '''$ (cd pox/pox/lib/pxcap/pxcap_c && python setup.py build)''')
+    pcap = pxpcap.PCap(start=False, filter=filter_string,
+                       callback=self._pcap_callback)
+    pcap.open(device=host_device, promiscuous=True)
+    pcap.start(addListeners=False)
     self.pcap = pcap
 
-  def pcap_callback(self, data, sec, usec, length):
+  def _pcap_callback(self, data, sec, usec, length):
     self._read_queue.put(data)
 
   @property
