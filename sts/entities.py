@@ -509,6 +509,11 @@ class Controller(object):
   def _bind_pcap(self, host_device):
     filter_string = "(not tcp port %d)" % self.config.port
     if self.config.sync is not None and self.config.sync != "":
+      # TODO(cs): this is not quite correct. The *listen* port is sync_port,
+      # but the sync data connection will go over over an ephermeral port.
+      # Luckily this mistake is not fatal -- the kernel copies all
+      # packets sent to the pcap, and we'll just drop the copied packets when
+      # we realize we don't know where to route them.
       (_, _, sync_port) = parse_openflow_uri(self.config.sync)
       filter_string += " and (not tcp port %d)" % sync_port
     return bind_pcap(host_device, filter_string=filter_string)
