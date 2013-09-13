@@ -18,7 +18,6 @@ Utility functions for launching network namespaces.
 '''
 
 from pox.lib.addresses import EthAddr, IPAddr
-from pox.lib.pxpcap import PCap
 
 import subprocess
 import struct
@@ -131,7 +130,11 @@ def bind_pcap(host_device, filter_string="", callback=lambda data, sec, usec, le
   Note that this method spawns a new thread! This will certainly be
   changed in the future to run as an io_worker in io_master.
   '''
-  p = PCap(start=False, filter=filter_string, callback=callback)
+  import pox.lib.pxpcap as pxpcap
+  if not pxpcap.enabled:
+    raise RuntimeError('''You need to compile POX's pxpcap library:\n'''
+                       '''$ (cd pox/pox/lib/pxcap/pxcap_c && python setup.py build)''')
+  p = pxpcap.PCap(start=False, filter=filter_string, callback=callback)
   p.open(device=host_device, promiscuous=True)
   p.start(addListeners=False)
   return p
