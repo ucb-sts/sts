@@ -78,7 +78,7 @@ $ sudo pip install pytrie
 If your control software supports distribution, you may need to compile POX's pcap library to enable interposition on messages sent between controllers:
 ```
 # (N.B. depends on the libpcap-dev package)
-$ (cd pox/pox/lib/pxcap/pxcap_c && sudo python setup.py build && sudo python setup.py install)
+$ $ (cd pox/pox/lib/pxcap/pxcap_c && python setup.py build)
 ```
 
 Finally, interactive mode depends on the readline module:
