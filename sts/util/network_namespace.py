@@ -26,6 +26,7 @@ import socket
 import os
 from exceptions import EnvironmentError
 from platform import system
+import Queue
 
 ETH_P_ALL = 3                     # from linux/if_ether.h
 
@@ -104,6 +105,9 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
   guest_eth_addr = get_eth_address_for_interface(guest_device)
   return (guest, guest_eth_addr, host_device)
 
+
+# TODO(cs): move these functions -- not necessarily specific to network
+# namespaces.
 def bind_raw_socket(host_device, blocking=0):
   # make the host-side (STS-side) socket
   # do this before unshare/fork to make failure/cleanup easier
@@ -119,13 +123,12 @@ def bind_raw_socket(host_device, blocking=0):
   s.setblocking(blocking)
   return s
 
-def bind_pcap(host_device, filter_string="", callback=lambda data, sec, usec, length: None):
+def bind_pcap(host_device, filter_string=""):
   '''
    - host_device: interface to bind to.
    - filter_string: tcp dump syntax packet filter.
-   - callback: called for every new packet received host_device.
 
-  Returns a pox.lib.pxcap.PCap object.
+  Returns a BufferedPCap object that queues all packets read on the PCap.
 
   Note that this method spawns a new thread! This will certainly be
   changed in the future to run as an io_worker in io_master.
@@ -134,10 +137,30 @@ def bind_pcap(host_device, filter_string="", callback=lambda data, sec, usec, le
   if not pxpcap.enabled:
     raise RuntimeError('''You need to compile POX's pxpcap library:\n'''
                        '''$ (cd pox/pox/lib/pxcap/pxcap_c && python setup.py build)''')
-  p = pxpcap.PCap(start=False, filter=filter_string, callback=callback)
+  buffered_pcap = BufferedPCap()
+  p = pxpcap.PCap(start=False, filter=filter_string,
+                  callback=buffered_pcap.pcap_callback)
   p.open(device=host_device, promiscuous=True)
   p.start(addListeners=False)
-  return p
+  buffered_pcap.set_pcap(p)
+  return buffered_pcap
+
+class BufferedPCap(object):
+  ''' Thread-safe PCap wrapper that buffers all incoming packets in a
+  thread-safe queue. '''
+  def __init__(self):
+    self._read_queue = Queue.Queue()
+    self.pcap = None
+
+  def set_pcap(self, pcap):
+    self.pcap = pcap
+
+  def pcap_callback(self, data, sec, usec, length):
+    self._read_queue.put(data)
+
+  @property
+  def read_queue(self):
+    return self._read_queue
 
 def get_eth_address_for_interface(ifname):
   '''Returns an EthAddr object from the interface specified by the argument.

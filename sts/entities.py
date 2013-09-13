@@ -475,7 +475,7 @@ class Controller(object):
     self.log = logging.getLogger("Controller")
     # For network namespaces only:
     self.guest_eth_addr = None
-    self.pcap = None
+    self.buffered_pcap = None
 
   @property
   def pid(self):
@@ -533,7 +533,7 @@ class Controller(object):
           launch_namespace(" ".join(self.config.expanded_start_cmd),
                            self.config.address, self.cid,
                            host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address))
-      self.pcap = self._bind_pcap(host_device)
+      self.buffered_pcap = self._bind_pcap(host_device)
     else:
       self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
@@ -628,7 +628,7 @@ class POXController(Controller):
                            self.config.address, self.cid,
                            host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address),
                            cwd=self.config.cwd, env=env)
-      self.pcap = self._bind_pcap(host_device)
+      self.buffered_pcap = self._bind_pcap(host_device)
     else:
       self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
     self._register_proc(self.process)
