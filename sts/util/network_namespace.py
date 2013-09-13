@@ -18,6 +18,7 @@ Utility functions for launching network namespaces.
 '''
 
 from pox.lib.addresses import EthAddr, IPAddr
+from pox.lib.pxpcap import PCap
 
 import subprocess
 import struct
@@ -119,6 +120,21 @@ def bind_raw_socket(host_device, blocking=0):
   s.setblocking(blocking)
   return s
 
+def bind_pcap(host_device, filter_string="", callback=lambda data, sec, usec, length: None):
+  '''
+   - host_device: interface to bind to.
+   - filter_string: tcp dump syntax packet filter.
+   - callback: called for every new packet received host_device.
+
+  Returns a pox.lib.pxcap.PCap object.
+
+  Note that this method spawns a new thread! This will certainly be
+  changed in the future to run as an io_worker in io_master.
+  '''
+  p = PCap(start=False, filter=filter_string, callback=callback)
+  p.open(device=host_device, promiscuous=True)
+  p.start(addListeners=False)
+  return p
 
 def get_eth_address_for_interface(ifname):
   '''Returns an EthAddr object from the interface specified by the argument.
