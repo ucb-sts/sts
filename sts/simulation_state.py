@@ -25,7 +25,7 @@ Encapsulates the state of the simulation, including:
 from sts.util.io_master import IOMaster
 from sts.dataplane_traces.trace import Trace
 from entities import DeferredOFConnection
-from sts.controller_manager import ControllerManager
+from sts.controller_manager import ControllerManager, LocalControllerPatchPanel
 from sts.util.deferred_io import DeferredIOWorker
 from sts.god_scheduler import GodScheduler
 from sts.topology import *
@@ -71,7 +71,8 @@ class SimulationConfig(object):
                snapshot_service=None,
                multiplex_sockets=False,
                violation_persistence_threshold=None,
-               kill_controllers_on_exit=True):
+               kill_controllers_on_exit=True,
+               interpose_on_controllers=False):
     '''
     Constructor parameters:
       topology_class    => a sts.topology.Topology class (not object!)
@@ -111,6 +112,7 @@ class SimulationConfig(object):
     self.snapshot_service = snapshot_service
     self.current_simulation = None
     self.multiplex_sockets = multiplex_sockets
+    self.interpose_on_controllers = interpose_on_controllers
 
   def bootstrap(self, sync_callback, boot_controllers=default_boot_controllers):
     '''Return a simulation object encapsulating the state of
@@ -136,6 +138,19 @@ class SimulationConfig(object):
       msg.set_io_master(_io_master)
       return _io_master
 
+    def wire_controller_patch_panel(controller_manager):
+      patch_panel = None
+      if not self.interpose_on_controllers:
+        return patch_panel
+      # N.B. includes local controllers in network namespaces or VMs.
+      remote_controllers = controller_manager.remote_controllers
+      if len(remote_controllers) != 0:
+        # TODO(cs): don't assume LocalControllerPatchPanel.
+        patch_panel = LocalControllerPatchPanel()
+        for c in remote_controllers:
+          patch_panel.register_controller(c.guest_eth_addr, c.buffered_pcap)
+      return patch_panel
+
     def instantiate_topology(create_io_worker):
       '''construct a clean topology object from topology_class and
       topology_params'''
@@ -155,6 +170,7 @@ class SimulationConfig(object):
     controller_manager = boot_controllers(self.controller_configs,
                                           self.snapshot_service,
                                           sync_connection_manager)
+    controller_patch_panel = wire_controller_patch_panel(controller_manager)
     topology = instantiate_topology(io_master.create_worker_for_socket)
     patch_panel = self._patch_panel_class(topology.switches, topology.hosts,
                                           topology.get_connected_port)
@@ -168,8 +184,8 @@ class SimulationConfig(object):
       violation_tracker = ViolationTracker()
 
     simulation = Simulation(topology, controller_manager, dataplane_trace,
-                            god_scheduler, io_master, patch_panel,
-                            sync_callback, self.multiplex_sockets,
+                            god_scheduler, io_master, controller_patch_panel,
+                            patch_panel, sync_callback, self.multiplex_sockets,
                             violation_tracker, self._kill_controllers_on_exit)
     self.current_simulation = simulation
     return simulation
@@ -200,14 +216,16 @@ class Simulation(object):
     - Dataplane Trace (pending dataplane messages)
   '''
   def __init__(self, topology, controller_manager, dataplane_trace,
-               god_scheduler, io_master, patch_panel, controller_sync_callback,
-               multiplex_sockets, violation_tracker, kill_controllers_on_exit):
+               god_scheduler, io_master, controller_patch_panel, patch_panel,
+               controller_sync_callback, multiplex_sockets,
+               violation_tracker, kill_controllers_on_exit):
     self.topology = topology
     self.controller_manager = controller_manager
     self.controller_manager.set_simulation(self)
     self.dataplane_trace = dataplane_trace
     self.god_scheduler = god_scheduler
     self._io_master = io_master
+    self.controller_patch_panel = controller_patch_panel
     self.patch_panel = patch_panel
     self.controller_sync_callback = controller_sync_callback
     self.multiplex_sockets = multiplex_sockets
@@ -246,6 +264,9 @@ class Simulation(object):
       for switch in self.topology.switches:
         for connection in switch.connections:
           connection.close()
+
+    if self.controller_patch_panel is not None:
+      self.controller_patch_panel.close_all_pcaps()
 
     # Just to make sure there isn't any state lying around, throw out
     # the old RecocoIOLoop

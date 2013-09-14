@@ -27,6 +27,8 @@ import os
 from exceptions import EnvironmentError
 from platform import system
 import Queue
+import logging
+log = logging.getLogger("netns")
 
 ETH_P_ALL = 3                     # from linux/if_ether.h
 
@@ -70,6 +72,11 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
 
     # create a veth pair and set the host end to be promiscuous
     subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
+    guest_eth_addr = get_eth_address_for_interface(guest_device)
+    log.debug("Guest ETH %s" % guest_eth_addr)
+    host_eth_addr = get_eth_address_for_interface(host_device)
+    log.debug("Host ETH %s" % host_eth_addr)
+
     subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
     # Our end of the veth pair
     subprocess.check_call(['ip','link','set',host_device,'up'])
@@ -102,7 +109,6 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
   # Send the command.
   guest.stdin.write(cmd + "\n")
 
-  guest_eth_addr = get_eth_address_for_interface(guest_device)
   return (guest, guest_eth_addr, host_device)
 
 
@@ -123,7 +129,7 @@ def bind_raw_socket(host_device, blocking=0):
   s.setblocking(blocking)
   return s
 
-def bind_pcap(host_device, filter_string=""):
+def bind_pcap(host_device, filter_string=None):
   '''
    - host_device: interface to bind to.
    - filter_string: tcp dump syntax packet filter.
@@ -148,10 +154,22 @@ class BufferedPCap(object):
                        callback=self._pcap_callback)
     pcap.open(device=host_device, promiscuous=True)
     pcap.start(addListeners=False)
-    self.pcap = pcap
+    self._pcap = pcap
 
-  def _pcap_callback(self, data, sec, usec, length):
+  def _pcap_callback(self, pcap, data, sec, usec, length):
     self._read_queue.put(data)
+
+  def inject(self, data):
+    # TODO(cs): Murphy believes this is a non-blocking, but is not entirely
+    # sure... should double check.
+    self._pcap.inject(data)
+
+  def close(self):
+    self._pcap.close()
+
+  @property
+  def pcap(self):
+    return self._pcap
 
   @property
   def read_queue(self):
@@ -163,5 +181,6 @@ def get_eth_address_for_interface(ifname):
   interface is a string, commonly eth0, wlan0, lo.'''
   s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   info = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('256s', ifname[:15]))
+  s.close()
   return EthAddr(''.join(['%02x:' % ord(char) for char in info[18:24]])[:-1])
 

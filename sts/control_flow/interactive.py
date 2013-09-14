@@ -360,6 +360,7 @@ class Interactive(ControlFlow):
     print "-------------------"
     print "Advanced to step %d" % self.logical_time
     self.show_queued_events()
+    self.check_controller_traffic()
 
   def show_queued_events(self):
     queued = self.simulation.patch_panel.queued_dataplane_events
@@ -612,6 +613,12 @@ class Interactive(ControlFlow):
     if not dp_event:
       return
     self.simulation.patch_panel.delay_dp_event(dp_event)
+
+  def check_controller_traffic(self):
+    if self.simulation.controller_patch_panel is not None:
+      # N.B. if controller_patch_panel.pass_through is False, this simply
+      # moves packets from the incoming queue to the outgoing queue.
+      self.simulation.controller_patch_panel.process_all_incoming_traffic()
 
   # TODO(cs): add support for control channel blocking + link,
   # controller failures, god scheduling

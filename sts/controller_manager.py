@@ -16,8 +16,13 @@
 
 ''' Convenience object for encapsulating and interacting with Controller processes '''
 
+from pox.lib.packet.ethernet import ethernet
+from pox.openflow.software_switch import *
+from pox.openflow.libopenflow_01 import *
 from sts.entities import ControllerState
 from sts.util.console import msg
+import logging
+log = logging.getLogger("ctrl_mgm")
 
 class ControllerManager(object):
   ''' Encapsulate a list of controllers objects '''
@@ -40,6 +45,11 @@ class ControllerManager(object):
     cs = self.cid2controller.values()
     cs.sort(key=lambda c: c.cid)
     return cs
+
+  @property
+  def remote_controllers(self):
+    # N.B. includes local controllers in network namespaces or VMs.
+    return [ c for c in self.controllers if c.remote ]
 
   @property
   def cids(self):
@@ -97,3 +107,82 @@ class ControllerManager(object):
         controllers_with_problems.append((c, msg))
     return controllers_with_problems
 
+
+class ControllerPatchPanel(object):
+  '''
+  When multiple controllers are managing the network, we need to interpose on the
+  messages sent between controllers, for at least two reasons:
+    - interposition will allow us to simulate important failure modes, e.g.
+      by delaying or dropping heartbeat messages.
+    - interposition mitigates non-determinism during replay, as we have
+      better control over message arrival.
+
+  Note that wiring the distributed controllers to route through the
+  patch panel is a separate task (specific to each controller), and is
+  not implemented here. We assume here that the controllers route through
+  interfaces on this machine.
+  '''
+  # TODO(cs): implement fingerprints for all control messages (e.g. Cassandra,
+  # VRRP).
+  pass
+
+# TODO(cs): the distinction between Local/Remote may not be necessary. The
+# main difference seems to be that the RemoteControllerPatchPanel must only
+# use one (or two?) interfaces, and possibly tunnels, to multiplex between the
+# controllers. This is in contrast to LocalControllerPatchPanel, which can
+# assume an veth for each controller. It's not clear to me yet whether this difference
+# is fundamental.
+
+class LocalControllerPatchPanel(ControllerPatchPanel):
+  ''' For cases when all controllers are run on this machine, either in
+  virtual machines or network namepaces. '''
+  def __init__(self, pass_through=True):
+    # { outgoing port of our switch -> BufferedPCap bound to host veth connected to controller }
+    self._port2pcap = {}
+    if not pass_through:
+      raise NotImplementedError("pass-through is currently the only suppported mode.")
+    self.pass_through = pass_through
+    # We play a clever trick to route between controllers: use a
+    # SoftwareSwitch to do the switching.
+    # TODO(cs): control plane traffic better be low throughput... otherwise
+    # this is going to really suck.
+    self.switch = SoftwareSwitch(-1, ports=[])
+    # Tell it to flood all ethernet broadcasts.
+    # TODO(cs): as a (potentially substantial) optimization, act as an
+    # ARP/DHCP server, since we know all addresses.
+    for dl_dst in [EthAddr("FF:FF:FF:FF:FF:FF"), EthAddr("00:00:00:00:00:00")]:
+      self.switch.on_message_received(None,
+              ofp_flow_mod(match=ofp_match(dl_dst=dl_dst),
+                           action=ofp_action_output(port=OFPP_FLOOD)))
+    # Add a DpOutEvent handler.
+    self.switch.addListener(DpPacketOut, self._handle_DpPacketOut)
+
+  def _handle_DpPacketOut(self, event):
+    if self.pass_through:
+      # TODO(cs): log this event.
+      self._port2pcap[event.port].inject(event.packet)
+    # TODO(cs): implement buffering.
+
+  def close_all_pcaps(self):
+    for pcap in self.eth_addr2pcap.itervalues():
+      pcap.close()
+
+  def register_controller(self, guest_eth_addr, buffered_pcap):
+    # Wire up a new port for the switch leading to this controller's pcap, and
+    # tell the switch to forward any packets destined for this controller out that port.
+    # The ethernet address we assign shouldn't matter afaict.
+    port = ofp_phy_port(port_no=len(self.switch.ports)+1)
+    self.switch.bring_port_up(port)
+    self._port2pcap[port] = buffered_pcap
+    self.switch.on_message_received(None,
+            ofp_flow_mod(match=ofp_match(dl_dst=guest_eth_addr),
+                         action=ofp_action_output(port=port)))
+
+  def process_all_incoming_traffic(self):
+    for port, pcap in self._port2pcap.iteritems():
+      while not pcap.read_queue.empty():
+        packet = ethernet(raw=pcap.read_queue.get())
+        self.switch.process_packet(packet, port.port_no)
+
+class RemoteControllerPatchPanel(ControllerPatchPanel):
+  pass

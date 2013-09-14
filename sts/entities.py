@@ -478,6 +478,10 @@ class Controller(object):
     self.buffered_pcap = None
 
   @property
+  def remote(self):
+    return self.config.address != "127.0.0.1" and self.config.address != "localhost"
+
+  @property
   def pid(self):
     ''' Return the PID of the Popen instance the controller was started with '''
     return self.process.pid if self.process else -1

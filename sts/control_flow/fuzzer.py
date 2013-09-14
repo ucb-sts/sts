@@ -326,6 +326,7 @@ class Fuzzer(ControlFlow):
     self.fuzz_traffic()
     self.check_controllers()
     self.check_migrations()
+    self.check_controller_traffic()
 
   def check_dataplane(self, pass_through=False):
     ''' Decide whether to delay, drop, or deliver packets '''
@@ -515,3 +516,8 @@ class Fuzzer(ControlFlow):
                                               access_link.host.hid))
           self._send_initialization_packet(access_link.host, send_to_self=True)
 
+  def check_controller_traffic(self):
+    if self.simulation.controller_patch_panel is not None:
+      # N.B. if controller_patch_panel.pass_through is False, this simply
+      # moves packets from the incoming queue to the outgoing queue.
+      self.simulation.controller_patch_panel.process_all_incoming_traffic()

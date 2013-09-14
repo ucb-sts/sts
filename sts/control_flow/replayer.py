@@ -181,7 +181,8 @@ class Replayer(ControlFlow):
           if isinstance(event, InputEvent):
             self._check_early_state_changes(dag, i, event)
           self._check_new_state_changes(dag, i)
-          self._check_unexpected_messages(dag, i)
+          self._check_unexpected_dp_messages(dag, i)
+          self._check_unexpected_controller_messages(dag, i)
           # TODO(cs): quasi race-condition here. If unexpected state change
           # happens *while* we're waiting for event, we basically have a
           # deadlock (if controller logging is set to blocking) until the
@@ -248,7 +249,7 @@ class Replayer(ControlFlow):
         self.unexpected_state_changes.append(repr(state_change))
         self.sync_callback.ack_pending_state_change(state_change)
 
-  def _check_unexpected_messages(self, dag, current_index):
+  def _check_unexpected_dp_messages(self, dag, current_index):
     ''' If throughout replay we observe new messages that weren't in the
     original trace, we (usually) want to let them through. This is especially true
     for messages that are related to timers, such as LLDP, since timings will
@@ -295,6 +296,12 @@ class Replayer(ControlFlow):
           log_event.replay_time = SyncTime.now()
           self.passed_unexpected_messages.append(repr(log_event))
           self._log_input_event(log_event)
+
+  def _check_unexpected_controller_messages(self, dag, current_index):
+    # TODO(cs): do something intelligent here. For now just always let
+    # everything through.
+    if self.simulation.controller_patch_panel is not None:
+      self.simulation.controller_patch_panel.process_all_incoming_traffic()
 
 # --- Note: use DataplaneChecker at your own risk. I have observed it fail to
 #     reproduce a bug that was reproducible with dataplane timeouts.
