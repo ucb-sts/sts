@@ -38,7 +38,9 @@ class LocalControllerPatchPanelTest(unittest.TestCase):
     ping2_pcap = bind_pcap(ping2_host_device)
     p.register_controller(ping2_eth_addr, ping2_pcap)
 
-    for i in xrange(200):
+    # TODO(cs): this number is super finicky. Figure out a better way to
+    # ensure that all packets have been processed.
+    for i in xrange(1000):
       p.process_all_incoming_traffic()
 
     # TODO(cs): when buffering is implemented, verify that at least 2 ICMP

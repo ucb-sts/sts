@@ -144,8 +144,19 @@ class LocalControllerPatchPanel(ControllerPatchPanel):
     self.pass_through = pass_through
     # We play a clever trick to route between controllers: use a
     # SoftwareSwitch to do the switching.
-    # TODO(cs): control plane traffic better be low throughput... otherwise
-    # this is going to really suck.
+    # TODO(cs): three optimization possibilities if this switch can't keep up with
+    # control plane traffic or latency (measured 75ms minimum RTT on
+    # localhost, with high variance):
+    #   - Use OVS rather than our SoftwareSwitch. Tell OVS to automatically
+    #   forward broadcast traffic (which we don't care about), and
+    #   have it forward only select traffic to us. Further possibility: only simulate
+    #   intermittent packet delays by telling OVS to buffer for a short period
+    #   of time -- don't examine individual packets.
+    #   - Don't parse the entire ethernet packets -- just do a quick lookup on
+    #   the dl_dst.
+    #   - Write a subclass of SoftwareSwitch that does a single hash lookup
+    #   from dst EthAddr -> raw socket, without indirection through recococo
+    #   events.
     self.switch = SoftwareSwitch(-1, ports=[])
     # Tell it to flood all ethernet broadcasts.
     # TODO(cs): as a (potentially substantial) optimization, act as an
