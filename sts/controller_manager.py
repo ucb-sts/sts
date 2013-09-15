@@ -158,15 +158,10 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
               ofp_flow_mod(match=ofp_match(dl_dst=dl_dst),
                            action=ofp_action_output(port=OFPP_FLOOD)))
     # Add a DpOutEvent handler.
-    # TODO(cs): potential optimization: don't redirect through revent; have
-    # the switch directly output the pcap.
-    self.switch.addListener(DpPacketOut, self._handle_DpPacketOut)
-
-  def _handle_DpPacketOut(self, event):
-    if self.pass_through:
-      # TODO(cs): log this event.
-      self._port2pcap[event.port].inject(event.packet)
-    # TODO(cs): implement buffering.
+    # TODO(cs): potential optimization: don't redirect through revent;
+    # have the switch directly output the pcap.
+    self.switch.addListener(DpPacketOut,
+            lambda event: self._port2pcap[event.port].inject(event.packet))
 
   def close_all_pcaps(self):
     for pcap in self.eth_addr2pcap.itervalues():
