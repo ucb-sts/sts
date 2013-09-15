@@ -277,7 +277,7 @@ class Replayer(ControlFlow):
         expected_send_fingerprints.add((of_fingerprint, dpid, cid))
 
     # Now check pending messages.
-    for event_fingerprints, messages in [
+    for expected_fingerprints, messages in [
          (expected_receive_fingerprints, self.simulation.god_scheduler.pending_receives()),
          (expected_send_fingerprints, self.simulation.god_scheduler.pending_sends())]:
       for pending_message in messages:
