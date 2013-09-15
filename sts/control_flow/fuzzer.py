@@ -171,6 +171,12 @@ class Fuzzer(ControlFlow):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.traffic_generator.set_topology(self.simulation.topology)
+
+    if self.params.ofp_cmd_process_rate != 0:
+      for switch in self.simulation.topology.switches:
+        assert(isinstance(switch, FuzzSoftwareSwitch))
+        switch.use_delayed_commands()
+        
     return self.loop()
 
   def loop(self):
@@ -322,7 +328,8 @@ class Fuzzer(ControlFlow):
     self.check_dataplane()
     self.check_tcp_connections()
     self.check_pending_messages()
-    self.check_pending_commands()
+    if self.params.ofp_cmd_process_rate != 0:
+      self.check_pending_commands()
     self.check_switch_crashes()
     self.check_link_failures()
     self.fuzz_traffic()
@@ -401,13 +408,13 @@ class Fuzzer(ControlFlow):
                                                  b64_packet=b64_packet))
 
   def check_pending_commands(self):
-    ofp_cmd_process_rate = 1
     for switch in self.simulation.topology.switches:
       assert(isinstance(switch, FuzzSoftwareSwitch))
-      if (self.random.random() < ofp_cmd_process_rate):
+      if self.params.ofp_cmd_process_rate == 0:
+        print "fuzzer first"
+      elif (self.random.random() < self.params.ofp_cmd_process_rate):
         if switch.has_pending_commands():
           switch.process_command()
-
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
