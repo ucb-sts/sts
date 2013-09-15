@@ -15,6 +15,7 @@
 import unittest
 import sys
 import os
+import time
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
@@ -42,6 +43,8 @@ class LocalControllerPatchPanelTest(unittest.TestCase):
     # ensure that all packets have been processed.
     for i in xrange(1000):
       p.process_all_incoming_traffic()
+      if i % 33 == 0:
+        time.sleep(0.01)
 
     # TODO(cs): when buffering is implemented, verify that at least 2 ICMP
     # replies have been buffered.
