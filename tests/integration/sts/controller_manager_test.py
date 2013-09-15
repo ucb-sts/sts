@@ -19,16 +19,16 @@ import time
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
-from sts.controller_manager import LocalControllerPatchPanel
+from sts.controller_manager import UserSpaceControllerPatchPanel
 from sts.util.network_namespace import *
 
-class LocalControllerPatchPanelTest(unittest.TestCase):
+class UserSpaceControllerPatchPanelTest(unittest.TestCase):
   def test_without_host_ips_set(self):
     if os.geteuid() != 0: # Must be run as root
       return
 
     # Have two net_ns processes ping eachother, and verify that the pings go through.
-    p = LocalControllerPatchPanel(pass_through=True)
+    p = UserSpaceControllerPatchPanel(pass_through=True)
     ping1_addr = "192.168.1.3"
     ping2_addr = "192.168.1.4"
     (ping1_proc, ping1_eth_addr, ping1_host_device) = launch_namespace("ping -c 1 %s" % ping2_addr, ping1_addr, 1)
