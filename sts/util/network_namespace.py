@@ -129,6 +129,10 @@ def bind_raw_socket(host_device, blocking=0):
   s.setblocking(blocking)
   return s
 
+# TODO(cs): pcap is an awkward way to filter out OpenFlow for the
+# intracontroller patch panel. A cleaner, simpler way would be to
+# create a separate veth pair for OpenFlow/sync, in addition to the
+# veth pair for intracontroller communication.
 def bind_pcap(host_device, filter_string=None):
   '''
    - host_device: interface to bind to.
