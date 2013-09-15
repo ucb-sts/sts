@@ -25,7 +25,7 @@ Encapsulates the state of the simulation, including:
 from sts.util.io_master import IOMaster
 from sts.dataplane_traces.trace import Trace
 from entities import DeferredOFConnection
-from sts.controller_manager import ControllerManager, UserSpaceControllerPatchPanel
+from sts.controller_manager import ControllerManager, LocalControllerPatchPanel
 from sts.util.deferred_io import DeferredIOWorker
 from sts.god_scheduler import GodScheduler
 from sts.topology import *
@@ -145,8 +145,8 @@ class SimulationConfig(object):
       # N.B. includes local controllers in network namespaces or VMs.
       remote_controllers = controller_manager.remote_controllers
       if len(remote_controllers) != 0:
-        # TODO(cs): support OVSControllerPatchPanel
-        patch_panel = UserSpaceControllerPatchPanel()
+        # TODO(cs): don't assume LocalControllerPatchPanel.
+        patch_panel = LocalControllerPatchPanel()
         for c in remote_controllers:
           patch_panel.register_controller(c.guest_eth_addr, c.buffered_pcap)
       return patch_panel

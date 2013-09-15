@@ -617,8 +617,7 @@ class Interactive(ControlFlow):
   def check_controller_traffic(self):
     if self.simulation.controller_patch_panel is not None:
       # N.B. if controller_patch_panel.pass_through is False, this simply
-      # moves packets from the incoming queue to the outgoing queue, but does
-      # not forward them.
+      # moves packets from the incoming queue to the outgoing queue.
       self.simulation.controller_patch_panel.process_all_incoming_traffic()
 
   # TODO(cs): add support for control channel blocking + link,

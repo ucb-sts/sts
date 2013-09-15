@@ -120,14 +120,22 @@ class ControllerPatchPanel(object):
   Note that wiring the distributed controllers to route through the
   patch panel is a separate task (specific to each controller), and is
   not implemented here. We assume here that the controllers route through
-  (virtual) interfaces on this machine, one for each controller.
+  interfaces on this machine.
   '''
   # TODO(cs): implement fingerprints for all control messages (e.g. Cassandra,
   # VRRP).
   pass
 
-class UserSpaceControllerPatchPanel(ControllerPatchPanel):
-  ''' Uses a python SoftwareSwitch to route between controllers.'''
+# TODO(cs): the distinction between Local/Remote may not be necessary. The
+# main difference seems to be that the RemoteControllerPatchPanel must only
+# use one (or two?) interfaces, and possibly tunnels, to multiplex between the
+# controllers. This is in contrast to LocalControllerPatchPanel, which can
+# assume an veth for each controller. It's not clear to me yet whether this difference
+# is fundamental.
+
+class LocalControllerPatchPanel(ControllerPatchPanel):
+  ''' For cases when all controllers are run on this machine, either in
+  virtual machines or network namepaces. '''
   def __init__(self, pass_through=True):
     # { outgoing port of our switch -> BufferedPCap bound to host veth connected to controller }
     self._port2pcap = {}
@@ -141,9 +149,9 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
     # localhost, with high variance):
     #   - Use OVS rather than our SoftwareSwitch. Tell OVS to automatically
     #   forward broadcast traffic (which we don't care about), and
-    #   have it forward only select traffic to us. Further possibility: write a
-    #   separate click or custom C program to control OVS, that talks back to
-    #   this python process via RPC.
+    #   have it forward only select traffic to us. Further possibility: only simulate
+    #   intermittent packet delays by telling OVS to buffer for a short period
+    #   of time -- don't examine individual packets.
     #   - Don't parse the entire ethernet packets -- just do a quick lookup on
     #   the dl_dst.
     #   - Write a subclass of SoftwareSwitch that does a single hash lookup
@@ -164,9 +172,9 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
 
   def _handle_DpPacketOut(self, event):
     if self.pass_through:
+      # TODO(cs): log this event.
       self._port2pcap[event.port].inject(event.packet)
-    else:
-      pass
+    # TODO(cs): implement buffering.
 
   def close_all_pcaps(self):
     for pcap in self.eth_addr2pcap.itervalues():
@@ -191,6 +199,5 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
           log.debug("Dequeing packet %s, port %s" % (packet, port))
         self.switch.process_packet(packet, port.port_no)
 
-class OVSControllerPatchPanel(ControllerPatchPanel):
-  ''' Uses OVS to route between controllers. '''
+class RemoteControllerPatchPanel(ControllerPatchPanel):
   pass
