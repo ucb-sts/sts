@@ -1,8 +1,6 @@
 #!/bin/bash
 # Invoke with: ./tools/clean.sh
 
-no_compile=$1
-
 if [ -f .project ]; then
     cp .project .pydevproject /tmp
 fi
@@ -13,8 +11,6 @@ if [ -f .project ]; then
     cp /tmp/.project /tmp/.pydevproject .
 fi
 
-if [ "$no_compile" != "" ]; then
-  cd sts/hassel/hassel-c
-  make
-fi
+cd sts/hassel/hassel-c
+make
 
