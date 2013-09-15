@@ -149,7 +149,7 @@ class BufferedPCap(object):
   ''' Thread-safe PCap wrapper that buffers all incoming packets in a
   thread-safe queue. '''
   def __init__(self, host_device, filter_string):
-    self._read_queue = Queue.Queue()
+    self.read_queue = Queue.Queue()
     import pox.lib.pxpcap as pxpcap
     if not pxpcap.enabled:
       raise RuntimeError('''You need to compile POX's pxpcap library:\n'''
@@ -161,7 +161,7 @@ class BufferedPCap(object):
     self._pcap = pcap
 
   def _pcap_callback(self, pcap, data, sec, usec, length):
-    self._read_queue.put(data)
+    self.read_queue.put(data)
 
   def inject(self, data):
     # TODO(cs): Murphy believes this is a non-blocking, but is not entirely
@@ -174,10 +174,6 @@ class BufferedPCap(object):
   @property
   def pcap(self):
     return self._pcap
-
-  @property
-  def read_queue(self):
-    return self._read_queue
 
 def get_eth_address_for_interface(ifname):
   '''Returns an EthAddr object from the interface specified by the argument.

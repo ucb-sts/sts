@@ -166,6 +166,8 @@ class LocalControllerPatchPanel(ControllerPatchPanel):
               ofp_flow_mod(match=ofp_match(dl_dst=dl_dst),
                            action=ofp_action_output(port=OFPP_FLOOD)))
     # Add a DpOutEvent handler.
+    # TODO(cs): potential optimization: don't redirect through revent; have
+    # the switch directly output the pcap.
     self.switch.addListener(DpPacketOut, self._handle_DpPacketOut)
 
   def _handle_DpPacketOut(self, event):
@@ -193,6 +195,8 @@ class LocalControllerPatchPanel(ControllerPatchPanel):
     for port, pcap in self._port2pcap.iteritems():
       while not pcap.read_queue.empty():
         packet = ethernet(raw=pcap.read_queue.get())
+        if log.isEnabledFor(logging.DEBUG):
+          log.debug("Dequeing packet %s, port %s" % (packet, port))
         self.switch.process_packet(packet, port.port_no)
 
 class RemoteControllerPatchPanel(ControllerPatchPanel):
