@@ -164,7 +164,7 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
             lambda event: self._port2pcap[event.port].inject(event.packet))
 
   def close_all_pcaps(self):
-    for pcap in self.eth_addr2pcap.itervalues():
+    for pcap in self._port2pcap.itervalues():
       pcap.close()
 
   def register_controller(self, guest_eth_addr, buffered_pcap):
