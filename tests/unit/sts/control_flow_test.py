@@ -103,7 +103,8 @@ class ReplayerTest(unittest.TestCase):
 
   def setup_controller_simulation(self):
     start_cmd = "./pox.py --verbose --no-cli sts.syncproto.pox_syncer --blocking=False openflow.of_01 --address=__address__ --port=__port__"
-    controllers = [ControllerConfig(cwd='pox', start_cmd=start_cmd, address="127.0.0.1", port=8899, sync="tcp:localhost:18899")]
+    ControllerConfig._controller_labels.clear()
+    controllers = [ControllerConfig(cwd='pox', label="c1", start_cmd=start_cmd, address="127.0.0.1", port=8899, sync="tcp:localhost:18899")]
     topology_class = MeshTopology
     topology_params = "num_switches=2"
     patch_panel_class = BufferedPatchPanel
