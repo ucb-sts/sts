@@ -55,6 +55,8 @@ controller_crash_rate = 0.1
 controller_recovery_rate = 0.5
 traffic_generation_rate = 0.5
 host_migration_rate = 0.5
+intracontroller_block_rate = 0.0
+intracontroller_unblock_rate = 0.0
 '''
 
 class FuzzerTest(unittest.TestCase):

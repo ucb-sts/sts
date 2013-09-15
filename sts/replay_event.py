@@ -856,6 +856,57 @@ class DataplaneDrop(InputEvent):
     del fields['_fingerprint']
     return json.dumps(fields)
 
+class BlockControllerPair(InputEvent):
+  ''' '''
+  def __init__(self, cid1, cid2, label=None, round=-1, time=None):
+    super(BlockControllerPair, self).__init__(label=label, round=round, time=time)
+    self.cid1 = cid1
+    self.cid2 = cid2
+
+  def proceed(self):
+    self.simulation.controller_patch_panel.block_controller_pair(self.cid1, self.cid2)
+    return True
+
+  @property
+  def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, cid1, cid2)
+    '''
+    return (self.__class__.__name__, self.cid1, self.cid2)
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'cid1', 'cid2')
+    cid1 = json_hash['cid1']
+    cid2 = json_hash['cid2']
+    return BlockControllerPair(cid1, cid2, round=round, label=label, time=time)
+
+class UnblockControllerPair(InputEvent):
+  def __init__(self, cid1, cid2, label=None, round=-1, time=None):
+    super(UnblockControllerPair, self).__init__(label=label, round=round, time=time)
+    self.cid1 = cid1
+    self.cid2 = cid2
+
+  def proceed(self):
+    self.simulation.controller_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
+    return True
+
+  @property
+  def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, cid1, cid2)
+    '''
+    return (self.__class__.__name__, self.cid1, self.cid2)
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'cid1', 'cid2')
+    cid1 = json_hash['cid1']
+    cid2 = json_hash['cid2']
+    return UnblockControllerPair(cid1, cid2, round=round, label=label, time=time)
+
 # TODO(cs): Temporary hack until we figure out determinism
 class LinkDiscovery(InputEvent):
   ''' Deprecated '''
@@ -887,7 +938,8 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
                     ControlChannelBlock, ControlChannelUnblock,
-                    DataplaneDrop, LinkDiscovery]
+                    DataplaneDrop, BlockControllerPair, UnblockControllerPair,
+                    LinkDiscovery]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
@@ -1020,6 +1072,7 @@ class ControlMessageSend(ControlMessageBase):
     return ControlMessageSend(dpid, controller_id, fingerprint, round=round,
                               b64_packet=b64_packet, label=label, time=time,
                               timeout_disallowed=timeout_disallowed)
+
 
 # TODO(cs): move me?
 class PendingStateChange(namedtuple('PendingStateChange',

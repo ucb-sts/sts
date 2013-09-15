@@ -330,6 +330,12 @@ class Interactive(ControlFlow):
       c.cmd(self.migrate_host,      "migrate_host",         alias="mh",     help_msg="Migrate a host to switch dpid")\
           .arg("hid", values=lambda: map(lambda h: h.hid, self.simulation.topology.hosts))\
           .arg("dpid", values=lambda: map(lambda s: s.dpid, self.simulation.topology.switches))
+      c.cmd(self.block_controller_traffic,   "block_controllers",   alias="bc",  help_msg="Drop traffic between controllers")\
+          .arg("cid1", values=lambda: map(lambda c: c.cid, self.simulation.controller_manager.live_controllers))\
+          .arg("cid2", values=lambda: map(lambda c: c.cid, self.simulation.controller_manager.live_controllers))
+      c.cmd(self.unblock_controller_traffic, "unblock_controllers", alias="ubc", help_msg="Stop dropping traffic between controllers")\
+          .arg("cid1", values=lambda: map(lambda c: c.cid, self.simulation.controller_manager.live_controllers))\
+          .arg("cid2", values=lambda: map(lambda c: c.cid, self.simulation.controller_manager.live_controllers))
 
       c.cmd_group("Python Objects")
       c.register_obj(self.simulation,           "simulation", alias="sim",  help_msg="access the simulation object")
@@ -616,10 +622,23 @@ class Interactive(ControlFlow):
 
   def check_controller_traffic(self):
     if self.simulation.controller_patch_panel is not None:
-      # N.B. if controller_patch_panel.pass_through is False, this simply
-      # moves packets from the incoming queue to the outgoing queue, but does
-      # not forward them.
       self.simulation.controller_patch_panel.process_all_incoming_traffic()
+
+  def block_controller_traffic(self, cid1, cid2):
+    ''' Drop all messages sent from controller 1 to controller 2 until
+    unblock_controller_pair is called. '''
+    if self.simulation.controller_patch_panel is None:
+      self.log.warn("The controller patch panel does not exist.")
+      return
+    self.simulation.controller_patch_panel.block_controller_pair(cid1, cid2)
+    self._log_input_event(BlockControllerPair(cid1, cid2))
+
+  def unblock_controller_traffic(self, cid1, cid2):
+    ''' Stop dropping messages sent from controller 1 to controller 2 '''
+    if self.simulation.controller_patch_panel is None:
+      self.log.warn("The controller patch panel does not exist.")
+    self.simulation.controller_patch_panel.unblock_controller_pair(cid1, cid2)
+    self._log_input_event(UnblockControllerPair(cid1, cid2))
 
   # TODO(cs): add support for control channel blocking + link,
   # controller failures, god scheduling

@@ -182,7 +182,6 @@ class Replayer(ControlFlow):
             self._check_early_state_changes(dag, i, event)
           self._check_new_state_changes(dag, i)
           self._check_unexpected_dp_messages(dag, i)
-          self._check_unexpected_controller_messages(dag, i)
           # TODO(cs): quasi race-condition here. If unexpected state change
           # happens *while* we're waiting for event, we basically have a
           # deadlock (if controller logging is set to blocking) until the
@@ -191,6 +190,7 @@ class Replayer(ControlFlow):
           # through.. we only let new state changes through. Should experiment
           # with whether we would get better fidelity if we let them through.
           event_scheduler.schedule(event)
+          self._process_intracontroller_traffic()
           if self.logical_time != event.round:
             self.logical_time = event.round
             self.increment_round()
@@ -297,9 +297,8 @@ class Replayer(ControlFlow):
           self.passed_unexpected_messages.append(repr(log_event))
           self._log_input_event(log_event)
 
-  def _check_unexpected_controller_messages(self, dag, current_index):
-    # TODO(cs): do something intelligent here. For now just always let
-    # everything through.
+  def _process_intracontroller_traffic(self):
+    # Flush intracontroller traffic at the end of every round.
     if self.simulation.controller_patch_panel is not None:
       self.simulation.controller_patch_panel.process_all_incoming_traffic()
 

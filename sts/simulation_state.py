@@ -148,7 +148,7 @@ class SimulationConfig(object):
         # TODO(cs): support OVSControllerPatchPanel
         patch_panel = UserSpaceControllerPatchPanel()
         for c in remote_controllers:
-          patch_panel.register_controller(c.guest_eth_addr, c.buffered_pcap)
+          patch_panel.register_controller(c.cid, c.guest_eth_addr, c.buffered_pcap)
       return patch_panel
 
     def instantiate_topology(create_io_worker):

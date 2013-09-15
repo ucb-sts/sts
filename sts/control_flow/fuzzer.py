@@ -125,6 +125,8 @@ class Fuzzer(ControlFlow):
     self._all_to_all_iterations = 0
     # How often (in terms of logical rounds) to inject all-to-all packets
     self._all_to_all_interval = 5
+    self.blocked_controller_pairs = []
+    self.unblocked_controller_pairs = []
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
@@ -150,6 +152,14 @@ class Fuzzer(ControlFlow):
       raise IOError("Could not find fuzzer params config file: %s" %
                     fuzzer_params_path)
 
+  def _compute_unblocked_controller_pairs(self):
+    sorted_controllers = sorted(self.simulation.controller_manager.controllers, key=lambda c: c.cid)
+    unblocked_pairs = []
+    for i in xrange(0, len(sorted_controllers)-1):
+      for j in xrange(i+1, len(sorted_controllers)):
+        unblocked_pairs.append((sorted_controllers[i], sorted_controllers[j]))
+    return unblocked_pairs
+
   def init_results(self, results_dir):
     if self._input_logger:
       self._input_logger.open(results_dir)
@@ -170,6 +180,7 @@ class Fuzzer(ControlFlow):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.traffic_generator.set_topology(self.simulation.topology)
+    self.unblocked_controller_pairs = self._compute_unblocked_controller_pairs()
     return self.loop()
 
   def loop(self):
@@ -326,6 +337,7 @@ class Fuzzer(ControlFlow):
     self.fuzz_traffic()
     self.check_controllers()
     self.check_migrations()
+    self.check_intracontroller_blocks()
     self.check_controller_traffic()
 
   def check_dataplane(self, pass_through=False):
@@ -516,8 +528,32 @@ class Fuzzer(ControlFlow):
                                               access_link.host.hid))
           self._send_initialization_packet(access_link.host, send_to_self=True)
 
+  def check_intracontroller_blocks(self):
+    if self.simulation.controller_patch_panel is None:
+      return
+
+    blocked_this_round = None
+
+    # Block at most one controller pair per round.
+    if (len(self.unblocked_controller_pairs) > 0 and
+        self.random.random() < self.params.intracontroller_block_rate):
+      (cid1, cid2) = self.random.choice(self.unblocked_controller_pairs)
+      blocked_this_round = (cid1, cid2)
+      self.unblocked_controller_pairs.remove((cid1, cid2))
+      self.simulation.controller_patch_panel.block_controller_pair(cid1, cid2)
+      self._log_input_event(BlockControllerPair(cid1, cid2))
+
+    if (len(self.blocked_controller_pairs) > 0 and
+        self.random.random() < self.params.intracontroller_unblock_rate):
+      (cid1, cid2) = self.random.choice(self.blocked_controller_pairs)
+      self.blocked_controller_pairs.remove((cid1, cid2))
+      self.unblocked_controller_pairs.append((cid1, cid2))
+      self.simulation.controller_patch_panel.unblock_controller_pair(cid1, cid2)
+      self._log_input_event(UnblockControllerPair(cid1, cid2))
+
+    if blocked_this_round is not None:
+      self.blocked_controller_pairs.append(blocked_this_round)
+
   def check_controller_traffic(self):
     if self.simulation.controller_patch_panel is not None:
-      # N.B. if controller_patch_panel.pass_through is False, this simply
-      # moves packets from the incoming queue to the outgoing queue.
       self.simulation.controller_patch_panel.process_all_incoming_traffic()

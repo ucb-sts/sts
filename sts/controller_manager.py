@@ -128,12 +128,11 @@ class ControllerPatchPanel(object):
 
 class UserSpaceControllerPatchPanel(ControllerPatchPanel):
   ''' Uses a python SoftwareSwitch to route between controllers.'''
-  def __init__(self, pass_through=True):
+  def __init__(self):
     # { outgoing port of our switch -> BufferedPCap bound to host veth connected to controller }
     self._port2pcap = {}
-    if not pass_through:
-      raise NotImplementedError("pass-through is currently the only suppported mode.")
-    self.pass_through = pass_through
+    # { cid of connected controller -> ethernet address }
+    self._cid2ethaddr = {}
     # We play a clever trick to route between controllers: use a
     # SoftwareSwitch to do the switching.
     # TODO(cs): three optimization possibilities if this switch can't keep up with
@@ -167,16 +166,45 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
     for pcap in self._port2pcap.itervalues():
       pcap.close()
 
-  def register_controller(self, guest_eth_addr, buffered_pcap):
+  def register_controller(self, cid, guest_eth_addr, buffered_pcap):
     # Wire up a new port for the switch leading to this controller's pcap, and
     # tell the switch to forward any packets destined for this controller out that port.
     # The ethernet address we assign shouldn't matter afaict.
     port = ofp_phy_port(port_no=len(self.switch.ports)+1)
     self.switch.bring_port_up(port)
     self._port2pcap[port] = buffered_pcap
+    self._cid2ethaddr[cid] = guest_eth_addr
     self.switch.on_message_received(None,
             ofp_flow_mod(match=ofp_match(dl_dst=guest_eth_addr),
                          action=ofp_action_output(port=port)))
+
+  def block_controller_pair(self, cid1, cid2):
+    ''' Drop all messages sent between controller 1 and controller 2 until
+    unblock_controller_pair is called. '''
+    ethaddr1 = self._cid2ethaddr[cid1]
+    ethaddr2 = self._cid2ethaddr[cid2]
+    # Make sure to block both directions.
+    # TODO(cs): support unidirectional blocks.
+    # N.B. no actions implies drop.
+    self.switch.on_message_received(None,
+            ofp_flow_mod(match=ofp_match(dl_dst=ethaddr1,dl_src=ethaddr2),
+                         priority=OFP_DEFAULT_PRIORITY+1))
+    self.switch.on_message_received(None,
+            ofp_flow_mod(match=ofp_match(dl_dst=ethaddr2,dl_src=ethaddr1),
+                         priority=OFP_DEFAULT_PRIORITY+1))
+
+  def unblock_controller_pair(self, cid1, cid2):
+    ''' Stop dropping messages sent between controller 1 and controller 2 '''
+    ethaddr1 = self._cid2ethaddr[cid1]
+    ethaddr2 = self._cid2ethaddr[cid2]
+    self.switch.on_message_received(None,
+            ofp_flow_mod(match=ofp_match(dl_dst=ethaddr1,dl_src=ethaddr2),
+                         priority=OFP_DEFAULT_PRIORITY+1,
+                         command=OFPFC_DELETE))
+    self.switch.on_message_received(None,
+            ofp_flow_mod(match=ofp_match(dl_dst=ethaddr2,dl_src=ethaddr1),
+                         priority=OFP_DEFAULT_PRIORITY+1,
+                         command=OFPFC_DELETE))
 
   def process_all_incoming_traffic(self):
     for port, pcap in self._port2pcap.iteritems():
