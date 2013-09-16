@@ -67,6 +67,7 @@ class SimulationConfig(object):
                topology_class=FatTree,
                topology_params="",
                patch_panel_class=BufferedPatchPanel,
+               controller_patch_panel_class=UserSpaceControllerPatchPanel,
                dataplane_trace=None,
                snapshot_service=None,
                multiplex_sockets=False,
@@ -113,6 +114,7 @@ class SimulationConfig(object):
     self.current_simulation = None
     self.multiplex_sockets = multiplex_sockets
     self.interpose_on_controllers = interpose_on_controllers
+    self.controller_patch_panel_class = controller_patch_panel_class
 
   def bootstrap(self, sync_callback, boot_controllers=default_boot_controllers):
     '''Return a simulation object encapsulating the state of
@@ -145,8 +147,7 @@ class SimulationConfig(object):
       # N.B. includes local controllers in network namespaces or VMs.
       remote_controllers = controller_manager.remote_controllers
       if len(remote_controllers) != 0:
-        # TODO(cs): support OVSControllerPatchPanel
-        patch_panel = UserSpaceControllerPatchPanel(create_io_worker)
+        patch_panel = self.controller_patch_panel_class(create_io_worker)
         for c in remote_controllers:
           patch_panel.register_controller(c.cid, c.guest_eth_addr, c.host_device)
       return patch_panel
