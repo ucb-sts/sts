@@ -287,3 +287,6 @@ class OVSControllerPatchPanel(ControllerPatchPanel):
   def _create_port_for_controller(self, guest_eth_addr, host_device):
     raise NotImplementedError("")
 
+  def clean_up(self):
+    self.json_worker.close()
+    self.pox.kill()
