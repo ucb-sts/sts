@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections import namedtuple
 import unittest
 import sys
 import os
@@ -22,6 +23,8 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 from sts.controller_manager import *
 from sts.util.network_namespace import *
 from sts.util.io_master import *
+from pox.openflow.software_switch import *
+from sts.entities import FuzzSoftwareSwitch
 
 class UserSpaceControllerPatchPanelTest(unittest.TestCase):
   def _setup_patch_panel(self, create_io_worker):
@@ -65,3 +68,25 @@ class UserSpaceControllerPatchPanelTest(unittest.TestCase):
     # TODO(cs): verify that no ICMP replies have been buffered.
     # TODO(cs): unblock the controllers and verify that something goes
     # through.
+
+MockControllerInfo = namedtuple('MockControllerInfo', ['address', 'port', 'cid'])
+
+class OVSControllerPatchPanelTest(unittest.TestCase):
+  def test_basic(self):
+    io_master = IOMaster()
+    p = OVSControllerPatchPanel(io_master.create_worker_for_socket)
+    # Wire up a SoftwareSwitch (as a lightweight substitute for OVS) to connect
+    # to the patch panel's POX forwarder, and verify that it gets initialized.
+    switch = FuzzSoftwareSwitch(5, ports=[])
+    controller_info = MockControllerInfo("127.0.0.1", OVSControllerPatchPanel.of_port, "c1")
+    switch.add_controller_info(controller_info)
+    def create_connection(info, switch):
+      socket = connect_socket_with_backoff(info.address, info.port)
+      io_worker = io_master.create_worker_for_socket(socket)
+      return OFConnection(io_worker)
+    switch.connect(create_connection)
+
+    # TODO(cs): this number is super finicky. Figure out a better way to
+    # ensure that all packets have been processed.
+    for i in xrange(10):
+      io_master.select(timeout=0.2)

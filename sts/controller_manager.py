@@ -16,12 +16,19 @@
 
 ''' Convenience object for encapsulating and interacting with Controller processes '''
 
+from pox.lib.util import connect_socket_with_backoff
 from pox.lib.packet.ethernet import ethernet
+from pox.lib.ioworker.io_worker import JSONIOWorker
 from pox.openflow.software_switch import *
 from pox.openflow.libopenflow_01 import *
 from sts.entities import ControllerState
 from sts.util.console import msg
 from sts.util.network_namespace import bind_raw_socket
+from sts.util.convenience import base64_encode
+
+import subprocess
+import os
+import abc
 import logging
 log = logging.getLogger("ctrl_mgm")
 
@@ -123,19 +130,74 @@ class ControllerPatchPanel(object):
   not implemented here. We assume here that the controllers route through
   (virtual) interfaces on this machine, one for each controller.
   '''
+  __metaclass__ = abc.ABCMeta
+
   # TODO(cs): implement fingerprints for all control messages (e.g. Cassandra,
   # VRRP).
   def __init__(self, create_io_worker):
     self.create_io_worker = create_io_worker
+    # { cid of connected controller -> ethernet address }
+    self._cid2ethaddr = {}
+
+  def _initialize_switch(self):
+    # Tell it to flood all ethernet broadcasts.
+    # TODO(cs): as a (potentially substantial) optimization, act as an
+    # ARP/DHCP server, since we know all addresses.
+    for dl_dst in [EthAddr("FF:FF:FF:FF:FF:FF"), EthAddr("00:00:00:00:00:00")]:
+      self._send_command(ofp_flow_mod(match=ofp_match(dl_dst=dl_dst),
+                                     action=ofp_action_output(port=OFPP_FLOOD)))
+    # Tell it to drop all unmatched packets.
+    self._send_command(ofp_flow_mod(match=ofp_match(), priority=1))
+
+  @abc.abstractmethod
+  def _send_command(self, command):
+    pass
+
+  def register_controller(self, cid, guest_eth_addr, host_device):
+    ''' Register a controller with this patch panel.'''
+    self._cid2ethaddr[cid] = guest_eth_addr
+    # Create a port for this controller.
+    port = self._create_port_for_controller(guest_eth_addr, host_device)
+    # Tell the switch to forward any packets destined for this controller out that port.
+    self._send_command(ofp_flow_mod(match=ofp_match(dl_dst=guest_eth_addr),
+                                   action=ofp_action_output(port=port)))
+
+  @abc.abstractmethod
+  def _create_port_for_controller(self):
+    pass
+
+  def clean_up(self):
+    pass
+
+  def block_controller_pair(self, cid1, cid2):
+    ''' Drop all messages sent between controller 1 and controller 2 until
+    unblock_controller_pair is called. '''
+    ethaddr1 = self._cid2ethaddr[cid1]
+    ethaddr2 = self._cid2ethaddr[cid2]
+    # Make sure to block both directions.
+    # TODO(cs): support unidirectional blocks.
+    # N.B. no actions implies drop.
+    self._send_command(ofp_flow_mod(match=ofp_match(dl_dst=ethaddr1,dl_src=ethaddr2),
+                                    priority=OFP_DEFAULT_PRIORITY+1))
+    self._send_command(ofp_flow_mod(match=ofp_match(dl_dst=ethaddr2,dl_src=ethaddr1),
+                                    priority=OFP_DEFAULT_PRIORITY+1))
+
+  def unblock_controller_pair(self, cid1, cid2):
+    ''' Stop dropping messages sent between controller 1 and controller 2 '''
+    ethaddr1 = self._cid2ethaddr[cid1]
+    ethaddr2 = self._cid2ethaddr[cid2]
+    self._send_command(ofp_flow_mod(match=ofp_match(dl_dst=ethaddr1,dl_src=ethaddr2),
+                                    priority=OFP_DEFAULT_PRIORITY+1,
+                                    command=OFPFC_DELETE))
+    self._send_command(ofp_flow_mod(match=ofp_match(dl_dst=ethaddr2,dl_src=ethaddr1),
+                                    priority=OFP_DEFAULT_PRIORITY+1,
+                                    command=OFPFC_DELETE))
+
 
 class UserSpaceControllerPatchPanel(ControllerPatchPanel):
   ''' Uses a python SoftwareSwitch to route between controllers.'''
   def __init__(self, create_io_worker):
     super(UserSpaceControllerPatchPanel, self).__init__(create_io_worker)
-    # { outgoing port of our switch -> io_worker bound to host veth connected to controller }
-    self._port2io_worker = {}
-    # { cid of connected controller -> ethernet address }
-    self._cid2ethaddr = {}
     # We play a clever trick to route between controllers: use a
     # SoftwareSwitch to do the switching.
     # TODO(cs): three optimization possibilities if this switch can't keep up with
@@ -152,36 +214,27 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
     #   from dst EthAddr -> raw socket, without indirection through recococo
     #   events.
     self.switch = SoftwareSwitch(-1, ports=[])
-    # Tell it to flood all ethernet broadcasts.
-    # TODO(cs): as a (potentially substantial) optimization, act as an
-    # ARP/DHCP server, since we know all addresses.
-    for dl_dst in [EthAddr("FF:FF:FF:FF:FF:FF"), EthAddr("00:00:00:00:00:00")]:
-      self.switch.on_message_received(None,
-              ofp_flow_mod(match=ofp_match(dl_dst=dl_dst),
-                           action=ofp_action_output(port=OFPP_FLOOD)))
-    # Tell it to drop all unmatched packets.
-    self.switch.on_message_received(None,
-              ofp_flow_mod(match=ofp_match(), priority=1))
+    # { outgoing port of our switch -> io_worker bound to host veth connected to controller }
+    self._port2io_worker = {}
     # Add a DpOutEvent handler.
     # TODO(cs): potential optimization: don't redirect through revent;
     # have the switch directly output the pcap.
     self.switch.addListener(DpPacketOut,
             lambda event: self._port2io_worker[event.port].send(event.packet.pack()))
+    self._initialize_switch()
 
   def clean_up(self):
     for io_worker in self._port2io_worker.itervalues():
       io_worker.close()
 
-  def register_controller(self, cid, guest_eth_addr, host_device):
-    self._cid2ethaddr[cid] = guest_eth_addr
+  def _send_command(self, command):
+    self.switch.on_message_received(None, command)
+
+  def _create_port_for_controller(self, guest_eth_addr, host_device):
     # Wire up a new port for the switch leading to this controller's io_worker, and
-    # tell the switch to forward any packets destined for this controller out that port.
     # The ethernet address we assign to the switch's port shouldn't matter afaict.
     port = ofp_phy_port(port_no=len(self.switch.ports)+1)
     self.switch.bring_port_up(port)
-    self.switch.on_message_received(None,
-            ofp_flow_mod(match=ofp_match(dl_dst=guest_eth_addr),
-                         action=ofp_action_output(port=port)))
 
     # Hook up a raw_socket and io_worker for this host_device.
     # TODO(cs): suport pcap filtering as an alternative to raw sockets. Would
@@ -204,35 +257,33 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
       switch.process_packet(packet, port.port_no)
     io_worker.set_receive_handler(_process_raw_socket_read)
     self._port2io_worker[port] = io_worker
-
-  def block_controller_pair(self, cid1, cid2):
-    ''' Drop all messages sent between controller 1 and controller 2 until
-    unblock_controller_pair is called. '''
-    ethaddr1 = self._cid2ethaddr[cid1]
-    ethaddr2 = self._cid2ethaddr[cid2]
-    # Make sure to block both directions.
-    # TODO(cs): support unidirectional blocks.
-    # N.B. no actions implies drop.
-    self.switch.on_message_received(None,
-            ofp_flow_mod(match=ofp_match(dl_dst=ethaddr1,dl_src=ethaddr2),
-                         priority=OFP_DEFAULT_PRIORITY+1))
-    self.switch.on_message_received(None,
-            ofp_flow_mod(match=ofp_match(dl_dst=ethaddr2,dl_src=ethaddr1),
-                         priority=OFP_DEFAULT_PRIORITY+1))
-
-  def unblock_controller_pair(self, cid1, cid2):
-    ''' Stop dropping messages sent between controller 1 and controller 2 '''
-    ethaddr1 = self._cid2ethaddr[cid1]
-    ethaddr2 = self._cid2ethaddr[cid2]
-    self.switch.on_message_received(None,
-            ofp_flow_mod(match=ofp_match(dl_dst=ethaddr1,dl_src=ethaddr2),
-                         priority=OFP_DEFAULT_PRIORITY+1,
-                         command=OFPFC_DELETE))
-    self.switch.on_message_received(None,
-            ofp_flow_mod(match=ofp_match(dl_dst=ethaddr2,dl_src=ethaddr1),
-                         priority=OFP_DEFAULT_PRIORITY+1,
-                         command=OFPFC_DELETE))
+    return port
 
 class OVSControllerPatchPanel(ControllerPatchPanel):
   ''' Uses OVS to route between controllers. '''
-  pass
+  of_port = 8765
+  messenger_port = 9876
+
+  def __init__(self, create_io_worker):
+    super(OVSControllerPatchPanel, self).__init__(create_io_worker)
+    # Boot up POX.
+    args = str("""./pox.py openflow.of_01 --address=127.0.0.1 --port=%d"""
+               """         messenger.messenger --tcp_address=127.0.0.1 --tcp_port=%d """
+               """         sts_of_forwarder.sts_of_forwarder """ %
+               (self.of_port, self.messenger_port)).split()
+    self.pox = subprocess.Popen(args, cwd="./pox/", preexec_fn=lambda: os.setsid())
+    # Establish connection with POX messenger component.
+    true_socket = connect_socket_with_backoff(address="127.0.0.1",
+                                              port=self.messenger_port)
+    self.json_worker = JSONIOWorker(create_io_worker(true_socket))
+    # Send the handshake.
+    self.json_worker.send({"sts_connection": ""})
+    self._initialize_switch()
+
+  def _send_command(self, command):
+    b64_pkt = base64_encode(command)
+    self.json_worker.send(b64_pkt)
+
+  def _create_port_for_controller(self, guest_eth_addr, host_device):
+    raise NotImplementedError("")
+
