@@ -111,7 +111,6 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
 
   return (guest, guest_eth_addr, host_device)
 
-
 # TODO(cs): move these functions -- not necessarily specific to network
 # namespaces.
 def bind_raw_socket(host_device, blocking=0):

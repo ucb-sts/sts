@@ -21,6 +21,7 @@ from pox.openflow.software_switch import *
 from pox.openflow.libopenflow_01 import *
 from sts.entities import ControllerState
 from sts.util.console import msg
+from sts.util.network_namespace import bind_raw_socket
 import logging
 log = logging.getLogger("ctrl_mgm")
 
@@ -124,13 +125,15 @@ class ControllerPatchPanel(object):
   '''
   # TODO(cs): implement fingerprints for all control messages (e.g. Cassandra,
   # VRRP).
-  pass
+  def __init__(self, create_io_worker):
+    self.create_io_worker = create_io_worker
 
 class UserSpaceControllerPatchPanel(ControllerPatchPanel):
   ''' Uses a python SoftwareSwitch to route between controllers.'''
-  def __init__(self):
-    # { outgoing port of our switch -> BufferedPCap bound to host veth connected to controller }
-    self._port2pcap = {}
+  def __init__(self, create_io_worker):
+    super(UserSpaceControllerPatchPanel, self).__init__(create_io_worker)
+    # { outgoing port of our switch -> io_worker bound to host veth connected to controller }
+    self._port2io_worker = {}
     # { cid of connected controller -> ethernet address }
     self._cid2ethaddr = {}
     # We play a clever trick to route between controllers: use a
@@ -156,27 +159,51 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
       self.switch.on_message_received(None,
               ofp_flow_mod(match=ofp_match(dl_dst=dl_dst),
                            action=ofp_action_output(port=OFPP_FLOOD)))
+    # Tell it to drop all unmatched packets.
+    self.switch.on_message_received(None,
+              ofp_flow_mod(match=ofp_match(), priority=1))
     # Add a DpOutEvent handler.
     # TODO(cs): potential optimization: don't redirect through revent;
     # have the switch directly output the pcap.
     self.switch.addListener(DpPacketOut,
-            lambda event: self._port2pcap[event.port].inject(event.packet))
+            lambda event: self._port2io_worker[event.port].send(event.packet.pack()))
 
-  def close_all_pcaps(self):
-    for pcap in self._port2pcap.itervalues():
-      pcap.close()
+  def clean_up(self):
+    for io_worker in self._port2io_worker.itervalues():
+      io_worker.close()
 
-  def register_controller(self, cid, guest_eth_addr, buffered_pcap):
-    # Wire up a new port for the switch leading to this controller's pcap, and
+  def register_controller(self, cid, guest_eth_addr, host_device):
+    self._cid2ethaddr[cid] = guest_eth_addr
+    # Wire up a new port for the switch leading to this controller's io_worker, and
     # tell the switch to forward any packets destined for this controller out that port.
-    # The ethernet address we assign shouldn't matter afaict.
+    # The ethernet address we assign to the switch's port shouldn't matter afaict.
     port = ofp_phy_port(port_no=len(self.switch.ports)+1)
     self.switch.bring_port_up(port)
-    self._port2pcap[port] = buffered_pcap
-    self._cid2ethaddr[cid] = guest_eth_addr
     self.switch.on_message_received(None,
             ofp_flow_mod(match=ofp_match(dl_dst=guest_eth_addr),
                          action=ofp_action_output(port=port)))
+
+    # Hook up a raw_socket and io_worker for this host_device.
+    # TODO(cs): suport pcap filtering as an alternative to raw sockets. Would
+    # require us to modify pxpcap to allow us to wrap a non-blocking pcap in
+    # an io_worker.
+    raw_socket = bind_raw_socket(host_device)
+    # Set up an io worker for our end of the socket, and tell it to
+    # immediately send packets to the switch.
+    # TODO(cs): create_io_worker is a broken reference!
+    io_worker = self.create_io_worker(raw_socket)
+    # TODO(cs): not sure if this line is strictly needed for the closure.
+    switch = self.switch
+    def _process_raw_socket_read(io_worker):
+      # N.B. raw sockets return exactly one ethernet frame for every read().
+      data = io_worker.peek_receive_buf()
+      packet = ethernet(bytes(data))
+      io_worker.consume_receive_buf(len(data))
+      if log.isEnabledFor(logging.DEBUG):
+        log.debug("Dequeing packet %s, port %s" % (packet, port))
+      switch.process_packet(packet, port.port_no)
+    io_worker.set_receive_handler(_process_raw_socket_read)
+    self._port2io_worker[port] = io_worker
 
   def block_controller_pair(self, cid1, cid2):
     ''' Drop all messages sent between controller 1 and controller 2 until
@@ -205,14 +232,6 @@ class UserSpaceControllerPatchPanel(ControllerPatchPanel):
             ofp_flow_mod(match=ofp_match(dl_dst=ethaddr2,dl_src=ethaddr1),
                          priority=OFP_DEFAULT_PRIORITY+1,
                          command=OFPFC_DELETE))
-
-  def process_all_incoming_traffic(self):
-    for port, pcap in self._port2pcap.iteritems():
-      while not pcap.read_queue.empty():
-        packet = ethernet(raw=pcap.read_queue.get())
-        if log.isEnabledFor(logging.DEBUG):
-          log.debug("Dequeing packet %s, port %s" % (packet, port))
-        self.switch.process_packet(packet, port.port_no)
 
 class OVSControllerPatchPanel(ControllerPatchPanel):
   ''' Uses OVS to route between controllers. '''

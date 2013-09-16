@@ -190,7 +190,6 @@ class Replayer(ControlFlow):
           # through.. we only let new state changes through. Should experiment
           # with whether we would get better fidelity if we let them through.
           event_scheduler.schedule(event)
-          self._process_intracontroller_traffic()
           if self.logical_time != event.round:
             self.logical_time = event.round
             self.increment_round()
@@ -296,11 +295,6 @@ class Replayer(ControlFlow):
           log_event.replay_time = SyncTime.now()
           self.passed_unexpected_messages.append(repr(log_event))
           self._log_input_event(log_event)
-
-  def _process_intracontroller_traffic(self):
-    # Flush intracontroller traffic at the end of every round.
-    if self.simulation.controller_patch_panel is not None:
-      self.simulation.controller_patch_panel.process_all_incoming_traffic()
 
 # --- Note: use DataplaneChecker at your own risk. I have observed it fail to
 #     reproduce a bug that was reproducible with dataplane timeouts.

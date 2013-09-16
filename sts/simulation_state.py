@@ -138,7 +138,7 @@ class SimulationConfig(object):
       msg.set_io_master(_io_master)
       return _io_master
 
-    def wire_controller_patch_panel(controller_manager):
+    def wire_controller_patch_panel(controller_manager, create_io_worker):
       patch_panel = None
       if not self.interpose_on_controllers:
         return patch_panel
@@ -146,9 +146,9 @@ class SimulationConfig(object):
       remote_controllers = controller_manager.remote_controllers
       if len(remote_controllers) != 0:
         # TODO(cs): support OVSControllerPatchPanel
-        patch_panel = UserSpaceControllerPatchPanel()
+        patch_panel = UserSpaceControllerPatchPanel(create_io_worker)
         for c in remote_controllers:
-          patch_panel.register_controller(c.cid, c.guest_eth_addr, c.buffered_pcap)
+          patch_panel.register_controller(c.cid, c.guest_eth_addr, c.host_device)
       return patch_panel
 
     def instantiate_topology(create_io_worker):
@@ -170,7 +170,8 @@ class SimulationConfig(object):
     controller_manager = boot_controllers(self.controller_configs,
                                           self.snapshot_service,
                                           sync_connection_manager)
-    controller_patch_panel = wire_controller_patch_panel(controller_manager)
+    controller_patch_panel = wire_controller_patch_panel(controller_manager,
+                                                         io_master.create_worker_for_socket)
     topology = instantiate_topology(io_master.create_worker_for_socket)
     patch_panel = self._patch_panel_class(topology.switches, topology.hosts,
                                           topology.get_connected_port)
@@ -266,7 +267,7 @@ class Simulation(object):
           connection.close()
 
     if self.controller_patch_panel is not None:
-      self.controller_patch_panel.close_all_pcaps()
+      self.controller_patch_panel.clean_up()
 
     # Just to make sure there isn't any state lying around, throw out
     # the old RecocoIOLoop

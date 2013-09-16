@@ -28,7 +28,7 @@ import pox.lib.packet.ethernet as eth
 from pox.lib.addresses import EthAddr, IPAddr
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
-from sts.util.network_namespace import launch_namespace, bind_raw_socket, bind_pcap
+from sts.util.network_namespace import launch_namespace
 from sts.util.convenience import IPAddressSpace
 
 from itertools import count
@@ -475,7 +475,7 @@ class Controller(object):
     self.log = logging.getLogger("Controller")
     # For network namespaces only:
     self.guest_eth_addr = None
-    self.buffered_pcap = None
+    self.host_device = None
 
   @property
   def remote(self):
@@ -533,11 +533,10 @@ class Controller(object):
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     if self.config.launch_in_network_namespace:
-      (self.process, self.guest_eth_addr, host_device) = \
+      (self.process, self.guest_eth_addr, self.host_device) = \
           launch_namespace(" ".join(self.config.expanded_start_cmd),
                            self.config.address, self.cid,
                            host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address))
-      self.buffered_pcap = self._bind_pcap(host_device)
     else:
       self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
@@ -627,12 +626,11 @@ class POXController(Controller):
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
     if self.config.launch_in_network_namespace:
-      (self.process, self.guest_eth_addr, host_device) = \
+      (self.process, self.guest_eth_addr, self.host_device) = \
           launch_namespace(" ".join(self.config.expanded_start_cmd),
                            self.config.address, self.cid,
                            host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address),
                            cwd=self.config.cwd, env=env)
-      self.buffered_pcap = self._bind_pcap(host_device)
     else:
       self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
     self._register_proc(self.process)

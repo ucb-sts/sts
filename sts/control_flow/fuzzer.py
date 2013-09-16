@@ -553,7 +553,3 @@ class Fuzzer(ControlFlow):
 
     if blocked_this_round is not None:
       self.blocked_controller_pairs.append(blocked_this_round)
-
-  def check_controller_traffic(self):
-    if self.simulation.controller_patch_panel is not None:
-      self.simulation.controller_patch_panel.process_all_incoming_traffic()
