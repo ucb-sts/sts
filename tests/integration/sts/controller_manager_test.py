@@ -19,12 +19,12 @@ import time
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
-from sts.controller_manager import UserSpaceControllerPatchPanel
+from sts.controller_manager import *
 from sts.util.network_namespace import *
 from sts.util.io_master import *
 
 class UserSpaceControllerPatchPanelTest(unittest.TestCase):
-  def _setup_patch_panel(self, create_io_worker, block_controllers=False):
+  def _setup_patch_panel(self, create_io_worker):
     # Have two net_ns processes ping eachother, and verify that the pings go through.
     p = UserSpaceControllerPatchPanel(create_io_worker)
     ping1_addr = "192.168.1.3"
@@ -54,7 +54,7 @@ class UserSpaceControllerPatchPanelTest(unittest.TestCase):
     if os.geteuid() != 0: # Must be run as root
       return
 
-    p = self._setup_patch_panel()
+    p = self._setup_patch_panel(io_master.create_worker_for_socket))
     p.block_controller_pair("c1", "c2")
 
     # TODO(cs): this number is super finicky. Figure out a better way to
