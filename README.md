@@ -13,7 +13,7 @@ STS depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install STS, you
 ```
 $ git clone git://github.com/ucb-sts/sts.git
 $ cd sts
-$ git clone -b debugger git://github.com/noxrepo/pox.git pox/
+$ git clone -b debugger git://github.com/ucb-sts/pox.git
 ```
 
 ### Running
@@ -73,12 +73,6 @@ You will need a [bitbucket](https://bitbucket.org/) account in order to clone th
 To use the advanced replay features of STS, you may need to install pytrie:
 ```
 $ sudo pip install pytrie
-```
-
-If your control software supports distribution, you may need to compile POX's pcap library to enable interposition on messages sent between controllers:
-```
-# (N.B. depends on the libpcap-dev package)
-$ $ (cd pox/pox/lib/pxcap/pxcap_c && python setup.py build)
 ```
 
 Finally, interactive mode depends on the readline module:
