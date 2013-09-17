@@ -57,7 +57,7 @@ class UserSpaceControllerPatchPanelTest(unittest.TestCase):
     if os.geteuid() != 0: # Must be run as root
       return
 
-    p = self._setup_patch_panel(io_master.create_worker_for_socket))
+    p = self._setup_patch_panel(io_master.create_worker_for_socket)
     p.block_controller_pair("c1", "c2")
 
     # TODO(cs): this number is super finicky. Figure out a better way to
