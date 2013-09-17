@@ -338,7 +338,6 @@ class Fuzzer(ControlFlow):
     self.check_controllers()
     self.check_migrations()
     self.check_intracontroller_blocks()
-    self.check_controller_traffic()
 
   def check_dataplane(self, pass_through=False):
     ''' Decide whether to delay, drop, or deliver packets '''
