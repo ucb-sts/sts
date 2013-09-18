@@ -48,6 +48,7 @@ class GodScheduler(EventMixin):
     self.pendingreceive2conn_messages = defaultdict(list)
     # { pending send -> [(connection, pending ofp)_1, (connection, pending ofp)_2, ...] }
     self.pendingsend2conn_messages = defaultdict(list)
+    self._delegate_input_logger = None
 
   def _pass_through_handler(self, message_event):
     ''' handler for pass-through mode '''
@@ -64,12 +65,17 @@ class GodScheduler(EventMixin):
                                       pending_message.controller_id,
                                       pending_message.fingerprint,
                                       b64_packet=message_event.b64_packet)
-    self.passed_through_events.append(replay_event)
+    if self._delegate_input_logger is not None:
+      # TODO(cs): set event.round somehow?
+      self._delegate_input_logger.log_input_event(replay_event)
+    else:
+      self.passed_through_events.append(replay_event)
 
-  def set_pass_through(self):
+  def set_pass_through(self, input_logger=None):
     ''' Cause all message receipts to pass through immediately without being
     buffered'''
     self.passed_through_events = []
+    self._delegate_input_logger = input_logger
     self.addListener(PendingMessage, self._pass_through_handler)
 
   def unset_pass_through(self):
