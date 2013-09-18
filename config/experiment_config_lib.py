@@ -167,6 +167,7 @@ class ControllerConfig(object):
     address = None
     if self.index is not None and self.index <= len(self._controller_addresses):
       address = self._controller_addresses[self.index-1]
+      self.address = address
       log.info("Found controller address for %s: %s!" % (self.label, self.address))
     else:
       raise RuntimeError("No IP address resolved for controller %s!" % self.label)
