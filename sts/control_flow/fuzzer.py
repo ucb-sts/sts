@@ -412,7 +412,7 @@ class Fuzzer(ControlFlow):
         assert(isinstance(switch, FuzzSoftwareSwitch))
         if (self.random.random() < self.params.ofp_cmd_process_rate):
           if switch.has_pending_commands():
-            switch.process_command()
+            (conn, processed_command) = switch.process_delayed_command()
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''

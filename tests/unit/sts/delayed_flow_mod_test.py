@@ -4,7 +4,6 @@ import sys
 import os.path
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
-print sys.path
 
 from pox.openflow.libopenflow_01 import *
 from sts.control_flow import Fuzzer, create_mock_connection
@@ -31,7 +30,7 @@ class MonkeyRandom:
 class DelayedFlowModTest(unittest.TestCase):
 
   class ControllerConfigs(object):
-    """Fake controller configuration to add to switch"""
+    """ Fake controller configuration to add to switch"""
     def __init__(self):
       self.cid = 3
 
@@ -64,13 +63,13 @@ class DelayedFlowModTest(unittest.TestCase):
 
     # Tell switch to process commands the way Fuzzer would
     self.assertTrue(switch.has_pending_commands())
-    switch.process_command()
+    switch.process_delayed_command()
     self.assertTrue(switch.has_pending_commands())
-    switch.process_command()
+    switch.process_delayed_command()
     self.assertTrue(switch.has_pending_commands())
-    switch.process_command()
+    switch.process_delayed_command()
     self.assertTrue(switch.has_pending_commands())
-    switch.process_command()
+    switch.process_delayed_command()
 
     # Make sure flow mods were processed according to the generated weights
     # IMPORTANT: Works off assumption switch's table stores entries in order they were processed
@@ -80,19 +79,13 @@ class DelayedFlowModTest(unittest.TestCase):
     self.assertEqual(switch.table.table[3].match.in_port, flow_mod1.match.in_port)
 
     # Make sure other_packet wasn't put into queue
-    self.assertRaises(Queue.Empty, switch.process_command)
+    self.assertRaises(Queue.Empty, switch.process_delayed_command)
     # Make sure nothing else got in the table.
     self.assertRaises(IndexError, switch.table.table.__getitem__,4)
     print switch.table.table
 
     # Restore legitimate random.Random class
     random.Random = old_random
-
-
-
-
-
-
 
 
 if __name__ == '__main__':
