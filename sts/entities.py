@@ -149,7 +149,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.error_handler = error_handler
     self.controller_info = []
     self.cmd_queue = Queue.PriorityQueue()
-    self.random = random.Random() # Seed this(?)
+    self.random = random.Random() # TODO(jl): Seed this
 
   def add_controller_info(self, info):
     self.controller_info.append(info)
@@ -235,10 +235,11 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def has_pending_commands(self):
     return not self.cmd_queue.empty()
 
-  def process_command(self):
-    #Throws an Empty error if queue is empty, but shouldn't be called if queue is empty anyways.
-    conn_cmd_tuple = self.cmd_queue.get_nowait()[1]
-    super(FuzzSoftwareSwitch, self).on_message_received(conn_cmd_tuple[0], conn_cmd_tuple[1])
+  def process_delayed_command(self):
+    """ Throws an Empty error if queue is empty """
+    (conn, command) = self.cmd_queue.get_nowait()[1]
+    super(FuzzSoftwareSwitch, self).on_message_received(conn, command)
+    return (conn, command)
 
   def use_delayed_commands(self):
     self.on_message_received = self.on_message_received_delayed
@@ -246,11 +247,11 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def on_message_received_delayed(self, connection, msg):
     """ Replacement for NXSoftwareSwitch.on_message_received when delaying command processing"""
     if isinstance(msg, ofp_flow_mod):
-      #Buffer flow mods
+      # Buffer flow mods
       rnd_weight = self.random.random()
       self.cmd_queue.put((rnd_weight, (connection, msg)))
     else:
-      #Forward all other messages
+      # Immediately process all other messages
       super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)
 
 class Link (object):
