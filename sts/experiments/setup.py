@@ -16,7 +16,7 @@
 
 from sts.util.console import Tee
 import sts.experiments.lifecycle as exp_lifecycle
-from sts.util.convenience import timestamp_string, create_clean_python_dir
+from sts.util.convenience import timestamp_string, create_clean_python_dir, create_python_dir
 
 import os
 import shutil
@@ -41,6 +41,7 @@ def setup_experiment(args, config):
     config.results_dir += "_" + str(now)
 
   # Set up results directory
+  create_python_dir("./experiments")
   create_clean_python_dir(config.results_dir)
 
   # Copy stdout and stderr to a file "simulator.out"
