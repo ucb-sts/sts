@@ -64,6 +64,9 @@ class Replayer(ControlFlow):
     else:
       self.dag = superlog_path_or_dag
 
+    if len(self.dag.events) == 0:
+      raise ValueError("No events to replay!")
+
     self.default_dp_permit = default_dp_permit
     # Set DataplanePermit and DataplaneDrop to passive if permit is set
     # to default
