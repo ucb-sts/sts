@@ -356,7 +356,7 @@ class MCSFinder(ControlFlow):
       input_logger = InputLogger()
       replayer = Replayer(self.simulation_cfg, new_dag,
                           wait_on_deterministic_values=self.wait_on_deterministic_values,
-                          input_logger=input_logger,
+                          input_logger=input_logger, allow_unexpected_messages=True,
                           **self.kwargs)
       replayer.init_results(results_dir)
       self._runtime_stats = RuntimeStats(subsequence_id)
