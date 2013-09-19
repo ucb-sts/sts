@@ -39,6 +39,20 @@ class GodScheduler(EventMixin):
   by god (control_flow.py) to be processed.
   '''
 
+  # Packet class matches that should be let through automatically if
+  # self.allow_whitelisted_packets is True.
+  whitelisted_packet_classes = [("class", "ofp_packet_out", ("data", ("class", "lldp", None))),
+                                ("class", "ofp_packet_in",  ("data", ("class", "lldp", None))),
+                                ("class", "ofp_echo_request", None),
+                                ("class", "ofp_echo_reply", None)]
+
+  @staticmethod
+  def in_whitelist(packet_fingerprint):
+    for match in GodScheduler.whitelisted_packet_classes:
+      if packet_fingerprint.check_match(match):
+        return True
+    return False
+
   _eventMixin_events = set([PendingMessage])
 
   def __init__(self):
@@ -49,6 +63,7 @@ class GodScheduler(EventMixin):
     # { pending send -> [(connection, pending ofp)_1, (connection, pending ofp)_2, ...] }
     self.pendingsend2conn_messages = defaultdict(list)
     self._delegate_input_logger = None
+    self.pass_through_whitelisted_packets = False
 
   def _pass_through_handler(self, message_event):
     ''' handler for pass-through mode '''
@@ -128,6 +143,9 @@ class GodScheduler(EventMixin):
   def insert_pending_receipt(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
+    if self.pass_through_whitelisted_packets and self.in_whitelist(fingerprint):
+      conn.allow_message_receipt(ofp_message)
+      return
     conn_message = (conn, ofp_message)
     pending_receive = PendingReceive(dpid, controller_id, fingerprint)
     self.pendingreceive2conn_messages[pending_receive].append(conn_message)
@@ -139,6 +157,9 @@ class GodScheduler(EventMixin):
   def insert_pending_send(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
+    if self.pass_through_whitelisted_packets and self.in_whitelist(fingerprint):
+      conn.allow_message_send(ofp_message)
+      return
     conn_message = (conn, ofp_message)
     pending_send = PendingSend(dpid, controller_id, fingerprint)
     self.pendingsend2conn_messages[pending_send].append(conn_message)

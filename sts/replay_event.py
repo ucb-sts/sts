@@ -37,7 +37,7 @@ each event's __init__() method.
 from sts.util.convenience import base64_decode_openflow
 from sts.util.console import msg
 from sts.entities import Link
-from sts.god_scheduler import PendingReceive, PendingSend
+from sts.god_scheduler import PendingReceive, PendingSend, GodScheduler
 from sts.dataplane_traces.trace import DataplaneEvent
 from sts.fingerprints.messages import *
 from config.invariant_checks import name_to_invariant_check
@@ -986,6 +986,7 @@ class ControlMessageBase(InternalEvent):
                      dpid, controller_id)
 
     self._fingerprint = fingerprint
+    self.ignore_whitelisted_packets = False
 
   def get_packet(self):
     # Avoid serialization exceptions, but we still want to memoize.
@@ -1007,9 +1008,12 @@ class ControlMessageReceive(ControlMessageBase):
   openflow message.
   '''
   def proceed(self, simulation):
-    message_waiting = simulation.god_scheduler.message_receipt_waiting(self.pending_receive)
+    pending_receive = self.pending_receive
+    if self.ignore_whitelisted_packets and GodScheduler.in_whitelist(pending_receive.fingerprint):
+      return True
+    message_waiting = simulation.god_scheduler.message_receipt_waiting(pending_receive)
     if message_waiting:
-      simulation.god_scheduler.schedule(self.pending_receive)
+      simulation.god_scheduler.schedule(pending_receive)
       return True
     return False
 
@@ -1045,9 +1049,12 @@ class ControlMessageSend(ControlMessageBase):
   openflow message.
   '''
   def proceed(self, simulation):
-    message_waiting = simulation.god_scheduler.message_send_waiting(self.pending_send)
+    pending_send = self.pending_send
+    if self.ignore_whitelisted_packets and GodScheduler.in_whitelist(pending_send.fingerprint):
+      return True
+    message_waiting = simulation.god_scheduler.message_send_waiting(pending_send)
     if message_waiting:
-      simulation.god_scheduler.schedule(self.pending_send)
+      simulation.god_scheduler.schedule(pending_send)
       return True
     return False
 

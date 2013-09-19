@@ -40,7 +40,8 @@ simulation_config = %s
 control_flow = Replayer(simulation_config, "%s",
                         input_logger=InputLogger(),
                         wait_on_deterministic_values=%s,
-                        allow_unexpected_messages=False)
+                        allow_unexpected_messages=False,
+                        pass_through_whitelisted_messages=True)
 # Invariant check: %s
 '''
 

@@ -36,6 +36,33 @@ class Fingerprint(object):
         flattened[field] = value
     return flattened
 
+  def check_match(self, match):
+    ''' Return whether this fingerprint matches the pattern in match.
+
+    match must be of the form (key, value, nested_match), where key and value
+    are members of self._field2value to match on, and nested_match is either
+    None or a tuple (nest_key, match pattern) to match on recursively.
+
+    This method differs from __eq__ in that it will return True if a
+    subset (specified in match)  of fields are equal, whereas __eq__ requires
+    every field to match.
+
+    # TODO(cs): an arguably cleaner way to implement this would be to support
+    # wildcarded fields in __eq__.
+    '''
+    (key, value, nested_match) = match
+    if key not in self._field2value:
+      return False
+    if value != self._field2value[key]:
+      return False
+    if nested_match is None:
+      return True
+    (nested_key, match) = nested_match
+    nested_fingerprint = self._field2value[nested_key]
+    if nested_fingerprint == ():
+      return True
+    return nested_fingerprint.check_match(match)
+
   @abc.abstractmethod
   def __hash__(self):
     pass
@@ -43,6 +70,9 @@ class Fingerprint(object):
   @abc.abstractmethod
   def __eq__(self, other):
     pass
+
+  def __getitem__(self, key):
+    return self._field2value[key]
 
   def __ne__(self, other):
     # NOTE: __ne__ in python does *NOT* by default delegate to eq
