@@ -30,6 +30,7 @@ from pox.lib.util import TimeoutError
 from pox.lib.packet.lldp import *
 from config.invariant_checks import name_to_invariant_check
 from sts.util.convenience import base64_encode
+from sts.god_scheduler import GodScheduler
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -56,7 +57,9 @@ class Fuzzer(ControlFlow):
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
-               mock_link_discovery=False, initialization_rounds=0):
+               mock_link_discovery=False,
+               never_drop_whitelisted_packets=True,
+               initialization_rounds=0):
     '''
     Options:
       - fuzzer_params: path to event probabilities
@@ -130,6 +133,7 @@ class Fuzzer(ControlFlow):
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
+    self.never_drop_whitelisted_packets = never_drop_whitelisted_packets
 
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
@@ -341,8 +345,6 @@ class Fuzzer(ControlFlow):
 
   def check_dataplane(self, pass_through=False):
     ''' Decide whether to delay, drop, or deliver packets '''
-    def is_lldp(pkt):
-      return type(pkt.next) == lldp
     def drop(dp_event):
       self.simulation.patch_panel.drop_dp_event(dp_event)
       self._log_input_event(DataplaneDrop(dp_event.fingerprint,
@@ -352,12 +354,16 @@ class Fuzzer(ControlFlow):
       self.simulation.patch_panel.permit_dp_event(dp_event)
       self._log_input_event(DataplanePermit(dp_event.fingerprint))
 
+    def in_whitelist(dp_event):
+      return (self.never_drop_whitelisted_packets and
+              GodScheduler.in_whitelist(dp_event.fingerprint[0]))
+
     for dp_event in self.simulation.patch_panel.queued_dataplane_events:
       if pass_through:
         permit(dp_event)
       elif not self.simulation.topology.ok_to_send(dp_event):
         drop(dp_event)
-      elif (self.random.random() >= self.params.dataplane_drop_rate) or is_lldp(dp_event.packet):
+      elif (self.random.random() >= self.params.dataplane_drop_rate or in_whitelist(dp_event)):
         permit(dp_event)
       else:
         drop(dp_event)

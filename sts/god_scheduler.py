@@ -43,6 +43,7 @@ class GodScheduler(EventMixin):
   # self.allow_whitelisted_packets is True.
   whitelisted_packet_classes = [("class", "ofp_packet_out", ("data", ("class", "lldp", None))),
                                 ("class", "ofp_packet_in",  ("data", ("class", "lldp", None))),
+                                ("class", "lldp", None),
                                 ("class", "ofp_echo_request", None),
                                 ("class", "ofp_echo_reply", None)]
 
