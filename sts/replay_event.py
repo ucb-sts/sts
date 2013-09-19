@@ -37,7 +37,7 @@ each event's __init__() method.
 from sts.util.convenience import base64_decode_openflow
 from sts.util.console import msg
 from sts.entities import Link
-from sts.god_scheduler import PendingReceive, PendingSend
+from sts.openflow_buffer import PendingReceive, PendingSend
 from sts.dataplane_traces.trace import DataplaneEvent
 from sts.fingerprints.messages import *
 from config.invariant_checks import name_to_invariant_check
@@ -955,9 +955,9 @@ class ControlMessageReceive(ControlMessageBase):
   openflow message.
   '''
   def proceed(self, simulation):
-    message_waiting = simulation.god_scheduler.message_receipt_waiting(self.pending_receive)
+    message_waiting = simulation.openflow_buffer.message_receipt_waiting(self.pending_receive)
     if message_waiting:
-      simulation.god_scheduler.schedule(self.pending_receive)
+      simulation.openflow_buffer.schedule(self.pending_receive)
       return True
     return False
 
@@ -993,9 +993,9 @@ class ControlMessageSend(ControlMessageBase):
   openflow message.
   '''
   def proceed(self, simulation):
-    message_waiting = simulation.god_scheduler.message_send_waiting(self.pending_send)
+    message_waiting = simulation.openflow_buffer.message_send_waiting(self.pending_send)
     if message_waiting:
-      simulation.god_scheduler.schedule(self.pending_send)
+      simulation.openflow_buffer.schedule(self.pending_send)
       return True
     return False
 

@@ -205,7 +205,7 @@ class Fuzzer(ControlFlow):
       if self.delay_startup:
         # Wait until the first OpenFlow message is received
         log.info("Waiting until first OpenFlow message received..")
-        while self.simulation.god_scheduler.pending_receives() == []:
+        while self.simulation.openflow_buffer.pending_receives() == []:
           self.simulation.io_master.select(self.delay)
 
       sent_self_packets = False
@@ -274,8 +274,8 @@ class Fuzzer(ControlFlow):
     buffered_events = []
     log.info("Pending Messages:")
     for event_type, pending2conn_messages in [
-            (ControlMessageReceive, self.simulation.god_scheduler.pendingreceive2conn_messages),
-            (ControlMessageSend, self.simulation.god_scheduler.pendingsend2conn_messages)]:
+            (ControlMessageReceive, self.simulation.openflow_buffer.pendingreceive2conn_messages),
+            (ControlMessageSend, self.simulation.openflow_buffer.pendingsend2conn_messages)]:
       for p, conn_messages in pending2conn_messages.iteritems():
         log.info("- %r", p)
         for _, ofp_message in conn_messages:
@@ -386,20 +386,20 @@ class Fuzzer(ControlFlow):
                               controller_id=connection.get_controller_id()))
 
   def check_pending_messages(self, pass_through=False):
-    for pending_receipt in self.simulation.god_scheduler.pending_receives():
+    for pending_receipt in self.simulation.openflow_buffer.pending_receives():
       # TODO(cs): this is a really dumb way to fuzz packet receipt scheduling
       if (self.random.random() < self.params.ofp_message_receipt_rate or
           pass_through):
-        message = self.simulation.god_scheduler.schedule(pending_receipt)
+        message = self.simulation.openflow_buffer.schedule(pending_receipt)
         b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                     pending_receipt.controller_id,
                                                     pending_receipt.fingerprint,
                                                     b64_packet=b64_packet))
-    for pending_send in self.simulation.god_scheduler.pending_sends():
+    for pending_send in self.simulation.openflow_buffer.pending_sends():
       if (self.random.random() < self.params.ofp_message_send_rate or
           pass_through):
-        message = self.simulation.god_scheduler.schedule(pending_send)
+        message = self.simulation.openflow_buffer.schedule(pending_send)
         b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageSend(pending_send.dpid,
                                                  pending_send.controller_id,

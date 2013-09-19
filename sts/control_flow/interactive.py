@@ -245,7 +245,7 @@ class Interactive(ControlFlow):
     self.traffic_generator = TrafficGenerator(random.Random())
     # TODO(cs): we don't actually have a way to support pass_through=False, in
     # a reasonable way -- the user has no (easy) way to examine and route
-    # GodScheduler's pending_receives and pending_sends.
+    # OpenFlowBuffer's pending_receives and pending_sends.
     self.pass_through_of_messages = pass_through_of_messages
     # TODO(cs): future feature: allow the user to interactively choose the order
     # events occur for each round, whether to delay, drop packets, fail nodes,
@@ -286,7 +286,7 @@ class Interactive(ControlFlow):
       self.simulation = simulation
 
     if self.pass_through_of_messages:
-      self.simulation.god_scheduler.set_pass_through()
+      self.simulation.openflow_buffer.set_pass_through()
 
     self._forwarded_this_step = 0
     self.traffic_generator.set_topology(self.simulation.topology)
@@ -614,4 +614,4 @@ class Interactive(ControlFlow):
     self.simulation.patch_panel.delay_dp_event(dp_event)
 
   # TODO(cs): add support for control channel blocking + link,
-  # controller failures, god scheduling
+  # controller failures, openflow buffering

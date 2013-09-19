@@ -46,11 +46,11 @@ from exceptions import EnvironmentError
 from platform import system
 
 class DeferredOFConnection(OFConnection):
-  def __init__(self, io_worker, cid, dpid, god_scheduler):
+  def __init__(self, io_worker, cid, dpid, openflow_buffer):
     super(DeferredOFConnection, self).__init__(io_worker)
     self.cid = cid
     self.dpid = dpid
-    self.god_scheduler = god_scheduler
+    self.openflow_buffer = openflow_buffer
     # Don't feed messages to the switch directly
     self.on_message_received = self.insert_pending_receipt
     self.true_on_message_handler = None
@@ -63,8 +63,8 @@ class DeferredOFConnection(OFConnection):
     return self.cid
 
   def insert_pending_receipt(self, _, ofp_msg):
-    ''' Rather than pass directly on to the switch, feed into the god scheduler'''
-    self.god_scheduler.insert_pending_receipt(self.dpid, self.cid, ofp_msg, self)
+    ''' Rather than pass directly on to the switch, feed into the openflow buffer'''
+    self.openflow_buffer.insert_pending_receipt(self.dpid, self.cid, ofp_msg, self)
 
   def set_message_handler(self, handler):
     ''' Take the switch's handler, and store it for later use '''
@@ -76,7 +76,7 @@ class DeferredOFConnection(OFConnection):
 
   def send(self, ofp_message):
     ''' Interpose on switch sends as well '''
-    self.god_scheduler.insert_pending_send(self.dpid, self.cid, ofp_message, self)
+    self.openflow_buffer.insert_pending_send(self.dpid, self.cid, ofp_message, self)
 
   def allow_message_send(self, ofp_message):
     ''' Allow message actually be sent to the controller '''

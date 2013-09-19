@@ -20,7 +20,7 @@ import sts.replay_event
 from pox.lib.revent import Event, EventMixin
 from sts.util.convenience import base64_encode
 import logging
-log = logging.getLogger("god_scheduler")
+log = logging.getLogger("openflow_buffer")
 
 class PendingMessage(Event):
   def __init__(self, pending_message, b64_packet, send_event=False):
@@ -32,11 +32,11 @@ class PendingMessage(Event):
     self.send_event = send_event
 
 # TODO(cs): move me to another file?
-class GodScheduler(EventMixin):
+class OpenFlowBuffer(EventMixin):
   '''
   Models asynchrony: chooses when switches get to process packets from
   controllers. Buffers packets until they are pulled off the buffer and chosen
-  by god (control_flow.py) to be processed.
+  by god aka. the buffer (control_flow.py) to be processed.
   '''
 
   _eventMixin_events = set([PendingMessage])
@@ -118,7 +118,7 @@ class GodScheduler(EventMixin):
     return message
 
   # TODO(cs): make this a factory method that returns DeferredOFConnection objects
-  # with bound god_scheduler.insert() method. (much cleaner API + separation of concerns)
+  # with bound openflow_buffer.insert() method. (much cleaner API + separation of concerns)
   def insert_pending_receipt(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
@@ -129,7 +129,7 @@ class GodScheduler(EventMixin):
     self.raiseEventNoErrors(PendingMessage(pending_receive, b64_packet))
 
   # TODO(cs): make this a factory method that returns DeferredOFConnection objects
-  # with bound god_scheduler.insert() method. (much cleaner API + separation of concerns)
+  # with bound openflow_buffer.insert() method. (much cleaner API + separation of concerns)
   def insert_pending_send(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)

@@ -27,7 +27,7 @@ from sts.dataplane_traces.trace import Trace
 from entities import DeferredOFConnection
 from sts.controller_manager import ControllerManager
 from sts.util.deferred_io import DeferredIOWorker
-from sts.god_scheduler import GodScheduler
+from sts.openflow_buffer import OpenFlowBuffer
 from sts.topology import *
 from sts.invariant_checker import ViolationTracker
 from sts.syncproto.sts_syncer import STSSyncConnectionManager
@@ -158,7 +158,7 @@ class SimulationConfig(object):
     topology = instantiate_topology(io_master.create_worker_for_socket)
     patch_panel = self._patch_panel_class(topology.switches, topology.hosts,
                                           topology.get_connected_port)
-    god_scheduler = GodScheduler()
+    openflow_buffer = OpenFlowBuffer()
     dataplane_trace = None
     if self._dataplane_trace_path is not None:
       dataplane_trace = Trace(self._dataplane_trace_path, topology)
@@ -168,7 +168,7 @@ class SimulationConfig(object):
       violation_tracker = ViolationTracker()
 
     simulation = Simulation(topology, controller_manager, dataplane_trace,
-                            god_scheduler, io_master, patch_panel,
+                            openflow_buffer, io_master, patch_panel,
                             sync_callback, self.multiplex_sockets,
                             violation_tracker, self._kill_controllers_on_exit)
     self.current_simulation = simulation
@@ -194,19 +194,19 @@ class Simulation(object):
   Encapsulates the running state of a single simulation:
     - Topology (network state)
     - Controller processes
-    - GodScheduler (OpenFlow messages)
+    - OpenFlowBuffer (OpenFlow messages)
     - PatchPanel (Dataplane messages)
     - RecordingSyncCallback (controller state changes)
     - Dataplane Trace (pending dataplane messages)
   '''
   def __init__(self, topology, controller_manager, dataplane_trace,
-               god_scheduler, io_master, patch_panel, controller_sync_callback,
+               openflow_buffer, io_master, patch_panel, controller_sync_callback,
                multiplex_sockets, violation_tracker, kill_controllers_on_exit):
     self.topology = topology
     self.controller_manager = controller_manager
     self.controller_manager.set_simulation(self)
     self.dataplane_trace = dataplane_trace
-    self.god_scheduler = god_scheduler
+    self.openflow_buffer = openflow_buffer
     self._io_master = io_master
     self.patch_panel = patch_panel
     self.controller_sync_callback = controller_sync_callback
@@ -221,14 +221,14 @@ class Simulation(object):
   def set_pass_through(self):
     ''' Set to pass-through during bootstrap, so that switch initialization
     messages don't get buffered '''
-    self.god_scheduler.set_pass_through()
+    self.openflow_buffer.set_pass_through()
     if hasattr(self.controller_sync_callback, "set_pass_through"):
       self.controller_sync_callback.set_pass_through()
 
   def unset_pass_through(self):
     ''' unset pass-through mode '''
     observed_events = []
-    observed_events += self.god_scheduler.unset_pass_through()
+    observed_events += self.openflow_buffer.unset_pass_through()
     if hasattr(self.controller_sync_callback, "unset_pass_through"):
       observed_events += self.controller_sync_callback.unset_pass_through()
     return observed_events
@@ -311,7 +311,7 @@ class Simulation(object):
       # Set non-blocking
       socket.setblocking(0)
       io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(socket))
-      connection = DeferredOFConnection(io_worker, controller_info.cid, switch.dpid, self.god_scheduler)
+      connection = DeferredOFConnection(io_worker, controller_info.cid, switch.dpid, self.openflow_buffer)
       return connection
 
     (self.mux_select, self.demuxers) = monkeypatch_select()
