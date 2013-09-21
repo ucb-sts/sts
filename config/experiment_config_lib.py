@@ -41,8 +41,7 @@ class ControllerConfig(object):
   def __init__(self, start_cmd="", address="127.0.0.1", port=None, additional_ports={},
                cwd=None, sync=None, controller_type=None, label=None, config_file=None,
                config_template=None, try_new_ports=False, kill_cmd="", restart_cmd="",
-               check_status_cmd="", get_address_cmd="",
-               launch_in_network_namespace=False):
+               get_address_cmd="", launch_in_network_namespace=False):
     '''
     Store metadata for the controller.
       - start_cmd: command that starts a controller or a set of controllers,
@@ -65,7 +64,6 @@ class ControllerConfig(object):
     self.start_cmd = start_cmd
     self.kill_cmd = kill_cmd
     self.restart_cmd = restart_cmd
-    self.check_status_cmd = check_status_cmd
     self.launch_in_network_namespace = launch_in_network_namespace
     if launch_in_network_namespace and (address == "127.0.0.1" or address == "localhost"):
       raise ValueError("""Must set a non-localhost address for namespace controller.\n"""
@@ -201,10 +199,6 @@ class ControllerConfig(object):
   def expanded_restart_cmd(self):
     return map(self._expand_vars, self.restart_cmd.split())
 
-  @property
-  def expanded_check_status_cmd(self):
-    return map(self._expand_vars, self.check_status_cmd.split())
-
   def generate_config_file(self, target_dir):
     if self.config_file is None:
       self.config_file = os.path.join(target_dir, os.path.basename(self.config_template).replace(".template", ""))
@@ -214,7 +208,7 @@ class ControllerConfig(object):
         out_file.write(self._expand_vars(in_file.read()))
 
   def __repr__(self):
-    attributes = ("start_cmd", "label", "address", "port", "cwd", "controller_type", "sync", "kill_cmd", "restart_cmd", "check_status_cmd")
+    attributes = ("start_cmd", "label", "address", "port", "cwd", "controller_type", "sync", "kill_cmd", "restart_cmd")
 
     pairs = ( (attr, getattr(self, attr)) for attr in attributes)
     quoted = ( "%s=%s" % (attr, repr(value)) for (attr, value) in pairs if value)

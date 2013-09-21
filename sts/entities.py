@@ -36,6 +36,11 @@ import logging
 import os
 import re
 import pickle
+import paramiko
+import time
+
+# Suppress normal SSH messages
+logging.getLogger("paramiko").setLevel(logging.WARN)
 
 class DeferredOFConnection(OFConnection):
   def __init__(self, io_worker, cid, dpid, god_scheduler):
@@ -642,6 +647,7 @@ class BigSwitchController(Controller):
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     super(BigSwitchController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self.log.info(" =====> STARTING BIG SWITCH CONTROLLER <===== ")
+    self.ssh_client = None
 
   def kill(self):
     if self.state != ControllerState.ALIVE:
@@ -677,16 +683,22 @@ class BigSwitchController(Controller):
     self.state = ControllerState.STARTING
 
   def check_status(self, simulation):
+    self.log.info("Checking status of controller %s" % self.label)
     if self.state == ControllerState.STARTING:
       return (True, "OK")
-    # Retrieve status from script
-    if self.config.check_status_cmd == "":
-      raise RuntimeError("No command found to check status of controller %s!" % self.label)
-    self.log.info("Checking status of controller %s: %s" % (self.label, " ".join(self.config.expanded_check_status_cmd)))
-    p = popen_filtered("[%s]" % self.label, self.config.expanded_check_status_cmd, self.config.cwd, redirect_output=False)
-    (out, _) = p.communicate()
+    if self.ssh_client is None:
+      self.ssh_client = paramiko.Transport((self.config.address, 22))
+      self.ssh_client.connect(username="root", password="")
+    session = self.ssh_client.open_channel(kind='session')
+    session.exec_command('service floodlight status')
+    while not session.recv_ready():
+      self.log.debug("Awaiting controller status reply...")
+      time.sleep(0.1)
+    reply = ""
+    while session.recv_ready():
+      reply += session.recv(100)
     # Actual state is whether remote process exists
-    actual_state = ControllerState.ALIVE if ("start" in out) else ControllerState.DEAD
+    actual_state = ControllerState.ALIVE if ("start" in reply) else ControllerState.DEAD
     if self.state == ControllerState.DEAD and actual_state == ControllerState.ALIVE:
       return (False, "Dead, but controller process exists!")
     if self.state == ControllerState.ALIVE and actual_state == ControllerState.DEAD:
