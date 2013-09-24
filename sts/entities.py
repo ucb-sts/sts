@@ -36,11 +36,8 @@ import logging
 import os
 import re
 import pickle
-import paramiko
 import time
 
-# Suppress normal SSH messages
-logging.getLogger("paramiko").setLevel(logging.WARN)
 
 class DeferredOFConnection(OFConnection):
   def __init__(self, io_worker, cid, dpid, god_scheduler):
@@ -687,6 +684,9 @@ class BigSwitchController(Controller):
     if self.state == ControllerState.STARTING:
       return (True, "OK")
     if self.ssh_client is None:
+      import paramiko
+      # Suppress normal SSH messages
+      logging.getLogger("paramiko").setLevel(logging.WARN)
       self.ssh_client = paramiko.Transport((self.config.address, 22))
       self.ssh_client.connect(username="root", password="")
     session = self.ssh_client.open_channel(kind='session')
