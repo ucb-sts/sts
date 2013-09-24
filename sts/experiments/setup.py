@@ -21,6 +21,7 @@ from sts.util.convenience import timestamp_string, create_clean_python_dir, crea
 import os
 import shutil
 import re
+import logging
 
 def setup_experiment(args, config):
   # Grab parameters
@@ -48,6 +49,13 @@ def setup_experiment(args, config):
   tee = Tee(open(os.path.join(config.results_dir, "simulator.out"), "w"))
   tee.tee_stdout()
   tee.tee_stderr()
+
+  # Load log configuration.
+  # N.B. this must be done after Tee()'ing.
+  if args.log_config:
+    logging.config.fileConfig(args.log_config)
+  else:
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
   # If specified, set up a config file for each controller
   for controller_config in config.simulation_config.controller_configs:

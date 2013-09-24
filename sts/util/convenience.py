@@ -17,6 +17,7 @@ from pox.lib.addresses import EthAddr, IPAddr
 import time
 import re
 import os
+import sys
 import errno
 import socket
 import random
@@ -24,9 +25,6 @@ import types
 import struct
 import shutil
 import base64
-
-import logging
-log = logging.getLogger("util")
 
 # don't use the standard instance - we don't want to be seeded
 true_random = random.Random()
@@ -72,9 +70,7 @@ def create_python_dir(results_dir):
 
 def create_clean_python_dir(results_dir):
   if os.path.exists(results_dir):
-    log.warn("Results dir %s already exists. Overwriting.." %
-             results_dir)
-  log.info("Wiping and creating %s" % results_dir)
+    print >> sys.stderr, "Results dir %s already exists. Overwriting.." % results_dir
   rm_rf(results_dir)
   create_python_dir(results_dir)
 
