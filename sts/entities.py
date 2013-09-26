@@ -73,7 +73,8 @@ class DeferredOFConnection(OFConnection):
     self.true_on_message_handler = handler
 
   def allow_message_receipt(self, _, ofp_message):
-    ''' Allow the message to actually go through to the switch '''
+    ''' Allow the message to actually go through to the switch First argument is connection, 
+    but is unused '''
     self.true_on_message_handler(self, ofp_message)
 
   def send(self, ofp_message):
@@ -81,7 +82,8 @@ class DeferredOFConnection(OFConnection):
     self.god_scheduler.insert_pending_send(self.dpid, self.cid, ofp_message, self)
 
   def allow_message_send(self, _, ofp_message):
-    ''' Allow message actually be sent to the controller '''
+    ''' Allow message actually be sent to the controller. First argument is connection, 
+    but is unused '''
     super(DeferredOFConnection, self).send(ofp_message)
 
 class ConnectionlessOFConnection(object):
