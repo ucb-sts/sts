@@ -152,7 +152,7 @@ class Replayer(ControlFlow):
 
   def _print_buffers(self):
     log.debug("Pending Message Receives:")
-    for p in self.simulation.openflow_buffer.pending_receives():
+    for p in self.simulation.god_scheduler.pending_receives():
       log.debug("- %s", p)
     log.debug("Pending State Changes:")
     for p in self.sync_callback.pending_state_changes():
@@ -277,14 +277,14 @@ class Replayer(ControlFlow):
 
     # Now check pending messages.
     for event_fingerprints, messages in [
-         (expected_receive_fingerprints, self.simulation.openflow_buffer.pending_receives()),
-         (expected_send_fingerprints, self.simulation.openflow_buffer.pending_sends())]:
+         (expected_receive_fingerprints, self.simulation.god_scheduler.pending_receives()),
+         (expected_send_fingerprints, self.simulation.god_scheduler.pending_sends())]:
       for pending_message in messages:
         fingerprint = (pending_message.fingerprint,
                        pending_message.dpid,
                        pending_message.controller_id)
         if fingerprint not in expected_fingerprints:
-          message = self.simulation.openflow_buffer.schedule(pending_message)
+          message = self.simulation.god_scheduler.schedule(pending_message)
           b64_packet = base64_encode(message)
           # Monkeypatch a "new internal event" marker to be logged to the JSON trace
           # (All fields picked up by event.to_json())

@@ -29,6 +29,8 @@ from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
 from itertools import count
 from pox.lib.addresses import EthAddr, IPAddr
+from sts.openflow_buffer import OpenFlowBuffer
+from collections import namedtuple
 
 import logging
 import os
@@ -46,11 +48,11 @@ from exceptions import EnvironmentError
 from platform import system
 
 class DeferredOFConnection(OFConnection):
-  def __init__(self, io_worker, cid, dpid, openflow_buffer):
+  def __init__(self, io_worker, cid, dpid, god_scheduler):
     super(DeferredOFConnection, self).__init__(io_worker)
     self.cid = cid
     self.dpid = dpid
-    self.openflow_buffer = openflow_buffer
+    self.god_scheduler = god_scheduler
     # Don't feed messages to the switch directly
     self.on_message_received = self.insert_pending_receipt
     self.true_on_message_handler = None
@@ -64,21 +66,21 @@ class DeferredOFConnection(OFConnection):
 
   def insert_pending_receipt(self, _, ofp_msg):
     ''' Rather than pass directly on to the switch, feed into the openflow buffer'''
-    self.openflow_buffer.insert_pending_receipt(self.dpid, self.cid, ofp_msg, self)
+    self.god_scheduler.insert_pending_receipt(self.dpid, self.cid, ofp_msg, self)
 
   def set_message_handler(self, handler):
     ''' Take the switch's handler, and store it for later use '''
     self.true_on_message_handler = handler
 
-  def allow_message_receipt(self, ofp_message):
+  def allow_message_receipt(self, _, ofp_message):
     ''' Allow the message to actually go through to the switch '''
     self.true_on_message_handler(self, ofp_message)
 
   def send(self, ofp_message):
     ''' Interpose on switch sends as well '''
-    self.openflow_buffer.insert_pending_send(self.dpid, self.cid, ofp_message, self)
+    self.god_scheduler.insert_pending_send(self.dpid, self.cid, ofp_message, self)
 
-  def allow_message_send(self, ofp_message):
+  def allow_message_send(self, _, ofp_message):
     ''' Allow message actually be sent to the controller '''
     super(DeferredOFConnection, self).send(ofp_message)
 
@@ -150,6 +152,10 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.controller_info = []
     self.cmd_queue = Queue.PriorityQueue()
     self.random = random.Random() # TODO(jl): Seed this
+
+    self.openflow_buffer = OpenFlowBuffer()
+    self.table_inserter = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received)
+    self.openflow_buffer.set_table_inserter(self.table_inserter)
 
   def add_controller_info(self, info):
     self.controller_info.append(info)
@@ -237,9 +243,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
 
   def process_delayed_command(self):
     """ Throws an Empty error if queue is empty """
-    (conn, command) = self.cmd_queue.get_nowait()[1]
-    super(FuzzSoftwareSwitch, self).on_message_received(conn, command)
-    return (conn, command)
+    buffered_cmd = self.cmd_queue.get_nowait()[1]
+    return self.openflow_buffer.schedule(buffered_cmd)
 
   def use_delayed_commands(self):
     self.on_message_received = self.on_message_received_delayed
@@ -249,7 +254,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     if isinstance(msg, ofp_flow_mod):
       # Buffer flow mods
       rnd_weight = self.random.random()
-      self.cmd_queue.put((rnd_weight, (connection, msg)))
+      receive = self.openflow_buffer.insert_pending_receipt(self.dpid, 0, msg, connection)
+      self.cmd_queue.put((rnd_weight, receive))
     else:
       # Immediately process all other messages
       super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)
@@ -794,3 +800,11 @@ class BigSwitchController(Controller):
       return (False, "Alive, but no controller process found!")
     return (True, "OK")
 
+class TableInserter(object):
+  def __init__(self, insert_method):
+    self.insert_method = insert_method
+
+  def allow_message_receipt(self, connection, message):
+    return self.insert_method(connection, message)
+
+FakeConnection = namedtuple('FakeConnection', ['ID'])

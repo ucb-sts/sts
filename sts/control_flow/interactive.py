@@ -286,7 +286,7 @@ class Interactive(ControlFlow):
       self.simulation = simulation
 
     if self.pass_through_of_messages:
-      self.simulation.openflow_buffer.set_pass_through()
+      self.simulation.god_scheduler.set_pass_through()
 
     self._forwarded_this_step = 0
     self.traffic_generator.set_topology(self.simulation.topology)
