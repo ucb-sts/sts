@@ -16,7 +16,7 @@ if [ -f .project ]; then
 fi
 
 if [ "$no_compile" == "" ]; then
-  (cd sts/hassel/hassel-c && make)
   (cd sts/hassel/hsa-python && source setup.sh)
+  (cd sts/hassel/hassel-c && make)
 fi
 
