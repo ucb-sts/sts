@@ -22,14 +22,22 @@ from pox.lib.packet.ipv4 import *
 try:
   import config_parser.openflow_parser as hsa
 except ImportError:
+  build_instructions = str(''' $ git submodule init \n'''
+                           ''' $ git submodule update \n'''
+                           ''' $ (cd sts/hassel/hsa-python && source setup.sh) ''')
+  import logging
+  log = logging.getLogger("messages")
+  log.warn("Headerspace Module not loaded. Load it with: %s" % build_instructions)
   class NeedSubmodule(object):
     def _need_submodule(self):
-      raise RuntimeError('''Need to load the hassel submodule:\n '''
-                         ''' $ git submodule init \n'''
-                         ''' $ git submodule update ''')
-    def format(self, *args): self._need_submodule()
-    def hs_format(self, *args): self._need_submodule()
-    def ofp_match_to_hsa_match(self): self._need_submodule()
+      raise RuntimeError("Need to load the hassel submodule:\n%s" % build_instructions)
+    def format(self, *args):
+      self._need_submodule()
+    @property
+    def hs_format(self):
+      return {"display": lambda *args: None}
+    def ofp_match_to_hsa_match(self, *args):
+      return None
 
   hsa = NeedSubmodule()
 
