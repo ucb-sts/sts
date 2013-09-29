@@ -436,7 +436,7 @@ class MCSFinder(ControlFlow):
                                    [ f for f in EventDag(log_parser.parse_path(path)).events
                                      if type(f) == ControlMessageReceive ] ])
     buffered_message_receipts = []
-    for p in simulation.of_buffer.pending_receives():
+    for p in simulation.openflow_buffer.pending_receives():
       if p not in prev_buffered_receives:
         buffered_message_receipts.append(repr(p))
       else:

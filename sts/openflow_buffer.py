@@ -48,14 +48,6 @@ class OpenFlowBuffer(EventMixin):
     # { pending send -> [(connection, pending ofp)_1, (connection, pending ofp)_2, ...] }
     self.pendingsend2conn_messages = defaultdict(list)
 
-    self.table_inserter = None
-
-
-  def set_table_inserter(self, inserter):
-    '''Optionally use a table to allow buffered messages instead of the connection
-    object the message came on'''
-    self.table_inserter = inserter
-
   def set_pass_through(self):
     ''' Cause all message receipts to pass through immediately without being
     buffered'''
@@ -128,18 +120,14 @@ class OpenFlowBuffer(EventMixin):
       if not self.message_send_waiting(pending_message):
         raise ValueError("No such pending message %s" % pending_message)
       multiset = self.pendingsend2conn_messages
-    (connection, message) = multiset[pending_message].pop(0)
+    (forwarder, message) = multiset[pending_message].pop(0)
     # Avoid memory leak:
     if multiset[pending_message] == []:
       del multiset[pending_message]
-    if self.table_inserter:
-      forwarder = self.table_inserter
-    else:
-      forwarder = connection
     if receive:
-      forwarder.allow_message_receipt(connection, message)
+      forwarder.allow_message_receipt(message)
     else:
-      forwarder.allow_message_send(connection, message)
+      forwarder.allow_message_send(message)
     return message
 
   # TODO(cs): make this a factory method that returns DeferredOFConnection objects

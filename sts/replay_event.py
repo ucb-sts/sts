@@ -955,9 +955,9 @@ class ControlMessageReceive(ControlMessageBase):
   openflow message.
   '''
   def proceed(self, simulation):
-    message_waiting = simulation.god_scheduler.message_receipt_waiting(self.pending_receive)
+    message_waiting = simulation.openflow_buffer.message_receipt_waiting(self.pending_receive)
     if message_waiting:
-      simulation.god_scheduler.schedule(self.pending_receive)
+      simulation.openflow_buffer.schedule(self.pending_receive)
       return True
     return False
 
@@ -993,9 +993,9 @@ class ControlMessageSend(ControlMessageBase):
   openflow message.
   '''
   def proceed(self, simulation):
-    message_waiting = simulation.god_scheduler.message_send_waiting(self.pending_send)
+    message_waiting = simulation.openflow_buffer.message_send_waiting(self.pending_send)
     if message_waiting:
-      simulation.god_scheduler.schedule(self.pending_send)
+      simulation.openflow_buffer.schedule(self.pending_send)
       return True
     return False
 

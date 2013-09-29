@@ -30,7 +30,6 @@ from sts.util.console import msg
 from itertools import count
 from pox.lib.addresses import EthAddr, IPAddr
 from sts.openflow_buffer import OpenFlowBuffer
-from collections import namedtuple
 
 import logging
 import os
@@ -48,11 +47,11 @@ from exceptions import EnvironmentError
 from platform import system
 
 class DeferredOFConnection(OFConnection):
-  def __init__(self, io_worker, cid, dpid, god_scheduler):
+  def __init__(self, io_worker, cid, dpid, openflow_buffer):
     super(DeferredOFConnection, self).__init__(io_worker)
     self.cid = cid
     self.dpid = dpid
-    self.god_scheduler = god_scheduler
+    self.openflow_buffer = openflow_buffer
     # Don't feed messages to the switch directly
     self.on_message_received = self.insert_pending_receipt
     self.true_on_message_handler = None
@@ -66,24 +65,22 @@ class DeferredOFConnection(OFConnection):
 
   def insert_pending_receipt(self, _, ofp_msg):
     ''' Rather than pass directly on to the switch, feed into the openflow buffer'''
-    self.god_scheduler.insert_pending_receipt(self.dpid, self.cid, ofp_msg, self)
+    self.openflow_buffer.insert_pending_receipt(self.dpid, self.cid, ofp_msg, self)
 
   def set_message_handler(self, handler):
     ''' Take the switch's handler, and store it for later use '''
     self.true_on_message_handler = handler
 
-  def allow_message_receipt(self, _, ofp_message):
-    ''' Allow the message to actually go through to the switch First argument is connection, 
-    but is unused '''
+  def allow_message_receipt(self, ofp_message):
+    ''' Allow the message to actually go through to the switch. '''
     self.true_on_message_handler(self, ofp_message)
 
   def send(self, ofp_message):
     ''' Interpose on switch sends as well '''
-    self.god_scheduler.insert_pending_send(self.dpid, self.cid, ofp_message, self)
+    self.openflow_buffer.insert_pending_send(self.dpid, self.cid, ofp_message, self)
 
-  def allow_message_send(self, _, ofp_message):
-    ''' Allow message actually be sent to the controller. First argument is connection, 
-    but is unused '''
+  def allow_message_send(self, ofp_message):
+    ''' Allow message actually be sent to the controller. '''
     super(DeferredOFConnection, self).send(ofp_message)
 
 class ConnectionlessOFConnection(object):
@@ -155,9 +152,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.cmd_queue = Queue.PriorityQueue()
     self.random = random.Random() # TODO(jl): Seed this
 
+    # Tell our buffer to insert directly to our flow table whenever commands are let through by control_flow.
     self.openflow_buffer = OpenFlowBuffer()
-    self.table_inserter = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received)
-    self.openflow_buffer.set_table_inserter(self.table_inserter)
 
   def add_controller_info(self, info):
     self.controller_info.append(info)
@@ -256,7 +252,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     if isinstance(msg, ofp_flow_mod):
       # Buffer flow mods
       rnd_weight = self.random.random()
-      receive = self.openflow_buffer.insert_pending_receipt(self.dpid, 0, msg, connection)
+      forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
+      receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
       self.cmd_queue.put((rnd_weight, receive))
     else:
       # Immediately process all other messages
@@ -803,10 +800,12 @@ class BigSwitchController(Controller):
     return (True, "OK")
 
 class TableInserter(object):
-  def __init__(self, insert_method):
+  ''' Shim layer sitting between incoming messages and a switch. This class 
+  takes a bound inserting/forwarding method and connection and is duck-typed
+  to offer the same (received message) forwarding method as a DeferredOFConnection. '''
+  def __init__(self, insert_method, connection):
     self.insert_method = insert_method
+    self.connection = connection
 
-  def allow_message_receipt(self, connection, message):
-    return self.insert_method(connection, message)
-
-FakeConnection = namedtuple('FakeConnection', ['ID'])
+  def allow_message_receipt(self, message):
+    return self.insert_method(self.connection, message)
