@@ -130,6 +130,9 @@ class Fuzzer(ControlFlow):
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
 
+    # Determine whether to use delayed and randomized flow mod processing
+    self.delay_flow_mods = False
+
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
       if self._initializing():
@@ -172,10 +175,12 @@ class Fuzzer(ControlFlow):
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.traffic_generator.set_topology(self.simulation.topology)
 
-    if self.params.ofp_cmd_process_rate != 0:
+    self.delay_flow_mods = self.params.ofp_cmd_process_rate != 0
+    if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
         switch.use_delayed_commands()
+        switch.randomize_flow_mods()
         
     return self.loop()
 
@@ -407,13 +412,17 @@ class Fuzzer(ControlFlow):
                                                  b64_packet=b64_packet))
 
   def check_pending_commands(self):
-    if self.params.ofp_cmd_process_rate != 0:
+    if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
         if (self.random.random() < self.params.ofp_cmd_process_rate):
           if switch.has_pending_commands():
-            message = switch.process_delayed_command()
-            # TODO(js): log replay event here.
+            message, pending_receipt = switch.process_delayed_command()
+            b64_packet = base64_encode(message)
+            self._log_input_event(ProcessFlowMod(pending_receipt.dpid,
+                                                 pending_receipt.controller_id,
+                                                 pending_receipt.fingerprint,
+                                                 b64_packet=b64_packet))
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''

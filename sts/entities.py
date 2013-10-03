@@ -31,6 +31,7 @@ from itertools import count
 from pox.lib.addresses import EthAddr, IPAddr
 from sts.openflow_buffer import OpenFlowBuffer
 
+import Queue
 import logging
 import os
 import socket
@@ -39,7 +40,6 @@ import fcntl
 import struct
 import re
 import pickle
-import Queue
 import random
 
 from os import geteuid
@@ -150,7 +150,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.error_handler = error_handler
     self.controller_info = []
     self.cmd_queue = Queue.PriorityQueue()
-    self.random = random.Random() # TODO(jl): Seed this
+    #self.random = random.Random() # TODO(jl): Seed this
 
     # Tell our buffer to insert directly to our flow table whenever commands are let through by control_flow.
     self.openflow_buffer = OpenFlowBuffer()
@@ -240,21 +240,29 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     return not self.cmd_queue.empty()
 
   def process_delayed_command(self):
-    """ Throws an Empty error if queue is empty """
+    """ Throws Queue.Empty if the queue is empty. """
     buffered_cmd = self.cmd_queue.get_nowait()[1]
-    return self.openflow_buffer.schedule(buffered_cmd)
+    return self.openflow_buffer.schedule(buffered_cmd), buffered_cmd
 
   def use_delayed_commands(self):
     self.on_message_received = self.on_message_received_delayed
 
+  def randomize_flow_mods(self, seed=None):
+    ''' Initialize the RNG and command queue and allow randomization of flow mod processing '''
+    self.random = random.Random()
+    if seed is not None:
+      self.random.seed(seed)
+    self.cmd_queue = Queue.PriorityQueue()
+
   def on_message_received_delayed(self, connection, msg):
-    """ Replacement for NXSoftwareSwitch.on_message_received when delaying command processing"""
+    ''' Replacement for NXSoftwareSwitch.on_message_received when delaying command processing '''
     if isinstance(msg, ofp_flow_mod):
       # Buffer flow mods
-      rnd_weight = self.random.random()
       forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
       receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
-      self.cmd_queue.put((rnd_weight, receive))
+      if self.cmd_queue:
+        rnd_weight = self.random.random()
+        self.cmd_queue.put((rnd_weight, receive))
     else:
       # Immediately process all other messages
       super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)

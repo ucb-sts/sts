@@ -152,6 +152,7 @@ class OpenFlowBuffer(EventMixin):
     self.pendingsend2conn_messages[pending_send].append(conn_message)
     b64_packet = base64_encode(ofp_message)
     self.raiseEventNoErrors(PendingMessage(pending_send, b64_packet, send_event=True))
+    return pending_send
 
   def pending_receives(self):
     ''' Return the message receipts which are waiting to be scheduled '''

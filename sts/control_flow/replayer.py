@@ -49,7 +49,7 @@ class Replayer(ControlFlow):
                print_buffers=True, wait_on_deterministic_values=False, default_dp_permit=False,
                fail_to_interactive=False, fail_to_interactive_on_persistent_violations=False,
                end_in_interactive=False, input_logger=None,
-               allow_unexpected_messages=True, **kwargs):
+               allow_unexpected_messages=True, delay_flow_mods=False, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -95,6 +95,7 @@ class Replayer(ControlFlow):
     # String repesentations of unexpected messages we've passed through, for
     # statistics purposes.
     self.passed_unexpected_messages = []
+    self.delay_flow_mods = delay_flow_mods
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -145,6 +146,10 @@ class Replayer(ControlFlow):
     self.simulation.fail_to_interactive_on_persistent_violations =\
       self.fail_to_interactive_on_persistent_violations
     self.logical_time = 0
+    if self.delay_flow_mods:
+      for switch in self.simulation.topology.switches:
+        assert(isinstance(switch, FuzzSoftwareSwitch))
+        switch.use_delayed_commands()
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
     if self.print_buffers_flag:
       self._print_buffers()

@@ -42,6 +42,7 @@ class DelayedFlowModTest(unittest.TestCase):
     # Create Switch, add controller, and connect to it
     switch = create_switch(1,2)
     switch.use_delayed_commands()
+    switch.randomize_flow_mods()
     configs = self.ControllerConfigs()
     switch.add_controller_info(configs)
     switch.connect(create_mock_connection)
@@ -82,7 +83,6 @@ class DelayedFlowModTest(unittest.TestCase):
     self.assertRaises(Queue.Empty, switch.process_delayed_command)
     # Make sure nothing else got in the table.
     self.assertRaises(IndexError, switch.table.table.__getitem__,4)
-    print switch.table.table
 
     # Restore legitimate random.Random class
     random.Random = old_random

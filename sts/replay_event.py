@@ -902,7 +902,7 @@ def extract_base_fields(json_hash):
 
 class ControlMessageBase(InternalEvent):
   '''
-  Logged whenever the GodScheduler decides to allow a switch to receive or
+  Logged whenever the primary OpenFlowBuffer decides to allow a switch to receive or
   send an openflow packet.
   '''
   def __init__(self, dpid, controller_id, fingerprint, b64_packet="", label=None, round=-1, time=None, timeout_disallowed=False):
@@ -1271,6 +1271,26 @@ class DataplanePermit(InternalEvent):
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
                        ConnectToControllers, ControllerStateChange,
                        DeterministicValue, DataplanePermit]
+
+class ProcessFlowMod(ControlMessageBase):
+  ''' Logged whenever the primary OpenFlowBuffer decides to allow buffered (local
+  to each switch) openflow FlowMod message through and be processed by the switch '''
+
+  def proceed(self, simulation):
+    switch = simulation.topology.get_switch(self.dpid)
+    message_waiting = switch.message_receipt_waiting(self.pending_receive)
+    if message_waiting:
+      switch.openflow_buffer.schedule(self.pending_receive)
+      return True
+    return False
+  
+  @property
+  def pending_receive(self):
+    # TODO(cs): inefficient to keep reconrstructing this tuple.
+    return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
+
+  def __str__(self):
+    return "ProcessFlowMod:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
 
 # Special events:
 
