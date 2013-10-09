@@ -954,7 +954,7 @@ def extract_base_fields(json_hash):
 
 class ControlMessageBase(InternalEvent):
   '''
-  Logged whenever the network-wide OpenFlowBuffer decides to allow a switch to receive or
+  Logged whenever an OpenFlowBuffer decides to allow a switch to receive or
   send an openflow packet.
   '''
   def __init__(self, dpid, controller_id, fingerprint, b64_packet="", label=None, round=-1, time=None, timeout_disallowed=False):
@@ -1329,8 +1329,8 @@ class DataplanePermit(InternalEvent):
 
 class ProcessFlowMod(ControlMessageBase):
   ''' Logged whenever the network-wide OpenFlowBuffer decides to allow buffered (local
-  to each switch) openflow FlowMod message through and be processed by the switch '''
-  # TODO(jl): Modify visualization tool to recognize this replay event
+  to each switch) OpenFlow FlowMod message through and be processed by the switch '''
+  # TODO(jl): Update visualization tool to recognize this replay event
 
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
@@ -1356,7 +1356,8 @@ class ProcessFlowMod(ControlMessageBase):
     if 'b64_packet' in json_hash:
       b64_packet = json_hash['b64_packet']
     return ProcessFlowMod(dpid, controller_id, fingerprint, b64_packet=b64_packet,
-                                 round=round, label=label, time=time, timeout_disallowed=timeout_disallowed)
+                          round=round, label=label, time=time, 
+                          timeout_disallowed=timeout_disallowed)
 
   def __str__(self):
     return "ProcessFlowMod:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())

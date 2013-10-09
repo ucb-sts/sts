@@ -259,7 +259,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
       if self.cmd_queue:
         rnd_weight = self.random.random()
-        # TODO(jl): use exponential moving average (define in params) to prioritize oldest flow_mods
+        # TODO(jl): use exponential moving average (define in params) rather than uniform distirbution
+        # to prioritize oldest flow_mods
         self.cmd_queue.put((rnd_weight, receive))
     else:
       # Immediately process all other messages

@@ -431,6 +431,8 @@ class Fuzzer(ControlFlow):
                                                  b64_packet=b64_packet))
 
   def check_pending_commands(self):
+    ''' If Fuzzer is configured to delay flow mods, this decides whether 
+    each switch is allowed to process a buffered flow mod '''
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
