@@ -20,7 +20,7 @@ import sts.replay_event
 from pox.lib.revent import Event, EventMixin
 from sts.util.convenience import base64_encode
 import logging
-log = logging.getLogger("god_scheduler")
+log = logging.getLogger("openflow_buffer")
 
 class PendingMessage(Event):
   def __init__(self, pending_message, b64_packet, send_event=False):
@@ -30,9 +30,9 @@ class PendingMessage(Event):
     self.pending_message = pending_message
     self.b64_packet = b64_packet
     self.send_event = send_event
-
+  
 # TODO(cs): move me to another file?
-class GodScheduler(EventMixin):
+class OpenFlowBuffer(EventMixin):
   '''
   Models asynchrony: chooses when switches get to process packets from
   controllers. Buffers packets until they are pulled off the buffer and chosen
@@ -49,7 +49,7 @@ class GodScheduler(EventMixin):
 
   @staticmethod
   def in_whitelist(packet_fingerprint):
-    for match in GodScheduler.whitelisted_packet_classes:
+    for match in OpenFlowBuffer.whitelisted_packet_classes:
       if packet_fingerprint.check_match(match):
         return True
     return False
@@ -65,6 +65,20 @@ class GodScheduler(EventMixin):
     self.pendingsend2conn_messages = defaultdict(list)
     self._delegate_input_logger = None
     self.pass_through_whitelisted_packets = False
+
+  def set_pass_through(self):
+    ''' Cause all message receipts to pass through immediately without being
+    buffered'''
+    self.passed_through_events = []
+    self.addListener(PendingMessage, self._pass_through_handler)
+
+  def unset_pass_through(self):
+    '''Unset pass through mode, and return any events that were passed through
+    since pass through mode was set'''
+    self.removeListener(self._pass_through_handler)
+    passed_events = self.passed_through_events
+    self.passed_through_events = []
+    return passed_events
 
   def _pass_through_handler(self, message_event):
     ''' handler for pass-through mode '''
@@ -129,18 +143,18 @@ class GodScheduler(EventMixin):
       if not self.message_send_waiting(pending_message):
         raise ValueError("No such pending message %s" % pending_message)
       multiset = self.pendingsend2conn_messages
-    (conn, message) = multiset[pending_message].pop(0)
+    (forwarder, message) = multiset[pending_message].pop(0)
     # Avoid memory leak:
     if multiset[pending_message] == []:
       del multiset[pending_message]
     if receive:
-      conn.allow_message_receipt(message)
+      forwarder.allow_message_receipt(message)
     else:
-      conn.allow_message_send(message)
+      forwarder.allow_message_send(message)
     return message
 
   # TODO(cs): make this a factory method that returns DeferredOFConnection objects
-  # with bound god_scheduler.insert() method. (much cleaner API + separation of concerns)
+  # with bound openflow_buffer.insert() method. (much cleaner API + separation of concerns)
   def insert_pending_receipt(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
@@ -152,9 +166,10 @@ class GodScheduler(EventMixin):
     self.pendingreceive2conn_messages[pending_receive].append(conn_message)
     b64_packet = base64_encode(ofp_message)
     self.raiseEventNoErrors(PendingMessage(pending_receive, b64_packet))
+    return pending_receive
 
   # TODO(cs): make this a factory method that returns DeferredOFConnection objects
-  # with bound god_scheduler.insert() method. (much cleaner API + separation of concerns)
+  # with bound openflow_buffer.insert() method. (much cleaner API + separation of concerns)
   def insert_pending_send(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
@@ -166,6 +181,7 @@ class GodScheduler(EventMixin):
     self.pendingsend2conn_messages[pending_send].append(conn_message)
     b64_packet = base64_encode(ofp_message)
     self.raiseEventNoErrors(PendingMessage(pending_send, b64_packet, send_event=True))
+    return pending_send
 
   def pending_receives(self):
     ''' Return the message receipts which are waiting to be scheduled '''
@@ -186,3 +202,6 @@ class GodScheduler(EventMixin):
 
 PendingReceive = namedtuple('PendingReceive', ['dpid', 'controller_id', 'fingerprint'])
 PendingSend = namedtuple('PendingSend', ['dpid', 'controller_id', 'fingerprint'])
+
+
+

@@ -37,7 +37,7 @@ each event's __init__() method.
 from sts.util.convenience import base64_decode_openflow
 from sts.util.console import msg
 from sts.entities import Link
-from sts.god_scheduler import PendingReceive, PendingSend, GodScheduler
+from sts.openflow_buffer import PendingReceive, PendingSend, OpenFlowBuffer
 from sts.dataplane_traces.trace import DataplaneEvent
 from sts.fingerprints.messages import *
 from config.invariant_checks import name_to_invariant_check
@@ -954,7 +954,7 @@ def extract_base_fields(json_hash):
 
 class ControlMessageBase(InternalEvent):
   '''
-  Logged whenever the GodScheduler decides to allow a switch to receive or
+  Logged whenever an OpenFlowBuffer decides to allow a switch to receive or
   send an openflow packet.
   '''
   def __init__(self, dpid, controller_id, fingerprint, b64_packet="", label=None, round=-1, time=None, timeout_disallowed=False):
@@ -1009,11 +1009,11 @@ class ControlMessageReceive(ControlMessageBase):
   '''
   def proceed(self, simulation):
     pending_receive = self.pending_receive
-    if self.ignore_whitelisted_packets and GodScheduler.in_whitelist(pending_receive.fingerprint):
+    if self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_receive.fingerprint):
       return True
-    message_waiting = simulation.god_scheduler.message_receipt_waiting(pending_receive)
+    message_waiting = simulation.openflow_buffer.message_receipt_waiting(pending_receive)
     if message_waiting:
-      simulation.god_scheduler.schedule(pending_receive)
+      simulation.openflow_buffer.schedule(pending_receive)
       return True
     return False
 
@@ -1050,11 +1050,11 @@ class ControlMessageSend(ControlMessageBase):
   '''
   def proceed(self, simulation):
     pending_send = self.pending_send
-    if self.ignore_whitelisted_packets and GodScheduler.in_whitelist(pending_send.fingerprint):
+    if self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_send.fingerprint):
       return True
-    message_waiting = simulation.god_scheduler.message_send_waiting(pending_send)
+    message_waiting = simulation.openflow_buffer.message_send_waiting(pending_send)
     if message_waiting:
-      simulation.god_scheduler.schedule(pending_send)
+      simulation.openflow_buffer.schedule(pending_send)
       return True
     return False
 
@@ -1079,7 +1079,6 @@ class ControlMessageSend(ControlMessageBase):
     return ControlMessageSend(dpid, controller_id, fingerprint, round=round,
                               b64_packet=b64_packet, label=label, time=time,
                               timeout_disallowed=timeout_disallowed)
-
 
 # TODO(cs): move me?
 class PendingStateChange(namedtuple('PendingStateChange',
@@ -1328,9 +1327,44 @@ class DataplanePermit(InternalEvent):
     del fields['_fingerprint']
     return json.dumps(fields)
 
+class ProcessFlowMod(ControlMessageBase):
+  ''' Logged whenever the network-wide OpenFlowBuffer decides to allow buffered (local
+  to each switch) OpenFlow FlowMod message through and be processed by the switch '''
+  # TODO(jl): Update visualization tool to recognize this replay event
+
+  def proceed(self, simulation):
+    switch = simulation.topology.get_switch(self.dpid)
+    message_waiting = switch.openflow_buffer.message_receipt_waiting(self.pending_receive)
+    if message_waiting:
+      switch.openflow_buffer.schedule(self.pending_receive)
+      return True
+    return False
+  
+  @property
+  def pending_receive(self):
+    # TODO(cs): inefficient to keep reconrstructing this tuple.
+    return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
+    assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
+    dpid = json_hash['dpid']
+    controller_id = json_hash['controller_id']
+    fingerprint = json_hash['fingerprint']
+    b64_packet = ""
+    if 'b64_packet' in json_hash:
+      b64_packet = json_hash['b64_packet']
+    return ProcessFlowMod(dpid, controller_id, fingerprint, b64_packet=b64_packet,
+                          round=round, label=label, time=time, 
+                          timeout_disallowed=timeout_disallowed)
+
+  def __str__(self):
+    return "ProcessFlowMod:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
+
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
                        ConnectToControllers, ControllerStateChange,
-                       DeterministicValue, DataplanePermit]
+                       DeterministicValue, DataplanePermit, ProcessFlowMod]
 
 # Special events:
 

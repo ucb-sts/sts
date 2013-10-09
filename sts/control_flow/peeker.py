@@ -130,7 +130,7 @@ class Peeker(object):
     # Note that there isn't a race condition between flush()'ing and
     # incoming internal events, since sts is single-threaded
     # TODO(cs): flush() is not longer needed!
-    simulation.god_scheduler.flush()
+    simulation.openflow_buffer.flush()
     simulation.controller_sync_callback.flush()
 
     # Now set all internal event buffers (GodScheduler for
