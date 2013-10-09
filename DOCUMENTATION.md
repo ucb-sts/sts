@@ -162,7 +162,7 @@ complete.
 STS buffers all messages that are passed throughout the system. There are two
 important buffer objects to note:
 
-  - GodScheduler (found in sts/god_scheduler.py): buffers OpenFlow messages between switches and controllers
+  - GodScheduler (found in sts/openflow_buffer.py): buffers OpenFlow messages between switches and controllers
     (both incoming and outgoing messages)
   - BufferedPatchPanel (found in sts/topology.py): buffers dataplane messages sent between switches
 

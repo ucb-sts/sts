@@ -30,7 +30,8 @@ from pox.lib.util import TimeoutError
 from pox.lib.packet.lldp import *
 from config.invariant_checks import name_to_invariant_check
 from sts.util.convenience import base64_encode
-from sts.god_scheduler import GodScheduler
+from sts.entities import FuzzSoftwareSwitch
+from sts.openflow_buffer import OpenFlowBuffer
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -135,6 +136,10 @@ class Fuzzer(ControlFlow):
     self.logical_time = 0
     self.never_drop_whitelisted_packets = never_drop_whitelisted_packets
 
+    # Determine whether to use delayed and randomized flow mod processing
+    # (Set by fuzzer_params, not by an optional __init__ argument)
+    self.delay_flow_mods = False
+
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
       if self._initializing():
@@ -185,6 +190,14 @@ class Fuzzer(ControlFlow):
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.traffic_generator.set_topology(self.simulation.topology)
     self.unblocked_controller_pairs = self._compute_unblocked_controller_pairs()
+
+    self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 0
+    if self.delay_flow_mods:
+      for switch in self.simulation.topology.switches:
+        assert(isinstance(switch, FuzzSoftwareSwitch))
+        switch.use_delayed_commands()
+        switch.randomize_flow_mods()
+        
     return self.loop()
 
   def loop(self):
@@ -213,7 +226,7 @@ class Fuzzer(ControlFlow):
       if self.delay_startup:
         # Wait until the first OpenFlow message is received
         log.info("Waiting until first OpenFlow message received..")
-        while self.simulation.god_scheduler.pending_receives() == []:
+        while self.simulation.openflow_buffer.pending_receives() == []:
           self.simulation.io_master.select(self.delay)
 
       sent_self_packets = False
@@ -282,8 +295,8 @@ class Fuzzer(ControlFlow):
     buffered_events = []
     log.info("Pending Messages:")
     for event_type, pending2conn_messages in [
-            (ControlMessageReceive, self.simulation.god_scheduler.pendingreceive2conn_messages),
-            (ControlMessageSend, self.simulation.god_scheduler.pendingsend2conn_messages)]:
+            (ControlMessageReceive, self.simulation.openflow_buffer.pendingreceive2conn_messages),
+            (ControlMessageSend, self.simulation.openflow_buffer.pendingsend2conn_messages)]:
       for p, conn_messages in pending2conn_messages.iteritems():
         log.info("- %r", p)
         for _, ofp_message in conn_messages:
@@ -336,6 +349,7 @@ class Fuzzer(ControlFlow):
     self.check_dataplane()
     self.check_tcp_connections()
     self.check_pending_messages()
+    self.check_pending_commands()
     self.check_switch_crashes()
     self.check_link_failures()
     self.fuzz_traffic()
@@ -356,7 +370,7 @@ class Fuzzer(ControlFlow):
 
     def in_whitelist(dp_event):
       return (self.never_drop_whitelisted_packets and
-              GodScheduler.in_whitelist(dp_event.fingerprint[0]))
+              OpenFlowBuffer.in_whitelist(dp_event.fingerprint[0]))
 
     for dp_event in self.simulation.patch_panel.queued_dataplane_events:
       if pass_through:
@@ -396,24 +410,39 @@ class Fuzzer(ControlFlow):
                               controller_id=connection.get_controller_id()))
 
   def check_pending_messages(self, pass_through=False):
-    for pending_receipt in self.simulation.god_scheduler.pending_receives():
+    for pending_receipt in self.simulation.openflow_buffer.pending_receives():
       # TODO(cs): this is a really dumb way to fuzz packet receipt scheduling
       if (self.random.random() < self.params.ofp_message_receipt_rate or
           pass_through):
-        message = self.simulation.god_scheduler.schedule(pending_receipt)
+        message = self.simulation.openflow_buffer.schedule(pending_receipt)
         b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                     pending_receipt.controller_id,
                                                     pending_receipt.fingerprint,
                                                     b64_packet=b64_packet))
-    for pending_send in self.simulation.god_scheduler.pending_sends():
+    for pending_send in self.simulation.openflow_buffer.pending_sends():
       if (self.random.random() < self.params.ofp_message_send_rate or
           pass_through):
-        message = self.simulation.god_scheduler.schedule(pending_send)
+        message = self.simulation.openflow_buffer.schedule(pending_send)
         b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageSend(pending_send.dpid,
                                                  pending_send.controller_id,
                                                  pending_send.fingerprint,
+                                                 b64_packet=b64_packet))
+
+  def check_pending_commands(self):
+    ''' If Fuzzer is configured to delay flow mods, this decides whether 
+    each switch is allowed to process a buffered flow mod '''
+    if self.delay_flow_mods:
+      for switch in self.simulation.topology.switches:
+        assert(isinstance(switch, FuzzSoftwareSwitch))
+        if (self.random.random() < self.params.ofp_cmd_passthrough_rate):
+          if switch.has_pending_commands():
+            (message, pending_receipt) = switch.process_delayed_command()
+            b64_packet = base64_encode(message)
+            self._log_input_event(ProcessFlowMod(pending_receipt.dpid,
+                                                 pending_receipt.controller_id,
+                                                 pending_receipt.fingerprint,
                                                  b64_packet=b64_packet))
 
   def check_switch_crashes(self):

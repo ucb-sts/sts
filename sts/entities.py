@@ -28,23 +28,26 @@ import pox.lib.packet.ethernet as eth
 from pox.lib.addresses import EthAddr, IPAddr
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
+from sts.openflow_buffer import OpenFlowBuffer
 from sts.util.network_namespace import launch_namespace
 from sts.util.convenience import IPAddressSpace
 
+import Queue
 from itertools import count
 import logging
 import os
 import re
 import pickle
+import random
 import time
 
 
 class DeferredOFConnection(OFConnection):
-  def __init__(self, io_worker, cid, dpid, god_scheduler):
+  def __init__(self, io_worker, cid, dpid, openflow_buffer):
     super(DeferredOFConnection, self).__init__(io_worker)
     self.cid = cid
     self.dpid = dpid
-    self.god_scheduler = god_scheduler
+    self.openflow_buffer = openflow_buffer
     # Don't feed messages to the switch directly
     self.on_message_received = self.insert_pending_receipt
     self.true_on_message_handler = None
@@ -57,8 +60,8 @@ class DeferredOFConnection(OFConnection):
     return self.cid
 
   def insert_pending_receipt(self, _, ofp_msg):
-    ''' Rather than pass directly on to the switch, feed into the god scheduler'''
-    self.god_scheduler.insert_pending_receipt(self.dpid, self.cid, ofp_msg, self)
+    ''' Rather than pass directly on to the switch, feed into the openflow buffer'''
+    self.openflow_buffer.insert_pending_receipt(self.dpid, self.cid, ofp_msg, self)
 
   def set_message_handler(self, handler):
     ''' Take the switch's handler, and store it for later use '''
@@ -70,7 +73,7 @@ class DeferredOFConnection(OFConnection):
 
   def send(self, ofp_message):
     ''' Interpose on switch sends as well '''
-    self.god_scheduler.insert_pending_send(self.dpid, self.cid, ofp_message, self)
+    self.openflow_buffer.insert_pending_send(self.dpid, self.cid, ofp_message, self)
 
   def allow_message_send(self, ofp_message):
     ''' Allow message actually be sent to the controller '''
@@ -142,6 +145,10 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.cid2connection = {}
     self.error_handler = error_handler
     self.controller_info = []
+    # Used in randomize_flow_mod mode to prioritize the order in which flow_mods are processed.
+    self.cmd_queue = None
+    # Tell our buffer to insert directly to our flow table whenever commands are let through by control_flow.
+    self.openflow_buffer = OpenFlowBuffer()
 
   def add_controller_info(self, info):
     self.controller_info.append(info)
@@ -223,6 +230,41 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     if self.software_switch:
       serializable.ofp_phy_ports = self.software_switch.ports.values()
     return pickle.dumps(serializable, protocol=0)
+
+  def has_pending_commands(self):
+    return not self.cmd_queue.empty()
+
+  def process_delayed_command(self):
+    """ Throws Queue.Empty if the queue is empty. """
+    buffered_cmd = self.cmd_queue.get_nowait()[1]
+    return (self.openflow_buffer.schedule(buffered_cmd), buffered_cmd)
+
+  def use_delayed_commands(self):
+    ''' Tell the switch to buffer flow mods '''
+    self.on_message_received = self.on_message_received_delayed
+
+  def randomize_flow_mods(self, seed=None):
+    ''' Initialize the RNG and command queue and mandate switch to randomize order in which flow_mods
+    are processed '''
+    self.random = random.Random()
+    if seed is not None:
+      self.random.seed(seed)
+    self.cmd_queue = Queue.PriorityQueue()
+
+  def on_message_received_delayed(self, connection, msg):
+    ''' Replacement for NXSoftwareSwitch.on_message_received when delaying command processing '''
+    if isinstance(msg, ofp_flow_mod):
+      # Buffer flow mods
+      forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
+      receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
+      if self.cmd_queue:
+        rnd_weight = self.random.random()
+        # TODO(jl): use exponential moving average (define in params) rather than uniform distirbution
+        # to prioritize oldest flow_mods
+        self.cmd_queue.put((rnd_weight, receive))
+    else:
+      # Immediately process all other messages
+      super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)
 
 class Link (object):
   """
@@ -705,3 +747,13 @@ class BigSwitchController(Controller):
       return (False, "Alive, but no controller process found!")
     return (True, "OK")
 
+class TableInserter(object):
+  ''' Shim layer sitting between incoming messages and a switch. This class 
+  takes a bound inserting/forwarding method and connection and is duck-typed
+  to offer the same (received message) forwarding method as a DeferredOFConnection. '''
+  def __init__(self, insert_method, connection):
+    self.insert_method = insert_method
+    self.connection = connection
+
+  def allow_message_receipt(self, message):
+    return self.insert_method(self.connection, message)
