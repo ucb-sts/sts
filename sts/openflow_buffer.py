@@ -49,7 +49,7 @@ class OpenFlowBuffer(EventMixin):
 
   @staticmethod
   def in_whitelist(packet_fingerprint):
-    for match in GodScheduler.whitelisted_packet_classes:
+    for match in OpenFlowBuffer.whitelisted_packet_classes:
       if packet_fingerprint.check_match(match):
         return True
     return False

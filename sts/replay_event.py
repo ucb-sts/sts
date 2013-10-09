@@ -37,7 +37,7 @@ each event's __init__() method.
 from sts.util.convenience import base64_decode_openflow
 from sts.util.console import msg
 from sts.entities import Link
-from sts.openflow_buffer import PendingReceive, PendingSend, OpenFlowBufferr
+from sts.openflow_buffer import PendingReceive, PendingSend, OpenFlowBuffer
 from sts.dataplane_traces.trace import DataplaneEvent
 from sts.fingerprints.messages import *
 from config.invariant_checks import name_to_invariant_check
@@ -1334,7 +1334,7 @@ class ProcessFlowMod(ControlMessageBase):
 
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
-    message_waiting = switch.message_receipt_waiting(self.pending_receive)
+    message_waiting = switch.openflow_buffer.message_receipt_waiting(self.pending_receive)
     if message_waiting:
       switch.openflow_buffer.schedule(self.pending_receive)
       return True

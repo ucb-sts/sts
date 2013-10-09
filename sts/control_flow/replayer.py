@@ -28,6 +28,7 @@ from sts.util.console import color
 from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.util.convenience import find, find_index, base64_encode
 from sts.topology import BufferedPatchPanel
+from sts.entities import FuzzSoftwareSwitch
 
 import signal
 import logging
@@ -51,6 +52,7 @@ class Replayer(ControlFlow):
                end_in_interactive=False, input_logger=None,
                allow_unexpected_messages=False,
                pass_through_whitelisted_messages=True,
+               delay_flow_mods = True,
                **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
@@ -156,7 +158,7 @@ class Replayer(ControlFlow):
     self.simulation.fail_to_interactive = self.fail_to_interactive
     self.simulation.fail_to_interactive_on_persistent_violations =\
       self.fail_to_interactive_on_persistent_violations
-    self.simulation.god_scheduler.pass_through_whitelisted_messages =\
+    self.simulation.openflow_buffer.pass_through_whitelisted_messages =\
       self.pass_through_whitelisted_messages
     self.logical_time = 0
     if self.delay_flow_mods:
@@ -298,8 +300,8 @@ class Replayer(ControlFlow):
 
     # Now check pending messages.
     for expected_fingerprints, messages in [
-         (expected_receive_fingerprints, self.simulation.god_scheduler.pending_receives()),
-         (expected_send_fingerprints, self.simulation.god_scheduler.pending_sends())]:
+         (expected_receive_fingerprints, self.simulation.openflow_buffer.pending_receives()),
+         (expected_send_fingerprints, self.simulation.openflow_buffer.pending_sends())]:
       for pending_message in messages:
         fingerprint = (pending_message.fingerprint,
                        pending_message.dpid,
