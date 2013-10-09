@@ -131,6 +131,7 @@ class Fuzzer(ControlFlow):
     self.logical_time = 0
 
     # Determine whether to use delayed and randomized flow mod processing
+    # (Set by fuzzer_params, not by an optional __init__ argument)
     self.delay_flow_mods = False
 
   def _log_input_event(self, event, **kws):
@@ -175,7 +176,7 @@ class Fuzzer(ControlFlow):
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.traffic_generator.set_topology(self.simulation.topology)
 
-    self.delay_flow_mods = self.params.ofp_cmd_process_rate != 0
+    self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 0
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
@@ -415,9 +416,9 @@ class Fuzzer(ControlFlow):
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
-        if (self.random.random() < self.params.ofp_cmd_process_rate):
+        if (self.random.random() < self.params.ofp_cmd_passthrough_rate):
           if switch.has_pending_commands():
-            message, pending_receipt = switch.process_delayed_command()
+            (message, pending_receipt) = switch.process_delayed_command()
             b64_packet = base64_encode(message)
             self._log_input_event(ProcessFlowMod(pending_receipt.dpid,
                                                  pending_receipt.controller_id,

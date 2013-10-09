@@ -149,9 +149,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.cid2connection = {}
     self.error_handler = error_handler
     self.controller_info = []
-    self.cmd_queue = Queue.PriorityQueue()
-    #self.random = random.Random() # TODO(jl): Seed this
-
+    # Used in randomize_flow_mod mode to prioritize the order in which flow_mods are processed.
+    self.cmd_queue = None
     # Tell our buffer to insert directly to our flow table whenever commands are let through by control_flow.
     self.openflow_buffer = OpenFlowBuffer()
 
@@ -242,13 +241,15 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def process_delayed_command(self):
     """ Throws Queue.Empty if the queue is empty. """
     buffered_cmd = self.cmd_queue.get_nowait()[1]
-    return self.openflow_buffer.schedule(buffered_cmd), buffered_cmd
+    return (self.openflow_buffer.schedule(buffered_cmd), buffered_cmd)
 
   def use_delayed_commands(self):
+    ''' Tell the switch to buffer flow mods '''
     self.on_message_received = self.on_message_received_delayed
 
   def randomize_flow_mods(self, seed=None):
-    ''' Initialize the RNG and command queue and allow randomization of flow mod processing '''
+    ''' Initialize the RNG and command queue and mandate switch to randomize order in which flow_mods
+    are processed '''
     self.random = random.Random()
     if seed is not None:
       self.random.seed(seed)
@@ -262,6 +263,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
       if self.cmd_queue:
         rnd_weight = self.random.random()
+        # TODO(jl): use exponential moving average (define in params) to prioritize oldest flow_mods
         self.cmd_queue.put((rnd_weight, receive))
     else:
       # Immediately process all other messages
