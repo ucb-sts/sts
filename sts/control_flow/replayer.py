@@ -49,7 +49,9 @@ class Replayer(ControlFlow):
                print_buffers=True, wait_on_deterministic_values=False, default_dp_permit=False,
                fail_to_interactive=False, fail_to_interactive_on_persistent_violations=False,
                end_in_interactive=False, input_logger=None,
-               allow_unexpected_messages=True, delay_flow_mods=False, **kwargs):
+               allow_unexpected_messages=False,
+               pass_through_whitelisted_messages=True,
+               **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -63,6 +65,9 @@ class Replayer(ControlFlow):
       self.dag = EventDag(log_parser.parse_path(superlog_path))
     else:
       self.dag = superlog_path_or_dag
+
+    if len(self.dag.events) == 0:
+      raise ValueError("No events to replay!")
 
     self.default_dp_permit = default_dp_permit
     # Set DataplanePermit and DataplaneDrop to passive if permit is set
@@ -89,6 +94,7 @@ class Replayer(ControlFlow):
       fail_to_interactive_on_persistent_violations
     self._input_logger = input_logger
     self.allow_unexpected_messages = allow_unexpected_messages
+    self.pass_through_whitelisted_messages = pass_through_whitelisted_messages
     # How many logical rounds to peek ahead when deciding if a message is
     # expected or not.
     self.expected_message_round_window = 3
@@ -96,6 +102,11 @@ class Replayer(ControlFlow):
     # statistics purposes.
     self.passed_unexpected_messages = []
     self.delay_flow_mods = delay_flow_mods
+
+    if self.pass_through_whitelisted_messages:
+      for event in self.dag.events:
+        if hasattr(event, "ignore_whitelisted_packets"):
+          event.ignore_whitelisted_packets = True
 
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
@@ -145,6 +156,8 @@ class Replayer(ControlFlow):
     self.simulation.fail_to_interactive = self.fail_to_interactive
     self.simulation.fail_to_interactive_on_persistent_violations =\
       self.fail_to_interactive_on_persistent_violations
+    self.simulation.god_scheduler.pass_through_whitelisted_messages =\
+      self.pass_through_whitelisted_messages
     self.logical_time = 0
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
@@ -186,7 +199,7 @@ class Replayer(ControlFlow):
           if isinstance(event, InputEvent):
             self._check_early_state_changes(dag, i, event)
           self._check_new_state_changes(dag, i)
-          self._check_unexpected_messages(dag, i)
+          self._check_unexpected_dp_messages(dag, i)
           # TODO(cs): quasi race-condition here. If unexpected state change
           # happens *while* we're waiting for event, we basically have a
           # deadlock (if controller logging is set to blocking) until the
@@ -253,7 +266,7 @@ class Replayer(ControlFlow):
         self.unexpected_state_changes.append(repr(state_change))
         self.sync_callback.ack_pending_state_change(state_change)
 
-  def _check_unexpected_messages(self, dag, current_index):
+  def _check_unexpected_dp_messages(self, dag, current_index):
     ''' If throughout replay we observe new messages that weren't in the
     original trace, we (usually) want to let them through. This is especially true
     for messages that are related to timers, such as LLDP, since timings will
@@ -261,8 +274,11 @@ class Replayer(ControlFlow):
     controller's behavior. '''
     if not self.allow_unexpected_messages:
       return
-    # TODO(cs): experiment with only letting LLDP/echos through, rather than
-    # all unexpected messages. Compare resulting executions using visualization tool.
+    # TODO(cs): evaluate whether _check_unexpected_dp_messages is more or less
+    # effective than _check_whitelisted_dp_messages. Compare executions with
+    # visualization tool. Currently it appears that this method is too
+    # liberal, and ends up causing timouts as a result of letting messages
+    # through.
 
     # First, build a set of expected ControlMessageSends/Receives fingerprints
     # within the next expected_message_round_window rounds.
@@ -281,15 +297,16 @@ class Replayer(ControlFlow):
         expected_send_fingerprints.add((of_fingerprint, dpid, cid))
 
     # Now check pending messages.
-    for event_fingerprints, messages in [
-         (expected_receive_fingerprints, self.simulation.openflow_buffer.pending_receives()),
-         (expected_send_fingerprints, self.simulation.openflow_buffer.pending_sends())]:
+    for expected_fingerprints, messages in [
+         (expected_receive_fingerprints, self.simulation.god_scheduler.pending_receives()),
+         (expected_send_fingerprints, self.simulation.god_scheduler.pending_sends())]:
       for pending_message in messages:
         fingerprint = (pending_message.fingerprint,
                        pending_message.dpid,
                        pending_message.controller_id)
         if fingerprint not in expected_fingerprints:
           message = self.simulation.openflow_buffer.schedule(pending_message)
+          log.debug("Sending unexpected %s" % message)
           b64_packet = base64_encode(message)
           # Monkeypatch a "new internal event" marker to be logged to the JSON trace
           # (All fields picked up by event.to_json())

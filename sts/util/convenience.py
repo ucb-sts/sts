@@ -17,6 +17,7 @@ from pox.lib.addresses import EthAddr, IPAddr
 import time
 import re
 import os
+import sys
 import errno
 import socket
 import random
@@ -24,9 +25,6 @@ import types
 import struct
 import shutil
 import base64
-
-import logging
-log = logging.getLogger("util")
 
 # don't use the standard instance - we don't want to be seeded
 true_random = random.Random()
@@ -65,15 +63,16 @@ def rm_rf(dst):
   if os.path.exists(dst):
     shutil.rmtree(dst)
 
-def create_clean_python_dir(results_dir):
-  if os.path.exists(results_dir):
-    log.warn("Results dir %s already exists. Overwriting.." %
-             results_dir)
-  log.info("Wiping and creating %s" % results_dir)
-  rm_rf(results_dir)
+def create_python_dir(results_dir):
   mkdir_p(results_dir)
   with file(results_dir + "/__init__.py", 'a'):
     pass
+
+def create_clean_python_dir(results_dir):
+  if os.path.exists(results_dir):
+    print >> sys.stderr, "Results dir %s already exists. Overwriting.." % results_dir
+  rm_rf(results_dir)
+  create_python_dir(results_dir)
 
 def random_eth_addr():
   return EthAddr(struct.pack("Q", true_random.randint(1,0xFF))[:6])
@@ -141,3 +140,30 @@ def base64_decode(data):
 def base64_decode_openflow(data):
   (msg, packet_length) = OFConnection.parse_of_packet(base64_decode(data))
   return msg
+
+class IPAddressSpace(object):
+  _claimed_addresses = set()
+
+  @staticmethod
+  def register_address(address):
+    if address in IPAddressSpace._claimed_addresses:
+      raise ValueError("Address %s already claimed" % address)
+    IPAddressSpace._claimed_addresses.add(address)
+
+  @staticmethod
+  def find_unclaimed_address(ip_prefix="192.168.1"):
+    ''' Find an unclaimed IP address in the given /24 range (may be specified
+        as a full IP address for convenience).
+    '''
+    octects = ip_prefix.split(".")
+    if len(octects) == 4:
+      ip_prefix = ".".join(octects[0:3])
+    host_octect = 2
+    address = "%s.%d" % (ip_prefix, host_octect)
+    while host_octect <= 255 and address in IPAddressSpace._claimed_addresses:
+      host_octect += 1
+      address = "%s.%d" % (ip_prefix, host_octect)
+
+    if address in IPAddressSpace._claimed_addresses:
+      raise RuntimeError("Out of IP addresses in prefix %s" % ip_prefix)
+    return address

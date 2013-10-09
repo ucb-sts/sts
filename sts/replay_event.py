@@ -37,7 +37,7 @@ each event's __init__() method.
 from sts.util.convenience import base64_decode_openflow
 from sts.util.console import msg
 from sts.entities import Link
-from sts.openflow_buffer import PendingReceive, PendingSend
+from sts.openflow_buffer import PendingReceive, PendingSend, OpenFlowBufferr
 from sts.dataplane_traces.trace import DataplaneEvent
 from sts.fingerprints.messages import *
 from config.invariant_checks import name_to_invariant_check
@@ -856,6 +856,57 @@ class DataplaneDrop(InputEvent):
     del fields['_fingerprint']
     return json.dumps(fields)
 
+class BlockControllerPair(InputEvent):
+  ''' '''
+  def __init__(self, cid1, cid2, label=None, round=-1, time=None):
+    super(BlockControllerPair, self).__init__(label=label, round=round, time=time)
+    self.cid1 = cid1
+    self.cid2 = cid2
+
+  def proceed(self):
+    self.simulation.controller_patch_panel.block_controller_pair(self.cid1, self.cid2)
+    return True
+
+  @property
+  def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, cid1, cid2)
+    '''
+    return (self.__class__.__name__, self.cid1, self.cid2)
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'cid1', 'cid2')
+    cid1 = json_hash['cid1']
+    cid2 = json_hash['cid2']
+    return BlockControllerPair(cid1, cid2, round=round, label=label, time=time)
+
+class UnblockControllerPair(InputEvent):
+  def __init__(self, cid1, cid2, label=None, round=-1, time=None):
+    super(UnblockControllerPair, self).__init__(label=label, round=round, time=time)
+    self.cid1 = cid1
+    self.cid2 = cid2
+
+  def proceed(self):
+    self.simulation.controller_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
+    return True
+
+  @property
+  def fingerprint(self):
+    ''' Fingerprint tuple format:
+    (class name, cid1, cid2)
+    '''
+    return (self.__class__.__name__, self.cid1, self.cid2)
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'cid1', 'cid2')
+    cid1 = json_hash['cid1']
+    cid2 = json_hash['cid2']
+    return UnblockControllerPair(cid1, cid2, round=round, label=label, time=time)
+
 # TODO(cs): Temporary hack until we figure out determinism
 class LinkDiscovery(InputEvent):
   ''' Deprecated '''
@@ -887,7 +938,8 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
                     ControlChannelBlock, ControlChannelUnblock,
-                    DataplaneDrop, LinkDiscovery]
+                    DataplaneDrop, BlockControllerPair, UnblockControllerPair,
+                    LinkDiscovery]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
@@ -934,6 +986,7 @@ class ControlMessageBase(InternalEvent):
                      dpid, controller_id)
 
     self._fingerprint = fingerprint
+    self.ignore_whitelisted_packets = False
 
   def get_packet(self):
     # Avoid serialization exceptions, but we still want to memoize.
@@ -955,9 +1008,12 @@ class ControlMessageReceive(ControlMessageBase):
   openflow message.
   '''
   def proceed(self, simulation):
-    message_waiting = simulation.openflow_buffer.message_receipt_waiting(self.pending_receive)
+    pending_receive = self.pending_receive
+    if self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_receive.fingerprint):
+      return True
+    message_waiting = simulation.openflow_buffer.message_receipt_waiting(pending_receive)
     if message_waiting:
-      simulation.openflow_buffer.schedule(self.pending_receive)
+      simulation.openflow_buffer.schedule(pending_receive)
       return True
     return False
 
@@ -993,9 +1049,12 @@ class ControlMessageSend(ControlMessageBase):
   openflow message.
   '''
   def proceed(self, simulation):
-    message_waiting = simulation.openflow_buffer.message_send_waiting(self.pending_send)
+    pending_send = self.pending_send
+    if self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_send.fingerprint):
+      return True
+    message_waiting = simulation.openflow_buffer.message_send_waiting(pending_send)
     if message_waiting:
-      simulation.openflow_buffer.schedule(self.pending_send)
+      simulation.openflow_buffer.schedule(pending_send)
       return True
     return False
 

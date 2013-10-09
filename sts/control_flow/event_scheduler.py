@@ -142,7 +142,7 @@ class EventScheduler(EventSchedulerBase):
 
   def __init__(self, simulation, speedup=1.0,
                delay_input_events=True, initial_wait=0.5, epsilon_seconds=0.5,
-               sleep_interval_seconds=0.2):
+               sleep_interval_seconds=0.2, assertion_checking=False):
     super(EventScheduler, self).__init__()
     self.simulation = simulation
     self.speedup = speedup
@@ -154,6 +154,7 @@ class EventScheduler(EventSchedulerBase):
     self.sleep_interval_seconds = sleep_interval_seconds
     self.started = False
     self.stats = EventSchedulerStats()
+    self.assertion_checking = assertion_checking
 
   def schedule(self, event):
     if not self.started:
@@ -229,11 +230,11 @@ class EventScheduler(EventSchedulerBase):
     real_delta = time.time() - self.last_real_time
 
     to_wait = rec_delta - real_delta
-    if to_wait > 10000:
+    if self.assertion_checking and to_wait > 10000:
       raise RuntimeError("to_wait %f ms is way too big for event %s" %
                          (to_wait, str(event)))
     # -0.03 to account for floating point error
-    if to_wait < -0.03:
+    if self.assertion_checking and to_wait < -0.03:
       raise RuntimeError("Wait time %f is negative for event %s" %
                          (to_wait, str(event)))
     return max(to_wait, 0)

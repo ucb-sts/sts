@@ -20,7 +20,7 @@ An orchestrating control flow that invokes replayer several times to
 find the minimal causal sequence (MCS) of a failure.
 '''
 
-from sts.util.console import msg, color
+from sts.util.console import msg, color, Tee
 from sts.util.convenience import timestamp_string, ExitCode, create_clean_python_dir
 from sts.util.rpc_forker import LocalForker, test_serialize_response
 from sts.util.precompute_cache import PrecomputeCache
@@ -346,10 +346,19 @@ class MCSFinder(ControlFlow):
       # wrapping them in a closure... otherwise, can't use RemoteForker
       # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
       create_clean_python_dir(results_dir)
+
+      # Copy stdout and stderr to a file "replay.out"
+      tee = Tee(open(os.path.join(results_dir, "replay.out"), "w"))
+      tee.tee_stdout()
+      tee.tee_stderr()
+
+      # Set up replayer.
       input_logger = InputLogger()
       replayer = Replayer(self.simulation_cfg, new_dag,
                           wait_on_deterministic_values=self.wait_on_deterministic_values,
                           input_logger=input_logger,
+                          allow_unexpected_messages=False,
+                          pass_through_whitelisted_messages=True,
                           **self.kwargs)
       replayer.init_results(results_dir)
       self._runtime_stats = RuntimeStats(subsequence_id)
@@ -374,6 +383,7 @@ class MCSFinder(ControlFlow):
         input_logger.close(replayer, self.simulation_cfg, skip_mcs_cfg=True)
         if simulation is not None:
           simulation.clean_up()
+        tee.close()
       if self.strict_assertion_checking:
         test_serialize_response(violations, self._runtime_stats.client_dict())
       timed_out_internal = [ e.label for e in new_dag.events if e.timed_out ]

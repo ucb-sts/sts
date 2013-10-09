@@ -25,26 +25,22 @@ from pox.openflow.flow_table import FlowTableModification
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
 import pox.lib.packet.ethernet as eth
+from pox.lib.addresses import EthAddr, IPAddr
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
-from itertools import count
-from pox.lib.addresses import EthAddr, IPAddr
 from sts.openflow_buffer import OpenFlowBuffer
+from sts.util.network_namespace import launch_namespace
+from sts.util.convenience import IPAddressSpace
 
 import Queue
+from itertools import count
 import logging
 import os
-import socket
-import subprocess
-import fcntl
-import struct
 import re
 import pickle
 import random
+import time
 
-from os import geteuid
-from exceptions import EnvironmentError
-from platform import system
 
 class DeferredOFConnection(OFConnection):
   def __init__(self, io_worker, cid, dpid, openflow_buffer):
@@ -72,7 +68,7 @@ class DeferredOFConnection(OFConnection):
     self.true_on_message_handler = handler
 
   def allow_message_receipt(self, ofp_message):
-    ''' Allow the message to actually go through to the switch. '''
+    ''' Allow the message to actually go through to the switch '''
     self.true_on_message_handler(self, ofp_message)
 
   def send(self, ofp_message):
@@ -80,7 +76,7 @@ class DeferredOFConnection(OFConnection):
     self.openflow_buffer.insert_pending_send(self.dpid, self.cid, ofp_message, self)
 
   def allow_message_send(self, ofp_message):
-    ''' Allow message actually be sent to the controller. '''
+    ''' Allow message actually be sent to the controller '''
     super(DeferredOFConnection, self).send(ofp_message)
 
 class ConnectionlessOFConnection(object):
@@ -442,8 +438,6 @@ class NamespaceHost(Host):
   '''
   A host that launches a process in a separate namespace process.
   '''
-  ETH_P_ALL = 3                     # from linux/if_ether.h
-
   def __init__(self, ip_addr_str, create_io_worker, name="", cmd="xterm"):
     '''
     - ip_addr_str must be a string! not a IPAddr object
@@ -451,116 +445,16 @@ class NamespaceHost(Host):
       The default is "xterm", which opens up a new terminal window.
     '''
     self.hid = self._hids.next()
-    self.socket = None
-    self.guest = None
-    self.guest_eth_addr = None
-    self.guest_device = None
-    self._launch_namespace(cmd, ip_addr_str, create_io_worker)
+    (self.guest, guest_eth_addr, host_device) = launch_namespace(cmd, ip_addr_str, self.hid)
+    self.socket = bind_raw_socket(host_device)
+    # Set up an io worker for our end of the socket
+    self.io_worker = create_io_worker(self.socket)
+    self.io_worker.set_receive_handler(self.send)
+
     self.interfaces = [HostInterface(self.guest_eth_addr, IPAddr(ip_addr_str))]
     if name == "":
       name = "host:" + ip_addr_str
     self.name = name
-
-  def _launch_namespace(self, cmd, ip_addr_str, create_io_worker):
-    '''
-    Set up and launch cmd in a new network namespace.
-
-    Returns a tuple of the (socket, Popen object of unshared project in netns, EthAddr of guest device).
-
-    This method uses functionality that requires CAP_NET_ADMIN capabilites. This
-    means that the calling method should check that the python process was
-    launched as admin/superuser.
-
-    Parameters:
-      - cmd: the string to launch, in a separate namespace
-    '''
-
-    if system() != 'Linux':
-      raise EnvironmentError('network namespace functionality requires a Linux environment')
-
-    uid = geteuid()
-    if uid != 0:
-      # user must have CAP_NET_ADMIN, which doesn't have to be su, but most often is
-      raise EnvironmentError("superuser privileges required to launch network namespace")
-
-    iface_index = self.hid
-
-    host_device = "heth%d" % (iface_index)
-    guest_device = "geth%d" % (iface_index)
-
-    try:
-      null = open(os.devnull, 'wb') # FIXME(sw): this file is never actually closed
-
-      # Clean up previos network namespaces
-      # (Delete the device if it already exists)
-      for dev in (host_device, guest_device):
-        if subprocess.call(['ip', 'link', 'show', dev], stdout=null, stderr=null) == 0:
-          subprocess.check_call(['ip', 'link', 'del', dev])
-
-      # create a veth pair and set the host end to be promiscuous
-      subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
-      subprocess.check_call(['ip','link','set',host_device,'promisc','on'])
-      # Our end of the veth pair
-      subprocess.check_call(['ip','link','set',host_device,'up'])
-    except subprocess.CalledProcessError:
-      raise # TODO raise a more informative exception
-
-    guest_eth_addr = self.get_eth_address_for_interface(guest_device)
-
-    # make the host-side (STS-side) socket
-    # do this before unshare/fork to make failure/cleanup easier
-    # Make sure we aren't monkeypatched first:
-    if hasattr(socket, "_old_socket"):
-      raise RuntimeError("MonkeyPatched socket! Bailing")
-    s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, self.ETH_P_ALL)
-    # Make sure the buffers are big enough to fit at least one full ethernet
-    # packet
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 8192)
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 8192)
-    s.bind((host_device, self.ETH_P_ALL))
-    s.setblocking(0) # set non-blocking
-
-    # all else should have succeeded, so now we fork and unshare for the guest
-    # `ifconfig $ifname set ip $ifaddr netmask 255.255.255.0 up ; xterm`
-    guest = subprocess.Popen(["unshare", "-n", "--", "/bin/bash"],
-                             stdin=subprocess.PIPE)
-
-    # push down the guest device into the netns
-    try:
-      subprocess.check_call(['ip', 'link', 'set', guest_device, 'netns', str(guest.pid)])
-    except subprocess.CalledProcessError:
-      # Failed to push down guest side of veth pair
-      s.close()
-      raise # TODO raise a more informative exception
-
-    # Set the IP address of the virtual interface
-    # TODO(cs): currently failing with the following error:
-    #   set: Host name lookup failure
-    #   ifconfig: `--help' gives usage information.
-    # I think we may need to add an entry to /etc/hosts before invoking
-    # ifconfig
-    # For now, just force the user to configure it themselves in the xterm
-    #guest.communicate("ifconfig %s set ip %s netmask 255.255.255.0 up" %
-    #                  (guest_device,ip_addr_str))
-    # Send the command
-    guest.communicate(cmd)
-
-    self.socket = s
-    # Set up an io worker for our end of the socket
-    self.io_worker = create_io_worker(self.socket)
-    self.io_worker.set_receive_handler(self.send)
-    self.guest = guest
-    self.guest_eth_addr = guest_eth_addr
-    self.guest_device = guest_device
-
-  @staticmethod
-  def get_eth_address_for_interface(ifname):
-    '''Returns an EthAddr object from the interface specified by the argument.
-
-    interface is a string, commonly eth0, wlan0, lo.'''
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    info = fcntl.ioctl(s.fileno(), 0x8927,  struct.pack('256s', ifname[:15]))
-    return EthAddr(''.join(['%02x:' % ord(char) for char in info[18:24]])[:-1])
 
   def send(self, io_worker):
     message = io_worker.peek_receive_buf()
@@ -622,6 +516,13 @@ class Controller(object):
     self.sync_connection = None
     self.snapshot_service = snapshot_service
     self.log = logging.getLogger("Controller")
+    # For network namespaces only:
+    self.guest_eth_addr = None
+    self.host_device = None
+
+  @property
+  def remote(self):
+    return self.config.address != "127.0.0.1" and self.config.address != "localhost"
 
   @property
   def pid(self):
@@ -652,6 +553,18 @@ class Controller(object):
     self.process = None
     self.state = ControllerState.DEAD
 
+  def _bind_pcap(self, host_device):
+    filter_string = "(not tcp port %d)" % self.config.port
+    if self.config.sync is not None and self.config.sync != "":
+      # TODO(cs): this is not quite correct. The *listen* port is sync_port,
+      # but the sync data connection will go over over an ephermeral port.
+      # Luckily this mistake is not fatal -- the kernel copies all
+      # packets sent to the pcap, and we'll just drop the copied packets when
+      # we realize we don't know where to route them.
+      (_, _, sync_port) = parse_openflow_uri(self.config.sync)
+      filter_string += " and (not tcp port %d)" % sync_port
+    return bind_pcap(host_device, filter_string=filter_string)
+
   def start(self):
     ''' Start a new controller process based on the config's start_cmd
     attribute. Registers the Popen member variable for deletion upon a SIG*
@@ -662,9 +575,15 @@ class Controller(object):
     if self.config.start_cmd == "":
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
-    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+    if self.config.launch_in_network_namespace:
+      (self.process, self.guest_eth_addr, self.host_device) = \
+          launch_namespace(" ".join(self.config.expanded_start_cmd),
+                           self.config.address, self.cid,
+                           host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address))
+    else:
+      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
-    self.state = ControllerState.STARTING
+    self.state = ControllerState.ALIVE
 
   def restart(self):
     if self.state != ControllerState.DEAD:
@@ -684,6 +603,7 @@ class Controller(object):
       return (False, "Controller %s: Alive, but controller process terminated with return code %d" %
               (self.cid, rc))
     return (True, "OK")
+
 
 class POXController(Controller):
   # N.B. controller-specific configuration is optional. The purpose of this
@@ -748,7 +668,14 @@ class POXController(Controller):
     if self.config.start_cmd == "":
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
-    self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
+    if self.config.launch_in_network_namespace:
+      (self.process, self.guest_eth_addr, self.host_device) = \
+          launch_namespace(" ".join(self.config.expanded_start_cmd),
+                           self.config.address, self.cid,
+                           host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address),
+                           cwd=self.config.cwd, env=env)
+    else:
+      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
     self._register_proc(self.process)
     if self.config.sync:
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
@@ -758,6 +685,7 @@ class BigSwitchController(Controller):
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     super(BigSwitchController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self.log.info(" =====> STARTING BIG SWITCH CONTROLLER <===== ")
+    self.ssh_client = None
 
   def kill(self):
     if self.state != ControllerState.ALIVE:
@@ -793,16 +721,25 @@ class BigSwitchController(Controller):
     self.state = ControllerState.STARTING
 
   def check_status(self, simulation):
+    self.log.info("Checking status of controller %s" % self.label)
     if self.state == ControllerState.STARTING:
       return (True, "OK")
-    # Retrieve status from script
-    if self.config.check_status_cmd == "":
-      raise RuntimeError("No command found to check status of controller %s!" % self.label)
-    self.log.info("Checking status of controller %s: %s" % (self.label, " ".join(self.config.expanded_check_status_cmd)))
-    p = popen_filtered("[%s]" % self.label, self.config.expanded_check_status_cmd, self.config.cwd, redirect_output=False)
-    (out, _) = p.communicate()
+    if self.ssh_client is None:
+      import paramiko
+      # Suppress normal SSH messages
+      logging.getLogger("paramiko").setLevel(logging.WARN)
+      self.ssh_client = paramiko.Transport((self.config.address, 22))
+      self.ssh_client.connect(username="root", password="")
+    session = self.ssh_client.open_channel(kind='session')
+    session.exec_command('service floodlight status')
+    while not session.recv_ready():
+      self.log.debug("Awaiting controller status reply...")
+      time.sleep(0.1)
+    reply = ""
+    while session.recv_ready():
+      reply += session.recv(100)
     # Actual state is whether remote process exists
-    actual_state = ControllerState.ALIVE if ("start" in out) else ControllerState.DEAD
+    actual_state = ControllerState.ALIVE if ("start" in reply) else ControllerState.DEAD
     if self.state == ControllerState.DEAD and actual_state == ControllerState.ALIVE:
       return (False, "Dead, but controller process exists!")
     if self.state == ControllerState.ALIVE and actual_state == ControllerState.DEAD:

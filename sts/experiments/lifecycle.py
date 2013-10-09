@@ -19,10 +19,7 @@ import socket
 import sys
 import json
 from sts.util.convenience import timestamp_string
-import logging
 import subprocess
-
-log = logging.getLogger("sts.exp_lifecycle")
 
 sts_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
@@ -100,6 +97,8 @@ def publish_prepare(exp_name, results_dir):
     raise Exception("Cannot publish - no git dir found in results tree")
 
 def publish_results(exp_name, results_dir):
+    import logging
+    log = logging.getLogger("sts.exp_lifecycle")
     res_git_dir = find_git_dir(results_dir)
     rel_results_dir = os.path.relpath(results_dir, res_git_dir)
     log.info("Publishing results to git dir "+res_git_dir)

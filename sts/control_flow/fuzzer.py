@@ -31,6 +31,7 @@ from pox.lib.packet.lldp import *
 from config.invariant_checks import name_to_invariant_check
 from sts.util.convenience import base64_encode
 from sts.entities import FuzzSoftwareSwitch
+from sts.openflow_buffer import OpenFlowBuffer
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 
@@ -57,7 +58,9 @@ class Fuzzer(ControlFlow):
                halt_on_violation=False, log_invariant_checks=True,
                delay_startup=True, print_buffers=True,
                record_deterministic_values=False,
-               mock_link_discovery=False, initialization_rounds=0):
+               mock_link_discovery=False,
+               never_drop_whitelisted_packets=True,
+               initialization_rounds=0):
     '''
     Options:
       - fuzzer_params: path to event probabilities
@@ -126,9 +129,12 @@ class Fuzzer(ControlFlow):
     self._all_to_all_iterations = 0
     # How often (in terms of logical rounds) to inject all-to-all packets
     self._all_to_all_interval = 5
+    self.blocked_controller_pairs = []
+    self.unblocked_controller_pairs = []
 
     # Logical time (round #) for the simulation execution
     self.logical_time = 0
+    self.never_drop_whitelisted_packets = never_drop_whitelisted_packets
 
     # Determine whether to use delayed and randomized flow mod processing
     # (Set by fuzzer_params, not by an optional __init__ argument)
@@ -155,6 +161,14 @@ class Fuzzer(ControlFlow):
       raise IOError("Could not find fuzzer params config file: %s" %
                     fuzzer_params_path)
 
+  def _compute_unblocked_controller_pairs(self):
+    sorted_controllers = sorted(self.simulation.controller_manager.controllers, key=lambda c: c.cid)
+    unblocked_pairs = []
+    for i in xrange(0, len(sorted_controllers)-1):
+      for j in xrange(i+1, len(sorted_controllers)):
+        unblocked_pairs.append((sorted_controllers[i], sorted_controllers[j]))
+    return unblocked_pairs
+
   def init_results(self, results_dir):
     if self._input_logger:
       self._input_logger.open(results_dir)
@@ -175,6 +189,7 @@ class Fuzzer(ControlFlow):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     self.traffic_generator.set_topology(self.simulation.topology)
+    self.unblocked_controller_pairs = self._compute_unblocked_controller_pairs()
 
     self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 0
     if self.delay_flow_mods:
@@ -340,11 +355,10 @@ class Fuzzer(ControlFlow):
     self.fuzz_traffic()
     self.check_controllers()
     self.check_migrations()
+    self.check_intracontroller_blocks()
 
   def check_dataplane(self, pass_through=False):
     ''' Decide whether to delay, drop, or deliver packets '''
-    def is_lldp(pkt):
-      return type(pkt.next) == lldp
     def drop(dp_event):
       self.simulation.patch_panel.drop_dp_event(dp_event)
       self._log_input_event(DataplaneDrop(dp_event.fingerprint,
@@ -354,12 +368,16 @@ class Fuzzer(ControlFlow):
       self.simulation.patch_panel.permit_dp_event(dp_event)
       self._log_input_event(DataplanePermit(dp_event.fingerprint))
 
+    def in_whitelist(dp_event):
+      return (self.never_drop_whitelisted_packets and
+              OpenFlowBuffer.in_whitelist(dp_event.fingerprint[0]))
+
     for dp_event in self.simulation.patch_panel.queued_dataplane_events:
       if pass_through:
         permit(dp_event)
       elif not self.simulation.topology.ok_to_send(dp_event):
         drop(dp_event)
-      elif (self.random.random() >= self.params.dataplane_drop_rate) or is_lldp(dp_event.packet):
+      elif (self.random.random() >= self.params.dataplane_drop_rate or in_whitelist(dp_event)):
         permit(dp_event)
       else:
         drop(dp_event)
@@ -542,3 +560,28 @@ class Fuzzer(ControlFlow):
                                               access_link.host.hid))
           self._send_initialization_packet(access_link.host, send_to_self=True)
 
+  def check_intracontroller_blocks(self):
+    if self.simulation.controller_patch_panel is None:
+      return
+
+    blocked_this_round = None
+
+    # Block at most one controller pair per round.
+    if (len(self.unblocked_controller_pairs) > 0 and
+        self.random.random() < self.params.intracontroller_block_rate):
+      (cid1, cid2) = self.random.choice(self.unblocked_controller_pairs)
+      blocked_this_round = (cid1, cid2)
+      self.unblocked_controller_pairs.remove((cid1, cid2))
+      self.simulation.controller_patch_panel.block_controller_pair(cid1, cid2)
+      self._log_input_event(BlockControllerPair(cid1, cid2))
+
+    if (len(self.blocked_controller_pairs) > 0 and
+        self.random.random() < self.params.intracontroller_unblock_rate):
+      (cid1, cid2) = self.random.choice(self.blocked_controller_pairs)
+      self.blocked_controller_pairs.remove((cid1, cid2))
+      self.unblocked_controller_pairs.append((cid1, cid2))
+      self.simulation.controller_patch_panel.unblock_controller_pair(cid1, cid2)
+      self._log_input_event(UnblockControllerPair(cid1, cid2))
+
+    if blocked_this_round is not None:
+      self.blocked_controller_pairs.append(blocked_this_round)

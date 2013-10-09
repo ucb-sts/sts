@@ -13,7 +13,7 @@ STS depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install STS, you
 ```
 $ git clone git://github.com/ucb-sts/sts.git
 $ cd sts
-$ git clone -b debugger git://github.com/noxrepo/pox.git pox/
+$ git clone -b debugger git://github.com/ucb-sts/pox.git
 ```
 
 ### Running

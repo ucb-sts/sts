@@ -36,8 +36,24 @@ class OpenFlowBuffer(EventMixin):
   '''
   Models asynchrony: chooses when switches get to process packets from
   controllers. Buffers packets until they are pulled off the buffer and chosen
-  by god aka. the buffer (control_flow.py) to be processed.
+  by god (control_flow.py) to be processed.
   '''
+
+  # Packet class matches that should be let through automatically if
+  # self.allow_whitelisted_packets is True.
+  whitelisted_packet_classes = [("class", "ofp_packet_out", ("data", ("class", "lldp", None))),
+                                ("class", "ofp_packet_in",  ("data", ("class", "lldp", None))),
+                                ("class", "lldp", None),
+                                ("class", "ofp_echo_request", None),
+                                ("class", "ofp_echo_reply", None)]
+
+  @staticmethod
+  def in_whitelist(packet_fingerprint):
+    for match in GodScheduler.whitelisted_packet_classes:
+      if packet_fingerprint.check_match(match):
+        return True
+    return False
+
   _eventMixin_events = set([PendingMessage])
 
   def __init__(self):
@@ -47,6 +63,8 @@ class OpenFlowBuffer(EventMixin):
     self.pendingreceive2conn_messages = defaultdict(list)
     # { pending send -> [(connection, pending ofp)_1, (connection, pending ofp)_2, ...] }
     self.pendingsend2conn_messages = defaultdict(list)
+    self._delegate_input_logger = None
+    self.pass_through_whitelisted_packets = False
 
   def set_pass_through(self):
     ''' Cause all message receipts to pass through immediately without being
@@ -77,12 +95,17 @@ class OpenFlowBuffer(EventMixin):
                                       pending_message.controller_id,
                                       pending_message.fingerprint,
                                       b64_packet=message_event.b64_packet)
-    self.passed_through_events.append(replay_event)
+    if self._delegate_input_logger is not None:
+      # TODO(cs): set event.round somehow?
+      self._delegate_input_logger.log_input_event(replay_event)
+    else:
+      self.passed_through_events.append(replay_event)
 
-  def set_pass_through(self):
+  def set_pass_through(self, input_logger=None):
     ''' Cause all message receipts to pass through immediately without being
     buffered'''
     self.passed_through_events = []
+    self._delegate_input_logger = input_logger
     self.addListener(PendingMessage, self._pass_through_handler)
 
   def unset_pass_through(self):
@@ -135,6 +158,9 @@ class OpenFlowBuffer(EventMixin):
   def insert_pending_receipt(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
+    if self.pass_through_whitelisted_packets and self.in_whitelist(fingerprint):
+      conn.allow_message_receipt(ofp_message)
+      return
     conn_message = (conn, ofp_message)
     pending_receive = PendingReceive(dpid, controller_id, fingerprint)
     self.pendingreceive2conn_messages[pending_receive].append(conn_message)
@@ -147,6 +173,9 @@ class OpenFlowBuffer(EventMixin):
   def insert_pending_send(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
+    if self.pass_through_whitelisted_packets and self.in_whitelist(fingerprint):
+      conn.allow_message_send(ofp_message)
+      return
     conn_message = (conn, ofp_message)
     pending_send = PendingSend(dpid, controller_id, fingerprint)
     self.pendingsend2conn_messages[pending_send].append(conn_message)

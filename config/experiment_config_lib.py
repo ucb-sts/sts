@@ -20,14 +20,14 @@ import subprocess
 import logging
 import re
 import time
-from sts.util.convenience import address_is_ip, find_port
+from sts.util.convenience import address_is_ip, find_port, IPAddressSpace
 from sts.entities import Controller, POXController, BigSwitchController
 
-log = logging.getLogger("controller-config") 
+log = logging.getLogger("controller-config")
 
 controller_type_map = {
   "pox": POXController,
-  "bsc": BigSwitchController
+  "bsc": BigSwitchController,
 }
 
 class ControllerConfig(object):
@@ -41,23 +41,33 @@ class ControllerConfig(object):
   def __init__(self, start_cmd="", address="127.0.0.1", port=None, additional_ports={},
                cwd=None, sync=None, controller_type=None, label=None, config_file=None,
                config_template=None, try_new_ports=False, kill_cmd="", restart_cmd="",
-               check_status_cmd="", get_address_cmd=""):
+               get_address_cmd="", launch_in_network_namespace=False):
     '''
     Store metadata for the controller.
       - start_cmd: command that starts a controller or a set of controllers,
-          followed by a list of command line tokens as arguments
+          followed by a list of command line tokens as arguments. You may make
+          use of two macros: __address__ expands to some available IP address
+          for the controller, and __port__ expands to some available (OpenFlow) port.
       - kill_cmd: command that kills a controller or a set of controllers,
           followed by a list of command line tokens as arguments
-      - address, port: controller socket info to listen for switches on
-      - controller_type: controller vendor, specified by the corresponding Controller
-          class itself, or a string chosen from one of the keys in controller_type_map 
+      - address, port: controller socket info for listening to OpenFlow
+        connections from switches. address may be specified as "auto" to automatically find a
+        non-localhost IP address in the range 192.168.1.0/24, or "__address__" to use
+        get_address_cmd to choose an address.
+      - get_address_cmd: an optional bash command that returns an address for
+        the controller to bind to.
+      - controller_type: controller type, specified by the corresponding Controller
+          class itself, or a string chosen from one of the keys in controller_type_map
     '''
     if start_cmd == "":
       raise RuntimeError("Must specify boot parameters.")
     self.start_cmd = start_cmd
     self.kill_cmd = kill_cmd
     self.restart_cmd = restart_cmd
-    self.check_status_cmd = check_status_cmd
+    self.launch_in_network_namespace = launch_in_network_namespace
+    if launch_in_network_namespace and (address == "127.0.0.1" or address == "localhost"):
+      raise ValueError("""Must set a non-localhost address for namespace controller.\n"""
+                       """Specify `auto` to automatically find an available IP.""")
 
     # Set label
     if label is None:
@@ -70,12 +80,19 @@ class ControllerConfig(object):
     # Set index, for assigning IP addresses in the case of multiple controllers
     match = re.search("c(\d+)", self.label)
     if match:
-      self.index = int(match.groups()[0]) 
+      self.index = int(match.groups()[0])
     else:
       self.index = None
 
-    # Set address and port
+    # Set address.
+    if address == "__address__":
+      address = self.get_address(get_address_cmd, cwd)
+    elif address == "auto":
+      # TODO(cs): need to add support for auto to the sync uri.
+      address = IPAddressSpace.find_unclaimed_address()
     self.address = address
+    IPAddressSpace.register_address(address)
+
     if address_is_ip(address) or address == "localhost":
       # Normal TCP socket
       if not port:
@@ -84,11 +101,6 @@ class ControllerConfig(object):
         port = find_port(xrange(port, port+2000))
       self.port = port
       self._server_info = (self.address, port)
-    elif address == "__address__":
-      if not port:
-        port = self._port_gen.next()
-      self.port = port
-      self.get_address(get_address_cmd, cwd)
     else:
       # Unix domain socket
       self.port = None
@@ -150,12 +162,14 @@ class ControllerConfig(object):
     else:
       raise RuntimeError("Cannot retrieve controller IP addresses after %d attempts!" %
                            self._max_address_retrieval_attempts)
+    address = None
     if self.index is not None and self.index <= len(self._controller_addresses):
-      self.address = self._controller_addresses[self.index-1]
-      self._server_info = (self.address, self.port)
+      address = self._controller_addresses[self.index-1]
+      self.address = address
       log.info("Found controller address for %s: %s!" % (self.label, self.address))
     else:
       raise RuntimeError("No IP address resolved for controller %s!" % self.label)
+    return address
 
   @property
   def cid(self):
@@ -176,7 +190,7 @@ class ControllerConfig(object):
   @property
   def expanded_start_cmd(self):
     return map(self._expand_vars, self.start_cmd.split())
-  
+
   @property
   def expanded_kill_cmd(self):
     return map(self._expand_vars, self.kill_cmd.split())
@@ -184,10 +198,6 @@ class ControllerConfig(object):
   @property
   def expanded_restart_cmd(self):
     return map(self._expand_vars, self.restart_cmd.split())
-
-  @property
-  def expanded_check_status_cmd(self):
-    return map(self._expand_vars, self.check_status_cmd.split())
 
   def generate_config_file(self, target_dir):
     if self.config_file is None:
@@ -198,7 +208,7 @@ class ControllerConfig(object):
         out_file.write(self._expand_vars(in_file.read()))
 
   def __repr__(self):
-    attributes = ("start_cmd", "label", "address", "port", "cwd", "controller_type", "sync", "kill_cmd", "restart_cmd", "check_status_cmd")
+    attributes = ("start_cmd", "label", "address", "cwd", "controller_type", "sync", "kill_cmd", "restart_cmd")
 
     pairs = ( (attr, getattr(self, attr)) for attr in attributes)
     quoted = ( "%s=%s" % (attr, repr(value)) for (attr, value) in pairs if value)

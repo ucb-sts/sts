@@ -19,16 +19,35 @@ from pox.lib.packet.ethernet import *
 from pox.lib.packet.lldp import *
 from pox.lib.packet.arp import *
 from pox.lib.packet.ipv4 import *
+import sys
 try:
+  # Import a dummy hsa module to check that the submodule is there.
+  import examples as hsa_import_test
+except ImportError:
+  print >> sys.stderr, str('''Headerspace submodule not loaded. '''
+                           '''flow_mod_matches will not be considered during replay. '''
+                           ''' Load with:\n'''
+                           '''$ git submodule init \n'''
+                           '''$ git submodule update \n''')
+
+try:
+  # Import the actual module to see if it's built.
   import config_parser.openflow_parser as hsa
 except ImportError:
+  build_instructions = "$ (cd sts/hassel/hsa-python && source setup.sh)"
+  print >> sys.stderr, str('''Headerspace module not built. '''
+                           '''flow_mod matches will not be considered during replay.\n'''
+                           '''Build it with:\n%s''' % build_instructions)
   class NeedSubmodule(object):
     def _need_submodule(self):
-      raise RuntimeError('''Need to load the hassel submodule:\n '''
-                         ''' $ git submodule init \n'''
-                         ''' $ git submodule update ''')
-    def format(self, *args): self._need_submodule()
-    def ofp_match_to_hsa_match(self): self._need_submodule()
+      raise RuntimeError("Need to build the hassel submodule:\n%s" % build_instructions)
+    def format(self, *args):
+      self._need_submodule()
+    @property
+    def hs_format(self):
+      return {"display": lambda *args: None}
+    def ofp_match_to_hsa_match(self, *args):
+      return None
 
   hsa = NeedSubmodule()
 
