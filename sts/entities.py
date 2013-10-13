@@ -682,11 +682,14 @@ class POXController(Controller):
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
     self.state = ControllerState.ALIVE
 
-class BigSwitchController(Controller):
-  def __init__(self, controller_config, sync_connection_manager, snapshot_service):
-    super(BigSwitchController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
-    self.log.info(" =====> STARTING BIG SWITCH CONTROLLER <===== ")
+class VMController(Controller):
+  ''' Controllers that are run in virtual machines rather than processes '''
+  def __init__(self, controller_config, sync_connection_manager,
+               snapshot_service, username="root", password=""):
+    super(VMController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self.ssh_client = None
+    self.username = username
+    self.password = password
 
   def kill(self):
     if self.state != ControllerState.ALIVE:
@@ -700,6 +703,7 @@ class BigSwitchController(Controller):
     self.state = ControllerState.DEAD
 
   def start(self):
+    self.log.info(" =====> STARTING VM CONTROLLER <===== ")
     if self.state != ControllerState.DEAD:
       self.log.warn("Starting controller %s when controller is not dead!" % self.label)
       return
@@ -730,7 +734,14 @@ class BigSwitchController(Controller):
       # Suppress normal SSH messages
       logging.getLogger("paramiko").setLevel(logging.WARN)
       self.ssh_client = paramiko.Transport((self.config.address, 22))
-      self.ssh_client.connect(username="root", password="")
+      self.ssh_client.connect(username=self.username, password=self.password)
+    return (None, "")
+
+class BigSwitchController(VMController):
+  def check_status(self, simulation):
+    (ok, message) = super(BigSwitchController, self).check_status
+    if ok:
+      return (ok, message)
     session = self.ssh_client.open_channel(kind='session')
     session.exec_command('service floodlight status')
     while not session.recv_ready():
