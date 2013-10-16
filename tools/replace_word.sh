@@ -15,7 +15,7 @@ for f in $FILES; do
     continue 
   fi
   CONTENT=$(sed s/$1/$2/g $f)
-  printf "$CONTENT" > $f
+  echo -e "$CONTENT" > $f
   echo "Replaced $1 with $2 in $f"
 done
 

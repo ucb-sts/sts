@@ -29,5 +29,7 @@ for i in $(seq 1 $1)
 do
   echo -e "\n==================== Starting the $i'th iteration ====================\n"
   ./simulator.py -c $2
-  mv experiments/"$EXP_NAME" experiments/"$EXP_NAME"_"$i"
+  NEW_EXP_NAME="$EXP_NAME"_"$i"
+  mv experiments/"$EXP_NAME" experiments/"$NEW_EXP_NAME"
+  find experiments/"$NEW_EXP_NAME" | xargs tools/replace_word.sh "$EXP_NAME" "$NEW_EXP_NAME"
 done
