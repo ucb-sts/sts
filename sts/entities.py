@@ -739,7 +739,7 @@ class VMController(Controller):
 
 class BigSwitchController(VMController):
   def check_status(self, simulation):
-    (ok, message) = super(BigSwitchController, self).check_status
+    (ok, message) = super(BigSwitchController, self).check_status(simulation)
     if ok:
       return (ok, message)
     session = self.ssh_client.open_channel(kind='session')
