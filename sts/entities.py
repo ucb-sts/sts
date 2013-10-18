@@ -40,7 +40,7 @@ import re
 import pickle
 import random
 import time
-
+import abc
 
 class DeferredOFConnection(OFConnection):
   def __init__(self, io_worker, cid, dpid, openflow_buffer):
@@ -684,6 +684,8 @@ class POXController(Controller):
 
 class VMController(Controller):
   ''' Controllers that are run in virtual machines rather than processes '''
+  __metaclass__ = abc.ABCMeta
+
   def __init__(self, controller_config, sync_connection_manager,
                snapshot_service, username="root", password=""):
     super(VMController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
@@ -725,6 +727,14 @@ class VMController(Controller):
     p.wait()
     self.state = ControllerState.STARTING
 
+  @abc.abstractmethod
+  def get_status_command(self):
+    pass
+
+  @abc.abstractmethod
+  def get_alive_status_string(self):
+    pass
+
   def check_status(self, simulation):
     self.log.info("Checking status of controller %s" % self.label)
     if self.state == ControllerState.STARTING:
@@ -735,15 +745,8 @@ class VMController(Controller):
       logging.getLogger("paramiko").setLevel(logging.WARN)
       self.ssh_client = paramiko.Transport((self.config.address, 22))
       self.ssh_client.connect(username=self.username, password=self.password)
-    return (None, "")
-
-class BigSwitchController(VMController):
-  def check_status(self, simulation):
-    (ok, message) = super(BigSwitchController, self).check_status(simulation)
-    if ok:
-      return (ok, message)
     session = self.ssh_client.open_channel(kind='session')
-    session.exec_command('service floodlight status')
+    session.exec_command(self.get_status_command())
     while not session.recv_ready():
       self.log.debug("Awaiting controller status reply...")
       time.sleep(0.1)
@@ -751,12 +754,26 @@ class BigSwitchController(VMController):
     while session.recv_ready():
       reply += session.recv(100)
     # Actual state is whether remote process exists
-    actual_state = ControllerState.ALIVE if ("start" in reply) else ControllerState.DEAD
+    actual_state = ControllerState.ALIVE if (self.get_alive_status_string() in reply) else ControllerState.DEAD
     if self.state == ControllerState.DEAD and actual_state == ControllerState.ALIVE:
       return (False, "Dead, but controller process exists!")
     if self.state == ControllerState.ALIVE and actual_state == ControllerState.DEAD:
       return (False, "Alive, but no controller process found!")
     return (True, "OK")
+
+class BigSwitchController(VMController):
+  def get_status_command(self):
+    return 'service floodlight status'
+
+  def get_alive_status_string(self):
+    return "alive"
+
+class ONOSController(VMController):
+  def get_status_command(self):
+    return 'cd ONOS; ./start-onos.sh status'
+
+  def get_alive_status_string(self):
+    return "1 instance of onos running"
 
 class TableInserter(object):
   ''' Shim layer sitting between incoming messages and a switch. This class 
