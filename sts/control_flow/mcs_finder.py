@@ -438,13 +438,18 @@ class MCSFinder(ControlFlow):
     ''' Pre: simulation must have been run through a replay'''
     # We always check against internal events that were buffered at the end of
     # the original run (don't want to overcount)
-    path = self.superlog_path + ".unacked"
-    if not os.path.exists(path):
-      log.warn("unacked internal events file from original run does not exist")
+    prev_buffered_receives = []
+    try:
+      path = self.superlog_path + ".unacked"
+      if not os.path.exists(path):
+        log.warn("unacked internal events file from original run does not exist")
+        return
+      prev_buffered_receives = set([ e.pending_receive for e in
+                                     [ f for f in EventDag(log_parser.parse_path(path)).events
+                                       if type(f) == ControlMessageReceive ] ])
+    except ValueError as e:
+      log.warn("unacked internal events is corrupt? %r" % e)
       return
-    prev_buffered_receives = set([ e.pending_receive for e in
-                                   [ f for f in EventDag(log_parser.parse_path(path)).events
-                                     if type(f) == ControlMessageReceive ] ])
     buffered_message_receipts = []
     for p in simulation.openflow_buffer.pending_receives():
       if p not in prev_buffered_receives:
