@@ -115,9 +115,10 @@ def _prefix_thread(f, func):
   t.start()
   return t
 
-def popen_filtered(name, args, cwd=None, env=None, redirect_output=True):
+def popen_filtered(name, args, cwd=None, env=None, redirect_output=True,
+                   shell=False):
   try:
-    cmd = subprocess.Popen(args, stdout=subprocess.PIPE,
+    cmd = subprocess.Popen(args, stdout=subprocess.PIPE, shell=shell,
                            stderr=subprocess.PIPE, stdin=sys.stdin, cwd=cwd, env=env,
                            preexec_fn=lambda: os.setsid())
   except OSError as e:

@@ -700,7 +700,8 @@ class VMController(Controller):
     if self.config.kill_cmd == "":
       raise RuntimeError("No command found to kill controller %s!" % self.label)
     self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
-    p = popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd, self.config.cwd)
+    p = popen_filtered("[%s]" % self.label, ' '.join(self.config.expanded_kill_cmd),
+                       self.config.cwd, shell=True)
     p.wait()
     self.state = ControllerState.DEAD
 
@@ -712,7 +713,8 @@ class VMController(Controller):
     if self.config.start_cmd == "":
       raise RuntimeError("No command found to start controller %s!" % self.label)
     self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
-    p = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+    p = popen_filtered("[%s]" % self.label, ' '.join(self.config.expanded_start_cmd),
+                       self.config.cwd, shell=True)
     p.wait()
     self.state = ControllerState.STARTING
 
@@ -723,7 +725,8 @@ class VMController(Controller):
     if self.config.restart_cmd == "":
       raise RuntimeError("No command found to restart controller %s!" % self.label)
     self.log.info("Relaunching controller %s: %s" % (self.label, " ".join(self.config.expanded_restart_cmd)))
-    p = popen_filtered("[%s]" % self.label, self.config.expanded_restart_cmd, self.config.cwd)
+    p = popen_filtered("[%s]" % self.label, ' ',join(self.config.expanded_restart_cmd),
+                       self.config.cwd, shell=True)
     p.wait()
     self.state = ControllerState.STARTING
 
