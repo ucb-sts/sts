@@ -769,6 +769,12 @@ class BigSwitchController(VMController):
     return "alive"
 
 class ONOSController(VMController):
+  def __init__(self, controller_config, sync_connection_manager,
+               snapshot_service, username="openflow", password="openflow"):
+    super(ONOSController, self).__init__(controller_config,
+          sync_connection_manager, snapshot_service,
+          username=username, password=password)
+
   def get_status_command(self):
     return 'cd ONOS; ./start-onos.sh status'
 
