@@ -22,6 +22,7 @@ import re
 import time
 from sts.util.convenience import address_is_ip, find_port, IPAddressSpace
 from sts.entities import Controller, POXController, BigSwitchController
+from collections import defaultdict
 
 log = logging.getLogger("controller-config")
 
@@ -31,7 +32,8 @@ controller_type_map = {
 }
 
 class ControllerConfig(object):
-  _port_gen = itertools.count(6633)
+  # { address -> port counter }
+  _port_gen = defaultdict(lambda: itertools.count(6633))
   _controller_count_gen = itertools.count(1)
   _controller_labels = set()
   _controller_addresses = []
@@ -96,7 +98,7 @@ class ControllerConfig(object):
     if address_is_ip(address) or address == "localhost":
       # Normal TCP socket
       if not port:
-        port = self._port_gen.next()
+        port = self._port_gen[address].next()
       if try_new_ports:
         port = find_port(xrange(port, port+2000))
       self.port = port
