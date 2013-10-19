@@ -20,7 +20,7 @@ if 'CLUSTER' not in os.environ:
 # N.B. this command is for the entire cluster, not individual nodes.
 start_cmd = (''' vagrant up onosdev1 onosdev2 ; '''
              ''' ./scripts/conf_setup.sh 2 ; zk start ; cassandra start; '''
-             ''' onos start ; sleep 15 ''')
+             ''' onos start ; sleep 30 ''')
 # N.B kills a single node.
 kill_cmd = (''' vagrant ssh %s -c "cd ONOS; ./start-onos.sh stop"''')
 # N.B. starts a single node.
