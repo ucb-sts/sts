@@ -67,13 +67,15 @@ class ControllerManager(object):
 
   @property
   def live_controllers(self):
-    self.check_controller_status()
+    ''' Note! you must invoke check_controller_status if you want an
+    up-to-date list of the live controllers'''
     alive = [controller for controller in self.controllers if controller.state == ControllerState.ALIVE]
     return set(alive)
 
   @property
   def down_controllers(self):
-    self.check_controller_status()
+    ''' Note! you must invoke check_controller_status if you want an
+    up-to-date list of the down controllers'''
     down = [controller for controller in self.controllers if controller.state == ControllerState.DEAD]
     return set(down)
 
@@ -105,6 +107,7 @@ class ControllerManager(object):
     controller.restart()
 
   def check_controller_status(self):
+    ''' N.B. this method mutates the state of the controller objects '''
     controllers_with_problems = []
     for c in self.controllers:
       (ok, msg) = c.check_status(self.simulation)
