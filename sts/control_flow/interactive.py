@@ -370,9 +370,9 @@ class Interactive(ControlFlow):
   def show_queued_events(self):
     queued = self.simulation.patch_panel.queued_dataplane_events
     if len(queued) > 0:
-      print "Queued Dataplane events:"
+      log.debug("Queued Dataplane events:")
       for (i, e) in enumerate(queued):
-        print "%d: %s on %s:%s" % (i, e, e.node, e.port)
+        log.debug("%d: %s on %s:%s" % (i, e, e.node, e.port))
 
   def list_controllers(self):
     cm = self.simulation.controller_manager
