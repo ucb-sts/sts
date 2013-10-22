@@ -605,6 +605,13 @@ class Controller(object):
               (self.cid, rc))
     return (True, "OK")
 
+  def block_peer(self, peer_controller):
+    ''' Ignore traffic to/from the given peer controller '''
+    raise NotImplementedError("Peer blocking not yet supported")
+
+  def unblock_peer(self, peer_controller):
+    ''' Stop ignoring traffic to/from the given peer controller '''
+    raise NotImplementedError("Peer blocking not yet supported")
 
 class POXController(Controller):
   # N.B. controller-specific configuration is optional. The purpose of this
@@ -689,7 +696,7 @@ class VMController(Controller):
   def __init__(self, controller_config, sync_connection_manager,
                snapshot_service, username="root", password=""):
     super(VMController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
-    self.ssh_client = None
+    self._ssh_client = None
     self.username = username
     self.password = password
 
@@ -738,16 +745,24 @@ class VMController(Controller):
   def get_alive_status_string(self):
     pass
 
+  @property
+  def ssh_client(self):
+    if self._ssh_client is None:
+      try:
+        import paramiko
+      except ImportError:
+        raise RuntimeError('''Must install paramiko to use ssh: \n'''
+                           ''' $ sudo pip install paramiko ''')
+      # Suppress normal SSH messages
+      logging.getLogger("paramiko").setLevel(logging.WARN)
+      self._ssh_client = paramiko.Transport((self.config.address, 22))
+      self._ssh_client.connect(username=self.username, password=self.password)
+    return self._ssh_client
+
   def check_status(self, simulation):
     self.log.info("Checking status of controller %s" % self.label)
     if self.state == ControllerState.STARTING:
       return (True, "OK")
-    if self.ssh_client is None:
-      import paramiko
-      # Suppress normal SSH messages
-      logging.getLogger("paramiko").setLevel(logging.WARN)
-      self.ssh_client = paramiko.Transport((self.config.address, 22))
-      self.ssh_client.connect(username=self.username, password=self.password)
     session = self.ssh_client.open_channel(kind='session')
     session.exec_command(self.get_status_command())
     while not session.recv_ready():
@@ -763,6 +778,23 @@ class VMController(Controller):
     if self.state == ControllerState.ALIVE and actual_state == ControllerState.DEAD:
       return (False, "Alive, but no controller process found!")
     return (True, "OK")
+
+  def block_peer(self, peer_controller):
+    session = self.ssh_client.open_channel(kind='session')
+    session.exec_command("sudo iptables -A INPUT -s %s -j DROP" %
+                         peer_controller.config.address)
+    session = self.ssh_client.open_channel(kind='session')
+    session.exec_command("sudo iptables -A OUTPUT -s %s -j DROP" %
+                         peer_controller.config.address)
+
+  def unblock_peer(self, peer_controller):
+    session = self.ssh_client.open_channel(kind='session')
+    session.exec_command("sudo iptables -D INPUT -s %s -j DROP" %
+                         peer_controller.config.address)
+    session = self.ssh_client.open_channel(kind='session')
+    session.exec_command("sudo iptables -D OUTPUT -s %s -j DROP" %
+                         peer_controller.config.address)
+
 
 class BigSwitchController(VMController):
   def get_status_command(self):

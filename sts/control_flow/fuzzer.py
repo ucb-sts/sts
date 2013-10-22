@@ -563,9 +563,6 @@ class Fuzzer(ControlFlow):
           self._send_initialization_packet(access_link.host, send_to_self=True)
 
   def check_intracontroller_blocks(self):
-    if self.simulation.controller_patch_panel is None:
-      return
-
     blocked_this_round = None
 
     # Block at most one controller pair per round.
@@ -574,7 +571,12 @@ class Fuzzer(ControlFlow):
       (cid1, cid2) = self.random.choice(self.unblocked_controller_pairs)
       blocked_this_round = (cid1, cid2)
       self.unblocked_controller_pairs.remove((cid1, cid2))
-      self.simulation.controller_patch_panel.block_controller_pair(cid1, cid2)
+      if self.simulation.controller_patch_panel is not None:
+        self.simulation.controller_patch_panel.block_controller_pair(cid1, cid2)
+      else:
+        (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
+                      for cid in [cid1, cid2] ]
+        c1.block_peer(c2)
       self._log_input_event(BlockControllerPair(cid1, cid2))
 
     if (len(self.blocked_controller_pairs) > 0 and
@@ -582,7 +584,12 @@ class Fuzzer(ControlFlow):
       (cid1, cid2) = self.random.choice(self.blocked_controller_pairs)
       self.blocked_controller_pairs.remove((cid1, cid2))
       self.unblocked_controller_pairs.append((cid1, cid2))
-      self.simulation.controller_patch_panel.unblock_controller_pair(cid1, cid2)
+      if self.simulation.controller_patch_panel is not None:
+        self.simulation.controller_patch_panel.unblock_controller_pair(cid1, cid2)
+      else:
+        (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
+                      for cid in [cid1, cid2] ]
+        c1.unblock_peer(c2)
       self._log_input_event(UnblockControllerPair(cid1, cid2))
 
     if blocked_this_round is not None:
