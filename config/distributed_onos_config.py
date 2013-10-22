@@ -18,7 +18,7 @@ if 'CLUSTER' not in os.environ:
 # Use ONOS as our controller.
 # TODO(cs): first make sure to clean up any preexisting ONOS instances.
 # N.B. this command is for the entire cluster, not individual nodes.
-start_cmd = (''' vagrant up onosdev1 onosdev2 ; '''
+start_cmd = (''' vagrant halt onosdev1 onosdev2; vagrant up onosdev1 onosdev2 ; '''
              ''' ./scripts/conf_setup.sh 2 ; zk start ; cassandra start; '''
              ''' onos start ; sleep 30 ''')
 # N.B kills a single node.
@@ -42,8 +42,8 @@ topology_params = "num_switches=2"
 
 simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_class=topology_class,
-                                     topology_params=topology_params)
-                                     #multiplex_sockets=True)
+                                     topology_params=topology_params,
+                                     kill_controllers_on_exit=False)
 
 control_flow = Fuzzer(simulation_config, check_interval=20,
                       halt_on_violation=True,

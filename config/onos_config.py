@@ -6,12 +6,11 @@ from sts.input_traces.input_logger import InputLogger
 from sts.simulation_state import SimulationConfig
 
 # Use ONOS as our controller.
-# TODO(cs): ensure that no prior ONOS instances are running.
 # N.B. ./scripts/conf_setup.sh automatically clears the cassandra image. If
 # you're running on a machine other than c5, you may have to modify
 # conf_setup.sh to remove the interactive prompt for clearing the cassandra
 # image.
-start_cmd = ('''vagrant up onosdev1 ; ./scripts/conf_setup.sh 1 ;  '''
+start_cmd = ('''vagrant halt onosdev1; vagrant up onosdev1 ; ./scripts/conf_setup.sh 1 ;  '''
              ''' vagrant ssh onosdev1 -c "cd ONOS; ./start-zk.sh start; sleep 5; '''
              ''' ./start-cassandra.sh start; sleep 10; '''
              ''' ./start-onos.sh start; sleep 15"''')
@@ -27,8 +26,8 @@ topology_params = "num_switches=2"
 
 simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_class=topology_class,
-                                     topology_params=topology_params)
-                                     #multiplex_sockets=True)
+                                     topology_params=topology_params,
+                                     kill_controllers_on_exit=False)
 
 control_flow = Fuzzer(simulation_config, check_interval=20,
                       halt_on_violation=True,
