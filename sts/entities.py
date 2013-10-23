@@ -780,20 +780,16 @@ class VMController(Controller):
     return (True, "OK")
 
   def block_peer(self, peer_controller):
-    session = self.ssh_client.open_channel(kind='session')
-    session.exec_command("sudo iptables -A INPUT -s %s -j DROP" %
-                         peer_controller.config.address)
-    session = self.ssh_client.open_channel(kind='session')
-    session.exec_command("sudo iptables -A OUTPUT -s %s -j DROP" %
-                         peer_controller.config.address)
+    for chain in ['INPUT', 'OUTPUT']:
+      session = self.ssh_client.open_channel(kind='session')
+      session.exec_command("sudo iptables -I %s 1 -s %s -j DROP" %
+                           (chain, peer_controller.config.address))
 
   def unblock_peer(self, peer_controller):
-    session = self.ssh_client.open_channel(kind='session')
-    session.exec_command("sudo iptables -D INPUT -s %s -j DROP" %
-                         peer_controller.config.address)
-    session = self.ssh_client.open_channel(kind='session')
-    session.exec_command("sudo iptables -D OUTPUT -s %s -j DROP" %
-                         peer_controller.config.address)
+    for chain in ['INPUT', 'OUTPUT']:
+      session = self.ssh_client.open_channel(kind='session')
+      session.exec_command("sudo iptables -D %s -s %s -j DROP" %
+                           (chain, peer_controller.config.address))
 
 
 class BigSwitchController(VMController):
