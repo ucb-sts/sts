@@ -164,9 +164,14 @@ class Fuzzer(ControlFlow):
   def _compute_unblocked_controller_pairs(self):
     sorted_controllers = sorted(self.simulation.controller_manager.controllers, key=lambda c: c.cid)
     unblocked_pairs = []
-    for i in xrange(0, len(sorted_controllers)-1):
+    for i in xrange(0, len(sorted_controllers)):
       for j in xrange(i+1, len(sorted_controllers)):
-        unblocked_pairs.append((sorted_controllers[i].cid, sorted_controllers[j].cid))
+        c1 = sorted_controllers[i]
+        c2 = sorted_controllers[j]
+        # Make sure all controller pairs are unblocked on startup
+        c1.unblock_peer(c2)
+        c2.unblock_peer(c1)
+        unblocked_pairs.append((c1.cid, c2.cid))
     return unblocked_pairs
 
   def init_results(self, results_dir):
