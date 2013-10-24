@@ -797,7 +797,7 @@ class BigSwitchController(VMController):
     return 'service floodlight status'
 
   def get_alive_status_string(self):
-    return "alive"
+    return "start/running"
 
 class ONOSController(VMController):
   def __init__(self, controller_config, sync_connection_manager,
