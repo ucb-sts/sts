@@ -166,7 +166,7 @@ class Fuzzer(ControlFlow):
     unblocked_pairs = []
     for i in xrange(0, len(sorted_controllers)-1):
       for j in xrange(i+1, len(sorted_controllers)):
-        unblocked_pairs.append((sorted_controllers[i], sorted_controllers[j]))
+        unblocked_pairs.append((sorted_controllers[i].cid, sorted_controllers[j].cid))
     return unblocked_pairs
 
   def init_results(self, results_dir):
@@ -514,7 +514,7 @@ class Fuzzer(ControlFlow):
       for host in self.simulation.topology.hosts:
         if self.random.random() < self.params.traffic_generation_rate:
           if len(host.interfaces) > 0:
-            msg.event("injecting a random packet")
+            msg.event("Injecting a random packet")
             traffic_type = "icmp_ping"
             dp_event = self.traffic_generator.generate_and_inject(traffic_type, host)
             self._log_input_event(TrafficInjection(dp_event=dp_event))
@@ -569,6 +569,7 @@ class Fuzzer(ControlFlow):
     if (len(self.unblocked_controller_pairs) > 0 and
         self.random.random() < self.params.intracontroller_block_rate):
       (cid1, cid2) = self.random.choice(self.unblocked_controller_pairs)
+      msg.event("Unblocking controllers %s, %s" % (cid1, cid2))
       blocked_this_round = (cid1, cid2)
       self.unblocked_controller_pairs.remove((cid1, cid2))
       if self.simulation.controller_patch_panel is not None:
@@ -582,6 +583,7 @@ class Fuzzer(ControlFlow):
     if (len(self.blocked_controller_pairs) > 0 and
         self.random.random() < self.params.intracontroller_unblock_rate):
       (cid1, cid2) = self.random.choice(self.blocked_controller_pairs)
+      msg.event("Blocking controllers %s, %s" % (cid1, cid2))
       self.blocked_controller_pairs.remove((cid1, cid2))
       self.unblocked_controller_pairs.append((cid1, cid2))
       if self.simulation.controller_patch_panel is not None:
