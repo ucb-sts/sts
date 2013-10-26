@@ -31,6 +31,7 @@ from sts.util.console import msg
 from sts.openflow_buffer import OpenFlowBuffer
 from sts.util.network_namespace import launch_namespace
 from sts.util.convenience import IPAddressSpace
+from collections import deque
 
 import Queue
 from itertools import count
@@ -147,6 +148,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.controller_info = []
     # Used in randomize_flow_mod mode to prioritize the order in which flow_mods are processed.
     self.cmd_queue = None
+    self.barrier_deque = None
     # Tell our buffer to insert directly to our flow table whenever commands are let through by control_flow.
     self.openflow_buffer = OpenFlowBuffer()
 
@@ -237,6 +239,11 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def process_delayed_command(self):
     """ Throws Queue.Empty if the queue is empty. """
     buffered_cmd = self.cmd_queue.get_nowait()[1]
+    while self.cmd_queue.empty() and len(self.barrier_deque) > 0:
+      (barrier_request, self.cmd_queue) = self.barrier_deque.popleft()
+      self.log.debug("Barrier request %s %s", self.name, str(barrier_request))
+      barrier_reply = ofp_barrier_reply(xid = barrier_request.xid)
+      self.send(barrier_reply)
     return (self.openflow_buffer.schedule(buffered_cmd), buffered_cmd)
 
   def use_delayed_commands(self):
@@ -250,18 +257,47 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     if seed is not None:
       self.random.seed(seed)
     self.cmd_queue = Queue.PriorityQueue()
+    self.barrier_deque = deque()
 
   def on_message_received_delayed(self, connection, msg):
     ''' Replacement for NXSoftwareSwitch.on_message_received when delaying command processing '''
-    if isinstance(msg, ofp_flow_mod):
-      # Buffer flow mods
-      forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
-      receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
-      if self.cmd_queue:
+    # TODO(jl): use exponential moving average (define in params) rather than uniform distirbution
+    # to prioritize oldest flow_mods
+    
+    def handle_with_active_barrier(connection, msg):
+      if isinstance(msg, ofp_barrier_request):
+        self.barrier_deque.append((msg, Queue.PriorityQueue()))
+      else:
+        # stick message on the queue of commands since last barrier
         rnd_weight = self.random.random()
-        # TODO(jl): use exponential moving average (define in params) rather than uniform distirbution
-        # to prioritize oldest flow_mods
+        forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
+        receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
+        self.barrier_deque[-1][1].put((rnd_weight, receive))
+
+    def handle_without_active_barrier(connection, msg):
+      if isinstance(msg, ofp_barrier_request):
+        if self.cmd_queue.empty():
+          # if no commands waiting, reply to barrier immediately
+          self.log.debug("Barrier request %s %s", self.name, str(msg))
+          barrier_reply = ofp_barrier_reply(xid = msg.xid)
+          self.send(barrier_reply)
+        else:
+          self.barrier_deque.append((msg, Queue.PriorityQueue()))
+      else:
+        # proceed normally (no barriers)
+        rnd_weight = self.random.random()
+        forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
+        receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
         self.cmd_queue.put((rnd_weight, receive))
+
+    if isinstance(msg, ofp_flow_mod) or isinstance(msg, ofp_barrier_request):
+      # first check if the switch was told to randomize flow_mods
+      if self.cmd_queue:
+        # then check if switch is currently operating under a barrier request
+        if len(self.barrier_deque) > 0:
+          handle_with_active_barrier(connection, msg)
+        else:
+          handle_without_active_barrier(connection, msg)
     else:
       # Immediately process all other messages
       super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)
