@@ -30,7 +30,7 @@ from pox.lib.util import TimeoutError
 from pox.lib.packet.lldp import *
 from config.invariant_checks import name_to_invariant_check
 from sts.util.convenience import base64_encode
-from sts.entities import FuzzSoftwareSwitch
+from sts.entities import FuzzSoftwareSwitch, ControllerState
 from sts.openflow_buffer import OpenFlowBuffer
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
@@ -470,7 +470,10 @@ class Fuzzer(ControlFlow):
           continue
         if self.random.random() < self.params.switch_recovery_rate:
           if down_controller_ids is None:
-            down_controller_ids = [ c.cid for c in self.simulation.controller_manager.down_controllers ]
+            self.simulation.controller_manager.check_controller_status()
+            down_controller_ids = [ c.cid for c in self.simulation.controller_manager.controllers\
+                                    if c.state == ControllerState.STARTING or\
+                                       c.state == ControllerState.DEAD ]
           connected = self.simulation.topology\
                           .recover_switch(software_switch,
                                           down_controller_ids=down_controller_ids)
