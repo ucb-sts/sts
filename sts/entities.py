@@ -771,7 +771,7 @@ class VMController(Controller):
           break
       session.close()
     except:
-      self.ssh_client = None
+      self._ssh_client = None
       self.execute_remote_cmd(cmd)
     return reply
 
