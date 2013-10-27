@@ -139,6 +139,7 @@ class Fuzzer(ControlFlow):
     # Determine whether to use delayed and randomized flow mod processing
     # (Set by fuzzer_params, not by an optional __init__ argument)
     self.delay_flow_mods = False
+    self.fail_flow_mods = False
 
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
@@ -191,12 +192,15 @@ class Fuzzer(ControlFlow):
     self.traffic_generator.set_topology(self.simulation.topology)
     self.unblocked_controller_pairs = self._compute_unblocked_controller_pairs()
 
-    self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 0
+    self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 0.0
+    self.fail_flow_mods = self.params.ofp_fmf_rate != 0.0
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
         switch.use_delayed_commands()
         switch.randomize_flow_mods()
+        if self.fail_flow_mods:
+          switch.fail_flow_mods(self.params.ofp_fmf_rate)
         
     return self.loop()
 
