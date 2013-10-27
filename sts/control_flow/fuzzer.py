@@ -586,6 +586,7 @@ class Fuzzer(ControlFlow):
         (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
                       for cid in [cid1, cid2] ]
         c1.block_peer(c2)
+        c2.block_peer(c1)
       self._log_input_event(BlockControllerPair(cid1, cid2))
 
     if (len(self.blocked_controller_pairs) > 0 and
@@ -600,6 +601,7 @@ class Fuzzer(ControlFlow):
         (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
                       for cid in [cid1, cid2] ]
         c1.unblock_peer(c2)
+        c2.unblock_peer(c1)
       self._log_input_event(UnblockControllerPair(cid1, cid2))
 
     if blocked_this_round is not None:
