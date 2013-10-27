@@ -863,13 +863,13 @@ class BlockControllerPair(InputEvent):
     self.cid1 = cid1
     self.cid2 = cid2
 
-  def proceed(self):
+  def proceed(self, simulation):
     # if there is a controller patch panel configured, us it, otherwise use
     # iptables.
-    if self.simulation.controller_patch_panel is not None:
-      self.simulation.controller_patch_panel.block_controller_pair(self.cid1, self.cid2)
+    if simulation.controller_patch_panel is not None:
+      simulation.controller_patch_panel.block_controller_pair(self.cid1, self.cid2)
     else:
-      (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
+      (c1, c2) = [ simulation.controller_manager.get_controller(cid)
                     for cid in [self.cid1, self.cid2] ]
       c1.block_peer(c2)
     return True
@@ -895,13 +895,13 @@ class UnblockControllerPair(InputEvent):
     self.cid1 = cid1
     self.cid2 = cid2
 
-  def proceed(self):
+  def proceed(self, simulation):
     # if there is a controller patch panel configured, us it, otherwise use
     # iptables.
-    if self.simulation.controller_patch_panel is not None:
-      self.simulation.controller_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
+    if simulation.controller_patch_panel is not None:
+      simulation.controller_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
     else:
-      (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
+      (c1, c2) = [ simulation.controller_manager.get_controller(cid)
                     for cid in [self.cid1, self.cid2] ]
       c1.unblock_peer(c2)
     return True
