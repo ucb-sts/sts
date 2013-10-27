@@ -772,7 +772,7 @@ class VMController(Controller):
       session.close()
     except:
       self._ssh_client = None
-      self.execute_remote_cmd(cmd)
+      return self.execute_remote_command(cmd)
     return reply
 
   # SSH into the VM to check on controller process
