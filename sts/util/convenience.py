@@ -167,3 +167,4 @@ class IPAddressSpace(object):
     if address in IPAddressSpace._claimed_addresses:
       raise RuntimeError("Out of IP addresses in prefix %s" % ip_prefix)
     return address
+

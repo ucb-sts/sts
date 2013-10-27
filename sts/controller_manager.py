@@ -293,3 +293,4 @@ class OVSControllerPatchPanel(ControllerPatchPanel):
   def clean_up(self):
     self.json_worker.close()
     self.pox.kill()
+
