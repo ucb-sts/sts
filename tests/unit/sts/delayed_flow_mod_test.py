@@ -120,7 +120,6 @@ class DelayedFlowModTest(unittest.TestCase):
     self.assertEqual(self.switch.table.table[4].match.in_port, fm4.match.in_port)
     self.assertEqual(self.switch.table.table[5].match.in_port, fm6.match.in_port)
     self.assertEqual(self.switch.table.table[6].match.in_port, fm5.match.in_port)
-
     
 if __name__ == '__main__':
   unittest.main()

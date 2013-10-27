@@ -443,11 +443,13 @@ class Fuzzer(ControlFlow):
         if (self.random.random() < self.params.ofp_cmd_passthrough_rate):
           if switch.has_pending_commands():
             (message, pending_receipt) = switch.process_delayed_command()
-            b64_packet = base64_encode(message)
-            self._log_input_event(ProcessFlowMod(pending_receipt.dpid,
-                                                 pending_receipt.controller_id,
-                                                 pending_receipt.fingerprint,
-                                                 b64_packet=b64_packet))
+            # TODO(jl): log our own flow_mod failure event
+            if message:
+              b64_packet = base64_encode(message)
+              self._log_input_event(ProcessFlowMod(pending_receipt.dpid,
+                                                   pending_receipt.controller_id,
+                                                   pending_receipt.fingerprint,
+                                                   b64_packet=b64_packet))
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''

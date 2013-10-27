@@ -241,7 +241,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     return not self.cmd_queue.empty()
 
   def process_delayed_command(self):
-    """ Throws Queue.Empty if the queue is empty. """
+    """ Throws Queue.Empty if the queue is empty. Returns the message and its receipt if the
+    flow_mod was successfully processed, or tuple of None values if it failed. """
     buffered_cmd = self.cmd_queue.get_nowait()[1]
     while self.cmd_queue.empty() and len(self.barrier_deque) > 0:
       (barrier_request, self.cmd_queue) = self.barrier_deque.popleft()
@@ -249,8 +250,9 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       barrier_reply = ofp_barrier_reply(xid = barrier_request.xid)
       self.send(barrier_reply)
     if self.fmf_rate != None and self.random.random() < self.fmf_rate:
-      # TODO(jl): report appropriate error code
+      # TODO(jl): log/send appropriate error code
       self.send_flow_mod_failed(buffered_cmd, OFPFMFC_UNSUPPORTED)
+      return (None, None)
     else:
       return (self.openflow_buffer.schedule(buffered_cmd), buffered_cmd)
 
