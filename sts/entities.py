@@ -770,7 +770,7 @@ class VMController(Controller):
         if session.exit_status_ready():
           break
       session.close()
-    except SSHException as e:
+    except paramiko.SSHException as e:
       self.ssh_client = None
       self.execute_remote_cmd(cmd)
     return reply
