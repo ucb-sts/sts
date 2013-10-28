@@ -760,20 +760,23 @@ class VMController(Controller):
 
   # Run a command remotely using paramiko
   def execute_remote_command(self, cmd):
-    try:
-      session = self.ssh_client.open_channel(kind='session')
-      session.exec_command(cmd)
-      reply = ""
-      while True:
-        if session.recv_ready():
-          reply += session.recv(100) # arbitrary
-        if session.exit_status_ready():
-          break
-      session.close()
-    except:
-      self._ssh_client = None
-      return self.execute_remote_command(cmd)
-    return reply
+    max_iterations = 10
+    while max_iterations > 0:
+      try:
+        session = self.ssh_client.open_channel(kind='session')
+        session.exec_command(cmd)
+        reply = ""
+        while True:
+          if session.recv_ready():
+            reply += session.recv(100) # arbitrary
+          if session.exit_status_ready():
+            break
+        session.close()
+        return reply
+      except:
+        self._ssh_client = None
+        max_iterations -= 1
+    return ""
 
   # SSH into the VM to check on controller process
   def check_status(self, simulation):
@@ -787,7 +790,7 @@ class VMController(Controller):
     if self.alive_status_string in remote_status:
       actual_state = ControllerState.ALIVE
     if self.state == ControllerState.DEAD and actual_state == ControllerState.ALIVE:
-      self.log.warn("%s is dead, but controller process found!")
+      self.log.warn("%s is dead, but controller process found!" % self.label)
       self.state = ControllerState.ALIVE
     if self.state == ControllerState.ALIVE and actual_state == ControllerState.DEAD:
       return (False, "Alive, but no controller process found!")
