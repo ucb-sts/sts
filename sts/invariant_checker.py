@@ -433,7 +433,7 @@ class ViolationTracker(object):
   Tracks all invariant violations and decides whether each one is transient or persistent
   '''
 
-  def __init__(self, persistence_threshold=50):
+  def __init__(self, persistence_threshold=50, buffer_persistent_violations=True):
     '''
     persistence_threshold: number of logical time units a violation must persist before
       we declare that it is a persistent violation
@@ -443,6 +443,7 @@ class ViolationTracker(object):
     '''
     self.persistence_threshold = persistence_threshold
     self.violation2time = {}
+    self.buffer_persistent_violations = buffer_persistent_violations
 
   def track(self, violations, logical_time):
     # First, untrack violations that expire
@@ -461,9 +462,9 @@ class ViolationTracker(object):
         msg.fail("Violation encountered again after %d steps: %s" %
                   (end_time - start_time, v))
  
-  def is_persistent(self, violation):
+  def get_age(self, violation):
     (start_time, end_time) = self.violation2time[violation]
-    return end_time - start_time > self.persistence_threshold 
+    return end_time - start_time
 
   @property
   def violations(self):
@@ -471,5 +472,15 @@ class ViolationTracker(object):
 
   @property
   def persistent_violations(self):
-    return [ v for v in self.violation2time.keys() if self.is_persistent(v) ]
-
+    persistent_violations = []
+    # Don't return persistent violations the moment they appear
+    buffer_this_round = True
+    for v in self.violation2time.keys():
+      if self.get_age(v) > self.persistence_threshold:
+        persistent_violations.append(v)
+      if self.get_age(v) > 2 * self.persistence_threshold:
+        buffer_this_round = False
+    if self.buffer_persistent_violations and buffer_this_round:
+      return [] 
+    return persistent_violations
+    
