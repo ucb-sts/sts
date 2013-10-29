@@ -207,7 +207,13 @@ class MockControllerManager(object):
     self.controller_configs = controller_configs
   def set_simulation(self, simulation): pass
   def kill_all(self): pass
+  # TODO(cs): these properties are only a temporary fix. In the long run, we
+  # should refactor interactive_replayer to use its own help options, distinct
+  # from interactive's help options.
+  @property
   def live_controllers(self): return []
+  @property
+  def down_controllers(self): return []
 
 def boot_mock_controllers(controller_configs, snapshot_service,
                      sync_connection_manager):
