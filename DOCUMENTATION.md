@@ -4,7 +4,8 @@ version of this file.
 This document provides an overview of the software architecture and
 development workflow for STS.
 
-For searchable code documentation, see this [page](http://ucb-sts.github.io/documentation/)
+For searchable code documentation, see this
+[page](http://ucb-sts.github.io/documentation/).
 
 ## Software Architecture
 
