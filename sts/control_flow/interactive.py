@@ -370,9 +370,9 @@ class Interactive(ControlFlow):
   def show_queued_events(self):
     queued = self.simulation.patch_panel.queued_dataplane_events
     if len(queued) > 0:
-      print "Queued Dataplane events:"
+      log.debug("Queued Dataplane events:")
       for (i, e) in enumerate(queued):
-        print "%d: %s on %s:%s" % (i, e, e.node, e.port)
+        log.debug("%d: %s on %s:%s" % (i, e, e.node, e.port))
 
   def list_controllers(self):
     cm = self.simulation.controller_manager
@@ -622,17 +622,22 @@ class Interactive(ControlFlow):
   def block_controller_traffic(self, cid1, cid2):
     ''' Drop all messages sent from controller 1 to controller 2 until
     unblock_controller_pair is called. '''
-    if self.simulation.controller_patch_panel is None:
-      self.log.warn("The controller patch panel does not exist.")
-      return
-    self.simulation.controller_patch_panel.block_controller_pair(cid1, cid2)
+    if self.simulation.controller_patch_panel is not None:
+      self.simulation.controller_patch_panel.block_controller_pair(cid1, cid2)
+    else:
+      (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
+                    for cid in [cid1, cid2] ]
+      c1.block_peer(c2)
     self._log_input_event(BlockControllerPair(cid1, cid2))
 
   def unblock_controller_traffic(self, cid1, cid2):
     ''' Stop dropping messages sent from controller 1 to controller 2 '''
-    if self.simulation.controller_patch_panel is None:
-      self.log.warn("The controller patch panel does not exist.")
-    self.simulation.controller_patch_panel.unblock_controller_pair(cid1, cid2)
+    if self.simulation.controller_patch_panel is not None:
+      self.simulation.controller_patch_panel.unblock_controller_pair(cid1, cid2)
+    else:
+      (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
+                    for cid in [cid1, cid2] ]
+      c1.unblock_peer(c2)
     self._log_input_event(UnblockControllerPair(cid1, cid2))
 
   # TODO(cs): add support for control channel blocking + link,

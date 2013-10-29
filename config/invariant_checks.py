@@ -6,8 +6,6 @@ def check_everything(simulation):
   # If there are no more live controllers, stop
   violations = []
   down_controllers = InvariantChecker.check_liveness(simulation)
-  if simulation.controller_manager.all_controllers_down():
-    return down_controllers
   violations = down_controllers
   # Check other invariants without checking liveness
   checks = [ InvariantChecker.check_loops,

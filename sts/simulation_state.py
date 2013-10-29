@@ -49,7 +49,7 @@ def default_boot_controllers(controller_configs, snapshot_service, sync_connecti
   for c in controller_configs:
     controller = c.controller_class(c, sync_connection_manager, snapshot_service)
     controller.start()
-    log.info("Launched controller c%s: %s [PID %d]" %
+    log.info("Launched controller %s: %s [PID %d]" %
              (str(c.cid), " ".join(c.expanded_start_cmd), controller.pid))
     controllers.append(controller)
   return ControllerManager(controllers)

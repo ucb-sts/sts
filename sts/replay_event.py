@@ -863,8 +863,15 @@ class BlockControllerPair(InputEvent):
     self.cid1 = cid1
     self.cid2 = cid2
 
-  def proceed(self):
-    self.simulation.controller_patch_panel.block_controller_pair(self.cid1, self.cid2)
+  def proceed(self, simulation):
+    # if there is a controller patch panel configured, us it, otherwise use
+    # iptables.
+    if simulation.controller_patch_panel is not None:
+      simulation.controller_patch_panel.block_controller_pair(self.cid1, self.cid2)
+    else:
+      (c1, c2) = [ simulation.controller_manager.get_controller(cid)
+                    for cid in [self.cid1, self.cid2] ]
+      c1.block_peer(c2)
     return True
 
   @property
@@ -888,8 +895,15 @@ class UnblockControllerPair(InputEvent):
     self.cid1 = cid1
     self.cid2 = cid2
 
-  def proceed(self):
-    self.simulation.controller_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
+  def proceed(self, simulation):
+    # if there is a controller patch panel configured, us it, otherwise use
+    # iptables.
+    if simulation.controller_patch_panel is not None:
+      simulation.controller_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
+    else:
+      (c1, c2) = [ simulation.controller_manager.get_controller(cid)
+                    for cid in [self.cid1, self.cid2] ]
+      c1.unblock_peer(c2)
     return True
 
   @property
@@ -1339,7 +1353,7 @@ class ProcessFlowMod(ControlMessageBase):
       switch.openflow_buffer.schedule(self.pending_receive)
       return True
     return False
-  
+
   @property
   def pending_receive(self):
     # TODO(cs): inefficient to keep reconrstructing this tuple.
@@ -1356,7 +1370,7 @@ class ProcessFlowMod(ControlMessageBase):
     if 'b64_packet' in json_hash:
       b64_packet = json_hash['b64_packet']
     return ProcessFlowMod(dpid, controller_id, fingerprint, b64_packet=b64_packet,
-                          round=round, label=label, time=time, 
+                          round=round, label=label, time=time,
                           timeout_disallowed=timeout_disallowed)
 
   def __str__(self):
