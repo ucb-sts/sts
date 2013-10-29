@@ -156,7 +156,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def _handle_ConnectionUp(self, event):
     self._setConnection(event.connection, event.ofp)
 
-  def connect(self, create_connection, down_controller_ids=None):
+  def connect(self, create_connection, down_controller_ids=None,
+              max_backoff_seconds=1024):
     ''' - create_connection is a factory method for creating Connection objects
           which are connected to controllers. Takes a ControllerConfig object
           and a reference to a switch (self) as a parameter
@@ -169,7 +170,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     for info in self.controller_info:
       # Don't connect to down controllers
       if info.cid not in down_controller_ids:
-        conn = create_connection(info, self)
+        conn = create_connection(info, self,
+                                 max_backoff_seconds=max_backoff_seconds)
         self.set_connection(conn)
         # cause errors to be raised
         conn.error_handler = self.error_handler
@@ -214,8 +216,11 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     if self.create_connection is None:
       self.log.warn("Never connected in the first place")
 
+    # We should only ever reconnect to live controllers, so set
+    # max_backoff_seconds to a low number.
     connected_to_at_least_one = self.connect(self.create_connection,
-                                             down_controller_ids=down_controller_ids)
+                                             down_controller_ids=down_controller_ids,
+                                             max_backoff_seconds=5)
     if connected_to_at_least_one:
       self.failed = False
     return connected_to_at_least_one
