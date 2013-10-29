@@ -154,7 +154,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     # Tell our buffer to insert directly to our flow table whenever commands are let through by control_flow.
     self.openflow_buffer = OpenFlowBuffer()
     # flow mod failure rate
-    self.fmf_rate = None
+    self.ofp_flow_mod_failure_rate = None
 
   def add_controller_info(self, info):
     self.controller_info.append(info)
@@ -249,29 +249,24 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       self.log.debug("Barrier request %s %s", self.name, str(barrier_request))
       barrier_reply = ofp_barrier_reply(xid = barrier_request.xid)
       self.send(barrier_reply)
-    if self.fmf_rate != None and self.random.random() < self.fmf_rate:
+    if self.ofp_flow_mod_failure_rate != None and self.random.random() < self.ofp_flow_mod_failure_rate:
       # TODO(jl): log/send appropriate error code
-      self.send_flow_mod_failed(buffered_cmd, OFPFMFC_UNSUPPORTED)
+      self.send_flow_mod_failure(buffered_cmd, OFPFMFC_UNSUPPORTED)
       return (None, None)
     else:
       return (self.openflow_buffer.schedule(buffered_cmd), buffered_cmd)
 
-  def fail_flow_mods(self, fmf_rate, seed=None):
+  def fail_flow_mods(self, ofp_flow_mod_failure_rate, seed=None):
     ''' Initialize RNG (if not already) and tell switch to fail a portion of the flow_mods 
     it is told to buffer. This mode requires delaying of flow_mods (call use_delay_commands())
     to be used. Uses the same RNG used for randomization of flow_mod processing so which flow_mods
     are dropped may be affected by whether or not both modes are active, but each mode itself 
     does not require the other. '''
-    if self.random == None:
+    if self.random is None:
       self.random = random.Random()
-      if seed != None:
+      if seed is not None:
         self.random.seed(seed)
-    self.fmf_rate = fmf_rate
-
-  def send_flow_mod_failed(self, flow_mod_receipt, fail_code):
-    self.log.debug("Flow Mod Failed %s %s", self.name, str(flow_mod_receipt))
-    err = ofp_error(type=OFPET_FLOW_MOD_FAILED, code=fail_code)
-    self.send(err)
+    self.ofp_flow_mod_failure_rate = ofp_flow_mod_failure_rate
 
   def use_delayed_commands(self):
     ''' Tell the switch to buffer flow mods '''
@@ -280,9 +275,9 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def randomize_flow_mods(self, seed=None):
     ''' Initialize the RNG (if not already) and tell switch to randomize order in which flow_mods
     are processed '''
-    if self.random == None:
+    if self.random is None:
       self.random = random.Random()
-      if seed != None:
+      if seed is not None:
         self.random.seed(seed)
     self.cmd_queue = Queue.PriorityQueue()
     self.barrier_deque = deque()

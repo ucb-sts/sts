@@ -193,14 +193,14 @@ class Fuzzer(ControlFlow):
     self.unblocked_controller_pairs = self._compute_unblocked_controller_pairs()
 
     self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 0.0
-    self.fail_flow_mods = self.params.ofp_fmf_rate != 0.0
+    self.fail_flow_mods = self.params.ofp_ofp_flow_mod_failure_rate != 0.0
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
         switch.use_delayed_commands()
         switch.randomize_flow_mods()
         if self.fail_flow_mods:
-          switch.fail_flow_mods(self.params.ofp_fmf_rate)
+          switch.fail_flow_mods(self.params.ofp_ofp_flow_mod_failure_rate)
         
     return self.loop()
 
