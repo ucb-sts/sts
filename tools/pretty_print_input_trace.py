@@ -61,7 +61,7 @@ field_formatters = {
   # TODO(cs): allow user to display relative time between events
 }
 
-class Stats:
+class Stats(object):
   def __init__(self):
     self.input_events = {}
     self.internal_events = {}
