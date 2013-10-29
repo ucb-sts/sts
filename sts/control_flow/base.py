@@ -207,6 +207,7 @@ class MockControllerManager(object):
     self.controller_configs = controller_configs
   def set_simulation(self, simulation): pass
   def kill_all(self): pass
+  def live_controllers(self): return []
 
 def boot_mock_controllers(controller_configs, snapshot_service,
                      sync_connection_manager):
