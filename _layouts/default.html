@@ -3,7 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <title>STS by ucb-sts</title>
+    <title>{{ page.title }}</title>
+    <meta name="description" content="{{page.description}}">
     <link rel="stylesheet" href="stylesheets/styles.css">
     <link rel="stylesheet" href="stylesheets/pygment_trac.css">
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
@@ -18,13 +19,18 @@
 
   </head>
   <body>
+      <div class="container">
+        {{ content }}
+      </div> <!-- /container -->
+
+
     <div class="wrapper">
 <a name="questions" class="anchor" href="#questions"><span class="octicon octicon-link"></span></a>Questions?</h3>
 
 <p>Send questions or feedback to: <a href="mailto:sts-dev@googlegroups.com">sts-dev@googlegroups.com</a></p>
       </section>
 
-    </div>
+    </div> <!-- wrapper -->
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
     
   </body>
