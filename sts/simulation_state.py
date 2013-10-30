@@ -322,7 +322,7 @@ class Simulation(object):
 
       return (mux_select, demuxers)
 
-    def create_connection(controller_info, switch):
+    def create_connection(controller_info, switch, max_backoff_seconds=1024):
       ''' Connect switches to controllers. May raise a TimeoutError '''
       while controller_info.address == "__address__":
         log.debug("Waiting for controller address for %s..." % controller_info.label)
@@ -330,7 +330,7 @@ class Simulation(object):
       # TODO(cs): move this into a ConnectionFactory class
       socket = connect_socket_with_backoff(controller_info.address,
                                            controller_info.port,
-                                           max_backoff_seconds=1024)
+                                           max_backoff_seconds=max_backoff_seconds)
       # Set non-blocking
       socket.setblocking(0)
       io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(socket))
