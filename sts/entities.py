@@ -798,13 +798,24 @@ class VMController(Controller):
 
   def block_peer(self, peer_controller):
     for chain in ['INPUT', 'OUTPUT']:
-      self.execute_remote_command("sudo iptables -I %s 1 -s %s -j DROP" %
-                           (chain, peer_controller.config.address))
+      check_block_cmd = "sudo iptables -L %s | grep \"DROP.*%s\"" % (chain, peer_controller.config.address)
+      add_block_cmd = "sudo iptables -I %s 1 -s %s -j DROP" % (chain, peer_controller.config.address)
+      # If already blocked, do nothing
+      if self.execute_remote_command(check_block_cmd) != "":
+        continue
+      self.execute_remote_command(add_block_cmd)
 
   def unblock_peer(self, peer_controller):
     for chain in ['INPUT', 'OUTPUT']:
-      self.execute_remote_command("sudo iptables -D %s -s %s -j DROP" %
-                           (chain, peer_controller.config.address))
+      check_block_cmd = "sudo iptables -L %s | grep \"DROP.*%s\"" % (chain, peer_controller.config.address)
+      remove_block_cmd = "sudo iptables -D %s -s %s -j DROP" % (chain, peer_controller.config.address)
+      max_iterations = 10
+      while max_iterations > 0:
+        # If already unblocked, do nothing
+        if self.execute_remote_command(check_block_cmd) == "":
+          break
+        self.execute_remote_command(remove_block_cmd)
+        max_iterations -= 1
 
   @property
   def ssh_client(self):
@@ -840,9 +851,7 @@ class BigSwitchController(VMController):
 
   def start(self):
     super(BigSwitchController, self).start()
-    remote_status = self.execute_remote_command(self.commands["check"])
-    if self.alive_status_string not in remote_status:
-      self.execute_remote_command(self.commands["restart"])
+    self.execute_remote_command(self.commands["restart"])
 
   def kill(self):
     if self.state != ControllerState.ALIVE:
