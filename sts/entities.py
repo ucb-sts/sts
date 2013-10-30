@@ -147,14 +147,19 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.error_handler = error_handler
     self.controller_info = []
 
-    self.random = None
-    # Used in randomize_flow_mod mode to prioritize the order in which flow_mods are processed.
-    self.cmd_queue = None
-    self.barrier_deque = None
+    # flow mod failures
+    self.fail_flow_mods = False
+    self.fail_flow_mod_function = None
     # Tell our buffer to insert directly to our flow table whenever commands are let through by control_flow.
+    self.delay_flow_mods = False
     self.openflow_buffer = OpenFlowBuffer()
-    # flow mod failure rate
-    self.ofp_flow_mod_failure_rate = None
+    self.barrier_deque = None
+    # Used in randomize_flow_mod mode to prioritize the order in which flow_mods are processed.
+    self.randomize_flow_mod_order = False
+    self.cmd_queue = None
+    self.random = None
+    
+    
 
   def add_controller_info(self, info):
     self.controller_info.append(info)
@@ -237,65 +242,59 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       serializable.ofp_phy_ports = self.software_switch.ports.values()
     return pickle.dumps(serializable, protocol=0)
 
-  def has_pending_commands(self):
-    return not self.cmd_queue.empty()
-
-  def process_delayed_command(self):
-    """ Throws Queue.Empty if the queue is empty. Returns the message and its receipt if the
-    flow_mod was successfully processed, or tuple of None values if it failed. """
-    buffered_cmd = self.cmd_queue.get_nowait()[1]
-    while self.cmd_queue.empty() and len(self.barrier_deque) > 0:
-      (barrier_request, self.cmd_queue) = self.barrier_deque.popleft()
-      self.log.debug("Barrier request %s %s", self.name, str(barrier_request))
-      barrier_reply = ofp_barrier_reply(xid = barrier_request.xid)
-      self.send(barrier_reply)
-    if self.ofp_flow_mod_failure_rate != None and self.random.random() < self.ofp_flow_mod_failure_rate:
-      # TODO(jl): log/send appropriate error code
-      self.send_flow_mod_failure(buffered_cmd, OFPFMFC_UNSUPPORTED)
-      return (None, None)
-    else:
-      return (self.openflow_buffer.schedule(buffered_cmd), buffered_cmd)
-
-  def fail_flow_mods(self, ofp_flow_mod_failure_rate, seed=None):
-    ''' Initialize RNG (if not already) and tell switch to fail a portion of the flow_mods 
-    it is told to buffer. This mode requires delaying of flow_mods (call use_delay_commands())
-    to be used. Uses the same RNG used for randomization of flow_mod processing so which flow_mods
-    are dropped may be affected by whether or not both modes are active, but each mode itself 
-    does not require the other. '''
-    if self.random is None:
-      self.random = random.Random()
-      if seed is not None:
-        self.random.seed(seed)
-    self.ofp_flow_mod_failure_rate = ofp_flow_mod_failure_rate
-
   def use_delayed_commands(self):
     ''' Tell the switch to buffer flow mods '''
+    self.delay_flow_mods = True
     self.on_message_received = self.on_message_received_delayed
 
   def randomize_flow_mods(self, seed=None):
-    ''' Initialize the RNG (if not already) and tell switch to randomize order in which flow_mods
+    ''' Initialize the RNG and tell switch to randomize order in which flow_mods
     are processed '''
-    if self.random is None:
-      self.random = random.Random()
-      if seed is not None:
-        self.random.seed(seed)
+    self.randomize_flow_mod_order = True
+    self.random = random.Random()
+    if seed is not None:
+      self.random.seed(seed)
     self.cmd_queue = Queue.PriorityQueue()
     self.barrier_deque = deque()
+
+  def fail_flow_mods(self, fail_flow_mod_function):
+    ''' Tell the switch to fail the application of flow_mods according to the given function,
+    which should take a flow_mod and act as a filter, returning True if the flow_mod should 
+    be allowed to be processed or False otherwise '''
+    self.fail_flow_mods = True
+    self.fail_flow_mod_function = fail_flow_mod_function
+
+  def on_message_received(self, connection, msg):
+    ''' Overrides NXSoftwareSwitch.on_message_received '''
+    should_fail = False
+    if self.fail_flow_mods and isinstance(msg, ofp_flow_mod):
+      should_fail = self.fail_flow_mod_function(msg)
+    if should_fail:
+      self.send_flow_mod_failure(msg, OFPFMFC_UNSUPPORTED)
+    else:
+      super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)
+
+  def _buffer_flow_mod(self, connection, msg, weight, buffr):
+    forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
+    receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
+    buffr.put((weight, msg, receive))
 
   def on_message_received_delayed(self, connection, msg):
     ''' Replacement for NXSoftwareSwitch.on_message_received when delaying command processing '''
     # TODO(jl): use exponential moving average (define in params) rather than uniform distirbution
     # to prioritize oldest flow_mods
-    
+    assert(self.delay_flow_mods is True)
+
     def handle_with_active_barrier(connection, msg):
       if isinstance(msg, ofp_barrier_request):
         self.barrier_deque.append((msg, Queue.PriorityQueue()))
       else:
-        # stick message on the queue of commands since last barrier
-        rnd_weight = self.random.random()
-        forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
-        receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
-        self.barrier_deque[-1][1].put((rnd_weight, receive))
+        # stick message on the queue of commands since the last barrier request
+        if self.randomize_flow_mod_order:
+          weight = self.random.random()
+        else:
+          weight = time.time()
+        self._buffer_flow_mod(connection, msg, weight, buffr=self.barrier_deque[-1][1])
 
     def handle_without_active_barrier(connection, msg):
       if isinstance(msg, ofp_barrier_request):
@@ -307,24 +306,41 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
         else:
           self.barrier_deque.append((msg, Queue.PriorityQueue()))
       else:
-        # proceed normally (no barriers)
-        rnd_weight = self.random.random()
-        forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
-        receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
-        self.cmd_queue.put((rnd_weight, receive))
+        # proceed normally (no active or pending barriers)
+        if self.randomize_flow_mod_order:
+          weight = self.random.random()
+        else:
+          weight = time.time()
+        self._buffer_flow_mod(connection, msg, weight, buffr=self.cmd_queue)
 
     if isinstance(msg, ofp_flow_mod) or isinstance(msg, ofp_barrier_request):
-      # first check if the switch was told to randomize flow_mods
-      if self.cmd_queue:
-        # then check if switch is currently operating under a barrier request
-        if len(self.barrier_deque) > 0:
-          handle_with_active_barrier(connection, msg)
-        else:
-          handle_without_active_barrier(connection, msg)
+      # Check if switch is currently operating under a barrier request
+      if len(self.barrier_deque) > 0:
+        handle_with_active_barrier(connection, msg)
+      else:
+        handle_without_active_barrier(connection, msg)
     else:
       # Immediately process all other messages
       super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)
 
+  def has_pending_commands(self):
+    return not self.cmd_queue.empty()
+
+  def process_delayed_command(self):
+    """ Throws Queue.Empty if the queue is empty. Returns the message and its receipt if the
+    flow_mod was successfully processed, or tuple of None values if it failed. """
+    (buffered_cmd, buffered_cmd_receive) = self.cmd_queue.get_nowait()[1:3]
+    while self.cmd_queue.empty() and len(self.barrier_deque) > 0:
+      (barrier_request, self.cmd_queue) = self.barrier_deque.popleft()
+      self.log.debug("Barrier request %s %s", self.name, str(barrier_request))
+      barrier_reply = ofp_barrier_reply(xid = barrier_request.xid)
+      self.send(barrier_reply)
+    if self.fail_flow_mods and self.fail_flow_mod_function(buffered_cmd):
+      # TODO(jl): log/send appropriate error code
+      self.send_flow_mod_failure(buffered_cmd, OFPFMFC_UNSUPPORTED)
+      return (None, None)
+    else:
+      return (self.openflow_buffer.schedule(buffered_cmd_receive), buffered_cmd_receive)
 
 class Link (object):
   """

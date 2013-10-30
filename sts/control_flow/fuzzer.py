@@ -192,15 +192,21 @@ class Fuzzer(ControlFlow):
     self.traffic_generator.set_topology(self.simulation.topology)
     self.unblocked_controller_pairs = self._compute_unblocked_controller_pairs()
 
+    def flow_mod_filter(flow_mod):
+      # super simple method to give to each switch to tell it whether to apply
+      # or actively fail a flow_mod
+      return self.random.random() < self.params.ofp_flow_mod_failure_rate
+
     self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 0.0
-    self.fail_flow_mods = self.params.ofp_ofp_flow_mod_failure_rate != 0.0
-    if self.delay_flow_mods:
+    self.fail_flow_mods = self.params.ofp_flow_mod_failure_rate != 0.0
+    if self.delay_flow_mods or self.fail_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
-        switch.use_delayed_commands()
-        switch.randomize_flow_mods()
+        if self.delay_flow_mods:
+          switch.use_delayed_commands()
+          switch.randomize_flow_mods()
         if self.fail_flow_mods:
-          switch.fail_flow_mods(self.params.ofp_ofp_flow_mod_failure_rate)
+          switch.fail_flow_mods(flow_mod_filter)
         
     return self.loop()
 
