@@ -5,8 +5,11 @@
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <title>{{ page.title }}</title>
     <meta name="description" content="{{page.description}}">
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
     <script src="javascripts/respond.js"></script>
     <!--[if lt IE 9]>
@@ -19,8 +22,8 @@
 
   </head>
   <body>
-    <div class="wrapper">
-      <section>
+    <div class="wrapper,container">
+      <section id="main_content">
         <p>
         {{ content }}
         </p></br>
@@ -30,7 +33,7 @@
         <p>Send questions or feedback to: <a href="mailto:sts-dev@googlegroups.com">sts-dev@googlegroups.com</a></p>
       </section>
 
-    </div> <!-- wrapper -->
+    </div> <!-- wrapper,container -->
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
     
   </body>
