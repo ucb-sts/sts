@@ -31,5 +31,18 @@ do
   ./simulator.py -c $2
   NEW_EXP_NAME="$EXP_NAME"_"$i"
   mv experiments/"$EXP_NAME" experiments/"$NEW_EXP_NAME"
-  find experiments/"$NEW_EXP_NAME" | xargs tools/replace_word.sh "$EXP_NAME" "$NEW_EXP_NAME"
+  tools/replace_word.sh "$EXP_NAME" "$NEW_EXP_NAME" experiments/"$NEW_EXP_NAME"
+  NO_VIOLATION=$(tail -n 100 experiments/"$NEW_EXP_NAME"/simulator.out | grep "Round 500 completed")
+  if [[ ! -z "$NO_VIOLATION" ]]; then
+    echo "$NEW_EXP_NAME has no violations!"
+    rm -rf experiments/"$NEW_EXP_NAME"
+    continue
+  fi
+  ./simulator.py -c experiments/"$NEW_EXP_NAME"/replay_config.py
+  REPLAY_NO_VIOLATION=$(tail -n 100 experiments/"$NEW_EXP_NAME"_replay/simulator.out | grep "No correctness violations")
+  if [[ ! -z "$REPLAY_NO_VIOLATION" ]]; then
+    echo "Cannot reproduce $NEW_EXP_NAME violation!"
+    rm -rf experiments/"$NEW_EXP_NAME"
+    rm -rf experiments/"$NEW_EXP_NAME"_replay
+  fi
 done
