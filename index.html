@@ -1,43 +1,33 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8">
+    <meta charset='utf-8'>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
+    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
+
     <title>STS by ucb-sts</title>
-    <link rel="stylesheet" href="stylesheets/styles.css">
-    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-    <script src="javascripts/respond.js"></script>
-    <!--[if lt IE 9]>
-      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    <!--[if lt IE 8]>
-    <link rel="stylesheet" href="stylesheets/ie.css">
-    <![endif]-->
-    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-
   </head>
+
   <body>
-      <div id="header">
-        <nav>
-          <li class="fork"><a href="https://github.com/ucb-sts/sts">View On GitHub</a></li>
-          <li class="downloads"><a href="https://github.com/ucb-sts/sts/zipball/master">ZIP</a></li>
-          <li class="downloads"><a href="https://github.com/ucb-sts/sts/tarball/master">TAR</a></li>
-          <li class="title">DOWNLOADS</li>
-        </nav>
-      </div><!-- end header -->
 
-    <div class="wrapper">
+    <header>
+      <div class="container">
+        <h1>STS</h1>
+        <h2>SDN Troubleshooting Simulator</h2>
 
-      <section>
-        <div id="title">
-          <h1>STS</h1>
-          <p>SDN Troubleshooting Simulator</p>
-          <hr>
-          <span class="credits left">Project maintained by <a href="https://github.com/ucb-sts">ucb-sts</a></span>
-          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
-        </div>
+        <section id="downloads">
+          <a href="https://github.com/ucb-sts/sts/zipball/master" class="btn">Download as .zip</a>
+          <a href="https://github.com/ucb-sts/sts/tarball/master" class="btn">Download as .tar.gz</a>
+          <a href="https://github.com/ucb-sts/sts" class="btn btn-github"><span class="icon"></span>View on GitHub</a>
+        </section>
+      </div>
+    </header>
 
+    <div class="container">
+      <section id="main_content">
         <p>Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? STS seeks to eliminate this need, freeing you to debug the problematic code itself. </p>
 
 <p>STS simulates the devices of your network, allowing you to easily generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.</p>
@@ -80,6 +70,11 @@ $ git clone -b debugger git://github.com/ucb-sts/pox.git
 </code></pre>
 
 <p>You can turn up the verbosity of the simulator's console output by passing the '-v' flag to simulator.py. </p>
+
+<p>For a detailed step-by-step walkthrough of STS's use cases, see this <a href="http://ucb-sts.github.io/sts/walkthrough">page</a>.</p>
+
+<h3>
+<a name="configuring-your-own-experiments" class="anchor" href="#configuring-your-own-experiments"><span class="octicon octicon-link"></span></a>Configuring your own experiments</h3>
 
 <p>The simulator automatically copies your configuration parameters and console output into the experiments/ directory for later examination.</p>
 
@@ -145,9 +140,8 @@ $ (cd sts/hassel/hassel-c &amp;&amp; make -j)
 
 <p>Send questions or feedback to: <a href="mailto:sts-dev@googlegroups.com">sts-dev@googlegroups.com</a></p>
       </section>
-
     </div>
-    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+
     
   </body>
 </html>
