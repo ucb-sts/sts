@@ -47,7 +47,9 @@ $ git clone -b debugger git://github.com/ucb-sts/pox.git
 <h3>
 <a name="running" class="anchor" href="#running"><span class="octicon octicon-link"></span></a>Running</h3>
 
-<p>Take STS for a test drive with:</p>
+<p>For a detailed step-by-step walkthrough of STS's use cases, see this <a href="http://ucb-sts.github.io/sts/walkthrough">page</a>.</p>
+
+<p>For the impatient, take STS for a test drive with:</p>
 
 <pre><code>$ ./simulator.py
 </code></pre>
@@ -71,19 +73,17 @@ $ git clone -b debugger git://github.com/ucb-sts/pox.git
 
 <p>You can turn up the verbosity of the simulator's console output by passing the '-v' flag to simulator.py. </p>
 
-<p>For a detailed step-by-step walkthrough of STS's use cases, see this <a href="http://ucb-sts.github.io/sts/walkthrough">page</a>.</p>
-
 <h3>
 <a name="configuring-your-own-experiments" class="anchor" href="#configuring-your-own-experiments"><span class="octicon octicon-link"></span></a>Configuring your own experiments</h3>
 
-<p>The simulator automatically copies your configuration parameters and console output into the experiments/ directory for later examination.</p>
+<p>The simulator automatically copies your configuration parameters, event logs, and console output into the experiments/ directory for later examination.</p>
 
 <p>The config/ directory contains sample configurations. You can specify your own config file by passing its path:</p>
 
 <pre><code>$ ./simulator.py -c config/my_config.py
 </code></pre>
 
-<p>See <a href="https://github.com/ucb-sts/sts/blob/master/config/README">config/README</a> for more information. </p>
+<p>See <a href="https://github.com/ucb-sts/sts/blob/master/config/README">config/README</a> for more information on how to write configuration files. </p>
 
 <h3>
 <a name="dependencies" class="anchor" href="#dependencies"><span class="octicon octicon-link"></span></a>Dependencies</h3>
