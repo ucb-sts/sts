@@ -25,12 +25,14 @@ from pox.openflow.flow_table import FlowTableModification
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
 import pox.lib.packet.ethernet as eth
+import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import EthAddr, IPAddr
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
 from sts.openflow_buffer import OpenFlowBuffer
 from sts.util.network_namespace import launch_namespace
 from sts.util.convenience import IPAddressSpace
+from sts.util.tabular import Tabular
 
 import Queue
 from itertools import count
@@ -270,6 +272,53 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     else:
       # Immediately process all other messages
       super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)
+
+  def show_flow_table(self):
+    dl_types = { 0x0800: "IP",
+                 0x0806: "ARP",
+                 0x8100: "VLAN",
+                 0x88cc: "LLDP",
+                 0x888e: "PAE"
+                 }
+    nw_protos = { 1 : "ICMP", 6 : "TCP", 17 : "UDP" }
+
+    ports = { v: k.replace("OFPP_","") for (k,v) in of.ofp_port_rev_map.iteritems() }
+
+    def dl_type(e):
+      d = e.match.dl_type
+      if d is None:
+        return d
+      else:
+        return dl_types[d] if d in dl_types else "%x" %d
+
+    def nw_proto(e):
+      p = e.match.nw_proto
+      return nw_protos[p] if p in nw_protos else p
+
+    def action(a):
+      if isinstance(a, ofp_action_output):
+        return ports[a.port] if a.port in ports else "output(%d)" % a.port
+      else:
+        return str(a)
+    def actions(e):
+      if len(e.actions) == 0:
+        return "(drop)"
+      else:
+        return ", ".join(action(a) for a in e.actions)
+
+    t = Tabular( ("Prio", lambda e: e.priority),
+                ("in_port", lambda e: e.match.in_port),
+                ("dl_type", dl_type),
+                ("dl_src", lambda e: e.match.dl_src),
+                ("dl_dst", lambda e: e.match.dl_dst),
+                ("nw_proto", nw_proto),
+                ("nw_src", lambda e: e.match.nw_src),
+                ("nw_dst", lambda e: e.match.nw_dst),
+                ("tp_src", lambda e: e.match.tp_src),
+                ("tp_dst", lambda e: e.match.tp_dst),
+                ("actions", actions),
+                )
+    t.show(self.table.entries)
 
 class Link (object):
   """

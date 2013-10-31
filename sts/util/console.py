@@ -54,6 +54,14 @@ class msg():
     print msg.BEGIN + msg.B_MAGENTA + message + msg.END
 
   @staticmethod
+  def openflow_event(message):
+    print msg.BEGIN + msg.BLUE + message + msg.END
+
+  @staticmethod
+  def special_event(message):
+    print msg.BEGIN + msg.MAGENTA + message + msg.END
+
+  @staticmethod
   def raw_input(message):
     prompt = msg.BEGIN + msg.WHITE + message + msg.END
     if msg.global_io_master:

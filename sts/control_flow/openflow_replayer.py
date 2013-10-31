@@ -80,7 +80,10 @@ class OpenFlowReplayer(ControlFlow):
 
     # Reproduce the routing table state.
     for next_event in self.event_list:
-      msg.success("Injecting %r" % next_event)
+      if "flow_mod" in ("%r" % next_event):
+        msg.special_event("Injecting %r" % next_event)
+      else:
+        msg.openflow_event("Injecting %r" % next_event)
       next_event.manually_inject(self.simulation)
 
     # now filter out all flow_mods that don't correspond to an entry in the
@@ -95,10 +98,19 @@ class OpenFlowReplayer(ControlFlow):
       if switch.table.matching_entries(last_event.get_packet().match) != []:
         relevent_flow_mods.append(last_event)
         switch.table.remove_matching_entries(last_event.get_packet().match)
+    print "\n"
 
     # Now print them in the forward direction.
-    msg.interactive("Filtered flow mods:")
+    msg.event("Filtered flow mods:")
     for next_event in reversed(relevent_flow_mods):
       print "%r" % next_event
+    print "\n"
+
+    # Now print the flow tables of each switch.
+    msg.event("Flow tables:")
+    for switch in self.simulation.topology.switches:
+      print "Switch %s" % switch.dpid
+      switch.show_flow_table()
+    print "\n"
 
     return self.simulation
