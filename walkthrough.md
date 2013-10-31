@@ -7,45 +7,84 @@ description: Walk through example usage of STS.
 
 ## Phase I: Bug Finding
 
-We start our use of STS by using it to find bugs in controller software. STS
-supports two ways to accomplish this:
-most commonly, we use STS to simulate a network, generate randomly chosen input sequences,
-feed them to controller(s), and check invariants at
-chosen intervals; we also run STS interactively so that we can examine the state of
+We start by using STS to find bugs in controller software. STS
+supports two ways to accomplish this goal:
+most commonly, we use STS to simulate a network, generate random
+network events, and periodically check invariants;
+we also run STS interactively so that we can examine the state of
 any part of the simulated network, observe and manipulate messages, and
 follow our intuition to induce orderings that we believe may trigger bugs.
 
 ### Fuzzing Mode
 
 Fuzzing mode is how we use STS to generate randomly chosen input sequences in
-search of bugs.
+search of bugs. Let's begin by looking at how we run the STS fuzzer.
 
-The simulator automatically copies your configuration parameters, event logs,
-and console output into the experiments/ directory for later examination.
+In the `config/` subdirectory, we find a configuration file
+`fuzz_pox_simple.py` we'll use to specify our experiment.
 
-The config/ directory contains sample configurations. You can specify your own
-config file by passing its path:
-
+The first two lines of this file tells STS how to boot the SDN controller
+(in this case, POX):
+```python
+start_cmd = ('''./pox.py openflow.discovery forwarding.l2_multi '''
+             '''openflow.of_01 --address=__address__ --port=__port__''')
+controllers = [ControllerConfig(start_cmd, cwd="pox")]
 ```
-$ ./simulator.py -c config/my_config.py
+In this case, we're running POX's l2_multi module, a simple routing routing
+application. Note that the macros __address__ and __port__ are expanded by STS to allow
+it to choose available ports and addresses.
+
+The next two lines specify the network topology we would like STS to simulate:
+```python
+topology_class = MeshTopology
+topology_params = "num_switches=2"
 ```
+In this case, we're simulating a simple mesh topology consiting of two
+switches each with an attached host, and a single link connecting the
+switches.
 
-See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README)
-for more information on how to write configuration files. 
+The next line bundles up the controller configuration parameters with the
+network topology configuration parameters:
+<pre>
+simulation_config = SimulationConfig(controller_configs=controllers,
+                                     topology_class=topology_class,
+                                     topology_params=topology_params)
+</pre>
 
-Now let's look in depth at fuzzer params.
+The last line specifies what mode we would like STS to run in. In our case,
+we want to generate random inputs with the Fuzzer class:
+<pre>
+control_flow = Fuzzer(simulation_config,
+                      input_logger=InputLogger(),
+                      invariant_check_name="InvariantChecker.check_liveness",
+                      halt_on_violation=True)
+</pre>
+Here we're telling the Fuzzer to record its execution with an
+InputLogger, check periodically whether the controller process has crashed,
+and halt the execution whenever we detect that the controller process has
+indeed crashed. For a complete list of invariants to check, see
+the dictionary at the bottom of `config/invariant_checks.py`.
 
-Now let's look in depth at invariant checks.
+By default Fuzzer generates its inputs based on a set of event probabilities defined in
+`config/fuzzer_params.py`. Taking a closer look at that file, we see a list of
+event types followed by numbers in the range [0,1], such as:
+<pre>
+switch_failure_rate = 0.05
+switch_recovery_rate = 0.1
+...
+</pre>
+This tells the fuzzer to trigger kill live switch with a probability of 5%,
+and recover down switches with a probability of 10%.
+
+Let's go ahead and see STS in action, by invoking the simulator with our
+config file:
+<pre>
+$ ./simulator.py -c config/fuzz_pox_simple.py
+</pre>
+
+The output should look something like this:
 
 BTW, you can drop into interactive mode by hitting ^C.
-
-By default Fuzzer generates its inputs based on the probabilities defined in
-config/fuzzer_params.py. That is, in a given round, the probability that an
-event will be triggered is defined by the parameter specified in that file.
-
-Fuzzer allows you to check invariants of your choice at specified intervals.
-
-See the pydoc on Fuzzer.__init__ for more information about parameters.
 
 ### Interactive Mode
 
@@ -62,6 +101,9 @@ Just change one thing in the config file.
 
 Let's suppose we found a juicy bug. Luckily, our event trace was recorded
 while we were running STS previously.
+
+The simulator automatically copies your configuration parameters, event logs,
+and console output into the experiments/ directory for later examination.
 
 See experiments/foo/bar for this event trace.
 
@@ -174,3 +216,6 @@ filtered_classes => a set of classes to ignore, from sts.replay_event
 see example_pretty_print_config.py for an example.
 </pre>
 
+That's it! See this
+[page](http://ucb-sts.github.io/sts/software_architecture.html) for a deeper dive into the structure
+of STS's code, including additional configuration parameters to STS's different modes.
