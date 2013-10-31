@@ -23,7 +23,7 @@ $ cd sts
 $ git clone -b debugger git://github.com/ucb-sts/pox.git
 ```
 
-### Running
+### Running STS
 
 For a detailed step-by-step walkthrough of STS's use cases, see this
 [page](http://ucb-sts.github.io/sts/walkthrough).
