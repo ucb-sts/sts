@@ -22,19 +22,24 @@
 
   </head>
   <body>
+    <header>
+      <div class="container">
+         <h1>{{ page.title }}</h1>
+         <h2>{{ page.subtitle }}</h2>
+      </div>
+    </header>
+
     <div class="container">
       <section id="main_content">
         <p>
         {{ content }}
-        </p></br>
+        </p>
 
-        <a name="questions" class="anchor" href="#questions"><span class="octicon octicon-link"></span></a>Questions?</h3>
+        <h3><a name="questions" class="anchor" href="#questions"><span class="octicon octicon-link"></span></a>Questions?</h3>
 
         <p>Send questions or feedback to: <a href="mailto:sts-dev@googlegroups.com">sts-dev@googlegroups.com</a></p>
       </section>
-
     </div> <!-- container -->
     <!--[if !IE]><script>fixScale(document);</script><![endif]-->
-    
   </body>
 </html>
