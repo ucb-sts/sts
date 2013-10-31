@@ -67,13 +67,11 @@ class ControllerManager(object):
 
   @property
   def live_controllers(self):
-    self.check_controller_status()
     alive = [controller for controller in self.controllers if controller.state == ControllerState.ALIVE]
     return set(alive)
 
   @property
   def down_controllers(self):
-    self.check_controller_status()
     down = [controller for controller in self.controllers if controller.state == ControllerState.DEAD]
     return set(down)
 

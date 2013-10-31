@@ -98,7 +98,9 @@ class ControllerConfig(object):
     if address_is_ip(address) or address == "localhost":
       # Normal TCP socket
       if not port:
-        port = self._port_gen.next()
+        # bigswitchpanic hack
+        port = 6633
+        #port = self._port_gen.next()
       if try_new_ports:
         port = find_port(xrange(port, port+2000))
       self.port = port
