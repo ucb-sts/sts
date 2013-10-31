@@ -1,8 +1,11 @@
-See https://github.com/ucb-sts/sts/blob/master/DOCUMENTATION.md for an HTML
+See http://ucb-sts.github.com/sts/software_architecture.html for an HTML
 version of this file.
 
-This document provides an overview of the software architecture and
-development workflow for STS.
+This document provides an overview of the software architecture of STS, as
+well as a development workflow for those contributing to STS itself..
+
+For a detailed walkthrough of STS's uses cases, see this
+[page](http://ucb-sts.github.io/sts/walkthrough).
 
 For searchable code documentation, see this
 [page](http://ucb-sts.github.io/documentation/).
