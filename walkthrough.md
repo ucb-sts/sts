@@ -5,11 +5,9 @@ subtitle: Step-by-step overview of STS's use-cases.
 description: Walk through example usage of STS.
 ---
 
-Yo.
-
 ## Phase I: Bug Finding
 
-First, we usually start by fuzzing to try to find bugs.
+we usually start by fuzzing to try to find bugs.
 
 ### Fuzzing Mode
 
