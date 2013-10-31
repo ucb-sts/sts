@@ -52,7 +52,7 @@ class Replayer(ControlFlow):
                end_in_interactive=False, input_logger=None,
                allow_unexpected_messages=False,
                pass_through_whitelisted_messages=True,
-               delay_flow_mods=True,
+               delay_flow_mods=False,
                **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:

@@ -202,7 +202,6 @@ class Fuzzer(ControlFlow):
         assert(isinstance(switch, FuzzSoftwareSwitch))
         switch.use_delayed_commands()
         switch.randomize_flow_mods()
-        
     return self.loop()
 
   def loop(self):
