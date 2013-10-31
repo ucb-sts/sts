@@ -779,6 +779,7 @@ class VMController(Controller):
         session.close()
         return reply
       except:
+        self.log.warn("Exception in executing remote command \"%s\": %s" % cmd, self.label)
         self._ssh_client = None
         max_iterations -= 1
     return ""
