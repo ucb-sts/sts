@@ -219,7 +219,7 @@ def boot_mock_controllers(controller_configs, snapshot_service,
                      sync_connection_manager):
   return MockControllerManager(controller_configs)
 
-def create_mock_connection(controller_config, software_switch):
+def create_mock_connection(controller_config, software_switch, max_backoff_seconds=1024):
     return ConnectionlessOFConnection(controller_config.cid,
                                       software_switch.dpid)
 def connect_to_mock_controllers(simulation):
