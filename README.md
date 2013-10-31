@@ -118,7 +118,7 @@ For searchable code documentation, see this
 ### Interested in contributing?
 
 Check out this
-[page](https://github.com/ucb-sts/sts/blob/master/CONTRIBUTE.md).
+[page](http://ucb-sts.github.io/sts/contribute.html).
 
 ### Research
 
