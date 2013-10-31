@@ -1,3 +1,10 @@
+---
+layout: default
+title: STS Software Architecture
+subtitle: Overview of the software architecture of STS.
+description: Overview of the software architecture of STS.
+---
+
 This document provides an overview of the software architecture of STS, as
 well as a development workflow for those contributing to STS itself..
 
