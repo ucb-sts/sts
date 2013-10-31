@@ -57,6 +57,7 @@ do
     if [[ $j -eq $NUM_REPLAYS ]]; then
       echo "Cannot reproduce $NEW_EXP_NAME violation!"
       mv experiments/"$NEW_EXP_NAME" experiments/"$EXP_NAME"_irreproducible
+      mv experiments/"$NEW_EXP_NAME"_replay experiments/"$EXP_NAME"_irreproducible
       break
     fi
   done
