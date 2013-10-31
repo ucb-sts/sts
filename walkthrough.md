@@ -7,11 +7,31 @@ description: Walk through example usage of STS.
 
 ## Phase I: Bug Finding
 
-we usually start by fuzzing to try to find bugs.
+We start our use of STS by using it to find bugs in controller software. STS
+supports two ways to accomplish this:
+most commonly, we use STS to simulate a network, generate randomly chosen input sequences,
+feed them to controller(s), and check invariants at
+chosen intervals; we also run STS interactively so that we can examine the state of
+any part of the simulated network, observe and manipulate messages, and
+follow our intuition to induce orderings that we believe may trigger bugs.
 
 ### Fuzzing Mode
 
-Let's look in depth at a config file.
+Fuzzing mode is how we use STS to generate randomly chosen input sequences in
+search of bugs.
+
+The simulator automatically copies your configuration parameters, event logs,
+and console output into the experiments/ directory for later examination.
+
+The config/ directory contains sample configurations. You can specify your own
+config file by passing its path:
+
+```
+$ ./simulator.py -c config/my_config.py
+```
+
+See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README)
+for more information on how to write configuration files. 
 
 Now let's look in depth at fuzzer params.
 
@@ -40,7 +60,22 @@ Just change one thing in the config file.
 
 ## Phase II: Troubleshooting
 
-Let's suppose we found a juicy bug. Luckily, our bug was .
+Let's suppose we found a juicy bug. Luckily, our event trace was recorded
+while we were running STS previously.
+
+See experiments/foo/bar for this event trace.
+
+Introduce pretty_print_event_trace.py here? Seems like an appropriate intro to
+event trace files.
+
+Experiment results are automatically placed in their own subdirectory under experiments/.
+There you can find console output, serialized event traces, and config files
+for replay and MCS finding.
+
+By default, the name of the results directory is inferred from the name of the
+config file. You can also specify a custom name with the `-n` parameter to
+simulator.py. You can also specify that each directory name should have a
+timestamp appended with the `-t` parameter
 
 ### Replay Mode
 
@@ -119,8 +154,23 @@ A common workflow:
     traces from delta debugging runs can be found in
     `experiments/experiment_name_mcs/interreplay_*`
 
+- ```visualization/visualize2D.html```: A webpage for showing a Lamport time diagram of an
+   event trace. Useful for visually spotting the root causes of race conditions
+   and other nasty bugs.
 
 ### Pretty printing event traces.
 
 The raw event.trace files are hard for humans to read.
 ./tools/pretty_print_event_trace.py.
+
+This script's output is highly configurable.
+
+<pre>
+----- config file format: ----
+config files are python modules that may define the following variables:
+fields  => an array of field names to print. uses default_fields if undefined.
+filtered_classes => a set of classes to ignore, from sts.replay_event
+...
+see example_pretty_print_config.py for an example.
+</pre>
+
