@@ -110,7 +110,7 @@ your controller process(es).
 ### Documentation
 
 For a high-level overview of STS's software architecture, see this
-[page](https://github.com/ucb-sts/sts/blob/master/DOCUMENTATION.md).
+[page](http://ucb-sts.github.io/sts/software_architecture.html).
 
 For searchable code documentation, see this
 [page](http://ucb-sts.github.io/documentation/).

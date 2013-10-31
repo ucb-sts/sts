@@ -1,4 +1,4 @@
-See https://github.com/ucb-sts/sts/blob/master/DOCUMENTATION.md for an HTML
+See http://ucb-sts.github.com/sts/software_architecture.html for an HTML
 version of this file.
 
 This document provides an overview of the software architecture of STS, as
