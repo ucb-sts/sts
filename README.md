@@ -2,7 +2,7 @@ See http://ucb-sts.github.com/sts/ for an HTML version of this file.
 
 Ever had to manually dig through logs to find the one or two inputs that lead
 your controller software to break? STS seeks to eliminate this need, freeing
-you to debug the problematic code itself.
+you to debug the problematic code itself. 
 
 STS simulates the devices of your network, allowing you to easily generate
 tricky test cases, interactively examine the state of the network, and
@@ -25,7 +25,10 @@ $ git clone -b debugger git://github.com/ucb-sts/pox.git
 
 ### Running
 
-Take STS for a test drive with:
+For a detailed step-by-step walkthrough of STS's use cases, see this
+[page](http://ucb-sts.github.io/sts/walkthrough).
+
+For the impatient, take STS for a test drive with:
 
 ```
 $ ./simulator.py
@@ -54,15 +57,12 @@ $ ./simulator.py -c config/pox_example_mcs.py
 ```
 
 You can turn up the verbosity of the simulator's console output by passing the
-'-v' flag to simulator.py.
-
-For a detailed step-by-step walkthrough of STS's use cases, see this
-[page](http://ucb-sts.github.io/sts/walkthrough).
+'-v' flag to simulator.py. 
 
 ### Configuring your own experiments
 
-The simulator automatically copies your configuration parameters and console
-output into the experiments/ directory for later examination.
+The simulator automatically copies your configuration parameters, event logs,
+and console output into the experiments/ directory for later examination.
 
 The config/ directory contains sample configurations. You can specify your own
 config file by passing its path:
@@ -72,7 +72,7 @@ $ ./simulator.py -c config/my_config.py
 ```
 
 See [config/README](https://github.com/ucb-sts/sts/blob/master/config/README)
-for more information.
+for more information on how to write configuration files. 
 
 ### Dependencies
 
@@ -80,9 +80,9 @@ STS requires python 2.7+
 
 To check network invariants with headerspace analysis, you will need to load
 [hassel](https://bitbucket.org/peymank/hassel-public) as a submodule and build
-it:
+it: 
 ```
-$ git submodule init
+$ git submodule init 
 $ git submodule update
 $ (cd sts/hassel/hsa-python && source setup.sh)
 $ (cd sts/hassel/hassel-c && make -j)
@@ -122,8 +122,8 @@ Check out this
 
 ### Research
 
-For more information about the research behind STS, see our
-[short](http://www.eecs.berkeley.edu/~rcs/research/sts_short.pdf) or
+For more information about the research behind STS, see our 
+[short](http://www.eecs.berkeley.edu/~rcs/research/sts_short.pdf) or 
 [long](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf) paper draft or our
 talk
 [slides](http://www.eecs.berkeley.edu/~rcs/research/selectiverecall.pptx).
