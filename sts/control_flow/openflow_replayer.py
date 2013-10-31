@@ -19,7 +19,7 @@ Motivation for this tool:
  - Delta debugging does not fully minimize traces (often for good reason,
    e.g. delicate timings). We have observed minimized traces often contain many
    OpenFlow messages that time our or are overwritten, i.e. are not directly
-   relevent for triggering an invalid network configuratoon.
+   relevant for triggering an invalid network configuratoon.
 
 This tool enables:
   - automatic filtering of flow_mods that timed out or were overwritten by
@@ -27,7 +27,7 @@ This tool enables:
   - automatic filtering of flow_mods that are irrelevant to a set of flow
     entries specified by the user.
   - interactive bisection of the OpenFlow trace to infer which messages were
-    and weren't relevent for triggering the bug (especially useful for tricky
+    and weren't relevant for triggering the bug (especially useful for tricky
     cases requiring human involvment). (TBD)
 
 The tool can then spit back out a new event trace without the irrelevant
@@ -56,7 +56,7 @@ class OpenFlowReplayer(ControlFlow):
   Replays OpenFlow messages and filters out messages that are not of interest,
   producing a new event trace file as output.
   '''
-  def __init__(self, simulation_cfg, superlog_path_or_dag):
+  def __init__(self, simulation_cfg, superlog_path_or_dag, ignore_trailing_flow_mod_deletes=True):
     # TODO(cs): allow the user to specify a stop point in the event dag, in
     # case the point they are interested in occurs before the end of the trace.
     self.simulation_cfg = simulation_cfg
@@ -72,6 +72,7 @@ class OpenFlowReplayer(ControlFlow):
     self.event_list = [ e for e in self.event_list
                         if type(e) == ControlMessageReceive
                         and type(e.get_packet()) != ofp_packet_out ]
+    self.ignore_trailing_flow_mod_deletes = ignore_trailing_flow_mod_deletes
 
   def simulate(self):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback,
@@ -80,37 +81,55 @@ class OpenFlowReplayer(ControlFlow):
 
     # Reproduce the routing table state.
     for next_event in self.event_list:
-      if "flow_mod" in ("%r" % next_event):
+      if type(next_event.get_packet()) == ofp_flow_mod:
         msg.special_event("Injecting %r" % next_event)
       else:
         msg.openflow_event("Injecting %r" % next_event)
       next_event.manually_inject(self.simulation)
 
-    # now filter out all flow_mods that don't correspond to an entry in the
+    # Some implementations send delete flow mods when disconnecting switches; ignore these flow_mods
+    if self.ignore_trailing_flow_mod_deletes:
+      ignore_flow_mods = {} # switch -> boolean of whether to ignore flow mods
+      for switch in self.simulation.topology.switches:
+        ignore_flow_mods[switch] = True
+
+    # Now filter out all flow_mods that don't correspond to an entry in the
     # final routing table. Do that by walking backwards through the flow_mods,
     # and checking if they match the flow table. If so, add it to list, and
     # remove all flow entries that currently match it to filter overlapping
     # flow_mods from earlier in the event_list.
-    relevent_flow_mods = []
-    all_flow_mods = [e for e in self.event_list if type(e.get_packet()) == ofp_flow_mod]
+    relevant_flow_mods = []
+    all_flow_mods = [ e for e in self.event_list if type(e.get_packet()) == ofp_flow_mod ]
     for last_event in reversed(all_flow_mods):
       switch = self.simulation.topology.get_switch(last_event.dpid)
+
+      # Ignore all trailing flow mod deletes
+      if self.ignore_trailing_flow_mod_deletes:
+        flow_mod_command = last_event.get_packet().command 
+	if flow_mod_command != OFPFC_DELETE and flow_mod_command != OFPFC_DELETE_STRICT:
+	  ignore_flow_mods[switch] = False
+	if ignore_flow_mods[switch]:
+	  continue
+
       if switch.table.matching_entries(last_event.get_packet().match) != []:
-        relevent_flow_mods.append(last_event)
+        relevant_flow_mods.append(last_event)
         switch.table.remove_matching_entries(last_event.get_packet().match)
+    relevant_flow_mods.reverse() 
     print "\n"
 
-    # Now print them in the forward direction.
+    # Print filtered flow mods
     msg.event("Filtered flow mods:")
-    for next_event in reversed(relevent_flow_mods):
+    for next_event in relevant_flow_mods:
       print "%r" % next_event
     print "\n"
 
-    # Now print the flow tables of each switch.
+    # Print the flow tables of each switch, adding back removed entries
     msg.event("Flow tables:")
+    for flow_mod_event in relevant_flow_mods:
+      flow_mod_event.manually_inject(self.simulation)
     for switch in self.simulation.topology.switches:
       print "Switch %s" % switch.dpid
       switch.show_flow_table()
-    print "\n"
 
     return self.simulation
+
