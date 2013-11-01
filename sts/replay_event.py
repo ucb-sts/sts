@@ -670,7 +670,7 @@ class CheckInvariants(InputEvent):
       if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
         raise KeyboardInterrupt("fail to interactive")
     else:
-      msg.interactive("No correctness violations!")
+      msg.success("No correctness violations!")
     if persistent_violations != []:
       msg.fail("Persistent violations detected!: %s" % str(persistent_violations))
       if hasattr(simulation, "fail_to_interactive_on_persistent_violations") and\

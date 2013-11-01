@@ -471,8 +471,13 @@ class Interactive(ControlFlow):
     dp_event = self.traffic_generator.generate_and_inject(traffic_type, host, send_to_self=send_to_self)
     self._log_input_event(TrafficInjection(dp_event=dp_event, host_id=host.hid))
 
-  def show_flow_table(self, dpid):
+  def show_flow_table(self, dpid=None):
     topology = self.simulation.topology
+    if not dpid:
+      for switch in topology.switches:
+        msg.interactive("Switch %s" % switch.dpid)
+        switch.show_flow_table()
+        return
     switch = topology.get_switch(dpid)
     switch.show_flow_table()
 

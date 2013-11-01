@@ -331,7 +331,7 @@ class Fuzzer(ControlFlow):
           msg.fail("The following correctness violations have occurred: %s"
                    % str(violations))
         else:
-          msg.interactive("No correctness violations!")
+          msg.success("No correctness violations!")
         if transient_violations != []:
           self._log_input_event(InvariantViolation(transient_violations))
         if persistent_violations != []:

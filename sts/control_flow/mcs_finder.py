@@ -410,7 +410,7 @@ class MCSFinder(ControlFlow):
       else:
         msg.fail("Bug does not match initial violation fingerprint!")
     else:
-      msg.interactive("No correctness violations!")
+      msg.success("No correctness violations!")
 
     if not ignore_runtime_stats:
       self._runtime_stats.merge_client_dict(client_runtime_stats)
