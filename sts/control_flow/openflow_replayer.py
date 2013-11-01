@@ -41,6 +41,7 @@ from sts.replay_event import ControlMessageReceive
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.base import *
 from sts.util.console import msg
+from sts.util.convenience import is_flow_mod
 
 # TODO(cs): need to virtualize time for the software switches to capture flow
 # entry timeouts. Currently they call time.time() to get the current time.
@@ -80,9 +81,11 @@ class OpenFlowReplayer(ControlFlow):
     connect_to_mock_controllers(self.simulation)
 
     # Reproduce the routing table state.
+    all_flow_mods = []
     for next_event in self.event_list:
-      if type(next_event.get_packet()) == ofp_flow_mod:
+      if is_flow_mod(next_event):
         msg.special_event("Injecting %r" % next_event)
+        all_flow_mods.append(next_event)
       else:
         msg.openflow_event("Injecting %r" % next_event)
       next_event.manually_inject(self.simulation)
@@ -99,7 +102,6 @@ class OpenFlowReplayer(ControlFlow):
     # remove all flow entries that currently match it to filter overlapping
     # flow_mods from earlier in the event_list.
     relevant_flow_mods = []
-    all_flow_mods = [ e for e in self.event_list if type(e.get_packet()) == ofp_flow_mod ]
     for last_event in reversed(all_flow_mods):
       switch = self.simulation.topology.get_switch(last_event.dpid)
 

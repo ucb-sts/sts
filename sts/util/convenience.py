@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from pox.openflow.software_switch import OFConnection
+from pox.openflow.libopenflow_01 import ofp_flow_mod
 from pox.lib.addresses import EthAddr, IPAddr
 import time
 import re
@@ -140,6 +141,9 @@ def base64_decode(data):
 def base64_decode_openflow(data):
   (msg, packet_length) = OFConnection.parse_of_packet(base64_decode(data))
   return msg
+
+def is_flow_mod(receive_event):
+  return type(base64_decode_openflow(receive_event.b64_packet)) == ofp_flow_mod
 
 class IPAddressSpace(object):
   _claimed_addresses = set()

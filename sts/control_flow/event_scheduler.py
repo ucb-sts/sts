@@ -13,9 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from sts.replay_event import *
-
+from sts.util.convenience import is_flow_mod
 import time
 from collections import Counter
 import operator
@@ -140,9 +139,9 @@ class EventScheduler(EventSchedulerBase):
   kwargs = set(['speedup', 'delay_input_events', 'initial_wait',
                 'epsilon_seconds', 'sleep_interval_seconds'])
 
-  def __init__(self, simulation, speedup=1.0,
-               delay_input_events=True, initial_wait=0.5, epsilon_seconds=0.5,
-               sleep_interval_seconds=0.2, assertion_checking=False):
+  def __init__(self, simulation, speedup=1.0, delay_input_events=True,
+               initial_wait=0.5, epsilon_seconds=0.5, sleep_interval_seconds=0.2,
+               assertion_checking=False, show_flow_tables=True):
     super(EventScheduler, self).__init__()
     self.simulation = simulation
     self.speedup = speedup
@@ -155,6 +154,7 @@ class EventScheduler(EventSchedulerBase):
     self.started = False
     self.stats = EventSchedulerStats()
     self.assertion_checking = assertion_checking
+    self.show_flow_tables = show_flow_tables
 
   def schedule(self, event):
     if not self.started:
@@ -211,6 +211,12 @@ class EventScheduler(EventSchedulerBase):
       event.timed_out = False
       self.stats.event_matched(event)
       self.update_event_time(event)
+      if self.show_flow_tables and\
+       type(event) == ControlMessageReceive and\
+       is_flow_mod(event):
+	for switch in self.simulation.topology.switches:
+	  msg.interactive("Switch %s" % switch.dpid)
+	  switch.show_flow_table()
     else:
       event.timed_out = True
       self.stats.event_timed_out(event)

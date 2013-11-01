@@ -37,6 +37,7 @@ import sts.input_traces.log_parser as log_parser
 from sts.replay_event import *
 from sts.event_dag import EventDag
 from sts.util.console import msg
+from sts.util.convenience import is_flow_mod
 
 import logging
 log = logging.getLogger("interactive_replayer")
@@ -110,10 +111,6 @@ class InteractiveReplayer(Interactive):
     self.logical_time += 1
     self._forwarded_this_step = 0
 
-    def is_flow_mod(event):
-      return type(event) == ControlMessageReceive and\
-	    type(event.get_packet()) == ofp_flow_mod
-
     if len(self.event_list) == 0:
       msg.fail("No more events to inject")
     else:
@@ -122,7 +119,7 @@ class InteractiveReplayer(Interactive):
         msg.replay_event_success("Injecting %r" % next_event)
         next_event.proceed(self.simulation)
       else: # type(next_event) in InteractiveReplayer.supported_internal_events
-	if is_flow_mod(next_event):
+	if type(next_event) == ControlMessageReceive and is_flow_mod(next_event):
           msg.mcs_event("Injecting %r" % next_event)
 	else:
           msg.replay_event_success("Injecting %r" % next_event)
