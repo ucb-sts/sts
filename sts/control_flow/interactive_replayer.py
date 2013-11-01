@@ -63,7 +63,8 @@ class InteractiveReplayer(Interactive):
                                 LinkRecovery, HostMigration, TrafficInjection])
   supported_internal_events = set([ControlMessageReceive])
 
-  def __init__(self, simulation_cfg, superlog_path_or_dag, mock_controllers=True, input_logger=None):
+  def __init__(self, simulation_cfg, superlog_path_or_dag, mock_controllers=True, input_logger=None,
+               show_flow_tables_each_step=True):
     # TODO(cs): allow user to specify a round number where they want to stop,
     # otherwise play forward events without asking for interactive ack.
     Interactive.__init__(self, simulation_cfg, input_logger=input_logger)
@@ -87,18 +88,19 @@ class InteractiveReplayer(Interactive):
       self.event_list = [ e for e in self.event_list
                           if type(e) in InteractiveReplayer.supported_input_events or
                              type(e) in InteractiveReplayer.supported_internal_events ]
-
+    self.show_flow_tables_each_step = show_flow_tables_each_step
 
   def simulate(self, bound_objects=()):
     # TODO(cs): add interactive prompt commands for examining next pending
     # event, inject next pending event, examining total pending events
     # remaining.
     if self.mock_controllers:
-      return Interactive.simulate(self, boot_controllers=boot_mock_controllers,
-                           connect_to_controllers=connect_to_mock_controllers,
-                           bound_objects=bound_objects)
+      self.simulation = Interactive.simulate(self, boot_controllers=boot_mock_controllers,
+                                      connect_to_controllers=connect_to_mock_controllers,
+                                      bound_objects=bound_objects)
     else: # not self.mock_controllers
-      return Interactive.simulate(self, simulation=simulation, bound_objects=bound_objects)
+      self.simulation = Interactive.simulate(self, simulation=simulation, bound_objects=bound_objects)
+    return self.simulation
 
   def default_command(self):
     return "next"
@@ -108,15 +110,28 @@ class InteractiveReplayer(Interactive):
     self.logical_time += 1
     self._forwarded_this_step = 0
 
+    def is_flow_mod(event):
+      return type(event) == ControlMessageReceive and\
+	    type(event.get_packet()) == ofp_flow_mod
+
     if len(self.event_list) == 0:
       msg.fail("No more events to inject")
     else:
       next_event = self.event_list.pop(0)
-      msg.success("Injecting %r" % next_event)
       if type(next_event) in InteractiveReplayer.supported_input_events:
+        msg.replay_event_success("Injecting %r" % next_event)
         next_event.proceed(self.simulation)
       else: # type(next_event) in InteractiveReplayer.supported_internal_events
+	if is_flow_mod(next_event):
+          msg.mcs_event("Injecting %r" % next_event)
+	else:
+          msg.replay_event_success("Injecting %r" % next_event)
         next_event.manually_inject(self.simulation)
+      if self.show_flow_tables_each_step:
+	for switch in self.simulation.topology.switches:
+	  print "Switch %s" % switch.dpid
+	  switch.show_flow_table()
 
-    print "-------------------"
-    print "Advanced to step %d" % self.logical_time
+    print "\nAdvanced to step %d\n" % self.logical_time
+
+

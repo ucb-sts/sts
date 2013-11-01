@@ -45,12 +45,12 @@ class EventSchedulerStats(object):
            format_time(event.time.as_float() - self.record_start)
 
   def event_matched(self, event):
-    msg.event_success(self.time(event) + " Successfully matched event "+str(event))
+    msg.replay_event_success(self.time(event) + " Successfully matched event "+str(event))
     # TODO(cs): maybe want more info than just class name? (e.g. fingerprint)
     self.event2matched[event.__class__.__name__] += 1
 
   def event_timed_out(self, event):
-    msg.event_timeout(self.time(event) + " Event timed out "+str(event))
+    msg.replay_event_timeout(self.time(event) + " Event timed out "+str(event))
     self.event2timeouts[event.__class__.__name__] += 1
 
   def sorted_match_counts(self):

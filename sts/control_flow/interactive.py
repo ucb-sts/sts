@@ -503,6 +503,7 @@ class Interactive(ControlFlow):
       message = "Blackholes: "
     else:
       log.warn("Unknown invariant kind...")
+      return
     self.simulation.violation_tracker.track(result, self.logical_time)
     persistent_violations = self.simulation.violation_tracker.persistent_violations
     transient_violations = list(set(result) - set(persistent_violations))

@@ -214,6 +214,8 @@ class MockControllerManager(object):
   def live_controllers(self): return []
   @property
   def down_controllers(self): return []
+  def check_controller_status(self): return []
+  def all_controllers_down(self): return False
 
 def boot_mock_controllers(controller_configs, snapshot_service,
                      sync_connection_manager):
@@ -223,6 +225,6 @@ def create_mock_connection(controller_config, software_switch, max_backoff_secon
     return ConnectionlessOFConnection(controller_config.cid,
                                       software_switch.dpid)
 def connect_to_mock_controllers(simulation):
-  
   simulation.topology.connect_to_controllers(simulation.controller_manager.controller_configs,
                                              create_connection=create_mock_connection)
+
