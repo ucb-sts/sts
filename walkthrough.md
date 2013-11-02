@@ -25,40 +25,39 @@ In the `config/` subdirectory, we find a configuration file
 
 The first two lines of this file tells STS how to boot the SDN controller
 (in this case, POX):
-```python
-start_cmd = ('''./pox.py openflow.discovery forwarding.l2_multi '''
-             '''openflow.of_01 --address=__address__ --port=__port__''')
-controllers = [ControllerConfig(start_cmd, cwd="pox")]
-```
+
+    start_cmd = ('''./pox.py openflow.discovery forwarding.l2_multi '''
+                 '''openflow.of_01 --address=__address__ --port=__port__''')
+    controllers = [ControllerConfig(start_cmd, cwd="pox")]
+
 In this case, we're running POX's l2_multi module, a simple routing routing
 application. Note that the macros __address__ and __port__ are expanded by STS to allow
 it to choose available ports and addresses.
 
 The next two lines specify the network topology we would like STS to simulate:
-```python
-topology_class = MeshTopology
-topology_params = "num_switches=2"
-```
+
+    topology_class = MeshTopology
+    topology_params = "num_switches=2"
+
 In this case, we're simulating a simple mesh topology consiting of two
 switches each with an attached host, and a single link connecting the
 switches.
 
 The next line bundles up the controller configuration parameters with the
 network topology configuration parameters:
-<pre>
-simulation_config = SimulationConfig(controller_configs=controllers,
-                                     topology_class=topology_class,
-                                     topology_params=topology_params)
-</pre>
+
+    simulation_config = SimulationConfig(controller_configs=controllers,
+                                         topology_class=topology_class,
+                                         topology_params=topology_params)
 
 The last line specifies what mode we would like STS to run in. In our case,
 we want to generate random inputs with the Fuzzer class:
-<pre>
-control_flow = Fuzzer(simulation_config,
-                      input_logger=InputLogger(),
-                      invariant_check_name="InvariantChecker.check_liveness",
-                      halt_on_violation=True)
-</pre>
+
+    control_flow = Fuzzer(simulation_config,
+                          input_logger=InputLogger(),
+                          invariant_check_name="InvariantChecker.check_liveness",
+                          halt_on_violation=True)
+
 Here we're telling the Fuzzer to record its execution with an
 InputLogger, check periodically whether the controller process has crashed,
 and halt the execution whenever we detect that the controller process has
@@ -68,19 +67,18 @@ the dictionary at the bottom of `config/invariant_checks.py`.
 By default Fuzzer generates its inputs based on a set of event probabilities defined in
 `config/fuzzer_params.py`. Taking a closer look at that file, we see a list of
 event types followed by numbers in the range [0,1], such as:
-<pre>
-switch_failure_rate = 0.05
-switch_recovery_rate = 0.1
-...
-</pre>
+
+     switch_failure_rate = 0.05
+     switch_recovery_rate = 0.1
+     ...
+
 This tells the fuzzer to trigger kill live switch with a probability of 5%,
 and recover down switches with a probability of 10%.
 
 Let's go ahead and see STS in action, by invoking the simulator with our
 config file:
-<pre>
-$ ./simulator.py -c config/fuzz_pox_simple.py
-</pre>
+
+    $ ./simulator.py -c config/fuzz_pox_simple.py
 
 The output should look something like this:
 
