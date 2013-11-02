@@ -28,10 +28,11 @@ The first two lines of this file tells STS how to boot the SDN controller
 
     start_cmd = ('''./pox.py openflow.discovery forwarding.l2_multi '''
                  '''openflow.of_01 --address=__address__ --port=__port__''')
-    controllers = [ControllerConfig(start_cmd, cwd="pox")]
+    controllers = [ControllerConfig(start_cmd, cwd="pox/")]
 
-In this case, we're running POX's l2_multi module, a simple routing routing
-application. Note that the macros __address__ and __port__ are expanded by STS to allow
+Here we're running POX's l2_multi module, a simple routing routing
+application located in `./pox/forwarding/`. Note that the macros "__address__"
+and "__port__" are expanded by STS to allow
 it to choose available ports and addresses.
 
 The next two lines specify the network topology we would like STS to simulate:
@@ -39,7 +40,7 @@ The next two lines specify the network topology we would like STS to simulate:
     topology_class = MeshTopology
     topology_params = "num_switches=2"
 
-In this case, we're simulating a simple mesh topology consiting of two
+In this case, we're simulating a simple mesh topology consisting of two
 switches each with an attached host, and a single link connecting the
 switches.
 
@@ -61,18 +62,20 @@ we want to generate random inputs with the Fuzzer class:
 Here we're telling the Fuzzer to record its execution with an
 InputLogger, check periodically whether the controller process has crashed,
 and halt the execution whenever we detect that the controller process has
-indeed crashed. For a complete list of invariants to check, see
+indeed crashed.
+
+For a complete list of invariants to check, see
 the dictionary at the bottom of `config/invariant_checks.py`.
 
 By default Fuzzer generates its inputs based on a set of event probabilities defined in
 `config/fuzzer_params.py`. Taking a closer look at that file, we see a list of
-event types followed by numbers in the range [0,1], such as:
+event types followed by numbers in the range \[0,1\], such as:
 
      switch_failure_rate = 0.05
      switch_recovery_rate = 0.1
      ...
 
-This tells the fuzzer to trigger kill live switch with a probability of 5%,
+This tells the fuzzer to trigger kill live switches with a probability of 5%,
 and recover down switches with a probability of 10%.
 
 Let's go ahead and see STS in action, by invoking the simulator with our
@@ -82,7 +85,19 @@ config file:
 
 The output should look something like this:
 
-BTW, you can drop into interactive mode by hitting ^C.
+<img
+src="http://www.eecs.berkeley.edu/%7Ercs/research/console_output.png"
+alt="console output">
+
+We see that STS populates the simulated topology, boots POX, connects the
+switches to POX, and begins feeding in traffic injections and other events.
+The console output is colored to dilineate the different sources of output:
+the green output is STS's internal logging, the blue output shows Fuzzer's
+injected network events, and the orange/red output is the logging output of
+the POX controller process ("C1").
+
+One particularly useful usage hint for fuzzer is that you can drop into
+interactive mode, described next, by hitting ^C at any point in the execution.
 
 ### Interactive Mode
 
