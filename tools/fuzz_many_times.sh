@@ -40,8 +40,8 @@ do
   NEW_EXP_NAME="$EXP_NAME"_"$i"
   mv experiments/"$EXP_NAME" experiments/"$NEW_EXP_NAME"
   tools/replace_word.sh "$EXP_NAME" "$NEW_EXP_NAME" experiments/"$NEW_EXP_NAME"
-  NO_VIOLATION=$(tail -n 100 experiments/"$NEW_EXP_NAME"/simulator.out | grep "Round 500 completed")
-  if [[ ! -z "$NO_VIOLATION" ]]; then
+  VIOLATION=$(tail -n 100 experiments/"$NEW_EXP_NAME"/simulator.out | grep "Persistent violations detected")
+  if [[ -z "$VIOLATION" ]]; then
     echo "$NEW_EXP_NAME has no violations!"
     mv experiments/"$NEW_EXP_NAME" experiments/"$EXP_NAME"_no_violations
     continue
@@ -50,8 +50,8 @@ do
   for j in $(seq 1 $NUM_REPLAYS)
   do
     ./simulator.py -c experiments/"$NEW_EXP_NAME"/replay_config.py
-    REPLAY_NO_VIOLATION=$(tail -n 100 experiments/"$NEW_EXP_NAME"_replay/simulator.out | grep "No correctness violations")
-    if [[ -z "$REPLAY_NO_VIOLATION" ]]; then
+    REPLAY_VIOLATION=$(tail -n 100 experiments/"$NEW_EXP_NAME"_replay/simulator.out | grep "Persistent violations detected")
+    if [[ ! -z "$REPLAY_VIOLATION" ]]; then
       break
     fi
     if [[ $j -eq $NUM_REPLAYS ]]; then
