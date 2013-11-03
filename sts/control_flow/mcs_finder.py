@@ -165,7 +165,7 @@ class MCSFinder(ControlFlow):
     # filter event types we don't want to include in the MCS
     # (e.g. CheckInvariants)
     self.dag.mark_invalid_input_sequences()
-    self.dag = self.dag.filter_unsupported_input_types()
+    # TODO(cs): invoke dag.filter_unsupported_input_types()
 
     if len(self.dag) == 0:
       raise RuntimeError("No supported input types?")
