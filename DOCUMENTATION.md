@@ -295,7 +295,9 @@ There are many useful tools in the tools/ subdirectory:
    checks whether an invariant violation occurred in the trace.
 
  - ```pretty_print_input_trace.py```: Print an events.trace file in human
-   readable format. This script's output is highly configurable.
+   readable format. This script's output is highly configurable; simply pass
+   the path to a config file to with `-c`. The config files have the following
+   format:
 
 <pre>
 ----- config file format: ----
