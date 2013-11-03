@@ -63,7 +63,7 @@ def process_actions(msg):
 
 def convert_match_to_human_readable_string(pkt):
   match_str = hsa.hs_format["display"](hsa.ofp_match_to_hsa_match(pkt.match))
-  match_str += ",in_port:%d" % pkt.match.in_port
+  match_str += ",in_port:%s" % str(pkt.match.in_port)
   return match_str
 
 class OFFingerprint(Fingerprint):
