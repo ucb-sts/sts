@@ -90,69 +90,173 @@ src="http://www.eecs.berkeley.edu/%7Ercs/research/console_output.png"
 alt="console output">
 
 We see that STS populates the simulated topology, boots POX, connects the
-switches to POX, and begins feeding in traffic injections and other events.
-The console output is colored to dilineate the different sources of output:
-the green output is STS's internal logging, the blue output shows Fuzzer's
-injected network events, and the orange/red output is the logging output of
+switches, and feeds in network traffic and other events.
+The console output is colored to delineate the different sources of output:
+the <font color="009900">green</font> output is STS's internal logging, the
+<font color="66CCFF">blue</font> output shows Fuzzer's
+injected network events, and the <font color="FFCC66">orange</font> output is the logging output of
 the POX controller process ("C1").
 
-One particularly useful usage hint for fuzzer is that you can drop into
+One particularly useful feature of the Fuzzer is that you can drop into
 interactive mode, described next, by hitting ^C at any point in the execution.
 
 ### Interactive Mode
 
-This mode provides a command line interface for users to interactively step
-through the execution of the network. Type `help` for more information on the
-command line interface.
-
 If you have bug in mind, interactive mode is the perfect way to manually
-trigger it.
+trigger it. It allows us to simulate the same network events as fuzzer mode,
+but gives us a command line interface to control the execution and examine the
+state of the network as we proceed.
 
-Just change one thing in the config file.
+We can run interactive either by hitting ^C during a fuzz execution, or by
+changing one line in the config file from before:
+
+    control_flow = Interactive(simulation_config, input_logger=InputLogger())
+
+This tells STS to start with interactive mode rather than fuzzing. When we run
+STS with our modified configuration file, it will again populate the network
+topology, start the controller process, connect switches, and this time present us with
+a prompt:
+
+<img
+src="http://www.eecs.berkeley.edu/%7Ercs/research/interactive_screenshot.png"
+alt="console output">
+
+Each time we hit enter without other console input, the simulator will process
+any pending I/O operations (e.g. OpenFlow receipts), sleep for a small amount
+of time, and present us again with a prompt.
+
+Interactive mode is particularly useful for examining the state of the network.
+For example, we can list all switches in the network by accessing the
+`topology` object's `switches` property:
+
+    STS [next] >topology.switches
+    [SoftwareSwitch(dpid=1, num_ports=2), SoftwareSwitch(dpid=2, num_ports=2)]
+
+We can also examine the current routing tables of a switch with the
+`show_flows` command:
+
+    STS [next] >show_flows 1
+    ----------------------------------------------------------------------------------------------------------------------
+    |  Prio | in_port | dl_type | dl_src | dl_dst            | nw_proto | nw_src | nw_dst | tp_src | tp_dst | actions    |
+    ----------------------------------------------------------------------------------------------------------------------
+    | 32768 |    None |    LLDP |   None | 01:23:20:00:00:01 |     None |   None |   None |   None |   None | CONTROLLER |
+    ----------------------------------------------------------------------------------------------------------------------
+
+From the prompt we can also check invariants, reorder or drop messages, and
+inject other network events such as link failures. Enter `help` for a full list of
+commands available in interactive mode.
 
 ## Phase II: Troubleshooting
 
-Let's suppose we found a juicy bug. Luckily, our event trace was recorded
-while we were running STS previously.
+Let's suppose we found a juicy invariant violation. Our InputLogger has
+recorded a trace of the network events that we can use to track down the root
+cause of the violation.
 
-The simulator automatically copies your configuration parameters, event logs,
-and console output into the experiments/ directory for later examination.
+We can find the raw event trace in the `experiments/fuzz_pox_simple` directory:
 
-See experiments/foo/bar for this event trace.
+    $ ls experiments/fuzz_pox_simple/
+    __init__.py                  fuzzer_params.py             mcs_config.py     openflow_replay_config.py    replay_config.py
+    events.trace                 interactive_replay_config.py metadata          orig_config.py               simulator.out
 
-Introduce pretty_print_event_trace.py here? Seems like an appropriate intro to
-event trace files.
+The raw event trace is stored in the file `events.trace`. In this directory we find a
+number of other useful files: the simulator automatically copies your
+configuration parameters (`fuzzer_params.py`, `orig_config.py`), console
+output (`simulator.out`), metadata about the state of the system when the
+trace was recorded, and new configuration files for replaying the event trace
+(`replay_config.py`), minimizing the event trace (`mcs_config.py`), and root
+causing the bug (`interactive_replay_config.py`, `openflow_replay_config.py`).
 
-Experiment results are automatically placed in their own subdirectory under experiments/.
-There you can find console output, serialized event traces, and config files
-for replay and MCS finding.
-
-By default, the name of the results directory is inferred from the name of the
+By default, this experiments results directory is inferred from the name of the
 config file. You can also specify a custom name with the `-n` parameter to
-simulator.py. You can also specify that each directory name should have a
-timestamp appended with the `-t` parameter
+`simulator.py`. You can optionally specify that each experiment results directory should have a
+timestamp appended with the `-t` parameter.
+
+The simplest way to start troubleshooting is by examining the event trace
+along with the console output. We rarely want to look at the event trace in its raw form though; we instead use a tool to
+parse and format the events:
+
+    $ ./tools/pretty_print_event_trace.py experiments/fuzz_pox_simple/events.trace
+    i1 ConnectToControllers (prunable)
+    fingerprint:  ()
+    --------------------------------------------------------------------
+    i2 ControlMessageReceive (prunable)
+    fingerprint:  (OFFingerprint{u'class': u'ofp_hello'}, 2, (u'c', u'1'))
+    ...
+
+The output of this tool is highly configurable; see the
+[documentation](http://ucb-sts.github.io/sts/software_architecture.html#tools) for more
+information.
 
 ### Replay Mode
 
-All events observed in fuzzing and interactive mode are recorded for later replay.
+Suppose we realize that we need to add more logging statements to the
+controller to understand what's going on. With STS's replayer mode, we can add our logging
+statements and then replay the same set of network events that triggered the
+original violation.
 
-Given an event trace generated by Interactive or Fuzzer, Replayer tries as best as it can to inject the inputs in
-the trace in a way that reproduces the same result. It does this by listening
-to the internal events in the trace and replaying inputs when it sees that the
-causal dependencies have been met.
+Replayer mode tries as best as it can to inject the network events from the trace
+in a way that reproduces the same outcome. It does this in part by maintaining
+the relative timing between input events as they appeared originally.
+Sometimes though the behavior of the controller can also change during replay. For
+example, the operating system may delay or reorder deliver of OpenFlow
+messages. For this reason STS also tracks the order and timing of internal
+events triggered by the controller software itself, and buffers these internal events
+during replay in an attempt to ensure the same causal order of events.
+
+We can replay out trace simply by specifying `replay_config.py` as our
+configuration file:
+
+
+    $ ./simulator.py -c experiments/fuzz_pox_simple/replay_config.py
+    ...
+    00:01.003 00:00.000 Successfully matched event ConnectToControllers:i1
+    00:01.006 00:00.000 Successfully matched event ControlMessageReceive:i2 c1 -> s2 [ofp_hello: ]
+    ...
+
+We can now replay as many times as we need to understand the root cause. The
+console output and other results from our replay runs can be found in a new
+subdirectory `experiments/fuzz_pox_simple_replay/`.
+
+<!-- TODO: mention events.trace.unacked -->
 
 ### MCS Finder Mode
 
-Given an event trace, MCSFinder executes delta debugging to find the minimal
-causal sequence. For each subsequence chosen by delta debugging, it
-instantiates a new Replayer object to replay the execution, and checks at the
-end whether the bug appears. To avoid garbage collection overhead, MCSFinder
-runs each Replay in a separate process, and returns the results via XMLRPC.
-See sts/util/rpc_forker.py for the mechanics of forking.
+Randomly generated event traces often contain a large number of events, many
+of which distract us during the troubleshooting process and are not actually relevant for the bug
+we are interested in. In such cases we can attempt to minimize the original
+event trace, leaving just behind just the events that are directly responsible
+for trigger the bug.
 
-The runtime statistics of MCSFinder are stored in a dictionary and logged to a json file.
+STS's MCSFinder mode executes the
+[delta debugging](http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf)
+algorithm to minimize the original event log. We can invoke MCSFinder by
+specifying the appropriate configuration file:
+
+    $ ./simulator.py -c experiments/fuzz_pox_simple/mcs_config.py
+
+The output of MCSFinder is yet another event trace that we can replay to
+continue with our troubleshooting. The results are stored in a new
+subdirectory `experiments/fuzz_pox_simple_mcs/`. The minimized event trace can
+be found in the `mcs.trace` and `mcs.trace.notimeouts` files. In addition, we
+see subdirectories such as `interreplay_1_l_0/`, which store results from
+intermediate replays throughout delta debugging's execution. Finally, we can
+see statistics about MCSFinder's progress by graphing the data stored in the
+`runtime_stats.json` file:
+
+    $ ./runtime_stats/generate_graph.py experiments/fuzz_pox_simple_mcs/runtime_stats.json
+
+The resulting graph will show us the decreasing size of the event trace
+throughout the delta debugging's execution:
+
+<img
+src="http://www.eecs.berkeley.edu/%7Ercs/research/mcs_runtime.png"
+alt="console output">
 
 ## Root Causing
+
+The last stage of the troubleshooting process involves understand the
+precise circumstances that lead up to the invariant violation. STS includes
+several tools to help with this process.
 
 ### InteractiveReplayer Mode
 
@@ -173,7 +277,7 @@ understand the conditions that triggered a bug. This is helpful for:
 Delta debugging does not fully minimize traces (often for good reason,
 e.g. delicate timings). In particular we have observed minimized traces often
 contain many OpenFlow messages that time our or are overwritten, i.e. are not
-directly relevent for triggering an invalid network configuratoon.
+directly relevant for triggering an invalid network configuration.
 
 OpenFlowReplayer replays the OpenFlow messages from an event trace, enabling:
   - automatic filtering of flow_mods that timed out or were overwritten by
@@ -181,8 +285,8 @@ OpenFlowReplayer replays the OpenFlow messages from an event trace, enabling:
   - automatic filtering of flow_mods that are irrelevant to a set of flow
     entries specified by the user.
   - interactive bisection of the OpenFlow trace to infer which messages were
-    and were not relevent for triggering the bug (especially useful for tricky
-    cases requiring human involvment). (TBD)
+    and were not relevant for triggering the bug (especially useful for tricky
+    cases requiring human involvement). (TBD)
 
 The tool can then spit back out a new event trace without the irrelevant
 OpenFlow messages, to be replayed again by Replayer or InteractiveReplayer.
