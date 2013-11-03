@@ -20,7 +20,7 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 # N.B. this import is needed to avoid a circular dependency.
 from sts.replay_event import *
-from sts.god_scheduler import GodScheduler, PendingReceive
+from sts.openflow_buffer import OpenFlowBuffer, PendingReceive
 from pox.openflow.libopenflow_01 import *
 
 class MockConnection(object):
@@ -32,7 +32,7 @@ class MockConnection(object):
 
 class GodSchedulerTest(unittest.TestCase):
   def test_basic(self):
-    god = GodScheduler()
+    god = OpenFlowBuffer()
     message = ofp_flow_mod(match=ofp_match(in_port=1, nw_src="1.1.1.1"),
                            action=ofp_action_output(port=1))
     mock_conn = MockConnection()
