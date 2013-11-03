@@ -95,6 +95,10 @@ class Event(object):
     self.timed_out = False
 
   @property
+  def label_id(self):
+    return int(self.label[1:])
+
+  @property
   def fingerprint(self):
     ''' All events must have a fingerprint. Fingerprints are used to compute
     functional equivalence. '''
@@ -841,6 +845,10 @@ class DataplaneDrop(InputEvent):
     '''
     return self._fingerprint
 
+  @property
+  def dp_fingerprint(self):
+    return self.fingerprint[1]
+
   @staticmethod
   def from_json(json_hash):
     (label, time, round) = extract_label_time(json_hash)
@@ -1325,6 +1333,10 @@ class DataplanePermit(InternalEvent):
     See fingerprints/messages.py for format of DPFingerprint.
     '''
     return self._fingerprint
+
+  @property
+  def dp_fingerprint(self):
+    return self.fingerprint[1]
 
   @staticmethod
   def from_json(json_hash):
