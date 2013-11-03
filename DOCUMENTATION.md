@@ -308,6 +308,12 @@ filtered_classes => a set of classes to ignore, from sts.replay_event
 see example_pretty_print_config.py for an example.
 </pre>
 
+ - ```trace_traffic_injection.py```: given a path to a events trace file, and the
+   event id (e.g. "e120"), this tool will trace the path a packet takes
+   through the network. in particular, it will print all dataplane permits and
+   drops, as well as ofp_packet_in's and out's associated with the packet
+   injected by the given traffic injection event.
+
  - ```reindent_pox.sh```: Canonicalize the whitespace formatting of all python
    files.
 
@@ -341,4 +347,3 @@ see example_pretty_print_config.py for an example.
 
  - ```visualization/visualize2D.html```: A webpage for showing a Lamport time diagram of an
    event trace. Useful for visually spotting the root causes of race conditions
-   and other nasty bugs.
