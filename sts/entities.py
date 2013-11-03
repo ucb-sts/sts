@@ -504,14 +504,17 @@ class NamespaceHost(Host):
     self.socket = bind_raw_socket(host_device)
     # Set up an io worker for our end of the socket
     self.io_worker = create_io_worker(self.socket)
-    self.io_worker.set_receive_handler(self.send)
+    self.io_worker.set_receive_handler(self._io_worker_receive_handler)
 
     self.interfaces = [HostInterface(self.guest_eth_addr, IPAddr(ip_addr_str))]
     if name == "":
       name = "host:" + ip_addr_str
     self.name = name
 
-  def send(self, io_worker):
+  def _io_worker_receive_handler(self, io_worker):
+    '''
+    Read a packet from the Namespace and inject it into the network.
+    '''
     message = io_worker.peek_receive_buf()
     # Create an ethernet packet
     # TODO(cs): this assumes that the raw socket returns exactly one ethernet
@@ -526,8 +529,9 @@ class NamespaceHost(Host):
 
   def receive(self, interface, packet):
     '''
-    Process an incoming packet from a switch
-    Called by PatchPanel
+    Send an incoming packet from a switch to the Namespace.
+
+    Called by PatchPanel.
     '''
     self.log.info("received packet on interface %s: %s. Passing to netns" %
                   (interface.name, str(packet)))
