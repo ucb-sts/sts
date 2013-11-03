@@ -82,8 +82,9 @@ class OVSControllerPatchPanelTest(unittest.TestCase):
       switch = FuzzSoftwareSwitch(5, ports=[])
       controller_info = MockControllerInfo("127.0.0.1", OVSControllerPatchPanel.of_port, "c1")
       switch.add_controller_info(controller_info)
-      def create_connection(info, switch):
-        socket = connect_socket_with_backoff(info.address, info.port)
+      def create_connection(info, switch, max_backoff_seconds=32):
+        socket = connect_socket_with_backoff(info.address, info.port,
+                                             max_backoff_seconds=max_backoff_seconds)
         io_worker = io_master.create_worker_for_socket(socket)
         return OFConnection(io_worker)
       switch.connect(create_connection)
