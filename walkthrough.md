@@ -213,6 +213,8 @@ configuration file:
     00:01.006 00:00.000 Successfully matched event ControlMessageReceive:i2 c1 -> s2 [ofp_hello: ]
     ...
 
+Like Fuzzer, we can drop into interactive mode at any time by sending ^C.
+
 We can now replay as many times as we need to understand the root cause. The
 console output and other results from our replay runs can be found in a new
 subdirectory `experiments/fuzz_pox_simple_replay/`.
@@ -225,7 +227,7 @@ Randomly generated event traces often contain a large number of events, many
 of which distract us during the troubleshooting process and are not actually relevant for the bug
 we are interested in. In such cases we can attempt to minimize the original
 event trace, leaving just behind just the events that are directly responsible
-for trigger the bug.
+for triggering the bug.
 
 STS's MCSFinder mode executes the
 [delta debugging](http://www.st.cs.uni-saarland.de/papers/tse2002/tse2002.pdf)
@@ -248,90 +250,145 @@ see statistics about MCSFinder's progress by graphing the data stored in the
 The resulting graph will show us the decreasing size of the event trace
 throughout the delta debugging's execution:
 
+<center>
 <img
 src="http://www.eecs.berkeley.edu/%7Ercs/research/mcs_runtime.png"
 alt="console output">
+</center>
 
 ## Root Causing
 
-The last stage of the troubleshooting process involves understand the
-precise circumstances that lead up to the invariant violation. STS includes
+The last stage of the troubleshooting process involves understanding the
+precise circumstances that caused the controller software to err. STS includes
 several tools to help with this process.
 
 ### InteractiveReplayer Mode
 
-Given an event trace (possibly minimized by MCSFinder), InteractiveReplayer
-allows you to interactively step through the trace (a la OFRewind) in order to
-understand the conditions that triggered a bug. This is helpful for:
-  - visualizing the network topology
-  - tracing the series of link/switch failures/recoveries
-  - tracing the series of host migrations
-  - tracing the series of flow_mods
-  - tracing the series of traffic injections
-  - perturbing the original event sequence by adding / removing inputs
-    interactively
-  - ...
+Sometimes Replayer moves too quickly to get a good understanding of an event
+trace. InteractiveReplayer is a combination of Interactive mode and Replayer
+mode, designed to to help with:
+* visualizing the network topology
+* tracing the series of link/switch failures/recoveries
+* tracing the series of host migrations
+* tracing the series of flow_mods
+* tracing the series of traffic injections
+* tracing the series of controller failures, recoveries, and partitions
+
+We can invoke InteractiveReplayer mode by invoking its automatically generated
+config file:
+
+    $ ./simulator.py -c experiments/fuzz_pox_simple/interactive_replay_config.py
+    STS [next] >
+    Injecting ControlMessageReceive:i2:(u'ControlMessageReceive', OFFingerprint{u'class': u'ofp_hello'}, 2, (u'c', u'1'))
+
+Here we're presented with another interactive prompt. Each time we hit enter,
+the next event in the trace is executed. We can also check invariants, examine
+flow tables, visualize the topology, and even induce previously unobserved
+inputs.
+
+Because the timing of events is so delicate in a distributed system,
+InteractiveReplayer does __not__ run controller processes. Instead, it mocks out
+OpenFlow connections, and replays the exact OpenFlow commands from the
+original trace.
 
 ### OpenFlowReplayer Mode
 
-Delta debugging does not fully minimize traces (often for good reason,
-e.g. delicate timings). In particular we have observed minimized traces often
-contain many OpenFlow messages that time our or are overwritten, i.e. are not
-directly relevant for triggering an invalid network configuration.
+The OpenFlow commands sent by controller software are often somewhat redundant. For
+example, flow_mods may override each other, expire, or periodically flush the
+contents of flow tables and later repopulate them. Hence even in minimized event
+traces we often observe OpenFlow messages that are not directly relevant
+for causing an invalid network configuration such as a loop or blackhole.
 
-OpenFlowReplayer replays the OpenFlow messages from an event trace, enabling:
-  - automatic filtering of flow_mods that timed out or were overwritten by
-    later flow_mods.
-  - automatic filtering of flow_mods that are irrelevant to a set of flow
-    entries specified by the user.
-  - interactive bisection of the OpenFlow trace to infer which messages were
-    and were not relevant for triggering the bug (especially useful for tricky
-    cases requiring human involvement). (TBD)
+OpenFlowReplayer mode is designed to filter out such redundant messages,
+leaving only the flow_mods that show up in the final routing tables.
+With this knowledge, it becomes much easier to know exactly what points in
+the trace the invalid network configuration was installed.
 
-The tool can then spit back out a new event trace without the irrelevant
-OpenFlow messages, to be replayed again by Replayer or InteractiveReplayer.
+Like the other modes, we can use OpenFlowReplayer mode simply by passing its
+config file as an argument to `simulator.py`:
+
+    $ ./simulator.py -c experiments/fuzz_pox_simple/openflow_replay_config.py
+    INFO:simulation:Creating topology...
+    Injecting ControlMessageReceive:i2:(u'ControlMessageReceive', OFFingerprint{u'class': u'ofp_hello'}, 2, (u'c', u'1'))
+    ...
+
+    Filtered flow mods:
+    ControlMessageReceive:i19:(u'ControlMessageReceive', OFFingerprint{u'hard_timeout': 0, u'out_port': 65535, u'priority': 32768, u'idle_timeout': 0, u'command': u'add', u'actions': (u'output(65533)',), u'flags': 0, u'class': u'ofp_flow_mod', u'match': u'dl_dst:01:23:20:00:00:01,dl_type:35020'}, 1, (u'c', u'1'))
+    ControlMessageReceive:i32:(u'ControlMessageReceive', OFFingerprint{u'hard_timeout': 0, u'out_port': 65535, u'priority': 32768, u'idle_timeout': 0, u'command': u'delete', u'actions': (), u'flags': 0, u'class': u'ofp_flow_mod', u'match': u'x^L'}, 2, (u'c', u'1'))
+    ...
+
+    Flow tables:
+    Switch 1
+    -------------------------------------------------------------------------------------------------------------------------------------------
+    |  Prio | in_port | dl_type |            dl_src |            dl_dst | nw_proto |      nw_src |      nw_dst | tp_src | tp_dst |    actions |
+    -------------------------------------------------------------------------------------------------------------------------------------------
+    | 32768 |    None |    LLDP |              None | 01:23:20:00:00:01 |     None |        None |        None |   None |   None | CONTROLLER |
+    | 32768 |    None |      IP | 12:34:56:78:01:02 | 12:34:56:78:01:02 |     ICMP | 123.123.1.2 | 123.123.1.2 |      0 |      0 |  output(2) |
+    -------------------------------------------------------------------------------------------------------------------------------------------
+    ...
+
+After replaying all OpenFlow commands, OpenFlowReplayer infers which flow_mods show up in the final routing tables.
 
 ### Visualization tools
 
-A common workflow:
-  - Run `./simulator.py -c experiments/experiment_name/mcs_config.py`
-  - Discover that the final MCS does not trigger the bug.
-  - Open `visualize1D.html` in a web browser.
-  - Load either the original (fuzzed) trace,
-    `experiments/experiment_name/events.trace`,
-    or the first replay of this trace,
-    `experiments/experiment_name_mcs/interreplay_0_reproducibility/events.trace`,
-    as the first timeline. I have found that it is often better to load the
-    first replay rather than the original fuzzed trace, since this has
-    timing information that matches the other replays much more closely.
-  - Load the final replay of the MCS trace,
-    `experiments/experiment_name_mcs/interreplay_._final_mcs_trace/events.trace`,
-    as the second timeline.
-  - Hover over events to further information about them, including functional equivalence
-    with events in the other traces.
-  - Load intermediate replay trace timelines if needed. Intermediate replay
-    traces from delta debugging runs can be found in
-    `experiments/experiment_name_mcs/interreplay_*`
+Understanding the timing of messages and internal events in distributed systems is a crucial part of troubleshooting.
+STS includes two visualization tools designed help with this task. First, the `./tools/visualization/visualize2d.html` tool
+will show an interactive Lamport time diagram of an event trace:
 
-- ```visualization/visualize2D.html```: A webpage for showing a Lamport time diagram of an
-   event trace. Useful for visually spotting the root causes of race conditions
-   and other nasty bugs.
+    $ open ./tools/visualization/visualize2d.html
 
-### Pretty printing event traces.
+A demo page is also available [here](http://www.eecs.berkeley.edu/~rcs/research/sts_visualization/visualize2D.html).
 
-The raw event.trace files are hard for humans to read.
-./tools/pretty_print_event_trace.py.
+After loading an event trace, we see a line for each switch, controller, and
+host in the network. If we hover over events, we can see more information
+about them. We can also adjust the size of the timeline by dragging our mouse
+up or down within the timeline area.
 
-This script's output is highly configurable.
+We include a second visualization tool, `./tools/visualization/visualize1d.html`, to help us compare
+the behavior of two or more event traces. This tool is particularly useful for understanding the effects of non-determinism in
+intermediate runs of delta debugging.
 
-<pre>
------ config file format: ----
-config files are python modules that may define the following variables:
-fields  => an array of field names to print. uses default_fields if undefined.
-filtered_classes => a set of classes to ignore, from sts.replay_event
-...
-see example_pretty_print_config.py for an example.
-</pre>
+A common workflow for the trace comparison tool:
+- Run MCSFinder.
+- Discover that the final MCS does not reliably trigger the bug.
+- Open `visualize1D.html` in a web browser.
+- Load either the original (fuzzed) trace,
+  `experiments/experiment_name/events.trace`,
+  or the first replay of this trace,
+  `experiments/experiment_name_mcs/interreplay_0_reproducibility/events.trace`,
+  as the first timeline. I have found that it is often better to load the
+  first replay rather than the original fuzzed trace, since this has
+  timing information that matches the other replays much more closely.
+- Load the final replay of the MCS trace,
+  `experiments/experiment_name_mcs/interreplay_._final_mcs_trace/events.trace`,
+  as the second timeline.
+- Hover over events to further information about them, including functional equivalence
+  with events in the other traces.
+- Load intermediate replay trace timelines if needed. Intermediate replay
+  traces from delta debugging runs can be found in
+  `experiments/experiment_name_mcs/interreplay_*`
+
+### Tracing packets through the network.
+
+It is often useful to know what path a packet took through the network. Given
+the event id of a TrafficInjection event, the `./tools/trace_traffic_injection.py`
+script will print all dataplane permits and
+drops, as well as ofp_packet_in's and out's associated with the
+TrafficInjection's packet:
+
+    $ ./tools/trace_traffic_injection.py experiments/fuzz_pox_simple/events.trace e22
+    e22 TrafficInjection (prunable)
+    fingerprint:  (Interface:HostInterface:eth2:12:34:56:78:02:02:[IPAddr('123.123.2.2')] Packet:[12:34:56:78:02:02>12:34:56:78:02:02:IP]|([v:4hl:5l:72t:64]ICMP cs:368c[123.123.2.2>123.123.2.2]){t:ECHO_REQUEST c:0 chk:637}{id:20585 seq:28263}, 2)
+    --------------------------------------------------------------------
+    i23 DataplanePermit (prunable)
+    fingerprint:  (DPFingerprint{u'dl_dst': u'12:34:56:78:02:02', u'nw_src': u'123.123.2.2', u'dl_src': u'12:34:56:78:02:02', u'nw_dst': u'123.123.2.2'}, 2, u'12:34:56:78:02:02')
+    --------------------------------------------------------------------
+    i28 ControlMessageSend (prunable)
+    fingerprint:  (OFFingerprint{u'data': DPFingerprint{u'dl_dst': u'12:34:56:78:02:02', u'nw_src': u'123.123.2.2', u'dl_src': u'12:34:56:78:02:02', u'nw_dst': u'123.123.2.2'}, u'class': u'ofp_packet_in', u'in_port': 2}, 2, (u'c', u'1'))
+    --------------------------------------------------------------------
+    ...
+
+### Fin!
 
 That's it! See this
 [page](http://ucb-sts.github.io/sts/software_architecture.html) for a deeper dive into the structure
