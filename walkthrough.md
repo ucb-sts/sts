@@ -21,7 +21,7 @@ Fuzzing mode is how we use STS to generate randomly chosen input sequences in
 search of bugs. Let's begin by looking at how we run the STS fuzzer.
 
 In the `config/` subdirectory, we find a configuration file
-`fuzz_pox_simple.py` we'll use to specify our experiment.
+[fuzz_pox_simple.py](https://github.com/ucb-sts/sts/blob/master/config/fuzz_pox_simple.py) we'll use to specify our experiment.
 
 The first two lines of this file tells STS how to boot the SDN controller
 (in this case, POX):
@@ -66,7 +66,8 @@ we want to generate random inputs with the Fuzzer class:
                           halt_on_violation=True)
 
 Here we're telling the Fuzzer to record its execution with an
-InputLogger, check periodically whether the controller process has crashed,
+[InputLogger](http://ucb-sts.github.io/documentation/sts.input_traces.html#module-sts.input_traces.input_logger),
+check periodically whether the controller process has crashed,
 and halt the execution whenever we detect that the controller process has
 indeed crashed.
 
@@ -75,10 +76,11 @@ forever. To place on upper bound on how long it runs, we can add another
 parameter `steps` with a maximum number of rounds to execute, e.g. `steps=500`.
 
 For a complete list of invariants to check, see
-the dictionary at the bottom of `config/invariant_checks.py`.
+the dictionary at the bottom of
+[config/invariant_checks.py](https://github.com/ucb-sts/sts/blob/master/config/invariant_checks.py#L47).
 
 By default Fuzzer generates its inputs based on a set of event probabilities defined in
-`config/fuzzer_params.py`. Taking a closer look at that file, we see a list of
+[config/fuzzer_params.py](https://github.com/ucb-sts/sts/blob/master/config/fuzzer_params.py). Taking a closer look at that file, we see a list of
 event types followed by numbers in the range \[0,1\], such as:
 
      switch_failure_rate = 0.05
@@ -383,7 +385,8 @@ A common workflow for the trace comparison tool:
 ### Tracing Packets Through the Network
 
 It is often useful to know what path a packet took through the network. Given
-the event id of a TrafficInjection event, the `./tools/trace_traffic_injection.py`
+the event id of a TrafficInjection event, the
+[./tools/trace_traffic_injection.py](https://github.com/ucb-sts/sts/blob/master/tools/trace_traffic_injection.py)
 script will print all dataplane permits and
 drops, as well as ofp_packet_in's and out's associated with the
 TrafficInjection's packet:
