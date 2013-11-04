@@ -42,9 +42,15 @@ The next two lines specify the network topology we would like STS to simulate:
 
 In this case, we're simulating a simple mesh topology consisting of two
 switches each with an attached host, and a single link connecting the
-switches.
+switches. For a complete list of default topologies STS supports (e.g.
+MeshTopology, FatTree), see the
+[documentation](http://ucb-sts.github.io/documentation/sts.html#sts.topology.Topology).
+You might also consider using STS's topology creation GUI to create your own
+custom topology:
 
-The next line bundles up the controller configuration parameters with the
+    $ ./simulator.py -c config/gui.py
+
+The next line of our config file bundles up the controller configuration parameters with the
 network topology configuration parameters:
 
     simulation_config = SimulationConfig(controller_configs=controllers,
@@ -63,6 +69,10 @@ Here we're telling the Fuzzer to record its execution with an
 InputLogger, check periodically whether the controller process has crashed,
 and halt the execution whenever we detect that the controller process has
 indeed crashed.
+
+If the Fuzzer does not find a violation, it will continue running
+forever. To place on upper bound on how long it runs, we can add another
+parameter `steps` with a maximum number of rounds to execute, e.g. `steps=500`.
 
 For a complete list of invariants to check, see
 the dictionary at the bottom of `config/invariant_checks.py`.
@@ -222,6 +232,8 @@ subdirectory `experiments/fuzz_pox_simple_replay/`.
 <!-- TODO: mention events.trace.unacked -->
 
 ### MCS Finder Mode
+
+<!-- TODO: mention EffecientMCSFinder vs. MCSFinder. Also, peeker -->
 
 Randomly generated event traces often contain a large number of events, many
 of which distract us during the troubleshooting process and are not actually relevant for the bug
@@ -388,8 +400,20 @@ TrafficInjection's packet:
     --------------------------------------------------------------------
     ...
 
+
+<!-- TODO: mention running delta debugging in parallel -->
+
+<!-- TODO: mention sync proto, socket mux, and general guidelines for
+instrumentation and other techniques for dealing with
+non-determinism -->
+
 ### Fin!
 
 That's it! See this
 [page](http://ucb-sts.github.io/sts/software_architecture.html) for a deeper dive into the structure
-of STS's code, including additional configuration parameters to STS's different modes.
+of STS's code, including additional configuration parameters to STS's
+different modes. You should also check out our collection of replayable
+experiments that have been used to find and troubleshoot real bugs in SDN
+controllers:
+
+    $ git clone git://github.com/ucb-sts/experiments.git
