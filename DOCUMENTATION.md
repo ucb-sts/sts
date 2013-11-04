@@ -2,7 +2,7 @@ See http://ucb-sts.github.com/sts/software_architecture.html for an HTML
 version of this file.
 
 This document provides an overview of the software architecture of STS, as
-well as a development workflow for those contributing to STS itself..
+well as a development workflow for those contributing to STS itself.
 
 For a detailed walkthrough of STS's uses cases, see this
 [page](http://ucb-sts.github.io/sts/walkthrough).
@@ -18,6 +18,17 @@ All the important state of the simulation can be accessed through a single
 object, instantiated from sts/simulation_state.py. This file stores the
 configuration parameters specified by the user, handles instantiation of the
 simulation object, and allows the control flow to access relevant state.
+
+### Topologies
+
+STS currently supports two default network topologies: full meshes, and
+fat trees. For more information on their coniguration parameters, see the
+[documentation](http://ucb-sts.github.io/documentation/sts.html#sts.topology.Topology).
+
+You might also consider using STS's topology creation GUI to create your own
+custom topology:
+
+    $ ./simulator.py -c config/gui.py
 
 ### Control Flow
 
