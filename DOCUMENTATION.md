@@ -15,7 +15,8 @@ For searchable code documentation, see this
 ### Simulation State
 
 All the important state of the simulation can be accessed through a single
-object, instantiated from sts/simulation_state.py. This file stores the
+object, instantiated from
+[sts/simulation_state.py](https://github.com/ucb-sts/sts/blob/master/sts/simulation_state.py). This file stores the
 configuration parameters specified by the user, handles instantiation of the
 simulation object, and allows the control flow to access relevant state.
 
@@ -33,7 +34,7 @@ custom topology:
 ### Control Flow
 
 STS has six modes of operation. Each of these are split into separate
-modules, each of which can be found under sts/control_flow/.
+modules, each of which can be found under `sts/control_flow/`.
 
 #### Interactive
 
@@ -59,12 +60,15 @@ while True:
 We refer to each iteration of this loop as a 'logical round'
 
 By default Fuzzer generates its inputs based on the probabilities defined in
-config/fuzzer_params.py. That is, in a given round, the probability that an
+[config/fuzzer_params.py](https://github.com/ucb-sts/sts/blob/master/config/fuzzer_params.py).
+That is, in a given round, the probability that an
 event will be triggered is defined by the parameter specified in that file.
 
 Fuzzer allows you to check invariants of your choice at specified intervals.
 
-See the pydoc on Fuzzer.__init__ for more information about parameters.
+See the documentation on
+[Fuzzer.__init__](http://ucb-sts.github.io/documentation/sts.control_flow.html#module-sts.control_flow.fuzzer)
+for more information about parameters.
 
 Fuzzer will drop into interactive mode if the user sends a ^C signal.
 
@@ -75,7 +79,8 @@ the trace in a way that reproduces the same result. It does this by listening
 to the internal events in the trace and replaying inputs when it sees that the
 causal dependencies have been met.
 
-event_scheduler.py determines how long the simulator waits for each internal event
+[event_scheduler.py](https://github.com/ucb-sts/sts/blob/master/sts/control_flow/event_scheduler.py)
+determines how long the simulator waits for each internal event
 before timing out.
 
 #### MCSFinder
@@ -85,7 +90,9 @@ causal sequence. For each subsequence chosen by delta debugging, it
 instantiates a new Replayer object to replay the execution, and checks at the
 end whether the bug appears. To avoid garbage collection overhead, MCSFinder
 runs each Replay in a separate process, and returns the results via XMLRPC.
-See sts/util/rpc_forker.py for the mechanics of forking.
+See
+[sts/util/rpc_forker.py](https://github.com/ucb-sts/sts/blob/master/sts/util/rpc_forker.py)
+for the mechanics of forking.
 
 The runtime statistics of MCSFinder are stored in a dictionary and logged to a json file.
 
@@ -136,7 +143,7 @@ timestamp appended with the `-t` parameter
 ### Event Traces
 
 The event types logged by Interactive and Fuzzer are defined in
-sts/replay_event.py
+[sts/replay_event.py](https://github.com/ucb-sts/sts/blob/master/sts/replay_event.py).
 
 Events are eventually serialized to JSON. The format of the JSON files is
 documented
@@ -167,7 +174,8 @@ operations or blocking calls such as `sleep()` are routed through a
 central [select](http://en.wikipedia.org/wiki/Asynchronous_I/O) loop.
 
 The select loop is encapsulated in an IOMaster object, found at
-sts/util/io_master.py. The IOMaster creates IOWorker objects to wrap each
+[sts/util/io_master.py](https://github.com/ucb-sts/sts/blob/master/sts/util/io_master.py).
+The IOMaster creates IOWorker objects to wrap each
 socket, which perform maintain read/write buffers to enable 'fire-and-forget'
 I/O semantics so that clients do not have to wait around for blocking calls to
 complete.
@@ -177,9 +185,11 @@ complete.
 STS buffers all messages that are passed throughout the system. There are two
 important buffer objects to note:
 
-  - GodScheduler (found in sts/openflow_buffer.py): buffers OpenFlow messages between switches and controllers
+  - GodScheduler (found in
+    [sts/openflow_buffer.py](https://github.com/ucb-sts/sts/blob/master/sts/openflow_buffer.py)): buffers OpenFlow messages between switches and controllers
     (both incoming and outgoing messages)
-  - BufferedPatchPanel (found in sts/topology.py): buffers dataplane messages sent between switches
+  - BufferedPatchPanel (found in
+    [sts/topology.py](https://github.com/ucb-sts/sts/blob/master/sts/topology.py#L183)): buffers dataplane messages sent between switches
 
 This buffering allows Fuzzer or Interactive to perturb the order or timing of
 events in the system. Messages are not allowed through until the main control
@@ -206,12 +216,12 @@ We convert our OpenFlow routing tables to headerspace transfer functions in
 sts/hassel/config_parser/openflow_parser.py.
 
 We generate a topology transfer function in
-sts/hassel/topology_loader/topology_loader.py
+sts/hassel/topology_loader/topology_loader.py.
 
 #### Defining New Invariants
 
 We use a shim layer to make all invocations into hassel:
-sts/invariant_checks.py.
+[sts/invariant_checker.py](https://github.com/ucb-sts/sts/blob/master/sts/invariant_checker.py).
 
 This defines static methods for common invariants.
 
@@ -221,7 +231,8 @@ To add a new invariant, add a static method there.
 
 If you just want to compose invariants, or perform some other computation
 on top of an existing invariant, define a new method in
-config/invariant_checks.py. This is where all invariant checks must be
+[config/invariant_checks.py](https://github.com/ucb-sts/sts/blob/master/config/invariant_checks.py).
+This is where all invariant checks must be
 explicitly named for event serialization purposes.
 
 ### Determinism
@@ -239,7 +250,8 @@ this by multiplexing all socket connections onto a single socket.
 Multiplexed sockets require there to be module written by us running within the controller
 software.
 
-See sts/util/socket_mux for more information.
+See
+[sts/util/socket_mux](https://github.com/ucb-sts/sts/tree/master/sts/util/socket_mux) for more information.
 
 #### Sync Protocol
 
@@ -263,12 +275,18 @@ STS depends on POX for library functionality (that is, we do not use POX for
 its controller functionality). Here are the specific library functionality we
 make use of:
   - Our software switches are instances of NXSoftwareSwitches from
-    pox/lib/openflow/nx_software_switch.py (also see software_switch.py)
-  - STSIOWorker subclasses the IOWorker from pox/lib/ioworker/io_worker.py
-  - We use the revent library for event handling
-  - POX's dataplane packet classes are used to encapsulate packets
-  - libopenflow1.0 is used to parse and encapsulate OpenFlow messages
-  - We use pox.util.connect_socket_with_backoff to create and connect
+    [pox/lib/openflow/nx_software_switch.py](https://github.com/ucb-sts/pox/blob/debugger/pox/openflow/nx_software_switch.py)
+    (also see
+    [software_switch.py](https://github.com/ucb-sts/pox/blob/debugger/pox/openflow/software_switch.py))
+  - STSIOWorker subclasses the IOWorker from
+    [pox/lib/ioworker/io_worker.py](https://github.com/ucb-sts/pox/blob/debugger/pox/lib/ioworker/io_worker.py)
+  - We use the
+    [revent](https://github.com/ucb-sts/pox/blob/debugger/pox/lib/revent/revent.py) library for event handling
+  - POX's dataplane [packet
+    classes](https://github.com/ucb-sts/pox/tree/debugger/pox/lib/packet) are used to encapsulate packets
+  - [libopenflow_01](https://github.com/ucb-sts/pox/blob/debugger/pox/openflow/libopenflow_01.py) is used to parse and encapsulate OpenFlow messages
+  - We use
+    [pox.util.connect_socket_with_backoff](https://github.com/ucb-sts/pox/blob/debugger/pox/lib/util.py#L405) to create and connect
     non-blocking sockets
 
 ## Development Workflow
@@ -279,13 +297,13 @@ All output to the console is serialized (and optionally colored with bash
 codes). Console output is also Tee'ed to a separate file in the experiments
 results directory (console.out). See:
 
-  - sts/util/console.py for bash code coloring and console Tee'ing
-  - sts/util/procutils.py for how the controller's console output is treated
+  - [sts/util/console.py](https://github.com/ucb-sts/sts/blob/master/sts/util/console.py) for bash code coloring and console Tee'ing
+  - [sts/util/procutils.py](https://github.com/ucb-sts/sts/blob/master/sts/util/procutils.py) for how the controller's console output is treated
 
 ### Testing
 
-All unit and integration tests are under the tests/ subdirectory. We use
-nose to run tests:
+All unit and integration tests are under the `tests/` subdirectory. We use
+[nose](https://nose.readthedocs.org/en/latest/) to run tests:
 
 ```
 $ nosetests
@@ -358,3 +376,4 @@ see example_pretty_print_config.py for an example.
 
  - ```visualization/visualize2D.html```: A webpage for showing a Lamport time diagram of an
    event trace. Useful for visually spotting the root causes of race conditions
+   and other nasty bugs.
