@@ -113,15 +113,7 @@ class InputLogger(object):
       self.interactive_replay_cfg_path = results_dir + "/interactive_replay_config.py"
       self.openflow_replay_cfg_path = results_dir + "/openflow_replay_config.py"
     else:
-      now = timestamp_string()
-      self.output_path = "input_traces/" + now + ".trace"
-      basename = os.path.basename(self.output_path)
-
-      self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
-      self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
-      self.interactive_replay_cfg_path = "./config/" + basename.replace(".trace", "") + "_interactive.py"
-      self.openflow_replay_cfg_path = "./config/" + basename.replace(".trace", "") + "_openflow.py"
-
+      raise ValueError("Default results_dir currently not supported")
     self.output = open(self.output_path, 'w')
 
   def disallow_timeouts(self):
