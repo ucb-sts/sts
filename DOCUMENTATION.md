@@ -23,7 +23,7 @@ simulation object, and allows the control flow to access relevant state.
 ### Topologies
 
 STS currently supports two default network topologies: full meshes, and
-fat trees. For more information on their coniguration parameters, see the
+fat trees. For more information on their configuration parameters, see the
 [documentation](http://ucb-sts.github.io/documentation/sts.html#sts.topology.Topology).
 
 You might also consider using STS's topology creation GUI to create your own
@@ -49,13 +49,11 @@ All events observed in interactive mode are recorded for later replay.
 This mode programmatically generates random inputs. The core of Fuzzer is a
 simple loop:
 
-```
-while True:
-  check dataplane messages
-  check controlplane messages
-  inject inputs
-  sleep
-```
+    while True:
+      check dataplane messages
+      check controlplane messages
+      inject inputs
+      sleep
 
 We refer to each iteration of this loop as a 'logical round'
 
@@ -101,14 +99,14 @@ The runtime statistics of MCSFinder are stored in a dictionary and logged to a j
 Given an event trace (possibly minimized by MCSFinder), InteractiveReplayer
 allows you to interactively step through the trace (a la OFRewind) in order to
 understand the conditions that triggered a bug. This is helpful for:
-  - visualizing the network topology
-  - tracing the series of link/switch failures/recoveries
-  - tracing the series of host migrations
-  - tracing the series of flow_mods
-  - tracing the series of traffic injections
-  - perturbing the original event sequence by adding / removing inputs
-    interactively
-  - ...
+- visualizing the network topology
+- tracing the series of link/switch failures/recoveries
+- tracing the series of host migrations
+- tracing the series of flow_mods
+- tracing the series of traffic injections
+- perturbing the original event sequence by adding / removing inputs
+  interactively
+- ...
 
 #### OpenFlowReplayer
 
@@ -118,21 +116,22 @@ contain many OpenFlow messages that time our or are overwritten, i.e. are not
 directly relevent for triggering an invalid network configuratoon.
 
 OpenFlowReplayer replays the OpenFlow messages from an event trace, enabling:
-  - automatic filtering of flow_mods that timed out or were overwritten by
-    later flow_mods.
-  - automatic filtering of flow_mods that are irrelevant to a set of flow
-    entries specified by the user.
-  - interactive bisection of the OpenFlow trace to infer which messages were
-    and were not relevent for triggering the bug (especially useful for tricky
-    cases requiring human involvment). (TBD)
+
+- automatic filtering of flow_mods that timed out or were overwritten by
+  later flow_mods
+- automatic filtering of flow_mods that are irrelevant to a set of flow
+  entries specified by the user
+- interactive bisection of the OpenFlow trace to infer which messages were
+  and were not relevent for triggering the bug (especially useful for tricky
+  cases requiring human involvment). (TBD)
 
 The tool can then spit back out a new event trace without the irrelevant
 OpenFlow messages, to be replayed again by Replayer or InteractiveReplayer.
 
 ### Experiment Results
 
-Experiment results are automatically placed in their own subdirectory under experiments/.
-There you can find console output, serialized event traces, and config files
+Experiment results are automatically placed in their own subdirectory under
+`experiments/`. There you can find console output, serialized event traces, and config files
 for replay and MCS finding.
 
 By default, the name of the results directory is inferred from the name of the
@@ -185,11 +184,11 @@ complete.
 STS buffers all messages that are passed throughout the system. There are two
 important buffer objects to note:
 
-  - GodScheduler (found in
-    [sts/openflow_buffer.py](https://github.com/ucb-sts/sts/blob/master/sts/openflow_buffer.py)): buffers OpenFlow messages between switches and controllers
-    (both incoming and outgoing messages)
-  - BufferedPatchPanel (found in
-    [sts/topology.py](https://github.com/ucb-sts/sts/blob/master/sts/topology.py#L183)): buffers dataplane messages sent between switches
+- GodScheduler (found in
+  [sts/openflow_buffer.py](https://github.com/ucb-sts/sts/blob/master/sts/openflow_buffer.py)): buffers OpenFlow messages between switches and controllers
+  (both incoming and outgoing messages)
+- BufferedPatchPanel (found in
+  [sts/topology.py](https://github.com/ucb-sts/sts/blob/master/sts/topology.py#L183)): buffers dataplane messages sent between switches
 
 This buffering allows Fuzzer or Interactive to perturb the order or timing of
 events in the system. Messages are not allowed through until the main control
@@ -202,21 +201,21 @@ STS primarily uses [headerspace analysis](http://cseweb.ucsd.edu/~varghese/PAPER
 hassel code can be found under sts/hassel.
 
 We use two parts of hassel:
-  - The python version can be found under sts/hassel/hsa-python. This
-    version is potentially much slower for large networks, but is much easier
-    to modify.
-  - The optimized C version can be found under sts/hassel/hassel-c. This
-    must be explicitly compiled with:
 
-```
-$ (cd sts/hassel/hassel-c; make)
-```
+- The python version can be found under `sts/hassel/hsa-python`. This
+  version is potentially much slower for large networks, but is much easier
+  to modify.
+- The optimized C version can be found under `sts/hassel/hassel-c`. This
+  must be explicitly compiled with:
+
+
+    $ (cd sts/hassel/hassel-c; make)
 
 We convert our OpenFlow routing tables to headerspace transfer functions in
-sts/hassel/config_parser/openflow_parser.py.
+`sts/hassel/config_parser/openflow_parser.py`.
 
 We generate a topology transfer function in
-sts/hassel/topology_loader/topology_loader.py.
+`sts/hassel/topology_loader/topology_loader.py`.
 
 #### Defining New Invariants
 
@@ -258,13 +257,13 @@ See
 The sync protocol (sts/syncproto) is in charge of extracting or feeding information to
 the controller software. It can:
 
- - Override `gettimeofday` in the controller, and instead have STS send fake
-    values
- - Inform STS whenever an internal state change has occurred. This is
-   currently implemented by monkeypatching the controller's logging library,
-   and routing logging messages through STS. Optionally, the controller can be
-   blocked at internal state transitions until STS gives explicit
-   acknowledgment.
+- Override `gettimeofday` in the controller, and instead have STS send fake
+   values
+- Inform STS whenever an internal state change has occurred. This is
+  currently implemented by monkeypatching the controller's logging library,
+  and routing logging messages through STS. Optionally, the controller can be
+  blocked at internal state transitions until STS gives explicit
+  acknowledgment.
 
 Sync proto requires there to be module written by us running within the controller
 software.
@@ -274,20 +273,21 @@ software.
 STS depends on POX for library functionality (that is, we do not use POX for
 its controller functionality). Here are the specific library functionality we
 make use of:
-  - Our software switches are instances of NXSoftwareSwitches from
-    [pox/lib/openflow/nx_software_switch.py](https://github.com/ucb-sts/pox/blob/debugger/pox/openflow/nx_software_switch.py)
-    (also see
-    [software_switch.py](https://github.com/ucb-sts/pox/blob/debugger/pox/openflow/software_switch.py))
-  - STSIOWorker subclasses the IOWorker from
-    [pox/lib/ioworker/io_worker.py](https://github.com/ucb-sts/pox/blob/debugger/pox/lib/ioworker/io_worker.py)
-  - We use the
-    [revent](https://github.com/ucb-sts/pox/blob/debugger/pox/lib/revent/revent.py) library for event handling
-  - POX's dataplane [packet
-    classes](https://github.com/ucb-sts/pox/tree/debugger/pox/lib/packet) are used to encapsulate packets
-  - [libopenflow_01](https://github.com/ucb-sts/pox/blob/debugger/pox/openflow/libopenflow_01.py) is used to parse and encapsulate OpenFlow messages
-  - We use
-    [pox.util.connect_socket_with_backoff](https://github.com/ucb-sts/pox/blob/debugger/pox/lib/util.py#L405) to create and connect
-    non-blocking sockets
+
+- Our software switches are instances of NXSoftwareSwitches from
+  [pox/lib/openflow/nx_software_switch.py](https://github.com/ucb-sts/pox/blob/debugger/pox/openflow/nx_software_switch.py)
+  (also see
+  [software_switch.py](https://github.com/ucb-sts/pox/blob/debugger/pox/openflow/software_switch.py))
+- STSIOWorker subclasses the IOWorker from
+  [pox/lib/ioworker/io_worker.py](https://github.com/ucb-sts/pox/blob/debugger/pox/lib/ioworker/io_worker.py)
+- We use the
+  [revent](https://github.com/ucb-sts/pox/blob/debugger/pox/lib/revent/revent.py) library for event handling
+- POX's dataplane [packet
+  classes](https://github.com/ucb-sts/pox/tree/debugger/pox/lib/packet) are used to encapsulate packets
+- [libopenflow_01](https://github.com/ucb-sts/pox/blob/debugger/pox/openflow/libopenflow_01.py) is used to parse and encapsulate OpenFlow messages
+- We use
+  [pox.util.connect_socket_with_backoff](https://github.com/ucb-sts/pox/blob/debugger/pox/lib/util.py#L405) to create and connect
+  non-blocking sockets
 
 ## Development Workflow
 
@@ -297,17 +297,15 @@ All output to the console is serialized (and optionally colored with bash
 codes). Console output is also Tee'ed to a separate file in the experiments
 results directory (console.out). See:
 
-  - [sts/util/console.py](https://github.com/ucb-sts/sts/blob/master/sts/util/console.py) for bash code coloring and console Tee'ing
-  - [sts/util/procutils.py](https://github.com/ucb-sts/sts/blob/master/sts/util/procutils.py) for how the controller's console output is treated
+- [sts/util/console.py](https://github.com/ucb-sts/sts/blob/master/sts/util/console.py) for bash code coloring and console Tee'ing
+- [sts/util/procutils.py](https://github.com/ucb-sts/sts/blob/master/sts/util/procutils.py) for how the controller's console output is treated
 
 ### Testing
 
 All unit and integration tests are under the `tests/` subdirectory. We use
 [nose](https://nose.readthedocs.org/en/latest/) to run tests:
 
-```
-$ nosetests
-```
+    $ nosetests
 
 This will find and run all files with '_test' in the name.
 
@@ -315,18 +313,18 @@ This will find and run all files with '_test' in the name.
 
 There are many useful tools in the tools/ subdirectory:
 
- - ```check_compile.sh```: Checks all python files for syntax or import
-   errors.
+- ```check_compile.sh```: Checks all python files for syntax or import
+  errors.
 
- - ```clean.sh```: Removes all extraneous files, e.g. .pyc files.
+- ```clean.sh```: Removes all extraneous files, e.g. .pyc files.
 
- - ```check_trace_for_violation.sh```: Given a path to an events.trace file,
-   checks whether an invariant violation occurred in the trace.
+- ```check_trace_for_violation.sh```: Given a path to an events.trace file,
+checks whether an invariant violation occurred in the trace.
 
- - ```pretty_print_input_trace.py```: Print an events.trace file in human
-   readable format. This script's output is highly configurable; simply pass
-   the path to a config file to with `-c`. The config files have the following
-   format:
+- ```pretty_print_input_trace.py```: Print an events.trace file in human
+readable format. This script's output is highly configurable; simply pass
+the path to a config file to with `-c`. The config files have the following
+format:
 
 <pre>
 ----- config file format: ----
@@ -337,43 +335,43 @@ filtered_classes => a set of classes to ignore, from sts.replay_event
 see example_pretty_print_config.py for an example.
 </pre>
 
- - ```trace_traffic_injection.py```: given a path to a events trace file, and the
-   event id (e.g. "e120"), this tool will trace the path a packet takes
-   through the network. in particular, it will print all dataplane permits and
-   drops, as well as ofp_packet_in's and out's associated with the packet
-   injected by the given traffic injection event.
+- ```trace_traffic_injection.py```: given a path to a events trace file, and the
+  event id (e.g. "e120"), this tool will trace the path a packet takes
+  through the network. in particular, it will print all dataplane permits and
+  drops, as well as ofp_packet_in's and out's associated with the packet
+  injected by the given traffic injection event.
 
- - ```reindent_pox.sh```: Canonicalize the whitespace formatting of all python
-   files.
+- ```reindent_pox.sh```: Canonicalize the whitespace formatting of all python
+  files.
 
- - ```run.sh```: Run the simulator iteratively until an invariant violation
-   occurs. Pass command line arguments as an argument, e.g. `$ run.sh
-   ./simulator.py ...`
+- ```run.sh```: Run the simulator iteratively until an invariant violation
+  occurs. Pass command line arguments as an argument, e.g. `$ run.sh
+  ./simulator.py ...`
 
- - ```visualization/visualize1D.html```: A webpage for visualizing event traces. Especially
-   useful for debugging non-deterministic replays by comparing the timings of
-   different replay runs.
+- ```visualization/visualize1D.html```: A webpage for visualizing event traces. Especially
+  useful for debugging non-deterministic replays by comparing the timings of
+  different replay runs.
 
    A common workflow:
-     - Run `./simulator.py -c experiments/experiment_name/mcs_config.py`
-     - Discover that the final MCS does not trigger the bug.
-     - Open `visualize1D.html` in a web browser.
-     - Load either the original (fuzzed) trace,
-       `experiments/experiment_name/events.trace`,
-       or the first replay of this trace,
-       `experiments/experiment_name_mcs/interreplay_0_reproducibility/events.trace`,
-       as the first timeline. I have found that it is often better to load the
-       first replay rather than the original fuzzed trace, since this has
-       timing information that matches the other replays much more closely.
-     - Load the final replay of the MCS trace,
-       `experiments/experiment_name_mcs/interreplay_._final_mcs_trace/events.trace`,
-       as the second timeline.
-     - Hover over events to further information about them, including functional equivalence
-       with events in the other traces.
-     - Load intermediate replay trace timelines if needed. Intermediate replay
-       traces from delta debugging runs can be found in
-       `experiments/experiment_name_mcs/interreplay_*`
+   * Run `./simulator.py -c experiments/experiment_name/mcs_config.py`
+   * Discover that the final MCS does not trigger the bug.
+   * Open `visualize1D.html` in a web browser.
+   * Load either the original (fuzzed) trace,
+     `experiments/experiment_name/events.trace`,
+     or the first replay of this trace,
+     `experiments/experiment_name_mcs/interreplay_0_reproducibility/events.trace`,
+     as the first timeline. I have found that it is often better to load the
+     first replay rather than the original fuzzed trace, since this has
+     timing information that matches the other replays much more closely.
+   * Load the final replay of the MCS trace,
+     `experiments/experiment_name_mcs/interreplay_._final_mcs_trace/events.trace`,
+     as the second timeline.
+   * Hover over events to further information about them, including functional equivalence
+     with events in the other traces.
+   * Load intermediate replay trace timelines if needed. Intermediate replay
+     traces from delta debugging runs can be found in
+     `experiments/experiment_name_mcs/interreplay_*`
 
- - ```visualization/visualize2D.html```: A webpage for showing a Lamport time diagram of an
-   event trace. Useful for visually spotting the root causes of race conditions
-   and other nasty bugs.
+- ```visualization/visualize2D.html```: A webpage for showing a Lamport time diagram of an
+  event trace. Useful for visually spotting the root causes of race conditions
+  and other nasty bugs.
