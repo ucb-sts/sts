@@ -185,7 +185,7 @@ The simplest way to start troubleshooting is by examining the event trace
 along with the console output. We rarely want to look at the event trace in its raw form though; we instead use a tool to
 parse and format the events:
 
-    $ ./tools/pretty_print_event_trace.py experiments/fuzz_pox_simple/events.trace
+    $ ./tools/pretty_print_input_trace.py experiments/fuzz_pox_simple/events.trace
     i1 ConnectToControllers (prunable)
     fingerprint:  ()
     --------------------------------------------------------------------
