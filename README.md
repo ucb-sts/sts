@@ -131,7 +131,7 @@ You should also check out our collection of replayable
 experiments that have been used to find and troubleshoot real bugs in SDN
 controllers:
 ```
-$ git clone git@github.com:ucb-sts/experiments.git
+$ git clone git://github.com/ucb-sts/experiments.git
 ```
 
 ### Questions?
