@@ -368,7 +368,7 @@ A common workflow for the trace comparison tool:
   traces from delta debugging runs can be found in
   `experiments/experiment_name_mcs/interreplay_*`
 
-### Tracing packets through the network.
+### Tracing Packets Through the Network
 
 It is often useful to know what path a packet took through the network. Given
 the event id of a TrafficInjection event, the `./tools/trace_traffic_injection.py`
