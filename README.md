@@ -117,8 +117,7 @@ For searchable code documentation, see this
 
 ### Interested in contributing?
 
-Check out this
-[page](http://ucb-sts.github.io/sts/contribute.html).
+Check out this [page](http://ucb-sts.github.io/sts/contribute.html).
 
 ### Research
 
@@ -127,6 +126,13 @@ For more information about the research behind STS, see our
 [long](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf) paper draft or our
 talk
 [slides](http://www.eecs.berkeley.edu/~rcs/research/selectiverecall.pptx).
+
+You should also check out our collection of replayable
+experiments that have been used to find and troubleshoot real bugs in SDN
+controllers:
+```
+$ git clone git@github.com:ucb-sts/experiments.git
+```
 
 ### Questions?
 
