@@ -35,6 +35,11 @@ custom topology:
 
     $ ./simulator.py -c config/gui.py
 
+### Traffic Generation
+
+For an overview of how to generate dataplane in STS, see this
+[page](http://ucb-sts.github.io/sts/traffic_generation).
+
 ### Control Flow
 
 STS has six modes of operation. Each of these are split into separate

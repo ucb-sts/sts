@@ -415,7 +415,9 @@ non-determinism -->
 That's it! See this
 [page](http://ucb-sts.github.io/sts/software_architecture.html) for a deeper dive into the structure
 of STS's code, including additional configuration parameters to STS's
-different modes. You should also check out our collection of replayable
+different modes. For an overview of how to generate dataplane traffic in STS,
+see this [page](http://ucb-sts.github.io/sts/traffic_generation).
+Finally, you should check out our collection of replayable
 experiments that have been used to find and troubleshoot real bugs in SDN
 controllers:
 
