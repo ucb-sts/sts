@@ -94,6 +94,8 @@ For a high-level overview of STS's software architecture, see this [page](http:/
 
 For searchable code documentation, see this [page](http://ucb-sts.github.io/documentation/).
 
+For an overview of how to generate dataplane traffic in STS, see this [page](http://ucb-sts.github.io/sts/traffic_generation).
+
 ### Interested in contributing?
 
 Check out this [page](http://ucb-sts.github.io/sts/contribute.html).
