@@ -87,6 +87,8 @@ event types followed by numbers in the range \[0,1\], such as:
      switch_recovery_rate = 0.1
      ...
 
+<!-- TODO: document all event types, e.g. Jefferson's flow_mod reordering -->
+
 This tells the fuzzer to trigger kill live switches with a probability of 5%,
 and recover down switches with a probability of 10%.
 
