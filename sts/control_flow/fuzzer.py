@@ -206,8 +206,7 @@ class Fuzzer(ControlFlow):
           switch.use_delayed_commands()
           switch.randomize_flow_mods()
         if self.fail_flow_mods:
-          switch.fail_flow_mods(flow_mod_filter)
-        
+          switch.use_fail_flow_mods(flow_mod_filter)
     return self.loop()
 
   def loop(self):

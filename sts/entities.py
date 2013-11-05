@@ -31,7 +31,6 @@ from sts.util.console import msg
 from sts.openflow_buffer import OpenFlowBuffer
 from sts.util.network_namespace import launch_namespace
 from sts.util.convenience import IPAddressSpace
-from collections import deque
 
 import Queue
 from itertools import count
@@ -159,8 +158,6 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.cmd_queue = None
     self.random = None
     
-    
-
   def add_controller_info(self, info):
     self.controller_info.append(info)
 
@@ -255,12 +252,12 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     if seed is not None:
       self.random.seed(seed)
     self.cmd_queue = Queue.PriorityQueue()
-    self.barrier_deque = deque()
+    self.barrier_deque = list()
 
-  def fail_flow_mods(self, fail_flow_mod_function):
+  def use_fail_flow_mods(self, fail_flow_mod_function):
     ''' Tell the switch to fail the application of flow_mods according to the given function,
     which should take a flow_mod and act as a filter, returning True if the flow_mod should 
-    be allowed to be processed or False otherwise '''
+    be made to fail or False otherwise '''
     self.fail_flow_mods = True
     self.fail_flow_mod_function = fail_flow_mod_function
 
@@ -280,23 +277,31 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     buffr.put((weight, msg, receive))
 
   def on_message_received_delayed(self, connection, msg):
-    ''' Replacement for NXSoftwareSwitch.on_message_received when delaying command processing '''
-    # TODO(jl): use exponential moving average (define in params) rather than uniform distirbution
+    ''' Precondition: use_delayed_commands() has been called. Replacement for 
+    NXSoftwareSwitch.on_message_received when delaying command processing '''
+    # TODO(jl): use exponential moving average (define in params) rather than uniform distribution
     # to prioritize oldest flow_mods
     assert(self.delay_flow_mods is True)
 
-    def handle_with_active_barrier(connection, msg):
+    def handle_with_active_barrier_in(connection, msg):
+      ''' Handling of flow_mods and barriers while operating under a barrier_in request'''
       if isinstance(msg, ofp_barrier_request):
+        # create a new priority queue for all subsequent flow_mods
         self.barrier_deque.append((msg, Queue.PriorityQueue()))
-      else:
-        # stick message on the queue of commands since the last barrier request
+      elif isinstance(msg, ofp_flow_mod):
+        # stick the flow_mod on the queue of commands since the last barrier request
         if self.randomize_flow_mod_order:
+          # TODO(jl): use exponential moving average (define in params) rather than uniform distribution
+          # to prioritize oldest flow_mods
           weight = self.random.random()
         else:
           weight = time.time()
+        # safe because if we have an active barrier_in, we appended a queue to barrier_deque so len(self.barrier_deque) > 0
         self._buffer_flow_mod(connection, msg, weight, buffr=self.barrier_deque[-1][1])
+      else:
+        raise TypeError("Unsupported type for command buffering")
 
-    def handle_without_active_barrier(connection, msg):
+    def handle_without_active_barrier_in(connection, msg):
       if isinstance(msg, ofp_barrier_request):
         if self.cmd_queue.empty():
           # if no commands waiting, reply to barrier immediately
@@ -305,20 +310,24 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
           self.send(barrier_reply)
         else:
           self.barrier_deque.append((msg, Queue.PriorityQueue()))
-      else:
+      elif isinstance(msg, ofp_flow_mod):
         # proceed normally (no active or pending barriers)
         if self.randomize_flow_mod_order:
+          # TODO(jl): use exponential moving average (define in params) rather than uniform distribution
+          # to prioritize oldest flow_mods
           weight = self.random.random()
         else:
           weight = time.time()
         self._buffer_flow_mod(connection, msg, weight, buffr=self.cmd_queue)
+      else:
+        raise TypeError("Unsupported type for command buffering")
 
     if isinstance(msg, ofp_flow_mod) or isinstance(msg, ofp_barrier_request):
       # Check if switch is currently operating under a barrier request
       if len(self.barrier_deque) > 0:
-        handle_with_active_barrier(connection, msg)
+        handle_with_active_barrier_in(connection, msg)
       else:
-        handle_without_active_barrier(connection, msg)
+        handle_without_active_barrier_in(connection, msg)
     else:
       # Immediately process all other messages
       super(FuzzSoftwareSwitch, self).on_message_received(connection, msg)
@@ -327,11 +336,14 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     return not self.cmd_queue.empty()
 
   def process_delayed_command(self):
-    """ Throws Queue.Empty if the queue is empty. Returns the message and its receipt if the
-    flow_mod was successfully processed, or tuple of None values if it failed. """
+    """ Precondition: use_delayed_commands() has been invoked. Invoked periodically from fuzzer. 
+    Pulls off and forwards the next buffered command. Throws Queue.Empty if the queue is empty. 
+    Returns the message and its receipt if the command was successfully processed, or tuple of 
+    None values if it failed. """
+    assert(self.delay_flow_mods is True)
     (buffered_cmd, buffered_cmd_receive) = self.cmd_queue.get_nowait()[1:3]
     while self.cmd_queue.empty() and len(self.barrier_deque) > 0:
-      (barrier_request, self.cmd_queue) = self.barrier_deque.popleft()
+      (barrier_request, self.cmd_queue) = self.barrier_deque.pop(0)
       self.log.debug("Barrier request %s %s", self.name, str(barrier_request))
       barrier_reply = ofp_barrier_reply(xid = barrier_request.xid)
       self.send(barrier_reply)
@@ -339,7 +351,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       # TODO(jl): log/send appropriate error code
       self.send_flow_mod_failure(buffered_cmd, OFPFMFC_UNSUPPORTED)
       return (None, None)
-    else:
+    else:      
       return (self.openflow_buffer.schedule(buffered_cmd_receive), buffered_cmd_receive)
 
 class Link (object):

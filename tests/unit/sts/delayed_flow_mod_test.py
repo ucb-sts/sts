@@ -53,19 +53,19 @@ class DelayedFlowModTest(unittest.TestCase):
     random.Random = self.old_random
 
   def create_flow_mod_group(self, num_flow_mods):
-        li = []
-        for i in range(num_flow_mods):
-            li.append(ofp_flow_mod(match=ofp_match(in_port=i, nw_src="%s.%s.%s.%s" % (i,i,i,i)), action=ofp_action_output(port=i)))
-        return li
+      li = []
+      for i in range(num_flow_mods):
+        li.append(ofp_flow_mod(match=ofp_match(in_port=i, nw_src="%s.%s.%s.%s" % (i,i,i,i)), action=ofp_action_output(port=i)))
+      return li
   
   def read_to_switch(self, packet_list):
     for packet in packet_list:
-        self.conn.read(packet)
+      self.conn.read(packet)
 
   def process_delayed_commands(self, num_commands):
     for i in range(num_commands):
-        self.assertTrue(self.switch.has_pending_commands())
-        self.switch.process_delayed_command()
+      self.assertTrue(self.switch.has_pending_commands())
+      self.switch.process_delayed_command()
 
 
   def test_randomization(self):
@@ -92,6 +92,7 @@ class DelayedFlowModTest(unittest.TestCase):
     self.assertRaises(IndexError, self.switch.table.table.__getitem__,4)
 
   def test_barriers(self):
+    ''' Ensure that switches batch flow_mod processing within the epoch boundaries defined by barrier_ins '''
     (fm0, fm1, fm2, fm3, fm4, fm5, fm6) = self.create_flow_mod_group(7)
     barrier_1 = ofp_barrier_request()
     barrier_2 = ofp_barrier_request()
