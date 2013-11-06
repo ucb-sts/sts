@@ -80,6 +80,11 @@ class OpenFlowReplayer(ControlFlow):
                                                     boot_controllers=boot_mock_controllers)
     connect_to_mock_controllers(self.simulation)
 
+    # Some implementations send delete flow mods when disconnecting switches; ignore these flow_mods
+    if self.ignore_trailing_flow_mod_deletes:
+      # switch -> whether we have observed a flow_mod other than a trailing delete yet
+      dpid2seen_non_delete = { switch.dpid : False for switch in self.simulation.topology.switches }
+
     # Reproduce the routing table state.
     all_flow_mods = []
     for next_event in self.event_list:
@@ -89,11 +94,6 @@ class OpenFlowReplayer(ControlFlow):
       else:
         msg.openflow_event("Injecting %r" % next_event)
       next_event.manually_inject(self.simulation)
-
-    # Some implementations send delete flow mods when disconnecting switches; ignore these flow_mods
-    if self.ignore_trailing_flow_mod_deletes:
-      # switch -> whether we have observed a flow_mod other than a trailing delete yet
-      dpid2seen_non_delete = { switch.dpid : False for switch in self.simulation.topology.switches }
 
     # Now filter out all flow_mods that don't correspond to an entry in the
     # final routing table. Do that by walking backwards through the flow_mods,
