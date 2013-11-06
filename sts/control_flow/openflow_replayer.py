@@ -78,12 +78,14 @@ class OpenFlowReplayer(ControlFlow):
   def simulate(self):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback,
                                                     boot_controllers=boot_mock_controllers)
-    connect_to_mock_controllers(self.simulation)
 
     # Some implementations send delete flow mods when disconnecting switches; ignore these flow_mods
     if self.ignore_trailing_flow_mod_deletes:
       # switch -> whether we have observed a flow_mod other than a trailing delete yet
       dpid2seen_non_delete = { switch.dpid : False for switch in self.simulation.topology.switches }
+
+    # Setup mock connections
+    connect_to_mock_controllers(self.simulation)
 
     # Reproduce the routing table state.
     all_flow_mods = []
