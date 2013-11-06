@@ -75,17 +75,20 @@ class OpenFlowReplayer(ControlFlow):
                         and type(e.get_packet()) != ofp_packet_out ]
     self.ignore_trailing_flow_mod_deletes = ignore_trailing_flow_mod_deletes
 
+  def initialize_simulation(self):
+    simulation = self.simulation_cfg.bootstrap(self.sync_callback,
+                                               boot_controllers=boot_mock_controllers)
+    # Setup mock connections
+    connect_to_mock_controllers(simulation)
+    return simulation
+
   def simulate(self):
-    self.simulation = self.simulation_cfg.bootstrap(self.sync_callback,
-                                                    boot_controllers=boot_mock_controllers)
+    simulation = self.initialize_simulation()
 
     # Some implementations send delete flow mods when disconnecting switches; ignore these flow_mods
     if self.ignore_trailing_flow_mod_deletes:
       # switch -> whether we have observed a flow_mod other than a trailing delete yet
-      dpid2seen_non_delete = { switch.dpid : False for switch in self.simulation.topology.switches }
-
-    # Setup mock connections
-    connect_to_mock_controllers(self.simulation)
+      dpid2seen_non_delete = { switch.dpid : False for switch in simulation.topology.switches }
 
     # Reproduce the routing table state.
     all_flow_mods = []
@@ -95,7 +98,7 @@ class OpenFlowReplayer(ControlFlow):
         all_flow_mods.append(next_event)
       else:
         msg.openflow_event("Injecting %r" % next_event)
-      next_event.manually_inject(self.simulation)
+      next_event.manually_inject(simulation)
 
     # Now filter out all flow_mods that don't correspond to an entry in the
     # final routing table. Do that by walking backwards through the flow_mods,
@@ -104,7 +107,7 @@ class OpenFlowReplayer(ControlFlow):
     # flow_mods from earlier in the event_list.
     relevant_flow_mods = []
     for last_event in reversed(all_flow_mods):
-      switch = self.simulation.topology.get_switch(last_event.dpid)
+      switch = simulation.topology.get_switch(last_event.dpid)
 
       # Ignore all trailing flow mod deletes
       if self.ignore_trailing_flow_mod_deletes:
@@ -128,14 +131,15 @@ class OpenFlowReplayer(ControlFlow):
       print "%r" % next_event
     print "\n"
 
-    # Print add back removed entries and print flow tables of each switch
+    # Add back removed entries.
     for flow_mod_event in relevant_flow_mods:
-      flow_mod_event.manually_inject(self.simulation)
+      flow_mod_event.manually_inject(simulation)
 
+    # Now print flow tables of each switch.
     msg.event("Flow tables:")
-    for switch in self.simulation.topology.switches:
+    for switch in simulation.topology.switches:
       print "Switch %s" % switch.dpid
       switch.show_flow_table()
 
-    return self.simulation
+    return simulation
 
