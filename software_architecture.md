@@ -344,6 +344,10 @@ filtered_classes => a set of classes to ignore, from sts.replay_event
 see example_pretty_print_config.py for an example.
 </pre>
 
+- ```tabulate_events.py```: Groups classes of events (e.g.
+  LinkFailures/Recoveries) together and prints the to the console in human
+readable format.
+
 - ```trace_traffic_injection.py```: given a path to a events trace file, and the
   event id (e.g. "e120"), this tool will trace the path a packet takes
   through the network. in particular, it will print all dataplane permits and

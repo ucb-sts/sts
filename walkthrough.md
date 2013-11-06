@@ -201,6 +201,24 @@ The output of this tool is highly configurable; see the
 [documentation](http://ucb-sts.github.io/sts/software_architecture.html#tools) for more
 information.
 
+It is sometimes also helpful to group together similar classes of event types.
+We can accomplish this easily with the another tool:
+
+    $ ./tools/tabulate_events.py experiments/fuzz_pox_simple/events.trace
+    ====================== Topology Change Events ======================
+    e32 SwitchFailure (prunable)
+    fingerprint:  (1,)
+    --------------------------------------------------------------------
+    e58 SwitchRecovery (prunable)
+    fingerprint:  (1,)
+    --------------------------------------------------------------------
+    ...
+
+    ====================== Host Migration Events =======================
+    ...
+
+
+
 ### Replay Mode
 
 Suppose we realize that we need to add more logging statements to the
