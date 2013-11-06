@@ -16,10 +16,10 @@
 Tool for replaying OpenFlow messages from a trace.
 
 Motivation for this tool:
- - Delta debugging does not fully minimize traces (often for good reason,
-   e.g. delicate timings). We have observed minimized traces often contain many
+ - Delta debugging does not fully minimize the internal events of traces (often for
+   good reason, e.g. delicate timings). We have observed minimized traces often contain many
    OpenFlow messages that time our or are overwritten, i.e. are not directly
-   relevant for triggering an invalid network configuratoon.
+   relevant for triggering an invalid network configuration.
 
 This tool enables:
   - automatic filtering of flow_mods that timed out or were overwritten by
@@ -28,7 +28,7 @@ This tool enables:
     entries specified by the user.
   - interactive bisection of the OpenFlow trace to infer which messages were
     and weren't relevant for triggering the bug (especially useful for tricky
-    cases requiring human involvment). (TBD)
+    cases requiring human involvement). (TBD)
 
 The tool can then spit back out a new event trace without the irrelevant
 OpenFlow messages.
@@ -92,9 +92,8 @@ class OpenFlowReplayer(ControlFlow):
 
     # Some implementations send delete flow mods when disconnecting switches; ignore these flow_mods
     if self.ignore_trailing_flow_mod_deletes:
-      ignore_flow_mods = {} # switch -> boolean of whether to ignore flow mods
-      for switch in self.simulation.topology.switches:
-        ignore_flow_mods[switch] = True
+      # switch -> whether we have observed a flow_mod other than a trailing delete yet
+      dpid2seen_non_delete = { switch.dpid : False for switch in self.simulation.topology.switches }
 
     # Now filter out all flow_mods that don't correspond to an entry in the
     # final routing table. Do that by walking backwards through the flow_mods,
@@ -107,28 +106,31 @@ class OpenFlowReplayer(ControlFlow):
 
       # Ignore all trailing flow mod deletes
       if self.ignore_trailing_flow_mod_deletes:
-        flow_mod_command = last_event.get_packet().command 
-	if flow_mod_command != OFPFC_DELETE and flow_mod_command != OFPFC_DELETE_STRICT:
-	  ignore_flow_mods[switch] = False
-	if ignore_flow_mods[switch]:
-	  continue
+        flow_mod_command = last_event.get_packet().command
+        if (not dpid2seen_non_delete[switch.dpid] and
+            (flow_mod_command == OFPFC_DELETE or flow_mod_command == OFPFC_DELETE_STRICT)):
+          continue
+        else:
+          dpid2seen_non_delete[switch.dpid] = True
 
       if switch.table.matching_entries(last_event.get_packet().match) != []:
         relevant_flow_mods.append(last_event)
         switch.table.remove_matching_entries(last_event.get_packet().match)
-    relevant_flow_mods.reverse() 
-    print "\n"
+
+    relevant_flow_mods.reverse()
 
     # Print filtered flow mods
+    print "\n"
     msg.event("Filtered flow mods:")
     for next_event in relevant_flow_mods:
       print "%r" % next_event
     print "\n"
 
-    # Print the flow tables of each switch, adding back removed entries
-    msg.event("Flow tables:")
+    # Print add back removed entries and print flow tables of each switch
     for flow_mod_event in relevant_flow_mods:
       flow_mod_event.manually_inject(self.simulation)
+
+    msg.event("Flow tables:")
     for switch in self.simulation.topology.switches:
       print "Switch %s" % switch.dpid
       switch.show_flow_table()
