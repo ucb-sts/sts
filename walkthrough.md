@@ -116,7 +116,7 @@ interactive mode, described next, by hitting ^C at any point in the execution.
 
 ### Interactive Mode
 
-If you have bug in mind, interactive mode is the perfect way to manually
+If you have  a bug in mind, interactive mode is the perfect way to manually
 trigger it. It allows us to simulate the same network events as fuzzer mode,
 but gives us a command line interface to control the execution and examine the
 state of the network as we proceed.
