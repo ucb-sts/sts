@@ -1410,7 +1410,6 @@ class FailFlowMod(ControlMessageBase):
   def __str__(self):
     return "FailFlowMod:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
 
-
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
                        ConnectToControllers, ControllerStateChange,
                        DeterministicValue, DataplanePermit, ProcessFlowMod, FailFlowMod]

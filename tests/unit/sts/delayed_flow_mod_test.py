@@ -69,6 +69,8 @@ class DelayedFlowModTest(unittest.TestCase):
 
 
   def test_randomization(self):
+    ''' Ensure that flow_mods are buffered and are popped out according to the "random" weights
+    they are assigned '''
     # Create packets to send
     (fm0, fm1, fm2, fm3) = self.create_flow_mod_group(4)
     other_packet = ofp_packet_out()
