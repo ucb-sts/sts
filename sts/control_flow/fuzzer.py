@@ -449,14 +449,15 @@ class Fuzzer(ControlFlow):
             # then check whether we should make the attempt to process the next command fail
             if should_fail_flow_mod(cmd):
               # TODO(jl): log our own flow_mod failure event
-              pass
+              eventclass = FailFlowMod
             else:
-              switch.process_delayed_command(pending_receipt)
-              b64_packet = base64_encode(cmd)
-              self._log_input_event(ProcessFlowMod(pending_receipt.dpid,
-                                                   pending_receipt.controller_id,
-                                                   pending_receipt.fingerprint,
-                                                   b64_packet=b64_packet))
+              eventclass = ProcessFlowMod
+            switch.process_delayed_command(pending_receipt)
+            b64_packet = base64_encode(cmd)
+            self._log_input_event(eventclass(pending_receipt.dpid,
+                                                 pending_receipt.controller_id,
+                                                 pending_receipt.fingerprint,
+                                                 b64_packet=b64_packet))
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
