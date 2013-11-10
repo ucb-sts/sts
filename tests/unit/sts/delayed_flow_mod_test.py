@@ -65,7 +65,7 @@ class DelayedFlowModTest(unittest.TestCase):
   def process_delayed_commands(self, num_commands):
     for i in range(num_commands):
       self.assertTrue(self.switch.has_pending_commands())
-      self.switch.process_delayed_command()
+      self.switch.process_delayed_command(self.switch.get_next_command()[1])
 
 
   def test_randomization(self):
@@ -87,7 +87,7 @@ class DelayedFlowModTest(unittest.TestCase):
     self.assertEqual(self.switch.table.table[3].match.in_port, fm0.match.in_port)
 
     # Make sure other_packet wasn't put into queue
-    self.assertRaises(Queue.Empty, self.switch.process_delayed_command)
+    self.assertRaises(Queue.Empty, self.switch.get_next_command)
     # Make sure nothing else got in the table.
     self.assertRaises(IndexError, self.switch.table.table.__getitem__,4)
 
@@ -108,7 +108,7 @@ class DelayedFlowModTest(unittest.TestCase):
 
     # command queue empty here, so this should cause instant reply
     self.read_to_switch([barrier_2])
-    self.assertRaises(Queue.Empty, self.switch.process_delayed_command)
+    self.assertRaises(Queue.Empty, self.switch.get_next_command)
 
     # make sure interleaving and consecutive barriers work as expected
     self.read_to_switch([fm2, fm3, barrier_3, fm4, barrier_4, barrier_5])

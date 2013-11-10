@@ -139,7 +139,6 @@ class Fuzzer(ControlFlow):
     # Determine whether to use delayed and randomized flow mod processing
     # (Set by fuzzer_params, not by an optional __init__ argument)
     self.delay_flow_mods = False
-    self.fail_flow_mods = False
 
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
@@ -192,21 +191,14 @@ class Fuzzer(ControlFlow):
     self.traffic_generator.set_topology(self.simulation.topology)
     self.unblocked_controller_pairs = self._compute_unblocked_controller_pairs()
 
-    def flow_mod_filter(flow_mod):
-      # super simple method to give to each switch to tell it whether to apply
-      # or actively fail a flow_mod
-      return self.random.random() < self.params.ofp_flow_mod_failure_rate
-
     self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 0.0
     self.fail_flow_mods = self.params.ofp_flow_mod_failure_rate != 0.0
-    if self.delay_flow_mods or self.fail_flow_mods:
+    if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
         if self.delay_flow_mods:
           switch.use_delayed_commands()
           switch.randomize_flow_mods()
-        if self.fail_flow_mods:
-          switch.use_fail_flow_mods(flow_mod_filter)
     return self.loop()
 
   def loop(self):
@@ -442,15 +434,25 @@ class Fuzzer(ControlFlow):
   def check_pending_commands(self):
     ''' If Fuzzer is configured to delay flow mods, this decides whether 
     each switch is allowed to process a buffered flow mod '''
+
+    def should_fail_flow_mod(command):
+      # super simple filter to tell whether to apply or actively fail a flow_mod
+      return self.random.random() < self.params.ofp_flow_mod_failure_rate
+
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
+        # first decide if we should try to process the next command from the switch
         if (self.random.random() < self.params.ofp_cmd_passthrough_rate):
           if switch.has_pending_commands():
-            (message, pending_receipt) = switch.process_delayed_command()
-            # TODO(jl): log our own flow_mod failure event
-            if message:
-              b64_packet = base64_encode(message)
+            (cmd, pending_receipt) = switch.get_next_command()
+            # then check whether we should make the attempt to process the next command fail
+            if should_fail_flow_mod(cmd):
+              # TODO(jl): log our own flow_mod failure event
+              pass
+            else:
+              switch.process_delayed_command(pending_receipt)
+              b64_packet = base64_encode(cmd)
               self._log_input_event(ProcessFlowMod(pending_receipt.dpid,
                                                    pending_receipt.controller_id,
                                                    pending_receipt.fingerprint,
