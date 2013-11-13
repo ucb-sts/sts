@@ -19,6 +19,9 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "pox"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "hassel/hsa-python"))
 
+# TODO(cs): only run this every every few hours or so, not for every run of
+# simulator.
+
 def check_sw_version(path, remote_branch):
   ''' Return whether the latest commit of the git repo located at the
       given path is the same as the remote repo's remote_branch.
