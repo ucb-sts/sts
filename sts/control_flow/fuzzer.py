@@ -91,7 +91,7 @@ class Fuzzer(ControlFlow):
 
     self.check_interval = check_interval
     if self.check_interval is None:
-      log.warn("Check interval is not specified... not checking invariants")
+      print >> sys.stderr, "Fuzzer Warning: Check interval is not specified... not checking invariants"
     if invariant_check_name not in name_to_invariant_check:
       raise ValueError('''Unknown invariant check %s.\n'''
                        '''Invariant check name must be defined in config.invariant_checks''',
