@@ -15,12 +15,10 @@
 
 import sys
 import os
+from datetime import date
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "pox"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "hassel/hsa-python"))
-
-# TODO(cs): only run this every every few hours or so, not for every run of
-# simulator.
 
 def check_sw_version(path, remote_branch):
   ''' Return whether the latest commit of the git repo located at the
@@ -43,17 +41,48 @@ def check_sw_version(path, remote_branch):
   finally:
     os.chdir(old_cwd)
 
-# Double check the first time STS is loaded whether we have the latest
-# software versions.
-print >> sys.stderr, "Checking software versions..."
-pox_path = os.path.join(os.path.dirname(__file__), "..", "pox")
-if not check_sw_version(pox_path, "remotes/origin/debugger"):
-  print >> sys.stderr, ('''Warning: POX version not up-to-date. You should '''
-                        '''probably run:\n $ (cd pox; git pull) ''')
+def check_dependencies():
+  '''
+  Double check whether POX and Hassel are at the latest software versions.
+  '''
+  print >> sys.stderr, "Checking software versions..."
+  pox_path = os.path.join(os.path.dirname(__file__), "..", "pox")
+  if not check_sw_version(pox_path, "remotes/origin/debugger"):
+    print >> sys.stderr, ('''Warning: POX version not up-to-date. You should '''
+                          '''probably run:\n $ (cd pox; git pull) ''')
 
-hassel_path = os.path.join(os.path.dirname(__file__), "hassel")
-if not os.path.exists(os.path.join(hassel_path, "LICENSE.txt")):
-  print >> sys.stderr, "Warning: Hassel submodule not loaded."
-elif not check_sw_version(hassel_path, "remotes/origin/HEAD"):
-  print >> sys.stderr, ('''Warning: Hassel version not up-to-date. You should '''
-                        '''probably run:\n $ git submodule update ''')
+  hassel_path = os.path.join(os.path.dirname(__file__), "hassel")
+  if not os.path.exists(os.path.join(hassel_path, "LICENSE.txt")):
+    print >> sys.stderr, "Warning: Hassel submodule not loaded."
+  elif not check_sw_version(hassel_path, "remotes/origin/HEAD"):
+    print >> sys.stderr, ('''Warning: Hassel version not up-to-date. You should '''
+                          '''probably run:\n $ git submodule update ''')
+
+# We store the last date we checked software versions in sts/last-version-check.
+# The format of the file is: date.today().toordinal()
+timestamp_path = os.path.join(os.path.dirname(__file__), "last-version-check")
+
+def checked_recently():
+  ''' Return whether we have checked dependencies in the last day. '''
+  if not os.path.exists(timestamp_path):
+    return False
+
+  current_date = date.today()
+  with open(timestamp_path) as timestamp_file:
+    try:
+      last_check_date = date.fromordinal(int(timestamp_file.read()))
+    except:
+      # Possible corruption.
+      return False
+    return last_check_date == current_date
+
+def write_new_timestamp():
+  with open(timestamp_path, "w") as timestamp_file:
+    current_date = date.today()
+    timestamp_file.write(str(current_date.toordinal()))
+
+# We only check dependencies once a day, since `git fetch` takes a fair amount of
+# time.
+if not checked_recently():
+  check_dependencies()
+  write_new_timestamp()
