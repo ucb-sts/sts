@@ -6,7 +6,7 @@ from sts.input_traces.input_logger import InputLogger
 from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller
-start_cmd = ('''./pox.py openflow.discovery forwarding.l2_multi '''
+start_cmd = ('''./pox.py samples.buggy '''
              '''openflow.of_01 --address=__address__ --port=__port__''')
 controllers = [ControllerConfig(start_cmd, cwd="pox/")]
 
@@ -20,4 +20,5 @@ simulation_config = SimulationConfig(controller_configs=controllers,
 control_flow = Fuzzer(simulation_config,
                       input_logger=InputLogger(),
                       invariant_check_name="InvariantChecker.check_liveness",
+                      check_interval=5,
                       halt_on_violation=True)
