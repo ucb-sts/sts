@@ -433,14 +433,19 @@ class ViolationTracker(object):
   Tracks all invariant violations and decides whether each one is transient or persistent
   '''
 
-  def __init__(self, persistence_threshold=50, buffer_persistent_violations=True):
+  def __init__(self, persistence_threshold=0, buffer_persistent_violations=False):
     '''
-    persistence_threshold: number of logical time units a violation must persist before
-      we declare that it is a persistent violation
+    persistence_threshold: number of logical time units a violation must
+      persist beyond the initial detection round before
+      we declare that it is a persistent violation. If zero, return any
+      violation as a persistent violation.
     violation2time: key is the violation signature (string), and value is a two-tuple
       (start_time, end_time), where start_time is the logical time at which the violation
       is first observed, and end time that at which the violation is last observed
     '''
+    # TODO(cs): @andrewor mind if we get some documentation on
+    # buffer_persistent_violations? Not immediately clear to me what it's
+    # doing.
     self.persistence_threshold = persistence_threshold
     self.violation2time = {}
     self.buffer_persistent_violations = buffer_persistent_violations
@@ -451,7 +456,7 @@ class ViolationTracker(object):
       if v not in violations:
         msg.success("Violation %s turns out to be transient!" % v)
         del self.violation2time[v]
-    # Now, track violations observed this round 
+    # Now, track violations observed this round
     for v in violations:
       if v not in self.violation2time.keys():
         self.violation2time[v] = (logical_time, logical_time)
@@ -461,7 +466,7 @@ class ViolationTracker(object):
         self.violation2time[v] = (start_time, end_time)
         msg.fail("Violation encountered again after %d steps: %s" %
                   (end_time - start_time, v))
- 
+
   def get_age(self, violation):
     (start_time, end_time) = self.violation2time[violation]
     return end_time - start_time
@@ -473,14 +478,15 @@ class ViolationTracker(object):
   @property
   def persistent_violations(self):
     persistent_violations = []
-    # Don't return persistent violations the moment they appear
+    # If buffer_persistent_violations, don't return persistent violations the moment they appear
     buffer_this_round = True
     for v in self.violation2time.keys():
-      if self.get_age(v) > self.persistence_threshold:
+      if self.get_age(v) >= self.persistence_threshold:
         persistent_violations.append(v)
-      if self.get_age(v) > 2 * self.persistence_threshold:
+      # TODO(cs): 2 is a magic number. Should be declared as a class variable.
+      if self.get_age(v) >= 2 * self.persistence_threshold:
         buffer_this_round = False
     if self.buffer_persistent_violations and buffer_this_round:
-      return [] 
+      return []
     return persistent_violations
-    
+
