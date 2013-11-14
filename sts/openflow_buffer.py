@@ -16,7 +16,6 @@
 
 from collections import defaultdict, namedtuple
 from sts.fingerprints.messages import *
-import sts.replay_event
 from pox.lib.revent import Event, EventMixin
 from sts.util.convenience import base64_encode
 import logging
@@ -30,7 +29,7 @@ class PendingMessage(Event):
     self.pending_message = pending_message
     self.b64_packet = b64_packet
     self.send_event = send_event
-  
+
 # TODO(cs): move me to another file?
 class OpenFlowBuffer(EventMixin):
   '''
@@ -82,6 +81,8 @@ class OpenFlowBuffer(EventMixin):
 
   def _pass_through_handler(self, message_event):
     ''' handler for pass-through mode '''
+    # TODO(cs): figure out a better way to resolve circular dependency
+    import sts.replay_event
     pending_message = message_event.pending_message
     # Pass through
     self.schedule(pending_message)
