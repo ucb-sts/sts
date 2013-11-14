@@ -26,13 +26,12 @@ In the `config/` subdirectory, we find a configuration file
 The first two lines of this file tells STS how to boot the SDN controller
 (in this case, POX):
 
-    start_cmd = ('''./pox.py openflow.discovery forwarding.l2_multi '''
+    start_cmd = ('''./pox.py samples.buggy '''
                  '''openflow.of_01 --address=__address__ --port=__port__''')
     controllers = [ControllerConfig(start_cmd, cwd="pox/")]
 
-Here we're running POX's l2_multi module, a simple routing routing
-application located in `./pox/forwarding/`. Note that the macros "__address__"
-and "__port__" are expanded by STS to allow
+Here we're running a POX application with a known bug (`samples.buggy`).
+Note that the macros "__address__" and "__port__" are expanded by STS to allow
 it to choose available ports and addresses.
 
 The next two lines specify the network topology we would like STS to simulate:
@@ -63,11 +62,12 @@ we want to generate random inputs with the Fuzzer class:
     control_flow = Fuzzer(simulation_config,
                           input_logger=InputLogger(),
                           invariant_check_name="InvariantChecker.check_liveness",
+                          check_interval=5,
                           halt_on_violation=True)
 
 Here we're telling the Fuzzer to record its execution with an
 [InputLogger](http://ucb-sts.github.io/documentation/sts.input_traces.html#module-sts.input_traces.input_logger),
-check periodically whether the controller process has crashed,
+check every 5 fuzzing rounds whether the controller process has crashed,
 and halt the execution whenever we detect that the controller process has
 indeed crashed.
 
@@ -83,13 +83,13 @@ By default Fuzzer generates its inputs based on a set of event probabilities def
 [config/fuzzer_params.py](https://github.com/ucb-sts/sts/blob/master/config/fuzzer_params.py). Taking a closer look at that file, we see a list of
 event types followed by numbers in the range \[0,1\], such as:
 
-     switch_failure_rate = 0.05
+     switch_failure_rate = 0.02
      switch_recovery_rate = 0.1
      ...
 
 <!-- TODO: document all event types, e.g. Jefferson's flow_mod reordering -->
 
-This tells the fuzzer to trigger kill live switches with a probability of 5%,
+This tells the fuzzer to trigger kill live switches with a probability of 2%,
 and recover down switches with a probability of 10%.
 
 Let's go ahead and see STS in action, by invoking the simulator with our
@@ -162,7 +162,8 @@ commands available in interactive mode.
 
 ## Phase II: Troubleshooting
 
-Let's suppose we found a juicy invariant violation. Our InputLogger has
+Let's suppose we found a juicy invariant violation (if we let the Fuzzer run long
+enough, we should have eventually triggered a controller crash). Our InputLogger has
 recorded a trace of the network events that we can use to track down the root
 cause of the violation.
 
@@ -269,6 +270,11 @@ algorithm to minimize the original event log. We can invoke MCSFinder by
 specifying the appropriate configuration file:
 
     $ ./simulator.py -c experiments/fuzz_pox_simple/mcs_config.py
+
+At the end of the console output, we should see a minimal sequence of inputs
+that are sufficient for triggering the original bug. In the case of POX's
+buggy module, we see that a single SwitchFailure event is enough to cause the controller
+to crash.
 
 The output of MCSFinder is yet another event trace that we can replay to
 continue with our troubleshooting. The results are stored in a new
