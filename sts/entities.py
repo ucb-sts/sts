@@ -476,7 +476,39 @@ class Host (EventMixin):
 
     Called by PatchPanel
     '''
-    self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
+    arp_reply = self.checkARPReply(interface,packet)
+    if arp_reply != "":
+      self.log.info("received valid arp packet on interface %s: %s" % (interface.name, str(packet)))
+      self.send(interface, arp_reply)
+    else:
+      self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
+
+  def checkARPReply(self, interface, packet):
+    '''
+    Check whether incoming packet is a valid ARP request. If so, construct an ARP reply and send back
+
+    Called by Host.receive()
+    '''
+    if packet.type != ethernet.ARP_TYPE:
+      return ""
+    payload = packet.payload
+    if payload.opcode != arp.REQUEST:
+      return ""
+    if IPAddr(payload.protodst) not in self.interfaces.ips:
+      return ""
+    else:
+      arp_reply = arp()
+      arp_reply.hwsrc = self.interfaces.hw_addr
+      arp_reply.hwdst = payload.hwsrc
+      arp_reply.opcode = arp.REPLY
+      arp_reply.protosrc = self.interfaces.ips[0]
+      arp_reply.protodst = payload.protosrc
+      ether = ethernet()
+      ether.type = ethernet.ARP_TYPE 
+      ether.dst = packet.src
+      ether.src = self.interfaces.hw_addr
+      ether.payload = arp_reply
+      return ether
 
   @property
   def dpid(self):
