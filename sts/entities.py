@@ -454,9 +454,6 @@ class Host (EventMixin):
   hosts on their own machines!
   '''
 
-  PKT_RECEIVE_REPLY = 0;
-  PKT_RECEIVE_NO_REPLY = 1;
-
   _eventMixin_events = set([DpPacketOut])
   _hids = count(1)
 
@@ -485,13 +482,13 @@ class Host (EventMixin):
       if arp_reply is not None:
         self.log.info("received valid arp packet on interface %s: %s" % (interface.name, str(packet)))
         self.send(interface, arp_reply)
-        return (self.PKT_RECEIVE_REPLY,arp_reply)
+        return arp_reply
       else:
         self.log.info("received invalid arp packet on interface %s: %s" % (interface.name, str(packet)))
-        return (self.PKT_RECEIVE_NO_REPLY,None)
+        return None
     else:
       self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
-      return (self.PKT_RECEIVE_NO_REPLY,None)
+      return None
 
   def _check_arp_reply(self, arp_packet):
     '''
@@ -504,7 +501,7 @@ class Host (EventMixin):
         return None
       else:
         '''
-        This ARP query is for us, construct an reply packet
+        This ARP query is for this host, construct an reply packet
         '''
         arp_reply = arp()
         arp_reply.hwsrc = self.interfaces[interface_indexing].hw_addr

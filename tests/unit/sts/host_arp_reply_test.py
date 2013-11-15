@@ -53,8 +53,7 @@ class ArpReplyTest(unittest.TestCase):
     ether.dst = EthAddr(H2_I1_ETH)
     ether.src = EthAddr(H1_I1_ETH)
     # Get the action and reply packet
-    (action,reply_packet) = h.receive(interfaces[0],ether)
-    self.assertTrue(action == h.PKT_RECEIVE_NO_REPLY)
+    reply_packet = h.receive(interfaces[0],ether)
     self.assertTrue(reply_packet == None)
 
   def test_invalid_arp(self):
@@ -73,8 +72,7 @@ class ArpReplyTest(unittest.TestCase):
     ether.src = EthAddr(H1_I1_ETH)
     ether.payload = arp_req
     # Get the action and reply packet
-    (action,reply_packet) = h.receive(interfaces[0],ether)
-    self.assertTrue(action == h.PKT_RECEIVE_NO_REPLY)
+    reply_packet = h.receive(interfaces[0],ether)
     self.assertTrue(reply_packet == None)
 
   def test_arp_reply(self):
@@ -93,8 +91,7 @@ class ArpReplyTest(unittest.TestCase):
     ether.src = EthAddr(H1_I1_ETH)
     ether.payload = arp_req
     # Get the action and arp reply packet
-    (action,arp_reply) = h.receive(interfaces[0],ether)
-    self.assertTrue(action == h.PKT_RECEIVE_REPLY)
+    arp_reply = h.receive(interfaces[0],ether)
     self.assertNotEqual(arp_reply,None)
     self.assertEqual(arp_reply.src,EthAddr(H2_I1_ETH))
     self.assertEqual(arp_reply.dst,EthAddr(H1_I1_ETH))
