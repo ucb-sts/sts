@@ -24,35 +24,85 @@ from pox.openflow.software_switch import DpPacketOut, SoftwareSwitch
 from pox.lib.addresses import EthAddr, IPAddr
 from pox.lib.packet import *
 
+'''IP and MAC of requester host 1 '''
+H1_I1_IP = '1.1.1.1'
+H1_I1_ETH = '\x01\x01\x01\x01\x01\x01'
+
+'''IP and MAC of receiver host 2, Interface 1'''
+H2_I1_IP1 = '2.2.1.1'
+H2_I1_ETH = '\x02\x02\x02\x02\x01\x01'
+'''Additional IP on the Interface 1'''
+H2_I1_IP2 = '2.2.1.2'
+
+'''IP and MAC of receiver host 2, Interface 2 '''
+H2_I2_IP = '2.2.2.1'
+H2_I2_ETH = '\x02\x02\x02\x02\x02\x01'
+
+'''IP and MAC of receiver host 3 '''
+H3_I3_IP = '3.3.3.1'
+H3_I3_ETH = '\x03\x03\x03\x03\x03\x01'
+
 class ArpReplyTest(unittest.TestCase):
 
-  def test_arp_reply(self):
-    REQ_IP = '1.1.1.1'
-    REQ_ETH_ADDR = '\x01\x01\x01\x01\x01\x01'
-    REPLY_IP = '2.2.2.2'
-    REPLY_ETH_ADDR = '\x02\x02\x02\x02\x02\x02'
-    interface = HostInterface(EthAddr(REPLY_ETH_ADDR),IPAddr(REPLY_IP)) 
-    h = Host(interface)
+  def test_none_arp(self):
+    '''Receive a none ARP packet and ensure there is no reply'''
+    interfaces = [HostInterface(EthAddr(H2_I1_ETH),[IPAddr(H2_I1_IP1),IPAddr(H2_I1_IP2)]),HostInterface(EthAddr(H2_I2_ETH),[IPAddr(H2_I2_IP)])]
+    h = Host(interfaces)
+    ether = ethernet()
+    ether.type = ethernet.IP_TYPE
+    ether.dst = EthAddr(H2_I1_ETH)
+    ether.src = EthAddr(H1_I1_ETH)
+    # Get the action and reply packet
+    (action,reply_packet) = h.receive(interfaces[0],ether)
+    self.assertTrue(action == h.PKT_RECEIVE_NO_REPLY)
+    self.assertTrue(reply_packet == None)
+
+  def test_invalid_arp(self):
+    '''Receive a ARP packet that isn't desinated to it and ensure there is no reply'''
+    interfaces = [HostInterface(EthAddr(H2_I1_ETH),[IPAddr(H2_I1_IP1),IPAddr(H2_I1_IP2)]),HostInterface(EthAddr(H2_I2_ETH),[IPAddr(H2_I2_IP)])]
+    h = Host(interfaces)
     arp_req = arp()
-    arp_req.hwsrc = EthAddr(REQ_ETH_ADDR)
+    arp_req.hwsrc = EthAddr(H1_I1_ETH)
     arp_req.hwdst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
     arp_req.opcode = arp.REQUEST
-    arp_req.protosrc = IPAddr(REQ_IP)
-    arp_req.protodst = IPAddr(REPLY_IP)
+    arp_req.protosrc = IPAddr(H1_I1_IP)
+    arp_req.protodst = IPAddr(H3_I3_IP)
     ether = ethernet()
     ether.type = ethernet.ARP_TYPE
     ether.dst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
-    ether.src = EthAddr(REQ_ETH_ADDR)
+    ether.src = EthAddr(H1_I1_ETH)
     ether.payload = arp_req
-    arp_reply = h.checkARPReply(interface,ether)
-    self.assertEqual(arp_reply.src,EthAddr(REPLY_ETH_ADDR))
-    self.assertEqual(arp_reply.dst,EthAddr(REQ_ETH_ADDR))
+    # Get the action and reply packet
+    (action,reply_packet) = h.receive(interfaces[0],ether)
+    self.assertTrue(action == h.PKT_RECEIVE_NO_REPLY)
+    self.assertTrue(reply_packet == None)
+
+  def test_arp_reply(self):
+    '''Receive a valid ARP packet and ensure the correct reply'''
+    interfaces = [HostInterface(EthAddr(H2_I1_ETH),[IPAddr(H2_I1_IP1),IPAddr(H2_I1_IP2)]),HostInterface(EthAddr(H2_I2_ETH),[IPAddr(H2_I2_IP)])]
+    h = Host(interfaces)
+    arp_req = arp()
+    arp_req.hwsrc = EthAddr(H1_I1_ETH)
+    arp_req.hwdst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
+    arp_req.opcode = arp.REQUEST
+    arp_req.protosrc = IPAddr(H1_I1_IP)
+    arp_req.protodst = IPAddr(H2_I1_IP1)
+    ether = ethernet()
+    ether.type = ethernet.ARP_TYPE
+    ether.dst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
+    ether.src = EthAddr(H1_I1_ETH)
+    ether.payload = arp_req
+    # Get the action and arp reply packet
+    (action,arp_reply) = h.receive(interfaces[0],ether)
+    self.assertTrue(action == h.PKT_RECEIVE_REPLY)
+    self.assertNotEqual(arp_reply,None)
+    self.assertEqual(arp_reply.src,EthAddr(H2_I1_ETH))
+    self.assertEqual(arp_reply.dst,EthAddr(H1_I1_ETH))
     self.assertEqual(arp_reply.type,ethernet.ARP_TYPE)
     reply_payload = arp_reply.payload
     self.assertEqual(reply_payload.opcode,arp.REPLY)
-    self.assertEqual(reply_payload.hwsrc,EthAddr(REPLY_ETH_ADDR))
-    self.assertEqual(reply_payload.hwdst,EthAddr(REQ_ETH_ADDR))
-    self.assertTrue(reply_payload.protosrc == REPLY_IP)
-    self.assertTrue(reply_payload.protodst == REQ_IP)
-    h.receive(interface,ether)
+    self.assertEqual(reply_payload.hwsrc,EthAddr(H2_I1_ETH))
+    self.assertEqual(reply_payload.hwdst,EthAddr(H1_I1_ETH))
+    self.assertTrue(reply_payload.protosrc == H2_I1_IP1)
+    self.assertTrue(reply_payload.protodst == H1_I1_IP)
 

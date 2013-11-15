@@ -453,6 +453,10 @@ class Host (EventMixin):
   If multiple host VMs are too heavy-weight for a single machine, run the
   hosts on their own machines!
   '''
+
+  PKT_RECEIVE_REPLY = 0;
+  PKT_RECEIVE_NO_REPLY = 1;
+
   _eventMixin_events = set([DpPacketOut])
   _hids = count(1)
 
@@ -476,39 +480,53 @@ class Host (EventMixin):
 
     Called by PatchPanel
     '''
-    arp_reply = self.checkARPReply(interface,packet)
-    if arp_reply != "":
-      self.log.info("received valid arp packet on interface %s: %s" % (interface.name, str(packet)))
-      self.send(interface, arp_reply)
+    if packet.type == ethernet.ARP_TYPE:
+      arp_reply = self._check_arp_reply(packet)
+      if arp_reply is not None:
+        self.log.info("received valid arp packet on interface %s: %s" % (interface.name, str(packet)))
+        self.send(interface, arp_reply)
+        return (self.PKT_RECEIVE_REPLY,arp_reply)
+      else:
+        self.log.info("received invalid arp packet on interface %s: %s" % (interface.name, str(packet)))
+        return (self.PKT_RECEIVE_NO_REPLY,None)
     else:
       self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
+      return (self.PKT_RECEIVE_NO_REPLY,None)
 
-  def checkARPReply(self, interface, packet):
+  def _check_arp_reply(self, arp_packet):
     '''
     Check whether incoming packet is a valid ARP request. If so, construct an ARP reply and send back
-
-    Called by Host.receive()
     '''
-    if packet.type != ethernet.ARP_TYPE:
-      return ""
-    payload = packet.payload
-    if payload.opcode != arp.REQUEST:
-      return ""
-    if IPAddr(payload.protodst) not in self.interfaces.ips:
-      return ""
+    arp_packet_payload = arp_packet.payload
+    if arp_packet_payload.opcode == arp.REQUEST:
+      interface_indexing = self._if_valid_arp_request(arp_packet_payload)
+      if interface_indexing == -1:
+        return None
+      else:
+        '''
+        This ARP query is for us, construct an reply packet
+        '''
+        arp_reply = arp()
+        arp_reply.hwsrc = self.interfaces[interface_indexing].hw_addr
+        arp_reply.hwdst = arp_packet_payload.hwsrc
+        arp_reply.opcode = arp.REPLY
+        arp_reply.protosrc = arp_packet_payload.protodst
+        arp_reply.protodst = arp_packet_payload.protosrc
+        ether = ethernet()
+        ether.type = ethernet.ARP_TYPE 
+        ether.dst = arp_packet.src
+        ether.src = self.interfaces[interface_indexing].hw_addr
+        ether.payload = arp_reply
+        return ether
     else:
-      arp_reply = arp()
-      arp_reply.hwsrc = self.interfaces.hw_addr
-      arp_reply.hwdst = payload.hwsrc
-      arp_reply.opcode = arp.REPLY
-      arp_reply.protosrc = self.interfaces.ips[0]
-      arp_reply.protodst = payload.protosrc
-      ether = ethernet()
-      ether.type = ethernet.ARP_TYPE 
-      ether.dst = packet.src
-      ether.src = self.interfaces.hw_addr
-      ether.payload = arp_reply
-      return ether
+      return None
+
+  def _if_valid_arp_request(self, arp_request_payload):
+    interface_index = -1
+    for i in range(len(self.interfaces)):
+      if arp_request_payload.protodst in self.interfaces[i].ips:
+        interface_index = i
+    return interface_index
 
   @property
   def dpid(self):
