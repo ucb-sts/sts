@@ -515,9 +515,9 @@ class Host (EventMixin):
     '''
     Check if the ARP query requests any interface of this host. If so, return the corresponding interface.
     '''
-    for i in range(len(self.interfaces)):
-      if arp_request_payload.protodst in self.interfaces[i].ips:
-        return self.interfaces[i]
+    for interface in self.interfaces:
+      if arp_request_payload.protodst in interface.ips:
+        return interface 
 
   @property
   def dpid(self):
