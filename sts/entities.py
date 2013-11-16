@@ -486,6 +486,7 @@ class Host (EventMixin):
       else:
         self.log.info("received invalid arp packet on interface %s: %s" % (interface.name, str(packet)))
         return None
+    self.log.info("Recieved packet %s on interface %s" % (str(packet), interface.name))
 
   def _check_arp_reply(self, arp_packet):
     '''
@@ -505,7 +506,7 @@ class Host (EventMixin):
         arp_reply.protosrc = arp_packet_payload.protodst
         arp_reply.protodst = arp_packet_payload.protosrc
         ether = ethernet()
-        ether.type = ethernet.ARP_TYPE 
+        ether.type = ethernet.ARP_TYPE
         ether.src = interface_matched.hw_addr
         ether.dst = arp_packet.src
         ether.payload = arp_reply
@@ -517,7 +518,8 @@ class Host (EventMixin):
     '''
     for interface in self.interfaces:
       if arp_request_payload.protodst in interface.ips:
-        return interface 
+        return interface
+    return None
 
   @property
   def dpid(self):
