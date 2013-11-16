@@ -45,7 +45,7 @@ H3_I3_ETH = '\x03\x03\x03\x03\x03\x01'
 class ArpReplyTest(unittest.TestCase):
 
   def test_none_arp(self):
-    '''Receive a none ARP packet and ensure there is no reply'''
+    '''Receive a non-ARP packet and ensure there is no reply'''
     interfaces = [HostInterface(EthAddr(H2_I1_ETH),[IPAddr(H2_I1_IP1),IPAddr(H2_I1_IP2)]),HostInterface(EthAddr(H2_I2_ETH),[IPAddr(H2_I2_IP)])]
     h = Host(interfaces)
     ether = ethernet()
@@ -54,7 +54,7 @@ class ArpReplyTest(unittest.TestCase):
     ether.src = EthAddr(H1_I1_ETH)
     # Get the action and reply packet
     reply_packet = h.receive(interfaces[0],ether)
-    self.assertTrue(reply_packet == None)
+    self.assertTrue(reply_packet is None)
 
   def test_invalid_arp(self):
     '''Receive a ARP packet that isn't desinated to it and ensure there is no reply'''
@@ -73,7 +73,7 @@ class ArpReplyTest(unittest.TestCase):
     ether.payload = arp_req
     # Get the action and reply packet
     reply_packet = h.receive(interfaces[0],ether)
-    self.assertTrue(reply_packet == None)
+    self.assertTrue(reply_packet is None)
 
   def test_arp_reply(self):
     '''Receive a valid ARP packet and ensure the correct reply'''
@@ -92,7 +92,7 @@ class ArpReplyTest(unittest.TestCase):
     ether.payload = arp_req
     # Get the action and arp reply packet
     arp_reply = h.receive(interfaces[0],ether)
-    self.assertNotEqual(arp_reply,None)
+    self.assertTrue(arp_reply is not None)
     self.assertEqual(arp_reply.src,EthAddr(H2_I1_ETH))
     self.assertEqual(arp_reply.dst,EthAddr(H1_I1_ETH))
     self.assertEqual(arp_reply.type,ethernet.ARP_TYPE)

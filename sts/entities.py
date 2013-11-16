@@ -486,9 +486,6 @@ class Host (EventMixin):
       else:
         self.log.info("received invalid arp packet on interface %s: %s" % (interface.name, str(packet)))
         return None
-    else:
-      self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
-      return None
 
   def _check_arp_reply(self, arp_packet):
     '''
@@ -496,34 +493,31 @@ class Host (EventMixin):
     '''
     arp_packet_payload = arp_packet.payload
     if arp_packet_payload.opcode == arp.REQUEST:
-      interface_indexing = self._if_valid_arp_request(arp_packet_payload)
-      if interface_indexing == -1:
+      interface_matched = self._if_valid_arp_request(arp_packet_payload)
+      if interface_matched is None:
         return None
       else:
-        '''
-        This ARP query is for this host, construct an reply packet
-        '''
+        # This ARP query is for this host, construct an reply packet
         arp_reply = arp()
-        arp_reply.hwsrc = self.interfaces[interface_indexing].hw_addr
+        arp_reply.hwsrc = interface_matched.hw_addr
         arp_reply.hwdst = arp_packet_payload.hwsrc
         arp_reply.opcode = arp.REPLY
         arp_reply.protosrc = arp_packet_payload.protodst
         arp_reply.protodst = arp_packet_payload.protosrc
         ether = ethernet()
         ether.type = ethernet.ARP_TYPE 
+        ether.src = interface_matched.hw_addr
         ether.dst = arp_packet.src
-        ether.src = self.interfaces[interface_indexing].hw_addr
         ether.payload = arp_reply
         return ether
-    else:
-      return None
 
   def _if_valid_arp_request(self, arp_request_payload):
-    interface_index = -1
+    '''
+    Check if the ARP query requests any interface of this host. If so, return the corresponding interface.
+    '''
     for i in range(len(self.interfaces)):
       if arp_request_payload.protodst in self.interfaces[i].ips:
-        interface_index = i
-    return interface_index
+        return self.interfaces[i]
 
   @property
   def dpid(self):
