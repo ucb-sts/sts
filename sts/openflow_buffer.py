@@ -204,5 +204,3 @@ class OpenFlowBuffer(EventMixin):
 PendingReceive = namedtuple('PendingReceive', ['dpid', 'controller_id', 'fingerprint'])
 PendingSend = namedtuple('PendingSend', ['dpid', 'controller_id', 'fingerprint'])
 
-
-

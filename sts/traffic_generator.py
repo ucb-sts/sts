@@ -62,13 +62,13 @@ class TrafficGenerator (object):
     if self.topology is None:
       raise RuntimeError("TrafficGenerator needs access to topology")
 
-    (src_host, src_interface) = self._choose_host(src_host, self.topology.hosts)    
+    (src_host, src_interface) = self._choose_host(src_host, self.topology.hosts)
     if send_to_self:
       (dst_host, dst_interface) = (src_host, src_interface)
     else:
       (dst_host, dst_interface) = self._choose_host(dst_host,
                                       [h for h in self.topology.hosts if h != src_host])
-      
+
     packet = self._packet_generators[packet_type](src_interface, dst_interface,
                                                   payload_content=payload_content)
     src_host.send(src_interface, packet)
@@ -81,7 +81,7 @@ class TrafficGenerator (object):
     '''
     if host is None:
       if len(hosts) == 0:
-        raise RuntimeError("No host to choose from!")  
+        raise RuntimeError("No host to choose from!")
       host = self.random.choice(hosts)
     if host in self.topology.hid2host.keys():
       host = self.topology.hid2host[host]
@@ -103,4 +103,4 @@ class TrafficGenerator (object):
       return self.random.choice(interface.ips)
     else:
       return random_ip_addr()
-  
+
