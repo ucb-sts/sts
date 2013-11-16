@@ -32,6 +32,7 @@ specifically help them to:
 # on paper while tracking down the root cause of the NOX loop.
 
 from sts.control_flow.base import *
+from sts.controller_manager import *
 from sts.control_flow.interactive import *
 import sts.input_traces.log_parser as log_parser
 from sts.replay_event import *

@@ -40,6 +40,7 @@ import sts.input_traces.log_parser as log_parser
 from sts.replay_event import ControlMessageReceive
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.base import *
+from sts.controller_manager import *
 from sts.util.console import msg
 from sts.util.convenience import is_flow_mod
 

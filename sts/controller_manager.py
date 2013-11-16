@@ -25,6 +25,7 @@ from sts.entities import ControllerState
 from sts.util.console import msg
 from sts.util.network_namespace import bind_raw_socket
 from sts.util.convenience import base64_encode
+from sts.entities import ConnectionlessOFConnection
 
 import subprocess
 import os
@@ -293,4 +294,32 @@ class OVSControllerPatchPanel(ControllerPatchPanel):
   def clean_up(self):
     self.json_worker.close()
     self.pox.kill()
+
+# --- The following mock methods are for use by interactive_replay.py and openflow_replayer.py,
+# who do not necessarily want to replay with true controller instances ---
+
+class MockControllerManager(object):
+  def __init__(self, controller_configs):
+    self.controller_configs = controller_configs
+  def set_simulation(self, simulation): pass
+  def kill_all(self): pass
+  # TODO(cs): these properties are only a temporary fix. In the long run, we
+  # should refactor interactive_replayer to use its own help options, distinct
+  # from interactive's help options.
+  @property
+  def live_controllers(self): return []
+  @property
+  def down_controllers(self): return []
+  def check_controller_status(self): return []
+  def all_controllers_down(self): return False
+
+def boot_mock_controllers(controller_configs, snapshot_service, sync_connection_manager):
+  return MockControllerManager(controller_configs)
+
+def create_mock_connection(controller_config, software_switch, max_backoff_seconds=1024):
+    return ConnectionlessOFConnection(controller_config.cid, software_switch.dpid)
+
+def connect_to_mock_controllers(simulation):
+  simulation.topology.connect_to_controllers(simulation.controller_manager.controller_configs,
+                                             create_connection=create_mock_connection)
 
