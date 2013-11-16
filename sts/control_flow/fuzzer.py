@@ -443,21 +443,20 @@ class Fuzzer(ControlFlow):
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
         # first decide if we should try to process the next command from the switch
-        if (self.random.random() < self.params.ofp_cmd_passthrough_rate):
-          if switch.has_pending_commands():
-            (cmd, pending_receipt) = switch.get_next_command()
-            # then check whether we should make the attempt to process the next command fail
-            if should_fail_flow_mod(cmd):
-              # TODO(jl): log our own flow_mod failure event
-              eventclass = FailFlowMod
-            else:
-              eventclass = ProcessFlowMod
-            switch.process_delayed_command(pending_receipt)
-            b64_packet = base64_encode(cmd)
-            self._log_input_event(eventclass(pending_receipt.dpid,
-                                                 pending_receipt.controller_id,
-                                                 pending_receipt.fingerprint,
-                                                 b64_packet=b64_packet))
+        if (self.random.random() < self.params.ofp_cmd_passthrough_rate) and switch.has_pending_commands():
+          (cmd, pending_receipt) = switch.get_next_command()
+          # then check whether we should make the attempt to process the next command fail
+          if should_fail_flow_mod(cmd):
+            eventclass = FailFlowMod
+            self.log.debug("Failing flow_mod %s" % cmd)
+          else:
+            eventclass = ProcessFlowMod
+          switch.process_delayed_command(pending_receipt)
+          b64_packet = base64_encode(cmd)
+          self._log_input_event(eventclass(pending_receipt.dpid,
+                                           pending_receipt.controller_id,
+                                           pending_receipt.fingerprint,
+                                           b64_packet=b64_packet))
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''

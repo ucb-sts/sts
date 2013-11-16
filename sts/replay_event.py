@@ -968,7 +968,7 @@ def extract_base_fields(json_hash):
 
 class ControlMessageBase(InternalEvent):
   '''
-  Logged whenever an OpenFlowBuffer decides to explicitly fail an openflow packet, or
+  Logged whenever an OpenFlowBuffer decides to explicitly fail an OpenFlow packet, or
   allow a switch to receive or send an openflow packet.
   '''
   def __init__(self, dpid, controller_id, fingerprint, b64_packet="", label=None, round=-1, time=None, timeout_disallowed=False):
@@ -1384,9 +1384,7 @@ class FailFlowMod(ControlMessageBase):
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
     message_waiting = switch.openflow_buffer.message_receipt_waiting(self.pending_receive)
-    if message_waiting:
-      return True
-    return False
+    return True
 
   @property
   def pending_receive(self):
@@ -1404,8 +1402,8 @@ class FailFlowMod(ControlMessageBase):
     if 'b64_packet' in json_hash:
       b64_packet = json_hash['b64_packet']
     return FailFlowMod(dpid, controller_id, fingerprint, b64_packet=b64_packet,
-                          round=round, label=label, time=time,
-                          timeout_disallowed=timeout_disallowed)
+                       round=round, label=label, time=time,
+                       timeout_disallowed=timeout_disallowed)
 
   def __str__(self):
     return "FailFlowMod:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
