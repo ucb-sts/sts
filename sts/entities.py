@@ -453,6 +453,7 @@ class Host (EventMixin):
   If multiple host VMs are too heavy-weight for a single machine, run the
   hosts on their own machines!
   '''
+
   _eventMixin_events = set([DpPacketOut])
   _hids = count(1)
 
@@ -476,7 +477,47 @@ class Host (EventMixin):
 
     Called by PatchPanel
     '''
-    self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
+    if packet.type == ethernet.ARP_TYPE:
+      arp_reply = self._check_arp_reply(packet)
+      if arp_reply is not None:
+        self.log.info("received valid arp packet on interface %s: %s" % (interface.name, str(packet)))
+        self.send(interface, arp_reply)
+        return arp_reply
+      else:
+        self.log.info("received invalid arp packet on interface %s: %s" % (interface.name, str(packet)))
+        return None
+
+  def _check_arp_reply(self, arp_packet):
+    '''
+    Check whether incoming packet is a valid ARP request. If so, construct an ARP reply and send back
+    '''
+    arp_packet_payload = arp_packet.payload
+    if arp_packet_payload.opcode == arp.REQUEST:
+      interface_matched = self._if_valid_arp_request(arp_packet_payload)
+      if interface_matched is None:
+        return None
+      else:
+        # This ARP query is for this host, construct an reply packet
+        arp_reply = arp()
+        arp_reply.hwsrc = interface_matched.hw_addr
+        arp_reply.hwdst = arp_packet_payload.hwsrc
+        arp_reply.opcode = arp.REPLY
+        arp_reply.protosrc = arp_packet_payload.protodst
+        arp_reply.protodst = arp_packet_payload.protosrc
+        ether = ethernet()
+        ether.type = ethernet.ARP_TYPE 
+        ether.src = interface_matched.hw_addr
+        ether.dst = arp_packet.src
+        ether.payload = arp_reply
+        return ether
+
+  def _if_valid_arp_request(self, arp_request_payload):
+    '''
+    Check if the ARP query requests any interface of this host. If so, return the corresponding interface.
+    '''
+    for interface in self.interfaces:
+      if arp_request_payload.protodst in interface.ips:
+        return interface 
 
   @property
   def dpid(self):
