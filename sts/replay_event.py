@@ -956,6 +956,8 @@ class LinkDiscovery(InputEvent):
     link_attrs = json_hash['link_attrs']
     return LinkDiscovery(controller_id, link_attrs, round=round, label=label, time=time)
 
+# N.B. When adding inputs to this list, make sure to update input susequence
+# validity checking in event_dag.py.
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
