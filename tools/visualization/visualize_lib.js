@@ -4,7 +4,7 @@
 
 var globals = {
   initialTraceCount: 2,        // How many event.traces to display
-  baseTimelineWidth: 1000,     // Base width of timeline width, not subject to zooming
+  baseTimelineWidth: 2500,     // Base width of timeline width, not subject to zooming
   timelineType: "1d",          // "1d" or "2d"
   timeline: null,
   tooltip: null,
