@@ -377,7 +377,8 @@ will show an interactive Lamport time diagram of an event trace:
 
     $ open ./tools/visualization/visualize2d.html
 
-A demo page is also available [here](http://www.eecs.berkeley.edu/~rcs/research/sts_visualization/visualize2D.html).
+A demo page is also available
+[here](http://www.eecs.berkeley.edu/~rcs/research/sts_visualization/visualize_example.html).
 
 After loading an event trace, we see a line for each switch, controller, and
 host in the network. If we hover over events, we can see more information
