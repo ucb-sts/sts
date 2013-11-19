@@ -297,7 +297,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def _buffer_flow_mod(self, connection, msg, weight, buffr):
     ''' Called by on_message_received_delayed. Inserts a receipt into self.openflow_buffer and sticks
     the message and receipt into the provided priority queue buffer for later retrieval. '''
-    forwarder = TableInserter(super(FuzzSoftwareSwitch, self).on_message_received, connection)
+    forwarder = TableInserter.instance_for_connection(connection=connection, insert_method=super(FuzzSoftwareSwitch, self).on_message_received)
     receive = self.openflow_buffer.insert_pending_receipt(self.dpid, connection.cid, msg, forwarder)
     buffr.put((weight, msg, receive))
 
@@ -915,7 +915,6 @@ class VMController(Controller):
       session.exec_command("sudo iptables -D %s -s %s -j DROP" %
                            (chain, peer_controller.config.address))
 
-
 class BigSwitchController(VMController):
   def get_status_command(self):
     return 'service floodlight status'
@@ -937,12 +936,24 @@ class ONOSController(VMController):
     return "1 instance of onos running"
 
 class TableInserter(object):
-  ''' Shim layer sitting between incoming messages and a switch. This class 
-  takes a bound inserting/forwarding method and connection and is duck-typed
-  to offer the same (received message) forwarding method as a DeferredOFConnection. '''
-  def __init__(self, insert_method, connection):
-    self.insert_method = insert_method
+  ''' Shim layer sitting between incoming messages and a switch. This class is duck-typed to offer the same 
+  (received message) API to OpenFlowBuffer as a DeferredOFConnection. Instances of this class should be created and 
+  retrieved by providing TableInserter.instance_for_connection() with a method to insert a flow_mod directly into 
+  a switch's table and the connection the flow_mod came in on. Each switch should create and use one TableInserter 
+  for each connection it receives a flow_mod from.
+  '''
+  connection2instance = {}
+
+  @staticmethod
+  def instance_for_connection(connection, insert_method):
+    if connection.ID not in TableInserter.connection2instance:
+      # Note: may cause memory leak if new connections w/ new connection.ID's are constanty created and not reused
+      TableInserter.connection2instance[connection.ID] = TableInserter(connection, insert_method)
+    return TableInserter.connection2instance[connection.ID]
+
+  def __init__(self, connection, insert_method):
     self.connection = connection
+    self.insert_method = insert_method
 
   def allow_message_receipt(self, message):
     return self.insert_method(self.connection, message)

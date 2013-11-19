@@ -448,7 +448,6 @@ class Fuzzer(ControlFlow):
           # then check whether we should make the attempt to process the next command fail
           if should_fail_flow_mod(cmd):
             eventclass = FailFlowMod
-            self.log.debug("Failing flow_mod %s" % cmd)
           else:
             eventclass = ProcessFlowMod
           switch.process_delayed_command(pending_receipt)
