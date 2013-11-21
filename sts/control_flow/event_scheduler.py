@@ -88,7 +88,6 @@ class EventSchedulerBase(object):
       self._input_logger.log_input_event(event, **kws)
 
 class DumbEventScheduler(EventSchedulerBase):
-
   kwargs = set(['epsilon_seconds', 'sleep_interval_seconds'])
 
   def __init__(self, simulation, epsilon_seconds=0.0, sleep_interval_seconds=0.2):
