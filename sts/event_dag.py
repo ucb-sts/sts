@@ -144,10 +144,12 @@ class EventDag(object):
   _peek_seconds = 0.3
   # If we prune a failure, make sure that the subsequent
   # recovery doesn't occur
-  _failure_types = set([SwitchFailure, LinkFailure, ControllerFailure, ControlChannelBlock])
+  _failure_types = set([SwitchFailure, LinkFailure, ControllerFailure,
+                        ControlChannelBlock, BlockControllerPair])
   # NOTE: we treat failure/recovery as an atomic pair, since it doesn't make
   # much sense to prune a recovery event
-  _recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery, ControlChannelUnblock])
+  _recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery,
+                         ControlChannelUnblock, UnblockControllerPair])
   # ignoring these input types
   _ignored_input_types = set([WaitTime])
 
@@ -397,7 +399,7 @@ class EventDag(object):
     # Note: we treat each failure/recovery pair atomically, since it doesn't
     # make much sense to prune recovery events. Also note that that we will
     # never see two failures (for a particular node) in a row without an
-    # interleaving recovery event
+    # interleaving recovery event.
     fingerprint2previousfailure = {}
 
     # NOTE: mutates the elements of self._events_list

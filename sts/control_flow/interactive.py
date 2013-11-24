@@ -30,7 +30,6 @@ from pox.lib.packet.ethernet import *
 from pox.lib.packet.ipv4 import *
 from pox.lib.packet.udp import *
 from pox.lib.packet.icmp import *
-import pox.openflow.libopenflow_01 as of
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 from sts.invariant_checker import InvariantChecker
@@ -67,7 +66,6 @@ class STSCommandArg(object):
       return self._values
     else:
       return self._values()
-
 
 class STSCommand(object):
   def __init__(self, func, name, alias, help_msg):
@@ -473,55 +471,15 @@ class Interactive(ControlFlow):
     dp_event = self.traffic_generator.generate_and_inject(traffic_type, host, send_to_self=send_to_self)
     self._log_input_event(TrafficInjection(dp_event=dp_event, host_id=host.hid))
 
-  def show_flow_table(self, dpid):
+  def show_flow_table(self, dpid=None):
     topology = self.simulation.topology
+    if not dpid:
+      for switch in topology.switches:
+        msg.interactive("Switch %s" % switch.dpid)
+        switch.show_flow_table()
+        return
     switch = topology.get_switch(dpid)
-
-    dl_types = { 0x0800: "IP",
-                 0x0806: "ARP",
-                 0x8100: "VLAN",
-                 0x88cc: "LLDP",
-                 0x888e: "PAE"
-                 }
-    nw_protos = { 1 : "ICMP", 6 : "TCP", 17 : "UDP" }
-
-    ports = { v: k.replace("OFPP_","") for (k,v) in of.ofp_port_rev_map.iteritems() }
-
-    def dl_type(e):
-      d = e.match.dl_type
-      if d is None:
-        return d
-      else:
-        return dl_types[d] if d in dl_types else "%x" %d
-
-    def nw_proto(e):
-      p = e.match.nw_proto
-      return nw_protos[p] if p in nw_protos else p
-
-    def action(a):
-      if isinstance(a, ofp_action_output):
-        return ports[a.port] if a.port in ports else "output(%d)" % a.port
-      else:
-        return str(a)
-    def actions(e):
-      if len(e.actions) == 0:
-        return "(drop)"
-      else:
-        return ", ".join(action(a) for a in e.actions)
-
-    t = Tabular( ("Prio", lambda e: e.priority),
-                ("in_port", lambda e: e.match.in_port),
-                ("dl_type", dl_type),
-                ("dl_src", lambda e: e.match.dl_src),
-                ("dl_dst", lambda e: e.match.dl_dst),
-                ("nw_proto", nw_proto),
-                ("nw_src", lambda e: e.match.nw_src),
-                ("nw_dst", lambda e: e.match.nw_dst),
-                ("tp_src", lambda e: e.match.tp_src),
-                ("tp_dst", lambda e: e.match.tp_dst),
-                ("actions", actions),
-                )
-    t.show(switch.table.entries)
+    switch.show_flow_table()
 
   def invariant_check(self, kind):
     if kind == "omega" or kind == "o":
@@ -550,6 +508,7 @@ class Interactive(ControlFlow):
       message = "Blackholes: "
     else:
       log.warn("Unknown invariant kind...")
+      return
     self.simulation.violation_tracker.track(result, self.logical_time)
     persistent_violations = self.simulation.violation_tracker.persistent_violations
     transient_violations = list(set(result) - set(persistent_violations))

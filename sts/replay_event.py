@@ -95,6 +95,10 @@ class Event(object):
     self.timed_out = False
 
   @property
+  def label_id(self):
+    return int(self.label[1:])
+
+  @property
   def fingerprint(self):
     ''' All events must have a fingerprint. Fingerprints are used to compute
     functional equivalence. '''
@@ -670,7 +674,7 @@ class CheckInvariants(InputEvent):
       if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
         raise KeyboardInterrupt("fail to interactive")
     else:
-      msg.interactive("No correctness violations!")
+      msg.success("No correctness violations!")
     if persistent_violations != []:
       msg.fail("Persistent violations detected!: %s" % str(persistent_violations))
       if hasattr(simulation, "fail_to_interactive_on_persistent_violations") and\
@@ -841,6 +845,10 @@ class DataplaneDrop(InputEvent):
     '''
     return self._fingerprint
 
+  @property
+  def dp_fingerprint(self):
+    return self.fingerprint[1]
+
   @staticmethod
   def from_json(json_hash):
     (label, time, round) = extract_label_time(json_hash)
@@ -863,13 +871,13 @@ class BlockControllerPair(InputEvent):
     self.cid1 = cid1
     self.cid2 = cid2
 
-  def proceed(self):
+  def proceed(self, simulation):
     # if there is a controller patch panel configured, us it, otherwise use
     # iptables.
-    if self.simulation.controller_patch_panel is not None:
-      self.simulation.controller_patch_panel.block_controller_pair(self.cid1, self.cid2)
+    if simulation.controller_patch_panel is not None:
+      simulation.controller_patch_panel.block_controller_pair(self.cid1, self.cid2)
     else:
-      (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
+      (c1, c2) = [ simulation.controller_manager.get_controller(cid)
                     for cid in [self.cid1, self.cid2] ]
       c1.block_peer(c2)
     return True
@@ -895,13 +903,13 @@ class UnblockControllerPair(InputEvent):
     self.cid1 = cid1
     self.cid2 = cid2
 
-  def proceed(self):
+  def proceed(self, simulation):
     # if there is a controller patch panel configured, us it, otherwise use
     # iptables.
-    if self.simulation.controller_patch_panel is not None:
-      self.simulation.controller_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
+    if simulation.controller_patch_panel is not None:
+      simulation.controller_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
     else:
-      (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
+      (c1, c2) = [ simulation.controller_manager.get_controller(cid)
                     for cid in [self.cid1, self.cid2] ]
       c1.unblock_peer(c2)
     return True
@@ -948,6 +956,8 @@ class LinkDiscovery(InputEvent):
     link_attrs = json_hash['link_attrs']
     return LinkDiscovery(controller_id, link_attrs, round=round, label=label, time=time)
 
+# N.B. When adding inputs to this list, make sure to update input susequence
+# validity checking in event_dag.py.
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
@@ -1325,6 +1335,10 @@ class DataplanePermit(InternalEvent):
     See fingerprints/messages.py for format of DPFingerprint.
     '''
     return self._fingerprint
+
+  @property
+  def dp_fingerprint(self):
+    return self.fingerprint[1]
 
   @staticmethod
   def from_json(json_hash):

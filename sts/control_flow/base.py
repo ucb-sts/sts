@@ -20,7 +20,6 @@ from sts.replay_event import ControllerStateChange, PendingStateChange, Determin
 from sts.syncproto.base import SyncTime
 from sts.syncproto.sts_syncer import STSSyncCallback
 from sts.controller_manager import ControllerManager
-from sts.entities import ConnectionlessOFConnection
 from functools import partial
 
 from collections import Counter
@@ -199,23 +198,3 @@ class RecordingSyncCallback(STSSyncCallback):
                                                            time=value))
     controller.sync_connection.send_deterministic_value(xid, value)
 
-# --- The following mock methods are for use by interactive_replay.py and openflow_replayer.py,
-# who do not necessarily want to replay with true controller instances ---
-
-class MockControllerManager(object):
-  def __init__(self, controller_configs):
-    self.controller_configs = controller_configs
-  def set_simulation(self, simulation): pass
-  def kill_all(self): pass
-
-def boot_mock_controllers(controller_configs, snapshot_service,
-                     sync_connection_manager):
-  return MockControllerManager(controller_configs)
-
-def create_mock_connection(controller_config, software_switch):
-    return ConnectionlessOFConnection(controller_config.cid,
-                                      software_switch.dpid)
-def connect_to_mock_controllers(simulation):
-  
-  simulation.topology.connect_to_controllers(simulation.controller_manager.controller_configs,
-                                             create_connection=create_mock_connection)

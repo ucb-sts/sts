@@ -1,8 +1,0 @@
-Think of this as an "integration test suite" library. We collect input
-sequences here that have caused controllers problems previously. The inputs
-themselves (link failures, VM migrations, policy changes) should be largely
-decoupled from the details of the controller under test (i.e. the traces
-should work for pox, Floodlight, Frenetic, etc.)
-
-Input sequences are stored as a log of json objects, each separated by a
-newline character.

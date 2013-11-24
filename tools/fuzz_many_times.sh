@@ -24,12 +24,42 @@ fi
 EXP_NAME=$(basename $2)
 EXP_NAME=${EXP_NAME%.*}
 
+rm -rf experiments/"$EXP_NAME"_no_violations
+rm -rf experiments/"$EXP_NAME"_irreproducible
+mkdir experiments/"$EXP_NAME"_no_violations
+mkdir experiments/"$EXP_NAME"_irreproducible
+
+NUM_REPLAYS=5
+
 # Run simulator 
 for i in $(seq 1 $1)
 do
   echo -e "\n==================== Starting the $i'th iteration ====================\n"
+  # Run Fuzzer
   ./simulator.py -c $2
   NEW_EXP_NAME="$EXP_NAME"_"$i"
   mv experiments/"$EXP_NAME" experiments/"$NEW_EXP_NAME"
-  find experiments/"$NEW_EXP_NAME" | xargs tools/replace_word.sh "$EXP_NAME" "$NEW_EXP_NAME"
+  tools/replace_word.sh "$EXP_NAME" "$NEW_EXP_NAME" experiments/"$NEW_EXP_NAME"
+  VIOLATION=$(tail -n 100 experiments/"$NEW_EXP_NAME"/simulator.out | grep "Persistent violations detected")
+  if [[ -z "$VIOLATION" ]]; then
+    echo "$NEW_EXP_NAME has no violations!"
+    mv experiments/"$NEW_EXP_NAME" experiments/"$EXP_NAME"_no_violations
+    continue
+  fi
+  # Run Replayer up to NUM_REPLAYS times
+  for j in $(seq 1 $NUM_REPLAYS)
+  do
+    ./simulator.py -c experiments/"$NEW_EXP_NAME"/replay_config.py
+    REPLAY_VIOLATION=$(tail -n 100 experiments/"$NEW_EXP_NAME"_replay/simulator.out | grep "Persistent violations detected")
+    if [[ ! -z "$REPLAY_VIOLATION" ]]; then
+      break
+    fi
+    if [[ $j -eq $NUM_REPLAYS ]]; then
+      echo "Cannot reproduce $NEW_EXP_NAME violation!"
+      mv experiments/"$NEW_EXP_NAME" experiments/"$EXP_NAME"_irreproducible
+      mv experiments/"$NEW_EXP_NAME"_replay experiments/"$EXP_NAME"_irreproducible
+      break
+    fi
+  done
 done
+

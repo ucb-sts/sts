@@ -41,6 +41,7 @@ control_flow = Replayer(simulation_config, "%s",
                         input_logger=InputLogger(),
                         wait_on_deterministic_values=%s,
                         allow_unexpected_messages=False,
+                        delay_flow_mods=%s,
                         pass_through_whitelisted_messages=True)
 # Invariant check: %s
 '''
@@ -58,6 +59,7 @@ simulation_config = %s
 
 control_flow = InteractiveReplayer(simulation_config, "%s")
 # wait_on_deterministic_values=%s
+# delay_flow_mods=%s
 # Invariant check: %s
 '''
 
@@ -72,6 +74,7 @@ simulation_config = %s
 
 control_flow = OpenFlowReplayer(simulation_config, "%s")
 # wait_on_deterministic_values=%s
+# delay_flow_mods=%s
 # Invariant check: %s
 '''
 
@@ -86,6 +89,7 @@ simulation_config = %s
 
 control_flow = EfficientMCSFinder(simulation_config, "%s",
                                   wait_on_deterministic_values=%s,
+                                  delay_flow_mods=%s,
                                   invariant_check_name=%s)
 '''
 
@@ -109,15 +113,7 @@ class InputLogger(object):
       self.interactive_replay_cfg_path = results_dir + "/interactive_replay_config.py"
       self.openflow_replay_cfg_path = results_dir + "/openflow_replay_config.py"
     else:
-      now = timestamp_string()
-      self.output_path = "input_traces/" + now + ".trace"
-      basename = os.path.basename(self.output_path)
-
-      self.replay_cfg_path = "./config/" + basename.replace(".trace", ".py")
-      self.mcs_cfg_path = "./config/" + basename.replace(".trace", "") + "_mcs.py"
-      self.interactive_replay_cfg_path = "./config/" + basename.replace(".trace", "") + "_interactive.py"
-      self.openflow_replay_cfg_path = "./config/" + basename.replace(".trace", "") + "_openflow.py"
-
+      raise ValueError("Default results_dir currently not supported")
     self.output = open(self.output_path, 'w')
 
   def disallow_timeouts(self):
@@ -169,10 +165,15 @@ class InputLogger(object):
     if hasattr(control_flow.sync_callback, "record_deterministic_values"):
       wait_on_deterministic_values = control_flow.sync_callback.record_deterministic_values
 
+    delay_flow_mods = False
+    if hasattr(control_flow, "delay_flow_mods"):
+      delay_flow_mods = control_flow.delay_flow_mods
+
     for path, template in path_templates:
       with open(path, 'w') as cfg_out:
         config_string = template % (str(simulation_cfg),
                                     self.output_path,
                                     str(wait_on_deterministic_values),
+                                    str(delay_flow_mods),
                                     "'%s'" % str(control_flow.invariant_check_name))
         cfg_out.write(config_string)

@@ -52,7 +52,7 @@ class Replayer(ControlFlow):
                end_in_interactive=False, input_logger=None,
                allow_unexpected_messages=False,
                pass_through_whitelisted_messages=True,
-               delay_flow_mods=True,
+               delay_flow_mods=False,
                **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
@@ -201,7 +201,7 @@ class Replayer(ControlFlow):
           if isinstance(event, InputEvent):
             self._check_early_state_changes(dag, i, event)
           self._check_new_state_changes(dag, i)
-          self._check_unexpected_dp_messages(dag, i)
+          self._check_unexpected_cp_messages(dag, i)
           # TODO(cs): quasi race-condition here. If unexpected state change
           # happens *while* we're waiting for event, we basically have a
           # deadlock (if controller logging is set to blocking) until the
@@ -232,6 +232,8 @@ class Replayer(ControlFlow):
   def _check_early_state_changes(self, dag, current_index, input):
     ''' Check whether any pending state change that were supposed to come
     *after* the current input have occured. If so, we have violated causality.'''
+    # Note that we never violate causality due to message sends/receipts,
+    # since we buffer all messages.
     pending_state_changes = self.sync_callback.pending_state_changes()
     if len(pending_state_changes) > 0:
       # TODO(cs): currently assumes a single controller (-> single pending state
@@ -268,7 +270,7 @@ class Replayer(ControlFlow):
         self.unexpected_state_changes.append(repr(state_change))
         self.sync_callback.ack_pending_state_change(state_change)
 
-  def _check_unexpected_dp_messages(self, dag, current_index):
+  def _check_unexpected_cp_messages(self, dag, current_index):
     ''' If throughout replay we observe new messages that weren't in the
     original trace, we (usually) want to let them through. This is especially true
     for messages that are related to timers, such as LLDP, since timings will
@@ -276,11 +278,11 @@ class Replayer(ControlFlow):
     controller's behavior. '''
     if not self.allow_unexpected_messages:
       return
-    # TODO(cs): evaluate whether _check_unexpected_dp_messages is more or less
-    # effective than _check_whitelisted_dp_messages. Compare executions with
-    # visualization tool. Currently it appears that this method is too
-    # liberal, and ends up causing timouts as a result of letting messages
-    # through.
+    # TODO(cs): evaluate whether _check_unexpected_cp_messages is more or less
+    # effective than whitelisting cp message types (in OpenflowBuffer).
+    # Compare executions with visualization tool.
+    # Currently it appears that this method is too liberal, and ends up
+    # causing timouts as a result of letting messages through.
 
     # First, build a set of expected ControlMessageSends/Receives fingerprints
     # within the next expected_message_round_window rounds.
@@ -326,7 +328,11 @@ class Replayer(ControlFlow):
 class DataplaneChecker(object):
   ''' Dataplane permits are the default, *unless* they were explicitly dropped in the
   initial run. This class keeps track of whether pending dataplane events should
-  be dropped or forwarded during replay'''
+  be dropped or forwarded during replay.
+
+  Note that whenever DataplaneChecker is in use, it should always be the case
+  that DataplanePermit and DataplaneDrop events are set to "passive" mode,
+  where their proceed() method always returns True.'''
   def __init__(self, event_dag, slop_buffer=10):
     ''' Consider the round i of a DataplaneDrop in the original
     event ordering. slop_buffer defines how tolerant we are to differences in

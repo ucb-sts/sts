@@ -101,7 +101,7 @@ class applications_test(unittest.TestCase):
     TTF = hsa_topo.generate_TTF(network_links)
     access_links = [ MockAccessLink(sw, sw.ports[1]) for sw in switches ]
     blackholes = hsa.find_blackholes(NTF, TTF, access_links)
-    self.assertEqual([(200002, [100001, 100002])], blackholes)
+    self.assertEqual([(200002, [100001, 100002])], [ s[1:] for s in blackholes])
 
   def test_no_blackhole(self):
     switch1 = create_switch(1, 2)

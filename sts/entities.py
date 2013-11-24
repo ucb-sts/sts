@@ -25,12 +25,14 @@ from pox.openflow.flow_table import FlowTableModification
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
 import pox.lib.packet.ethernet as eth
+import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import EthAddr, IPAddr
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
 from sts.openflow_buffer import OpenFlowBuffer
 from sts.util.network_namespace import launch_namespace
 from sts.util.convenience import IPAddressSpace
+from sts.util.tabular import Tabular
 
 import Queue
 from itertools import count
@@ -194,7 +196,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
   def _handle_ConnectionUp(self, event):
     self._setConnection(event.connection, event.ofp)
 
-  def connect(self, create_connection, down_controller_ids=None):
+  def connect(self, create_connection, down_controller_ids=None,
+              max_backoff_seconds=1024):
     ''' - create_connection is a factory method for creating Connection objects
           which are connected to controllers. Takes a ControllerConfig object
           and a reference to a switch (self) as a parameter
@@ -207,7 +210,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     for info in self.controller_info:
       # Don't connect to down controllers
       if info.cid not in down_controller_ids:
-        conn = create_connection(info, self)
+        conn = create_connection(info, self,
+                                 max_backoff_seconds=max_backoff_seconds)
         self.set_connection(conn)
         # cause errors to be raised
         conn.error_handler = self.error_handler
@@ -252,8 +256,11 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     if self.create_connection is None:
       self.log.warn("Never connected in the first place")
 
+    # We should only ever reconnect to live controllers, so set
+    # max_backoff_seconds to a low number.
     connected_to_at_least_one = self.connect(self.create_connection,
-                                             down_controller_ids=down_controller_ids)
+                                             down_controller_ids=down_controller_ids,
+                                             max_backoff_seconds=5)
     if connected_to_at_least_one:
       self.failed = False
     return connected_to_at_least_one
@@ -391,6 +398,53 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     assert(self.delay_flow_mods)
     return self.openflow_buffer.schedule(buffered_cmd_receipt)
 
+  def show_flow_table(self):
+    dl_types = { 0x0800: "IP",
+                 0x0806: "ARP",
+                 0x8100: "VLAN",
+                 0x88cc: "LLDP",
+                 0x888e: "PAE"
+                 }
+    nw_protos = { 1 : "ICMP", 6 : "TCP", 17 : "UDP" }
+
+    ports = { v: k.replace("OFPP_","") for (k,v) in of.ofp_port_rev_map.iteritems() }
+
+    def dl_type(e):
+      d = e.match.dl_type
+      if d is None:
+        return d
+      else:
+        return dl_types[d] if d in dl_types else "%x" %d
+
+    def nw_proto(e):
+      p = e.match.nw_proto
+      return nw_protos[p] if p in nw_protos else p
+
+    def action(a):
+      if isinstance(a, ofp_action_output):
+        return ports[a.port] if a.port in ports else "output(%d)" % a.port
+      else:
+        return str(a)
+    def actions(e):
+      if len(e.actions) == 0:
+        return "(drop)"
+      else:
+        return ", ".join(action(a) for a in e.actions)
+
+    t = Tabular( ("Prio", lambda e: e.priority),
+                ("in_port", lambda e: e.match.in_port),
+                ("dl_type", dl_type),
+                ("dl_src", lambda e: e.match.dl_src),
+                ("dl_dst", lambda e: e.match.dl_dst),
+                ("nw_proto", nw_proto),
+                ("nw_src", lambda e: e.match.nw_src),
+                ("nw_dst", lambda e: e.match.nw_dst),
+                ("tp_src", lambda e: e.match.tp_src),
+                ("tp_dst", lambda e: e.match.tp_dst),
+                ("actions", actions),
+                )
+    t.show(self.table.entries)
+
 class Link (object):
   """
   A network link between two switches
@@ -524,6 +578,7 @@ class Host (EventMixin):
   If multiple host VMs are too heavy-weight for a single machine, run the
   hosts on their own machines!
   '''
+
   _eventMixin_events = set([DpPacketOut])
   _hids = count(1)
 
@@ -547,7 +602,49 @@ class Host (EventMixin):
 
     Called by PatchPanel
     '''
-    self.log.info("received packet on interface %s: %s" % (interface.name, str(packet)))
+    if packet.type == ethernet.ARP_TYPE:
+      arp_reply = self._check_arp_reply(packet)
+      if arp_reply is not None:
+        self.log.info("received valid arp packet on interface %s: %s" % (interface.name, str(packet)))
+        self.send(interface, arp_reply)
+        return arp_reply
+      else:
+        self.log.info("received invalid arp packet on interface %s: %s" % (interface.name, str(packet)))
+        return None
+    self.log.info("Recieved packet %s on interface %s" % (str(packet), interface.name))
+
+  def _check_arp_reply(self, arp_packet):
+    '''
+    Check whether incoming packet is a valid ARP request. If so, construct an ARP reply and send back
+    '''
+    arp_packet_payload = arp_packet.payload
+    if arp_packet_payload.opcode == arp.REQUEST:
+      interface_matched = self._if_valid_arp_request(arp_packet_payload)
+      if interface_matched is None:
+        return None
+      else:
+        # This ARP query is for this host, construct an reply packet
+        arp_reply = arp()
+        arp_reply.hwsrc = interface_matched.hw_addr
+        arp_reply.hwdst = arp_packet_payload.hwsrc
+        arp_reply.opcode = arp.REPLY
+        arp_reply.protosrc = arp_packet_payload.protodst
+        arp_reply.protodst = arp_packet_payload.protosrc
+        ether = ethernet()
+        ether.type = ethernet.ARP_TYPE
+        ether.src = interface_matched.hw_addr
+        ether.dst = arp_packet.src
+        ether.payload = arp_reply
+        return ether
+
+  def _if_valid_arp_request(self, arp_request_payload):
+    '''
+    Check if the ARP query requests any interface of this host. If so, return the corresponding interface.
+    '''
+    for interface in self.interfaces:
+      if arp_request_payload.protodst in interface.ips:
+        return interface
+    return None
 
   @property
   def dpid(self):
@@ -575,14 +672,17 @@ class NamespaceHost(Host):
     self.socket = bind_raw_socket(host_device)
     # Set up an io worker for our end of the socket
     self.io_worker = create_io_worker(self.socket)
-    self.io_worker.set_receive_handler(self.send)
+    self.io_worker.set_receive_handler(self._io_worker_receive_handler)
 
     self.interfaces = [HostInterface(self.guest_eth_addr, IPAddr(ip_addr_str))]
     if name == "":
       name = "host:" + ip_addr_str
     self.name = name
 
-  def send(self, io_worker):
+  def _io_worker_receive_handler(self, io_worker):
+    '''
+    Read a packet from the Namespace and inject it into the network.
+    '''
     message = io_worker.peek_receive_buf()
     # Create an ethernet packet
     # TODO(cs): this assumes that the raw socket returns exactly one ethernet
@@ -597,8 +697,9 @@ class NamespaceHost(Host):
 
   def receive(self, interface, packet):
     '''
-    Process an incoming packet from a switch
-    Called by PatchPanel
+    Send an incoming packet from a switch to the Namespace.
+
+    Called by PatchPanel.
     '''
     self.log.info("received packet on interface %s: %s. Passing to netns" %
                   (interface.name, str(packet)))
@@ -645,6 +746,7 @@ class Controller(object):
     # For network namespaces only:
     self.guest_eth_addr = None
     self.host_device = None
+    self.welcome_msg = " =====> Starting Controller <===== "
 
   @property
   def remote(self):
@@ -695,6 +797,7 @@ class Controller(object):
     ''' Start a new controller process based on the config's start_cmd
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process '''
+    self.log.info(self.welcome_msg)
     if self.state != ControllerState.DEAD:
       self.log.warn("Starting controller %s when it is not dead!" % self.label)
       return
@@ -744,12 +847,14 @@ class POXController(Controller):
   # non-determinism in POX.
   def __init__(self, controller_config, sync_connection_manager, snapshot_service):
     super(POXController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
-    self.log.info(" =====> STARTING POX CONTROLLER <===== ")
+    self.welcome_msg = " =====> Starting POX Controller <===== "
 
   def start(self):
     ''' Start a new POX controller process based on the config's start_cmd
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process '''
+    self.log.info(self.welcome_msg)
+
     if self.state != ControllerState.DEAD:
       self.log.warn("Starting controller %s when controller is not dead!" % self.label)
       return
@@ -824,51 +929,120 @@ class VMController(Controller):
     self._ssh_client = None
     self.username = username
     self.password = password
+    self.commands = {}
+    self.populate_commands()
+    self.welcome_msg = " =====> Starting VM Controller <===== "
+    self.alive_status_string = "" # subclass dependent
+
+  def populate_commands(self):
+    if self.config.start_cmd == "":
+      raise RuntimeError("No command found to start controller %s!" % self.label)
+    if self.config.kill_cmd == "":
+      raise RuntimeError("No command found to kill controller %s!" % self.label)
+    if self.config.restart_cmd == "":
+      raise RuntimeError("No command found to restart controller %s!" % self.label)
+    self.commands["start"] = " ".join(self.config.expanded_start_cmd)
+    self.commands["kill"] = " ".join(self.config.expanded_kill_cmd)
+    self.commands["restart"] = " ".join(self.config.expanded_restart_cmd)
+    self.commands["check"] = "" # subclass dependent
 
   def kill(self):
     if self.state != ControllerState.ALIVE:
       self.log.warn("Killing controller %s when controller is not alive!" % self.label)
       return
-    if self.config.kill_cmd == "":
-      raise RuntimeError("No command found to kill controller %s!" % self.label)
-    self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
-    p = popen_filtered("[%s]" % self.label, ' '.join(self.config.expanded_kill_cmd),
-                       self.config.cwd, shell=True)
-    p.wait()
+    kill_cmd = self.commands["kill"]
+    self.log.info("Killing controller %s: %s" % (self.label, kill_cmd))
+    self.execute_local_command(kill_cmd)
     self.state = ControllerState.DEAD
 
   def start(self):
-    self.log.info(" =====> STARTING VM CONTROLLER <===== ")
+    self.log.info(self.welcome_msg)
     if self.state != ControllerState.DEAD:
       self.log.warn("Starting controller %s when controller is not dead!" % self.label)
       return
-    if self.config.start_cmd == "":
-      raise RuntimeError("No command found to start controller %s!" % self.label)
-    self.log.info("Launching controller %s: %s" % (self.label, " ".join(self.config.expanded_start_cmd)))
-    p = popen_filtered("[%s]" % self.label, ' '.join(self.config.expanded_start_cmd),
-                       self.config.cwd, shell=True)
-    p.wait()
+    start_cmd = self.commands["start"]
+    self.log.info("Launching controller %s: %s" % (self.label, start_cmd))
+    self.execute_local_command(start_cmd)
     self.state = ControllerState.STARTING
 
   def restart(self):
     if self.state != ControllerState.DEAD:
       self.log.warn("Restarting controller %s when controller is not dead!" % self.label)
       return
-    if self.config.restart_cmd == "":
-      raise RuntimeError("No command found to restart controller %s!" % self.label)
-    self.log.info("Relaunching controller %s: %s" % (self.label, " ".join(self.config.expanded_restart_cmd)))
-    p = popen_filtered("[%s]" % self.label, ' ',join(self.config.expanded_restart_cmd),
-                       self.config.cwd, shell=True)
-    p.wait()
+    restart_cmd = self.commands["restart"]
+    self.log.info("Relaunching controller %s: %s" % (self.label, restart_cmd))
+    self.execute_local_command(restart_cmd)
     self.state = ControllerState.STARTING
 
-  @abc.abstractmethod
-  def get_status_command(self):
-    pass
+  # Run a command locally using Popen
+  def execute_local_command(self, cmd):
+    process = popen_filtered("[%s]" % self.label, cmd, self.config.cwd, shell=True)
+    output = ""
+    while True:
+      output += process.stdout.read(100) # arbitrary
+      if output == '' and process.poll is not None:
+        break
+    return output
 
-  @abc.abstractmethod
-  def get_alive_status_string(self):
-    pass
+  # Run a command remotely using paramiko
+  def execute_remote_command(self, cmd):
+    max_iterations = 10
+    while max_iterations > 0:
+      try:
+        session = self.ssh_client.open_channel(kind='session')
+        session.exec_command(cmd)
+        reply = ""
+        while True:
+          if session.recv_ready():
+            reply += session.recv(100) # arbitrary
+          if session.exit_status_ready():
+            break
+        session.close()
+        return reply
+      except:
+        self.log.warn("Exception in executing remote command \"%s\": %s" % (cmd, self.label))
+        self._ssh_client = None
+        max_iterations -= 1
+    return ""
+
+  # SSH into the VM to check on controller process
+  def check_status(self, simulation):
+    check_cmd = self.commands["check"]
+    self.log.info("Checking status of controller %s: %s" % (self.label, check_cmd))
+    if self.state == ControllerState.STARTING:
+      return (True, "OK")
+    remote_status = self.execute_remote_command(check_cmd)
+    actual_state = ControllerState.DEAD
+    # Alive means remote controller process exists
+    if self.alive_status_string in remote_status:
+      actual_state = ControllerState.ALIVE
+    if self.state == ControllerState.DEAD and actual_state == ControllerState.ALIVE:
+      self.log.warn("%s is dead, but controller process found!" % self.label)
+      self.state = ControllerState.ALIVE
+    if self.state == ControllerState.ALIVE and actual_state == ControllerState.DEAD:
+      return (False, "Alive, but no controller process found!")
+    return (True, "OK")
+
+  def block_peer(self, peer_controller):
+    for chain in ['INPUT', 'OUTPUT']:
+      check_block_cmd = "sudo iptables -L %s | grep \"DROP.*%s\"" % (chain, peer_controller.config.address)
+      add_block_cmd = "sudo iptables -I %s 1 -s %s -j DROP" % (chain, peer_controller.config.address)
+      # If already blocked, do nothing
+      if self.execute_remote_command(check_block_cmd) != "":
+        continue
+      self.execute_remote_command(add_block_cmd)
+
+  def unblock_peer(self, peer_controller):
+    for chain in ['INPUT', 'OUTPUT']:
+      check_block_cmd = "sudo iptables -L %s | grep \"DROP.*%s\"" % (chain, peer_controller.config.address)
+      remove_block_cmd = "sudo iptables -D %s -s %s -j DROP" % (chain, peer_controller.config.address)
+      max_iterations = 10
+      while max_iterations > 0:
+        # If already unblocked, do nothing
+        if self.execute_remote_command(check_block_cmd) == "":
+          break
+        self.execute_remote_command(remove_block_cmd)
+        max_iterations -= 1
 
   @property
   def ssh_client(self):
@@ -884,44 +1058,45 @@ class VMController(Controller):
       self._ssh_client.connect(username=self.username, password=self.password)
     return self._ssh_client
 
-  def check_status(self, simulation):
-    self.log.info("Checking status of controller %s" % self.label)
-    if self.state == ControllerState.STARTING:
-      return (True, "OK")
-    session = self.ssh_client.open_channel(kind='session')
-    session.exec_command(self.get_status_command())
-    while not session.recv_ready():
-      self.log.debug("Awaiting controller status reply...")
-      time.sleep(0.1)
-    reply = ""
-    while session.recv_ready():
-      reply += session.recv(100)
-    # Actual state is whether remote process exists
-    actual_state = ControllerState.ALIVE if (self.get_alive_status_string() in reply) else ControllerState.DEAD
-    if self.state == ControllerState.DEAD and actual_state == ControllerState.ALIVE:
-      return (False, "Dead, but controller process exists!")
-    if self.state == ControllerState.ALIVE and actual_state == ControllerState.DEAD:
-      return (False, "Alive, but no controller process found!")
-    return (True, "OK")
-
-  def block_peer(self, peer_controller):
-    for chain in ['INPUT', 'OUTPUT']:
-      session = self.ssh_client.open_channel(kind='session')
-      session.exec_command("sudo iptables -I %s 1 -s %s -j DROP" %
-                           (chain, peer_controller.config.address))
-
-  def unblock_peer(self, peer_controller):
-    for chain in ['INPUT', 'OUTPUT']:
-      session = self.ssh_client.open_channel(kind='session')
-      session.exec_command("sudo iptables -D %s -s %s -j DROP" %
-                           (chain, peer_controller.config.address))
-
 class BigSwitchController(VMController):
-  def get_status_command(self):
-    return 'service floodlight status'
 
-  def get_alive_status_string(self):
-    return "alive"
+  def __init__(self, controller_config, sync_connection_manager,
+               snapshot_service, username="root", password=""):
+    super(BigSwitchController, self).__init__(controller_config,
+          sync_connection_manager, snapshot_service,
+          username=username, password=password)
+    self.welcome_msg = " =====> Starting BigSwitch Controller <===== "
+    self.alive_status_string = "start/running"
+
+  def populate_commands(self):
+    if self.config.start_cmd == "":
+      raise RuntimeError("No command found to start controller %s!" % self.label)
+    self.commands["start"] = " ".join(self.config.expanded_start_cmd)
+    self.commands["kill"] = "service floodlight stop"
+    self.commands["restart"] = "service floodlight start; initctl stop bscmon"
+    self.commands["check"] = "service floodlight status"
+
+  def start(self):
+    super(BigSwitchController, self).start()
+    self.execute_remote_command(self.commands["restart"])
+
+  def kill(self):
+    if self.state != ControllerState.ALIVE:
+      self.log.warn("Killing controller %s when controller is not alive!" % self.label)
+      return
+    kill_cmd = self.commands["kill"]
+    self.log.info("Killing controller %s: %s" % (self.label, kill_cmd))
+    self.execute_remote_command(kill_cmd)
+    self.state = ControllerState.DEAD
+
+  def restart(self):
+    if self.state != ControllerState.DEAD:
+      self.log.warn("Restarting controller %s when controller is not dead!" % self.label)
+      return
+    restart_cmd = self.commands["restart"]
+    self.log.info("Relaunching controller %s: %s" % (self.label, restart_cmd))
+    self.execute_remote_command(restart_cmd)
+    self.state = ControllerState.STARTING
 
 class ONOSController(VMController):
   def __init__(self, controller_config, sync_connection_manager,
@@ -929,12 +1104,12 @@ class ONOSController(VMController):
     super(ONOSController, self).__init__(controller_config,
           sync_connection_manager, snapshot_service,
           username=username, password=password)
+    self.welcome_msg = " =====> Starting ONOS Controller <===== "
+    self.alive_status_string = "1 instance of onos running"
 
-  def get_status_command(self):
-    return 'cd ONOS; ./start-onos.sh status'
-
-  def get_alive_status_string(self):
-    return "1 instance of onos running"
+  def populate_commands(self):
+    super(ONOSController, self).populate_commands()
+    self.commands["check"] = "cd ONOS; ./start-onos.sh status"
 
 class TableInserter(object):
   ''' Shim layer sitting between incoming messages and a switch. This class is duck-typed to offer the same 
@@ -959,3 +1134,4 @@ class TableInserter(object):
 
   def allow_message_receipt(self, message):
     return self.insert_method(self.connection, message)
+

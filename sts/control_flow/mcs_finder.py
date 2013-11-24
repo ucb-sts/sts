@@ -52,6 +52,7 @@ class MCSFinder(ControlFlow):
                no_violation_verification_runs=1,
                optimized_filtering=False, forker=LocalForker(),
                replay_final_trace=True, strict_assertion_checking=False,
+               delay_flow_mods=False,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     # number of subsequences delta debugging has examined so far, for
@@ -115,6 +116,7 @@ class MCSFinder(ControlFlow):
     self.forker = forker
     self.replay_final_trace = replay_final_trace
     self.strict_assertion_checking = strict_assertion_checking
+    self.delay_flow_mods = delay_flow_mods
 
   def log(self, s):
     ''' Output a message to both self._log and self._extra_log '''
@@ -163,7 +165,7 @@ class MCSFinder(ControlFlow):
     # filter event types we don't want to include in the MCS
     # (e.g. CheckInvariants)
     self.dag.mark_invalid_input_sequences()
-    self.dag = self.dag.filter_unsupported_input_types()
+    # TODO(cs): invoke dag.filter_unsupported_input_types()
 
     if len(self.dag) == 0:
       raise RuntimeError("No supported input types?")
@@ -359,6 +361,7 @@ class MCSFinder(ControlFlow):
                           input_logger=input_logger,
                           allow_unexpected_messages=False,
                           pass_through_whitelisted_messages=True,
+                          delay_flow_mods=self.delay_flow_mods,
                           **self.kwargs)
       replayer.init_results(results_dir)
       self._runtime_stats = RuntimeStats(subsequence_id)
@@ -368,7 +371,7 @@ class MCSFinder(ControlFlow):
         simulation = replayer.simulate()
         self._track_new_internal_events(simulation, replayer)
         # Wait a bit in case the bug takes awhile to happen
-        self.log("Sleeping %d seconds after run"  % self.end_wait_seconds)
+        self.log("Sleeping %d seconds after run" % self.end_wait_seconds)
         time.sleep(self.end_wait_seconds)
         violations = self.invariant_check(simulation)
         if violations != []:
@@ -407,7 +410,7 @@ class MCSFinder(ControlFlow):
       else:
         msg.fail("Bug does not match initial violation fingerprint!")
     else:
-      msg.interactive("No correctness violations!")
+      msg.success("No correctness violations!")
 
     if not ignore_runtime_stats:
       self._runtime_stats.merge_client_dict(client_runtime_stats)
