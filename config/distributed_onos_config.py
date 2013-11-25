@@ -2,18 +2,18 @@
 import os
 from config.experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology
-from sts.control_flow import Fuzzer
+from sts.control_flow import Fuzzer, Interactive
 from sts.input_traces.input_logger import InputLogger
 from sts.simulation_state import SimulationConfig
 
 if 'CLUSTER' not in os.environ:
   raise RuntimeError('''Need to set $CLUSTER. See '''
-                     '''https://wiki.onlab.us:8443/display/Eng/ONOS+Development+VM''')
-  # On c5:
-  # export CLUSTER=${HOME}/.cluster.hosts
-  # export ONOS_CLUSTER_BASENAME="onosdev"
-  # export ONOS_CLUSTER_NR_NODES=2
-  # export PATH=${HOME}/vagrant_onosdev/ONOS/cluster-mgmt/bin:$PATH
+                     '''https://wiki.onlab.us:8443/display/Eng/ONOS+Development+VM.\n'''
+                     '''On c5:\n'''
+                     '''export CLUSTER=${HOME}/.cluster.hosts\n'''
+                     '''export ONOS_CLUSTER_BASENAME="onosdev"\n'''
+                     '''export ONOS_CLUSTER_NR_NODES=2\n'''
+                     '''export PATH=${HOME}/vagrant_onosdev/ONOS/cluster-mgmt/bin:$PATH''')
 
 # Use ONOS as our controller.
 # TODO(cs): first make sure to clean up any preexisting ONOS instances.
@@ -45,8 +45,8 @@ simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_params=topology_params,
                                      kill_controllers_on_exit=False)
 
-control_flow = Fuzzer(simulation_config, check_interval=20,
-                      halt_on_violation=True,
-                      input_logger=InputLogger(),
-                      invariant_check_name="InvariantChecker.check_loops")
-
+#control_flow = Fuzzer(simulation_config, check_interval=20,
+#                      halt_on_violation=True,
+#                      input_logger=InputLogger(),
+#                      invariant_check_name="InvariantChecker.check_loops")
+control_flow = Interactive(simulation_config, input_logger=InputLogger())
