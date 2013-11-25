@@ -42,12 +42,20 @@ class msg():
     print msg.BEGIN + msg.CYAN + message + msg.END
 
   @staticmethod
-  def event_success(message):
-    print msg.BEGIN + msg.GREEN + msg.BEGIN + msg.B_BLUE + message + msg.END
+  def openflow_event(message):
+    print msg.BEGIN + msg.BLUE + message + msg.END
 
   @staticmethod
-  def event_timeout(message):
-    print msg.BEGIN + msg.RED + msg.BEGIN + msg.B_BLUE + message + msg.END
+  def special_event(message):
+    print msg.BEGIN + msg.MAGENTA + message + msg.END
+
+  @staticmethod
+  def replay_event_success(message):
+    print msg.BEGIN + msg.CYAN + msg.BEGIN + msg.B_BLUE + message + msg.END
+
+  @staticmethod
+  def replay_event_timeout(message):
+    print msg.BEGIN + msg.MAGENTA + msg.BEGIN + msg.B_RED + message + msg.END
 
   @staticmethod
   def mcs_event(message):

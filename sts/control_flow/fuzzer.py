@@ -30,7 +30,7 @@ from pox.lib.util import TimeoutError
 from pox.lib.packet.lldp import *
 from config.invariant_checks import name_to_invariant_check
 from sts.util.convenience import base64_encode
-from sts.entities import FuzzSoftwareSwitch
+from sts.entities import FuzzSoftwareSwitch, ControllerState
 from sts.openflow_buffer import OpenFlowBuffer
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
@@ -91,7 +91,7 @@ class Fuzzer(ControlFlow):
 
     self.check_interval = check_interval
     if self.check_interval is None:
-      log.warn("Check interval is not specified... not checking invariants")
+      print >> sys.stderr, "Fuzzer Warning: Check interval is not specified... not checking invariants"
     if invariant_check_name not in name_to_invariant_check:
       raise ValueError('''Unknown invariant check %s.\n'''
                        '''Invariant check name must be defined in config.invariant_checks''',
@@ -164,9 +164,14 @@ class Fuzzer(ControlFlow):
   def _compute_unblocked_controller_pairs(self):
     sorted_controllers = sorted(self.simulation.controller_manager.controllers, key=lambda c: c.cid)
     unblocked_pairs = []
-    for i in xrange(0, len(sorted_controllers)-1):
+    for i in xrange(0, len(sorted_controllers)):
       for j in xrange(i+1, len(sorted_controllers)):
-        unblocked_pairs.append((sorted_controllers[i], sorted_controllers[j]))
+        c1 = sorted_controllers[i]
+        c2 = sorted_controllers[j]
+        # Make sure all controller pairs are unblocked on startup
+        c1.unblock_peer(c2)
+        c2.unblock_peer(c1)
+        unblocked_pairs.append((c1.cid, c2.cid))
     return unblocked_pairs
 
   def init_results(self, results_dir):
@@ -197,7 +202,6 @@ class Fuzzer(ControlFlow):
         assert(isinstance(switch, FuzzSoftwareSwitch))
         switch.use_delayed_commands()
         switch.randomize_flow_mods()
-        
     return self.loop()
 
   def loop(self):
@@ -327,7 +331,7 @@ class Fuzzer(ControlFlow):
           msg.fail("The following correctness violations have occurred: %s"
                    % str(violations))
         else:
-          msg.interactive("No correctness violations!")
+          msg.success("No correctness violations!")
         if transient_violations != []:
           self._log_input_event(InvariantViolation(transient_violations))
         if persistent_violations != []:
@@ -465,7 +469,10 @@ class Fuzzer(ControlFlow):
           continue
         if self.random.random() < self.params.switch_recovery_rate:
           if down_controller_ids is None:
-            down_controller_ids = [ c.cid for c in self.simulation.controller_manager.down_controllers ]
+            self.simulation.controller_manager.check_controller_status()
+            down_controller_ids = [ c.cid for c in self.simulation.controller_manager.controllers\
+                                    if c.state == ControllerState.STARTING or\
+                                       c.state == ControllerState.DEAD ]
           connected = self.simulation.topology\
                           .recover_switch(software_switch,
                                           down_controller_ids=down_controller_ids)
@@ -514,7 +521,7 @@ class Fuzzer(ControlFlow):
       for host in self.simulation.topology.hosts:
         if self.random.random() < self.params.traffic_generation_rate:
           if len(host.interfaces) > 0:
-            msg.event("injecting a random packet")
+            msg.event("Injecting a random packet")
             traffic_type = "icmp_ping"
             dp_event = self.traffic_generator.generate_and_inject(traffic_type, host)
             self._log_input_event(TrafficInjection(dp_event=dp_event))
@@ -569,6 +576,7 @@ class Fuzzer(ControlFlow):
     if (len(self.unblocked_controller_pairs) > 0 and
         self.random.random() < self.params.intracontroller_block_rate):
       (cid1, cid2) = self.random.choice(self.unblocked_controller_pairs)
+      msg.event("Unblocking controllers %s, %s" % (cid1, cid2))
       blocked_this_round = (cid1, cid2)
       self.unblocked_controller_pairs.remove((cid1, cid2))
       if self.simulation.controller_patch_panel is not None:
@@ -577,11 +585,13 @@ class Fuzzer(ControlFlow):
         (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
                       for cid in [cid1, cid2] ]
         c1.block_peer(c2)
+        c2.block_peer(c1)
       self._log_input_event(BlockControllerPair(cid1, cid2))
 
     if (len(self.blocked_controller_pairs) > 0 and
         self.random.random() < self.params.intracontroller_unblock_rate):
       (cid1, cid2) = self.random.choice(self.blocked_controller_pairs)
+      msg.event("Blocking controllers %s, %s" % (cid1, cid2))
       self.blocked_controller_pairs.remove((cid1, cid2))
       self.unblocked_controller_pairs.append((cid1, cid2))
       if self.simulation.controller_patch_panel is not None:
@@ -590,6 +600,7 @@ class Fuzzer(ControlFlow):
         (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
                       for cid in [cid1, cid2] ]
         c1.unblock_peer(c2)
+        c2.unblock_peer(c1)
       self._log_input_event(UnblockControllerPair(cid1, cid2))
 
     if blocked_this_round is not None:

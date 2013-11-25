@@ -6,7 +6,8 @@ import os.path
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 from pox.openflow.libopenflow_01 import *
-from sts.control_flow import Fuzzer, create_mock_connection
+from sts.control_flow import Fuzzer
+from sts.controller_manager import create_mock_connection
 from sts.entities import FuzzSoftwareSwitch
 from sts.simulation_state import SimulationConfig
 from sts.topology import create_switch

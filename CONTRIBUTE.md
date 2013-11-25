@@ -1,4 +1,4 @@
-See https://github.com/ucb-sts/sts/blob/master/CONTRIBUTE.md for an HTML
+See http://ucb-sts.github.io/sts/contribute.html for an HTML
 version of this page.
 
 Great to have you here. Here are a few ways you can help make this project better!

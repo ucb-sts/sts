@@ -61,6 +61,11 @@ def process_data(msg):
 def process_actions(msg):
   return tuple("output(%d)" % a.port if isinstance(a, ofp_action_output) else str(type(a)) for a in msg.actions)
 
+def convert_match_to_human_readable_string(pkt):
+  match_str = hsa.hs_format["display"](hsa.ofp_match_to_hsa_match(pkt.match))
+  match_str += ",in_port:%s" % str(pkt.match.in_port)
+  return match_str
+
 class OFFingerprint(Fingerprint):
   ''' Fingerprints for openflow messages '''
   #  ofp_type -> fields to include in fingerprint
@@ -70,7 +75,7 @@ class OFFingerprint(Fingerprint):
     "ofp_features_reply" : ["datapath_id"],
     "ofp_switch_config" : ["flags"],
     "ofp_flow_mod" : ["command", "match", "idle_timeout", "hard_timeout", "priority",
-                     "out_port", "flags", "actions"],
+                      "out_port", "flags", "actions"],
     "ofp_port_mod" : ["port_no", "config", "mask", "advertise"],
     "ofp_queue_get_config_request" : [],
     "ofp_queue_get_config_reply" : [],
@@ -104,6 +109,7 @@ class OFFingerprint(Fingerprint):
   }
 
   flow_mod_commands = { v: k.replace("OFPFC_","").lower() for (k,v) in ofp_flow_mod_command_rev_map.iteritems() }
+
   special_fields = {
     # data needs a nested fingerprint
     'data' : process_data,
@@ -115,7 +121,7 @@ class OFFingerprint(Fingerprint):
     # match has a bunch of crazy fields
     # Trick: convert it to an hsa match, and extract the human readable string
     # for the hsa match
-    'match' : lambda pkt: hsa.hs_format["display"](hsa.ofp_match_to_hsa_match(pkt.match)),
+    'match' : convert_match_to_human_readable_string,
     'command': lambda ofp: OFFingerprint.flow_mod_commands[ofp.command]
   }
 

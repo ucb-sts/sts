@@ -1,13 +1,14 @@
 #!/bin/bash
 
-if [ $# -le 3 ]; then
-  echo "Usage: replace_word.sh [word_to_replace] [new word] [files]"
+if [ $# < 3 ]; then
+  echo "Usage: replace_word.sh [word_to_replace] [new word] [directory]"
   exit
 fi
 
 BEFORE=$1
 AFTER=$2
-FILES=${@:3}
+DIRECTORY=$3
+FILES=$(find $DIRECTORY)
 
 for f in $FILES; do
   if ! [ -f $f ]; then
