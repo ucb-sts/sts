@@ -30,15 +30,15 @@ class MockConnection(object):
   def allow_message_receipt(self, message):
     self.passed_message = True
 
-class GodSchedulerTest(unittest.TestCase):
+class OpenFlowBufferTest(unittest.TestCase):
   def test_basic(self):
-    god = OpenFlowBuffer()
+    buf = OpenFlowBuffer()
     message = ofp_flow_mod(match=ofp_match(in_port=1, nw_src="1.1.1.1"),
                            action=ofp_action_output(port=1))
     mock_conn = MockConnection()
-    god.insert_pending_receipt(1,"c1",message,mock_conn)
+    buf.insert_pending_receipt(1,"c1",message,mock_conn)
     pending_receipt = PendingReceive(1,"c1",OFFingerprint.from_pkt(message))
-    self.assertTrue(god.message_receipt_waiting(pending_receipt))
-    god.schedule(pending_receipt)
+    self.assertTrue(buf.message_receipt_waiting(pending_receipt))
+    buf.schedule(pending_receipt)
     self.assertTrue(mock_conn.passed_message)
-    self.assertFalse(god.message_receipt_waiting(pending_receipt))
+    self.assertFalse(buf.message_receipt_waiting(pending_receipt))
