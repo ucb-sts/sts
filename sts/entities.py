@@ -854,8 +854,8 @@ class VMController(Controller):
     process = popen_filtered("[%s]" % self.label, cmd, self.config.cwd, shell=True)
     output = ""
     while True:
-      output += process.stdout.read(100) # arbitrary
-      if output == '' and process.poll is not None:
+      output += process.stdout.read(1) # arbitrary
+      if output == '' and process.poll() is not None:
         break
     return output
 
