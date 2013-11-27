@@ -119,6 +119,37 @@ class applications_test(unittest.TestCase):
     blackholes = hsa.find_blackholes(NTF, TTF, access_links)
     self.assertEqual([], blackholes)
 
+  def test_blackhole_with_no_action_rules(self):
+    ''' An ingress switch with an explicit drop rule should count as a
+    blackhole '''
+    switch1 = create_switch(1, 2)
+    flow_mod = ofp_flow_mod(xid=124, priority=1, match=ofp_match(in_port=switch1.ports[1].port_no, nw_src="1.2.3.4"))
+    switch1.table.process_flow_mod(flow_mod)
+    switch2 = create_switch(2, 2)
+    network_links = [Link(switch1, switch1.ports[2], switch2, switch2.ports[2]),
+                     Link(switch2, switch2.ports[2], switch1, switch1.ports[2])]
+    switches = [switch1, switch2]
+    NTF = hsa_topo.generate_NTF(switches)
+    TTF = hsa_topo.generate_TTF(network_links)
+    access_links = [ MockAccessLink(sw, sw.ports[1]) for sw in switches ]
+    import pdb; pdb.set_trace()
+    blackholes = hsa.find_blackholes(NTF, TTF, access_links)
+    self.assertNotEqual(blackholes, [])
+
+  def test_no_blackhole_without_rules(self):
+    ''' An ingress switch with no rule should not count as a
+    blackhole '''
+    switch1 = create_switch(1, 2)
+    switch2 = create_switch(2, 2)
+    network_links = [Link(switch1, switch1.ports[2], switch2, switch2.ports[2]),
+                     Link(switch2, switch2.ports[2], switch1, switch1.ports[2])]
+    switches = [switch1, switch2]
+    NTF = hsa_topo.generate_NTF(switches)
+    TTF = hsa_topo.generate_TTF(network_links)
+    access_links = [ MockAccessLink(sw, sw.ports[1]) for sw in switches ]
+    blackholes = hsa.find_blackholes(NTF, TTF, access_links)
+    self.assertEqual(blackholes, [])
+
 if __name__ == '__main__':
   if submodule_loaded:
     unittest.main()
