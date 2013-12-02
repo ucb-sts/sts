@@ -113,6 +113,7 @@ the POX controller process ("C1").
 
 One particularly useful feature of the Fuzzer is that you can drop into
 interactive mode, described next, by hitting ^C at any point in the execution.
+You can then return to Fuzzer by hitting ^D.
 
 ### Interactive Mode
 
@@ -246,7 +247,8 @@ configuration file:
     00:01.006 00:00.000 Successfully matched event ControlMessageReceive:i2 c1 -> s2 [ofp_hello: ]
     ...
 
-Like Fuzzer, we can drop into interactive mode at any time by sending ^C.
+Like Fuzzer, we can drop into interactive mode at any time by sending ^C, and
+return to replay by sending ^D.
 
 We can now replay as many times as we need to understand the root cause. The
 console output and other results from our replay runs can be found in a new
