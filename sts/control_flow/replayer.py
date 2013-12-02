@@ -217,6 +217,7 @@ class Replayer(ControlFlow):
           interactive = Interactive(self.simulation_cfg,
                                     input_logger=self._input_logger)
           interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
+          # TODO(cs): what is the purpose of this line of code?
           self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
     finally:
       if self.old_interrupt:
@@ -225,8 +226,7 @@ class Replayer(ControlFlow):
       if self.default_dp_permit:
         msg.event(color.B_BLUE+"DataplaneDrop Stats: %s" % str(self.dp_checker.stats))
     if self.end_in_interactive:
-      interactive = Interactive(self.simulation_cfg,
-          input_logger=self._input_logger)
+      interactive = Interactive(self.simulation_cfg, input_logger=self._input_logger)
       interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
 
   def _check_early_state_changes(self, dag, current_index, input):

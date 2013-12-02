@@ -222,6 +222,7 @@ class Fuzzer(ControlFlow):
       self.interrupted = True
       raise KeyboardInterrupt()
 
+    # signal.signal returns the previous interrupt handler.
     self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
 
     try:
@@ -264,11 +265,13 @@ class Fuzzer(ControlFlow):
             self.check_dataplane(pass_through=True)
 
           msg.event("Round %d completed." % self.logical_time)
+          # Note that time.sleep triggers a round of select.select()
           time.sleep(self.delay)
         except KeyboardInterrupt as e:
           if self.interrupted:
             interactive = Interactive(self.simulation_cfg, self._input_logger)
             interactive.simulate(self.simulation, bound_objects=( ('fuzzer', self), ))
+            # TODO(cs): what is the purpose of this line of code?
             self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
           else:
             raise e
