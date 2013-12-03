@@ -111,8 +111,11 @@ class IOMaster(object):
 
       def run(self):
         while not self.done:
+          # TODO(cs): I believe this may trigger race conditions whenever
+          # asynchronous signals preempt the main thread!
           _io_master.select(None)
 
+    # TODO(cs): why do we invoke this sleep?
     self.sleep(0.05)
     io_thread = BackgroundIOThread()
     io_thread.daemon = False

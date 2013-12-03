@@ -217,6 +217,7 @@ class Fuzzer(ControlFlow):
 
     def interrupt(sgn, frame):
       msg.interactive("Interrupting fuzzer, dropping to console (press ^C again to terminate)")
+      # If ^C is triggered twice in a row, invoke the original handler.
       signal.signal(signal.SIGINT, self.old_interrupt)
       self.old_interrupt = None
       self.interrupted = True
@@ -271,7 +272,8 @@ class Fuzzer(ControlFlow):
           if self.interrupted:
             interactive = Interactive(self.simulation_cfg, self._input_logger)
             interactive.simulate(self.simulation, bound_objects=( ('fuzzer', self), ))
-            # TODO(cs): what is the purpose of this line of code?
+            # If Interactive terminated due to ^D, return to our replaying loop,
+            # prepared again to drop into Interactive on ^C.
             self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
           else:
             raise e

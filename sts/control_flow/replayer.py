@@ -217,7 +217,8 @@ class Replayer(ControlFlow):
           interactive = Interactive(self.simulation_cfg,
                                     input_logger=self._input_logger)
           interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
-          # TODO(cs): what is the purpose of this line of code?
+          # If Interactive terminated due to ^D, return to our fuzzing loop,
+          # prepared again to drop into Interactive on ^C.
           self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
     finally:
       if self.old_interrupt:
