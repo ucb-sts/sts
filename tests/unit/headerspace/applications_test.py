@@ -132,7 +132,6 @@ class applications_test(unittest.TestCase):
     NTF = hsa_topo.generate_NTF(switches)
     TTF = hsa_topo.generate_TTF(network_links)
     access_links = [ MockAccessLink(sw, sw.ports[1]) for sw in switches ]
-    import pdb; pdb.set_trace()
     blackholes = hsa.find_blackholes(NTF, TTF, access_links)
     self.assertNotEqual(blackholes, [])
 
