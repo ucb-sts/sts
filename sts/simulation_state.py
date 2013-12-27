@@ -342,6 +342,6 @@ class Simulation(object):
     self.topology.connect_to_controllers(self.controller_manager.controller_configs,
                                          create_connection=create_connection)
 
-    # create_connection should not be called again --revert monkeypatch in
+    # create_connection should not be called again -- revert monkeypatch in
     # case STS wants to open other sockets (e.g., xmlrplclib)
     revert_socket_monkeypatch()
