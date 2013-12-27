@@ -49,10 +49,11 @@ class MCSFinder(ControlFlow):
                transform_dag=None, end_wait_seconds=0.5,
                mcs_trace_path=None, extra_log=None, runtime_stats_path=None,
                wait_on_deterministic_values=False,
-               replays_per_subsequence=1,
+               max_replays_per_subsequence=1,
                optimized_filtering=False, forker=LocalForker(),
                replay_final_trace=True, strict_assertion_checking=False,
                delay_flow_mods=False,
+               no_violation_verification_runs=None,
                **kwargs):
     super(MCSFinder, self).__init__(simulation_cfg)
     # number of subsequences delta debugging has examined so far, for
@@ -108,8 +109,10 @@ class MCSFinder(ControlFlow):
     self.kwargs = kwargs
     self.end_wait_seconds = end_wait_seconds
     self.wait_on_deterministic_values = wait_on_deterministic_values
-    # `no' means "number"
-    self.replays_per_subsequence = replays_per_subsequence
+    if no_violation_verification_runs is not None:
+      raise ValueError('''no_violation_verification_runs parameter is deprecated. '''
+                       '''Use max_replays_per_subsequence.''')
+    self.max_replays_per_subsequence = max_replays_per_subsequence
     self._runtime_stats = RuntimeStats(self.subsequence_id, runtime_stats_path=runtime_stats_path)
     # Whether to try alternate trace splitting techiques besides splitting by time.
     self.optimized_filtering = optimized_filtering
@@ -174,7 +177,7 @@ class MCSFinder(ControlFlow):
       # First, run through without pruning to verify that the violation exists
       self._runtime_stats.record_replay_start()
 
-      for i in range(0, self.replays_per_subsequence):
+      for i in range(0, self.max_replays_per_subsequence):
         bug_found = self.replay(self.dag, "reproducibility",
                                 ignore_runtime_stats=True)
         if bug_found:
@@ -226,8 +229,8 @@ class MCSFinder(ControlFlow):
           self.log('''Warning! Final MCS did not result in violation, even '''
                    '''after ignoring timed out internal events. Your run ''
                    '' is probably effected by non-determinism.\n'''
-                   '''Try setting MCSFinder's replays_per_subsequence '''
-                   '''parameter in your config file (e.g. replays_per_subsequence=10)\n'''
+                   '''Try setting MCSFinder's max_replays_per_subsequence '''
+                   '''parameter in your config file (e.g. max_replays_per_subsequence=10)\n'''
                    '''If that still doesn't work, see tools/visualization/visualize1D.html '''
                    '''for debugging''')
 
@@ -325,8 +328,8 @@ class MCSFinder(ControlFlow):
   # N.B. always called within a child process.
   def _check_violation(self, new_dag, subset_index, label):
     ''' Check if there were violations '''
-    # Try replays_per_subsequence times to see if the bug shows up
-    for i in range(0, self.replays_per_subsequence):
+    # Try max_replays_per_subsequence times to see if the bug shows up
+    for i in range(0, self.max_replays_per_subsequence):
       bug_found = self.replay(new_dag, label)
 
       if bug_found:
