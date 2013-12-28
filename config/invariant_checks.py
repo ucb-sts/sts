@@ -9,8 +9,8 @@ def check_everything(simulation):
   violations = down_controllers
   # Check other invariants without checking liveness
   checks = [ InvariantChecker.check_loops,
-             InvariantChecker.python_check_blackholes ]
-             #InvariantChecker.check_connectivity ]
+             InvariantChecker.python_check_blackholes
+             InvariantChecker.check_connectivity ]
   for check in checks:
     violations += check(simulation, check_liveness_first=False)
   violations = list(set(violations))
