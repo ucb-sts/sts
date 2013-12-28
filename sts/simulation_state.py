@@ -43,12 +43,13 @@ import time
 
 log = logging.getLogger("simulation")
 
-def default_boot_controllers(controller_configs, snapshot_service, sync_connection_manager):
+def default_boot_controllers(controller_configs, snapshot_service,
+                             sync_connection_manager, multiplex_sockets=False):
   # Boot the controllers
   controllers = []
   for c in controller_configs:
     controller = c.controller_class(c, sync_connection_manager, snapshot_service)
-    controller.start()
+    controller.start(multiplex_sockets=multiplex_sockets)
     log.info("Launched controller %s: %s [PID %d]" %
              (str(c.cid), " ".join(c.expanded_start_cmd), controller.pid))
     controllers.append(controller)
@@ -170,7 +171,8 @@ class SimulationConfig(object):
                                                        sync_callback)
     controller_manager = boot_controllers(self.controller_configs,
                                           self.snapshot_service,
-                                          sync_connection_manager)
+                                          sync_connection_manager,
+                                          multiplex_sockets=self.multiplex_sockets)
     controller_patch_panel = wire_controller_patch_panel(controller_manager,
                                                          io_master.create_worker_for_socket)
     topology = instantiate_topology(io_master.create_worker_for_socket)

@@ -793,7 +793,7 @@ class Controller(object):
       filter_string += " and (not tcp port %d)" % sync_port
     return bind_pcap(host_device, filter_string=filter_string)
 
-  def start(self):
+  def start(self, multiplex_sockets=False):
     ''' Start a new controller process based on the config's start_cmd
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process '''
@@ -849,7 +849,7 @@ class POXController(Controller):
     super(POXController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self.welcome_msg = " =====> Starting POX Controller <===== "
 
-  def start(self):
+  def start(self, multiplex_sockets=False):
     ''' Start a new POX controller process based on the config's start_cmd
     attribute. Registers the Popen member variable for deletion upon a SIG*
     received in the simulator process '''
@@ -873,6 +873,7 @@ class POXController(Controller):
       port = port_match.group(1)
       env['sts_sync'] = "ptcp:0.0.0.0:%d" % (int(port),)
 
+    if self.config.sync or multiplex_sockets:
       src_dir = os.path.join(os.path.dirname(__file__), "..")
       pox_ext_dir = os.path.join(self.config.cwd, "ext")
       if os.path.exists(pox_ext_dir):
@@ -955,7 +956,7 @@ class VMController(Controller):
     self.execute_local_command(kill_cmd)
     self.state = ControllerState.DEAD
 
-  def start(self):
+  def start(self, multiplex_sockets=False):
     self.log.info(self.welcome_msg)
     if self.state != ControllerState.DEAD:
       self.log.warn("Starting controller %s when controller is not dead!" % self.label)
@@ -1076,7 +1077,7 @@ class BigSwitchController(VMController):
     self.commands["restart"] = "service floodlight start; initctl stop bscmon"
     self.commands["check"] = "service floodlight status"
 
-  def start(self):
+  def start(self, multiplex_sockets=False):
     super(BigSwitchController, self).start()
     self.execute_remote_command(self.commands["restart"])
 
