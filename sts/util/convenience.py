@@ -142,9 +142,6 @@ def base64_decode_openflow(data):
   (msg, packet_length) = OFConnection.parse_of_packet(base64_decode(data))
   return msg
 
-def is_flow_mod(receive_event):
-  return type(base64_decode_openflow(receive_event.b64_packet)) == ofp_flow_mod
-
 class IPAddressSpace(object):
   _claimed_addresses = set()
 
