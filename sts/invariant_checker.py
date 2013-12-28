@@ -435,17 +435,20 @@ class ViolationTracker(object):
 
   def __init__(self, persistence_threshold=0, buffer_persistent_violations=False):
     '''
-    persistence_threshold: number of logical time units a violation must
-      persist beyond the initial detection round before
-      we declare that it is a persistent violation. If zero, return any
-      violation as a persistent violation.
+    persistence_threshold: number of logical time units a violation must persist
+      beyond the initial detection round before we declare that it is a persistent
+      violation. If zero, return any violation as a persistent violation.
+
+    buffer_persistent_violations: if false, ViolationTracker returns as soon as a
+      persistent violation is detected, even if there other related violations that
+      would have become persistent if allowed a few more rounds. Setting this flag
+      to true causes ViolationTracker to wait for another persistence_threshold
+      before returning persistent violations
+
     violation2time: key is the violation signature (string), and value is a two-tuple
       (start_time, end_time), where start_time is the logical time at which the violation
       is first observed, and end time that at which the violation is last observed
     '''
-    # TODO(cs): @andrewor mind if we get some documentation on
-    # buffer_persistent_violations? Not immediately clear to me what it's
-    # doing.
     self.persistence_threshold = persistence_threshold
     self.violation2time = {}
     self.buffer_persistent_violations = buffer_persistent_violations

@@ -1366,12 +1366,18 @@ class ProcessFlowMod(ControlMessageBase):
     if message_waiting:
       switch.openflow_buffer.schedule(self.pending_receive)
       return True
+    self.show_flow_tables(simulation)
     return False
 
   @property
   def pending_receive(self):
     # TODO(cs): inefficient to keep reconrstructing this tuple.
     return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
+
+  def show_flow_tables(self, simulation):
+    for switch in simulation.topology.switches:
+      msg.interactive("Switch %s" % switch.dpid)
+      switch.show_flow_table()
 
   @staticmethod
   def from_json(json_hash):

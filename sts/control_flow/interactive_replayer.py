@@ -98,8 +98,8 @@ class InteractiveReplayer(Interactive):
     # remaining.
     if self.mock_controllers:
       self.simulation = Interactive.simulate(self, boot_controllers=boot_mock_controllers,
-                                      connect_to_controllers=connect_to_mock_controllers,
-                                      bound_objects=bound_objects)
+                                             connect_to_controllers=connect_to_mock_controllers,
+                                             bound_objects=bound_objects)
     else: # not self.mock_controllers
       self.simulation = Interactive.simulate(self, simulation=simulation, bound_objects=bound_objects)
     return self.simulation
@@ -114,21 +114,22 @@ class InteractiveReplayer(Interactive):
 
     if len(self.event_list) == 0:
       msg.fail("No more events to inject")
-    else:
-      next_event = self.event_list.pop(0)
-      if type(next_event) in InteractiveReplayer.supported_input_events:
+      return
+
+    next_event = self.event_list.pop(0)
+    if type(next_event) in InteractiveReplayer.supported_input_events:
+      msg.replay_event_success("Injecting %r" % next_event)
+      next_event.proceed(self.simulation)
+    else: # type(next_event) in InteractiveReplayer.supported_internal_events
+      if type(next_event) == ControlMessageReceive and is_flow_mod(next_event):
+        msg.mcs_event("Injecting %r" % next_event)
+      else:
         msg.replay_event_success("Injecting %r" % next_event)
-        next_event.proceed(self.simulation)
-      else: # type(next_event) in InteractiveReplayer.supported_internal_events
-	if type(next_event) == ControlMessageReceive and is_flow_mod(next_event):
-          msg.mcs_event("Injecting %r" % next_event)
-	else:
-          msg.replay_event_success("Injecting %r" % next_event)
-        next_event.manually_inject(self.simulation)
+      next_event.manually_inject(self.simulation)
       if self.show_flow_tables_each_step:
-	for switch in self.simulation.topology.switches:
-	  print "Switch %s" % switch.dpid
-	  switch.show_flow_table()
+        for switch in self.simulation.topology.switches:
+          print "Switch %s" % switch.dpid
+          switch.show_flow_table()
 
     print "\nAdvanced to step %d\n" % self.logical_time
 
