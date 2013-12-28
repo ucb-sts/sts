@@ -12,11 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# To monkey patch client side (implemented in sts/simulation_state.py):
+#  - After booting the controller,
+#  - and after STSSyncProtocol's socket has been created (i.e. no more auxiliary
+#    sockets remain to be instantiated)
+#  - create a single real socket for each ControllerInfo
+#  - connect them normally
+#  - wrap them in MultiplexedSelect's io_worker
+#  - create a STSSocketDemultiplexer for them
+#  - override select.select with MultiplexedSelect (this will create a true
+#    socket for the pinger)
+#  - override socket.socket
+#    - takes two params: protocol, socket type
+#    - if not SOCK_STREAM type, return a normal socket
+#    - else, return STSMockSocket
 
 from base import *
 from sts.util.convenience import base64_decode
 from itertools import count
 import logging
+
 
 log = logging.getLogger("sts_sock_mux")
 
@@ -29,7 +44,7 @@ class STSSocketDemultiplexer(SocketDemultiplexer):
   def __init__(self, true_io_worker, server_info):
     super(STSSocketDemultiplexer, self).__init__(true_io_worker)
     self.server_info = server_info
-    # let MockSockets know who their Demuxer is upon connect()
+    # let MockSockets know who their Demuxer is when they connect()
     STSMockSocket.address2demuxer[server_info] = self
 
   def _on_receive(self, worker, json_hash):
@@ -81,17 +96,3 @@ class STSMockSocket(MockSocket):
   def getpeername(self):
     return self.peer_address
 
-# To monkey patch client side:
-#  - After booting the controller,
-#  - and after STSSyncProtocol's socket has been created (no more auxiliary
-#    sockets remain to be instantiated)
-#  - create a single real socket for each ControllerInfo
-#  - connect them normally
-#  - wrap them in MultiplexedSelect's io_worker
-#  - create a STSSocketDemultiplexer for them
-#  - override select.select with MultiplexedSelect (this will create a true
-#    socket for the pinger)
-#  - override socket.socket
-#    - takes two params: protocol, socket type
-#    - if not SOCK_STREAM type, return a normal socket
-#    - else, return STSMockSocket

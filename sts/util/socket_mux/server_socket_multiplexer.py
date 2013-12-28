@@ -18,6 +18,24 @@ import socket
 import logging
 import base64
 
+# The server generally goes through the following states:
+# 
+# i.    Wait for controller to create a mock listen socket and call bind() on
+#       the mock listen socket.
+# ii.   Store the address/port from bind() in the mock listen socket.
+# iii.  Wait for controller to call listen() on the mock listen socket.
+# iv.   Create a true listen socket that waits on address/port for the client
+#       SocketDemuliplexer to connect. Store this true listen socket in
+#       ServerMultiplexedSelect.
+# v.    Once the client connects to the true listen socket, invoke its accept()
+#       to create a final true socket.
+# vi.   Wrap the final true socket in an io_worker managed by ServerMultiplexedSelect,
+#       and close() the true listen socket.
+# vii.  Wrap the io_worker in a ServerSocketDemultiplexer.
+# viii. Whenever the ClientSocketDemultiplexer negotiates a new connection,
+#       create a new mock socket and hand it to the mock listen socket created
+#       in step i.
+
 class ServerSocketDemultiplexer(SocketDemultiplexer):
   def __init__(self, true_io_worker, mock_listen_sock):
     ''' Whenever we see a handshake from the client, hand new MockSockets to
@@ -60,11 +78,13 @@ class ServerMockSocket(MockSocket):
     super(ServerMockSocket, self).__init__(protocol, sock_type,
                                            sock_id=sock_id,
                                            json_worker=json_worker)
+    self.log = logging.getLogger("mock_sock")
     self.set_true_listen_socket = set_true_listen_socket
     self.peer_address = peer_address
-    self.new_sockets = []
-    self.log = logging.getLogger("mock_sock")
     self.listener = False
+    # N.B. only used by mock listen sockets
+    self.new_sockets = []
+    self.server_info = None
 
   def ready_to_read(self):
     return self.pending_reads != [] or self.new_sockets != []
@@ -79,9 +99,9 @@ class ServerMockSocket(MockSocket):
     # Here, we create a *real* socket.
     # bind it to server_info, and wait for the client SocketDemultiplexer to
     # connect. After this is done, we can instantiate our own
-    # SocketDemultiplexer.
-    # Assumes that all invocations of bind() are intended for connection to
-    # STS. TODO(cs): STS should tell pox_monkeypatcher exactly what ports it
+    # SocketDemultiplexer. Assumes that all invocations of bind() are intended
+    # for connection to STS.
+    # TODO(cs): STS should tell pox_monkeypatcher exactly what ports it
     # intends to connect to. If bind() is called for some other port, delegate to
     # a real socket.
     if hasattr(socket, "_old_socket"):
@@ -164,9 +184,10 @@ class ServerMultiplexedSelect(MultiplexedSelect):
         new_sock = true_listen_sock.accept()[0]
         true_listen_sock.close()
         self.true_listen_socks.remove(true_listen_sock)
-        self.set_true_io_worker(self.create_worker_for_socket(new_sock))
+        true_io_worker = self.create_worker_for_socket(new_sock)
+        self.set_true_io_worker(true_io_worker)
         self.listen_sock_to_accept_callback[true_listen_sock]\
-                                            (self.true_io_workers[-1])
+                                            (true_io_worker)
         del self.listen_sock_to_accept_callback[true_listen_sock]
 
     return super(ServerMultiplexedSelect, self)\

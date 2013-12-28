@@ -42,6 +42,8 @@ log = logging.getLogger("sock_mux")
 #  - All data messages are of type `data', and include a `data' field
 
 class SocketDemultiplexer(object):
+  ''' Each true socket is wrapped in a single SocketDemultiplexer, which
+  Demultiplexes messages received on the true socket to MockSockets'''
   def __init__(self, true_io_worker):
     self.true_io_worker = true_io_worker
     self.client_info = true_io_worker.socket.getsockname()
@@ -53,6 +55,7 @@ class SocketDemultiplexer(object):
   def _on_receive(self, _, json_hash):
     if 'id' not in json_hash or 'type' not in json_hash:
       raise ValueError("Invalid json_hash %s" % str(json_hash))
+    pass
 
 class MockSocket(object):
   def __init__(self, protocol, sock_type, sock_id=-1, json_worker=None):
@@ -119,7 +122,7 @@ class MockSocket(object):
 
 def is_mocked(sock_or_io_worker):
   if sock_or_io_worker is None:
-    # Gaurd against race conditions
+    # Guard against None sockets upon exit
     return True
   return sock_or_io_worker.fileno() < 0
 
