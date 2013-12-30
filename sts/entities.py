@@ -116,16 +116,16 @@ class ConnectionlessOFConnection(object):
 
 # A note on FuzzSoftwareSwitch Command Buffering
 #   - When delaying flow_mods, we would like to buffer them and perturb the order in which they are processed.
-#     self.barrier_deque is a queue of priority queues, with each priority queue representing an epoch, defined by one or two 
+#     self.barrier_deque is a queue of priority queues, with each priority queue representing an epoch, defined by one or two
 #     barrier_in requests.
-#   - When non-barrier_in flow_mods come in, they get added to the back-most (i.e. most recently added) priority queue of 
-#     self.barrier_deque. When a barrier_in request is received, we append that request to self.barrier_deque, together with a 
-#     new priority queue to buffer all subsequently received commands until all previously received commands have been processed 
+#   - When non-barrier_in flow_mods come in, they get added to the back-most (i.e. most recently added) priority queue of
+#     self.barrier_deque. When a barrier_in request is received, we append that request to self.barrier_deque, together with a
+#     new priority queue to buffer all subsequently received commands until all previously received commands have been processed
 #     and the received barrier_in request is completed.
-#   - When processing buffered commands, they are always pulled off from the front-most priority queue. If pulling off a command 
+#   - When processing buffered commands, they are always pulled off from the front-most priority queue. If pulling off a command
 #     makes the front-most queue empty, we are done with this epoch, and we can respond to the controller with a barrier_reply. We
-#     then check if there is another priority queue waiting in self.barrier_deque. If there is, 
-#     we pop off the empty queue in front and reply to the barrier_in request that caused the creation of the next priority 
+#     then check if there is another priority queue waiting in self.barrier_deque. If there is,
+#     we pop off the empty queue in front and reply to the barrier_in request that caused the creation of the next priority
 #     queue. That priority queue is now at the front and is where we pull commands from.
 #
 # Command buffering flow chart
@@ -137,7 +137,7 @@ class ConnectionlessOFConnection(object):
 #                                                                 \
 #                                                                  else ---> report flow mod failure
 #                               ---> if front queue empty and another queue waiting ---> pop front queue off, reply to barrier_request
-#                                                                                         (until the queue in front is not 
+#                                                                                         (until the queue in front is not
 #                                                                                           empty or only one queue is left)
 
 class FuzzSoftwareSwitch (NXSoftwareSwitch):
@@ -147,8 +147,8 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     - flow_mod delays, where flow_mods are not processed immediately
     - flow_mod processing randomization, where the order in which flow_mods are applied to the routing table perturb
     - flow_mod dropping, where flow_mods are dropped according to a given filter. This is implemented by the caller of
-      get_next_command() applying a filter to the returned command and selectively allowing them through via process_next_command() 
-    
+      get_next_command() applying a filter to the returned command and selectively allowing them through via process_next_command()
+
     NOTE: flow_mod processing randomization and flow_mod dropping both require flow_mod delays to be activated, but
     are not dependent on each other.
   """
@@ -189,7 +189,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.randomize_flow_mod_order = False
     # Uninitialized RNG (initialize through randomize_flow_mods())
     self.random = None
-    
+
   def add_controller_info(self, info):
     self.controller_info.append(info)
 
@@ -310,7 +310,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     buffr.put((weight, msg, receive))
 
   def on_message_received_delayed(self, connection, msg):
-    ''' Precondition: use_delayed_commands() has been called. Replacement for 
+    ''' Precondition: use_delayed_commands() has been called. Replacement for
     NXSoftwareSwitch.on_message_received when delaying command processing '''
     # TODO(jl): use exponential moving average (define in params) rather than uniform distribution
     # to prioritize oldest flow_mods
@@ -373,7 +373,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
 
   def get_next_command(self):
     """ Precondition: use_delayed_commands() has been invoked. Invoked periodically from fuzzer.
-    Retrieves the next buffered command and its PendingReceive receipt. Throws Queue.Empty if 
+    Retrieves the next buffered command and its PendingReceive receipt. Throws Queue.Empty if
     the queue is empty. """
     assert(self.delay_flow_mods)
     # tuples in barrier are of the form (weight, buffered command, pending receipt)
@@ -381,7 +381,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     while self.current_cmd_queue.empty() and len(self.barrier_deque) > 1:
       # It's time to move to the next epoch and reply to the most recent barrier_request.
       # barrier_deque has the structure: [(None, queue_1), (barrier_request_1, queue_2), ...]
-      # so when we empty queue_x, we just finished processing and thus must reply to barrier_request_x, which is coupled in 
+      # so when we empty queue_x, we just finished processing and thus must reply to barrier_request_x, which is coupled in
       # the next element in barrier_deque: (barrier_request_x, queue_x+1)
       self.barrier_deque.pop(0)
       finished_barrier_request = self.barrier_deque[0][0]
@@ -393,7 +393,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
 
   def process_delayed_command(self, buffered_cmd_receipt):
     """ Precondition: use_delayed_commands() has been invoked and buffered_cmd_receipt is the PendingReceive
-    for a previously received and buffered command (i.e. was returned by get_next_command()) Returns the 
+    for a previously received and buffered command (i.e. was returned by get_next_command()) Returns the
     original buffered command """
     assert(self.delay_flow_mods)
     return self.openflow_buffer.schedule(buffered_cmd_receipt)
@@ -1113,10 +1113,10 @@ class ONOSController(VMController):
     self.commands["check"] = "cd ONOS; ./start-onos.sh status"
 
 class TableInserter(object):
-  ''' Shim layer sitting between incoming messages and a switch. This class is duck-typed to offer the same 
-  (received message) API to OpenFlowBuffer as a DeferredOFConnection. Instances of this class should be created and 
-  retrieved by providing TableInserter.instance_for_connection() with a method to insert a flow_mod directly into 
-  a switch's table and the connection the flow_mod came in on. Each switch should create and use one TableInserter 
+  ''' Shim layer sitting between incoming messages and a switch. This class is duck-typed to offer the same
+  (received message) API to OpenFlowBuffer as a DeferredOFConnection. Instances of this class should be created and
+  retrieved by providing TableInserter.instance_for_connection() with a method to insert a flow_mod directly into
+  a switch's table and the connection the flow_mod came in on. Each switch should create and use one TableInserter
   for each connection it receives a flow_mod from.
   '''
   connection2instance = {}
