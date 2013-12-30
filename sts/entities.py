@@ -981,7 +981,7 @@ class VMController(Controller):
     output = ""
     while True:
       output += process.stdout.read(100) # arbitrary
-      if output == '' and process.poll is not None:
+      if output == '' and process.poll() is not None:
         break
     return output
 
