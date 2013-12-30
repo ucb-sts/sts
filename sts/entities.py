@@ -886,7 +886,7 @@ class POXController(Controller):
           src_path = os.path.join(src_dir, f)
           if not os.path.exists(src_path):
             raise ValueError("Integrity violation: sts sync source path %s (abs: %s) does not exist" %
-                (src_path, os.path.abspath(src_path)))
+                             (src_path, os.path.abspath(src_path)))
           dst_path = os.path.join(pox_ext_dir, f)
           dst_dir = os.path.dirname(dst_path)
           init_py = os.path.join(dst_dir, "__init__.py")
