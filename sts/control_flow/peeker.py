@@ -23,6 +23,9 @@ from sts.replay_event import InternalEvent
 
 log = logging.getLogger("sts")
 
+# TODO(cs): is it problematic if we stop responding to OFP_PING / LLDP during
+# peek()?
+
 # TODO(cs): peek() runs this should run as subprocesses to cope with memory
 # constraints, as in mcs_finder. We would need to refactor the class variables
 # (convert them to RPC return values, as in client_stats_dict()) below to enable this.
