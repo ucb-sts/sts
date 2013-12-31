@@ -185,7 +185,6 @@ class ServerMultiplexedSelect(MultiplexedSelect):
         true_listen_sock.close()
         self.true_listen_socks.remove(true_listen_sock)
         true_io_worker = self.create_worker_for_socket(new_sock)
-        self.set_true_io_worker(true_io_worker)
         self.listen_sock_to_accept_callback[true_listen_sock]\
                                             (true_io_worker)
         del self.listen_sock_to_accept_callback[true_listen_sock]

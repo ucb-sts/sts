@@ -44,7 +44,6 @@ class MultiplexerTest(unittest.TestCase):
     io_master = MultiplexedSelect()
     socket = connect_socket_with_backoff(address=address)
     io_worker = io_master.create_worker_for_socket(socket)
-    io_master.set_true_io_worker(io_worker)
     # TODO(cs): unused variable demux
     demux = STSSocketDemultiplexer(io_worker, address)
     mock_socks = []

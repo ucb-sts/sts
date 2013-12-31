@@ -147,11 +147,7 @@ class MultiplexedSelect(IOMaster):
 
   def __init__(self, *args, **kwargs):
     super(MultiplexedSelect, self).__init__(*args, **kwargs)
-    self.true_io_workers = []
     self.log = logging.getLogger("mux_select")
-
-  def set_true_io_worker(self, true_io_worker):
-    self.true_io_workers.append(true_io_worker)
 
   def ready_to_read(self, sock_or_io_worker):
     if sock_or_io_worker is None:
@@ -204,7 +200,7 @@ class MultiplexedSelect(IOMaster):
       self.pinger.pongAll()
       rl.remove(self.pinger)
 
-    for true_io_worker in self.true_io_workers:
+    for true_io_worker in self._workers:
       if true_io_worker in xl:
         raise RuntimeError("Error in true socket")
 
