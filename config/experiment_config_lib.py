@@ -44,7 +44,8 @@ class ControllerConfig(object):
   def __init__(self, start_cmd="", address="127.0.0.1", port=None, additional_ports={},
                cwd=None, sync=None, controller_type=None, label=None, config_file=None,
                config_template=None, try_new_ports=False, kill_cmd="", restart_cmd="",
-               get_address_cmd="", launch_in_network_namespace=False):
+               get_address_cmd="", launch_in_network_namespace=False,
+               snapshot_address=""):
     '''
     Store metadata for the controller.
       - start_cmd: command that starts a controller or a set of controllers,
@@ -61,6 +62,8 @@ class ControllerConfig(object):
         the controller to bind to.
       - controller_type: controller type, specified by the corresponding Controller
           class itself, or a string chosen from one of the keys in controller_type_map
+      - snapshot_address: path to unix domain socket where (if configured)
+        controller will be listening for snapshot commands
     '''
     if start_cmd == "":
       raise RuntimeError("Must specify boot parameters.")
@@ -68,6 +71,7 @@ class ControllerConfig(object):
     self.kill_cmd = kill_cmd
     self.restart_cmd = restart_cmd
     self.launch_in_network_namespace = launch_in_network_namespace
+    self.snapshot_address = snapshot_address
     if launch_in_network_namespace and (address == "127.0.0.1" or address == "localhost"):
       raise ValueError("""Must set a non-localhost address for namespace controller.\n"""
                        """Specify `auto` to automatically find an available IP.""")

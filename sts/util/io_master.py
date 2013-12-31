@@ -169,6 +169,12 @@ class IOMaster(object):
         break
       self.select(remaining)
 
+  def deschedule_worker(self, io_worker):
+    self._workers.discard(io_worker)
+
+  def reschedule_worker(self, io_worker):
+    self._workers.add(io_worker)
+
   def grab_workers_rwe(self):
     # Now grab workers
     read_sockets = list(self._workers) + [ self.pinger ]

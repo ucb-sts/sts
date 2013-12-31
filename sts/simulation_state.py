@@ -34,6 +34,7 @@ from sts.syncproto.sts_syncer import STSSyncConnectionManager
 import sts.snapshot as snapshot
 from sts.util.socket_mux.base import MultiplexedSelect
 from sts.util.socket_mux.sts_socket_multiplexer import STSSocketDemultiplexer, STSMockSocket
+from sts.util.convenience import find
 from pox.lib.util import connect_socket_with_backoff
 
 import select
@@ -346,3 +347,16 @@ class Simulation(object):
     # create_connection should not be called again -- revert monkeypatch in
     # case STS wants to open other sockets (e.g., xmlrplclib)
     revert_socket_monkeypatch()
+
+  def get_demuxer_for_server_info(self, server_info):
+    '''
+    server_info is the address of the controller, either a tuple
+    (address, port) or a path to a unix domain socket
+
+    Raises a ValueError if there is no SocketDemultiplexer associated
+    with the given server_info.
+    '''
+    demuxer = find(lambda d: d.server_info == server_info, self.demuxers)
+    if demuxer is None:
+      return ValueError("server_info %s does not have a demuxer" % server_info)
+    return demuxer

@@ -27,6 +27,7 @@ from pox.lib.revent import EventMixin
 import pox.lib.packet.ethernet as eth
 import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import EthAddr, IPAddr
+from pox.lib.util import connect_socket_with_backoff
 from sts.util.procutils import popen_filtered, kill_procs
 from sts.util.console import msg
 from sts.openflow_buffer import OpenFlowBuffer
@@ -705,11 +706,39 @@ class NamespaceHost(Host):
                   (interface.name, str(packet)))
     self.io_worker.send(packet.pack())
 
+
+class SnapshotPopen(object):
+  ''' Popen wrapper for processes that were not created by us. '''
+  def __init__(self, pid):
+    import psutil
+    # See https://code.google.com/p/psutil/wiki/Documentation
+    # for the full API.
+    self.p = psutil.Process(pid)
+
+  def poll(self):
+    ''' A None value indicates that the process hasn't terminated yet. '''
+    if self.p.is_running():
+      return None
+    else:
+      return 1
+
+  @property
+  def pid(self):
+    return self.p.pid
+
+  def kill(self):
+    return self.p.kill()
+
+  def terminate(self):
+    return self.p.terminate()
+
+
 class ControllerState():
   ''' Represents different states of a controller '''
   ALIVE = 0
   STARTING = 1
   DEAD = 2
+
 
 class Controller(object):
   ''' Encapsulates the state of a running controller '''
@@ -747,6 +776,7 @@ class Controller(object):
     self.guest_eth_addr = None
     self.host_device = None
     self.welcome_msg = " =====> Starting Controller <===== "
+    self.snapshot_socket = None
 
   @property
   def remote(self):
@@ -793,6 +823,12 @@ class Controller(object):
       filter_string += " and (not tcp port %d)" % sync_port
     return bind_pcap(host_device, filter_string=filter_string)
 
+  def _check_snapshot_connect(self):
+    if self.config.snapshot_address:
+      # N.B. snapshot_socket is intended to be blocking
+      self.log.debug("Connecting snapshot socket")
+      self.snapshot_socket = connect_socket_with_backoff(address=self.config.snapshot_address)
+
   def start(self, multiplex_sockets=False):
     ''' Start a new controller process based on the config's start_cmd
     attribute. Registers the Popen member variable for deletion upon a SIG*
@@ -812,6 +848,7 @@ class Controller(object):
     else:
       self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
     self._register_proc(self.process)
+    self._check_snapshot_connect()
     self.state = ControllerState.ALIVE
 
   def restart(self):
@@ -840,6 +877,54 @@ class Controller(object):
   def unblock_peer(self, peer_controller):
     ''' Stop ignoring traffic to/from the given peer controller '''
     raise NotImplementedError("Peer blocking not yet supported")
+
+  def snapshot(self):
+    '''
+    Causes the controller to fork() a (suspended) copy of itself.
+    '''
+    self.log.info("Initiating snapshot")
+    self.snapshot_socket.send("SNAPSHOT")
+
+  def snapshot_proceed(self):
+    '''
+    Tell the previously fork()ed controller process to wake up, and connect
+    a new socket to the fork()ed controller's (OpenFlow) port.
+
+    Kills and cleans up the old controller process if necessary.
+
+    This method may block if the fork()ed process is not ready to proceed.
+
+    Returns: a new socket connected to the woken controller.
+
+    Pre: snapshot() has been invoked
+    '''
+    self.log.info("Initiating snapshot proceed")
+    # Check that the fork()ed controller is ready
+    self.log.debug("Checking READY")
+    # N.B. snapshot_socket is blocking
+    response = self.snapshot_socket.recv(100)
+    match = re.match("READY (?P<pid>\d+)", response)
+    if not match:
+      raise ValueError("Unknown response %s" % response)
+    pid = int(match.group('pid'))
+
+    # Kill old process, and overwrite with new child
+    kill_procs([self.process], close_fds=False)
+    self._unregister_proc(self.process)
+    self.process = SnapshotPopen(pid)
+    self._register_proc(self.process)
+
+    # Send PROCEED
+    self.log.debug("Sending PROCEED")
+    self.snapshot_socket.send("PROCEED")
+
+    # Reconnect
+    self.log.debug("Connecting new mux socket")
+    true_socket = connect_socket_with_backoff(address=self.config.address,
+                                              port=self.config.port)
+    true_socket.setblocking(0)
+    self.log.debug("Finished snapshot proceed")
+    return true_socket
 
 class POXController(Controller):
   # N.B. controller-specific configuration is optional. The purpose of this
@@ -918,6 +1003,7 @@ class POXController(Controller):
     self._register_proc(self.process)
     if self.config.sync:
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
+    self._check_snapshot_connect()
     self.state = ControllerState.ALIVE
 
 class VMController(Controller):
