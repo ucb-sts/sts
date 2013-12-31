@@ -179,7 +179,7 @@ class MultiplexedSelect(IOMaster):
     mock_write_workers = [ w for w in wl if is_mocked(w) ]
 
     (rl, wl, xl) = [ [s for s in l if not is_mocked(s) ]
-                     for l in [rl, wl, xl] ]
+                        for l in [rl, wl, xl] ]
 
     # Grab the sock lists for our internal socket. These lists will contain
     # our true_io_worker(s), along with our pinger.
