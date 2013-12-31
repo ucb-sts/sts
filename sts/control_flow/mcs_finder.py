@@ -177,11 +177,8 @@ class MCSFinder(ControlFlow):
       # First, run through without pruning to verify that the violation exists
       self._runtime_stats.record_replay_start()
 
-      for i in range(0, self.max_replays_per_subsequence):
-        bug_found = self.replay(self.dag, "reproducibility",
-                                ignore_runtime_stats=True)
-        if bug_found:
-          break
+      (bug_found, i) = self.replay_max_iterations(self.dag, "reproducibility",
+                                                  ignore_runtime_stats=True)
       self._runtime_stats.set_initial_verification_runs_needed(i)
       self._runtime_stats.record_replay_end()
       if not bug_found:
@@ -215,16 +212,16 @@ class MCSFinder(ControlFlow):
       #  Replaying the final trace achieves two goals:
       #  - verifies that the MCS indeed ends in the violation
       #  - allows us to prune internal events that time out
-      bug_found = self.replay(self.dag, "final_mcs_trace",
-                              ignore_runtime_stats=True)
+      (bug_found, i) = self.replay_max_iterations(self.dag, "final_mcs_trace",
+                                                  ignore_runtime_stats=True)
       if not bug_found:
         self.log('''Warning: MCS did not result in violation. Trying replay '''
                  '''again without timed out events.''')
         # TODO(cs): always replay the MCS without timeouts, since the console
         # output will be significantly cleaner?
         no_timeouts = self.dag.filter_timeouts()
-        bug_found = self.replay(no_timeouts, "final_mcs_no_timed_out_events",
-                                ignore_runtime_stats=True)
+        (bug_found, i) = self.replay_max_iterations(no_timeouts, "final_mcs_no_timed_out_events",
+                                                    ignore_runtime_stats=True)
         if not bug_found:
           self.log('''Warning! Final MCS did not result in violation, even '''
                    '''after ignoring timed out internal events. Your run ''
@@ -328,25 +325,36 @@ class MCSFinder(ControlFlow):
   # N.B. always called within a child process.
   def _check_violation(self, new_dag, subset_index, label):
     ''' Check if there were violations '''
-    # Try max_replays_per_subsequence times to see if the bug shows up
-    for i in range(0, self.max_replays_per_subsequence):
-      bug_found = self.replay(new_dag, label)
+    (bug_found, i) = self.replay_max_iterations(new_dag, label)
+    # Violation in the subset
+    if bug_found:
+      self.log_violation("Violation! Considering %d'th" % subset_index)
+      self._runtime_stats.record_violation_found(i)
+      return True
+    else:
+      # No violation!
+      self.log_no_violation("No violation in %d'th..." % subset_index)
+      return False
 
-      if bug_found:
-        # Violation in the subset
-        self.log_violation("Violation! Considering %d'th" % subset_index)
-        self._runtime_stats.record_violation_found(i)
-        return True
+  def replay_max_iterations(self, new_dag, label, ignore_runtime_stats=False):
+    '''
+    Attempt to reproduce the bug up to self.max_replays_per_subsequence
+    times.
 
-    # No violation!
-    self.log_no_violation("No violation in %d'th..." % subset_index)
-    return False
-
-  def replay(self, new_dag, label, ignore_runtime_stats=False):
-    # Run the simulation forward
+    Returns a tuple (bug found, 0-indexed iteration at which bug was found)
+    '''
     if self.transform_dag:
       new_dag = self.transform_dag(new_dag)
 
+    for i in range(0, self.max_replays_per_subsequence):
+      bug_found = self.replay(new_dag, label,
+                              ignore_runtime_stats=ignore_runtime_stats)
+      if bug_found:
+        break
+    return (bug_found, i)
+
+  def replay(self, new_dag, label, ignore_runtime_stats=False):
+    # Run the simulation forward
     self._runtime_stats.record_replay_stats(len(new_dag.input_events))
 
     # N.B. this function is run as a child process.
@@ -438,7 +446,7 @@ class MCSFinder(ControlFlow):
         self.log("\t** No events pruned for event type %s. Next!" % event_type)
         continue
       pruned_dag = self.dag.input_complement(pruned)
-      bug_found = self.replay(pruned_dag, "opt_%s" % event_type.__name__)
+      (bug_found, i) = self.replay_max_iterations(pruned_dag, "opt_%s" % event_type.__name__)
       if bug_found:
         self.log("\t** VIOLATION for pruning event type %s! Resizing original dag" % event_type)
         self.dag = pruned_dag
