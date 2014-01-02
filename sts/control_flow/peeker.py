@@ -288,15 +288,15 @@ def play_forward(simulation, wait_time_seconds):
 
   # Now set all internal event buffers (GodScheduler for
   # ControlMessageReceives and ReplaySyncCallback for state changes)
-  # to "pass through + record"
-  simulation.set_pass_through()
+  # to "record only"
+  simulation.set_record_only()
 
   # Note that this is the monkey patched version of time.sleep
   log.debug("peek()'ing for %f seconds" % wait_time_seconds)
   time.sleep(wait_time_seconds)
 
-  # Now turn off those pass-through and grab the inferred events
-  newly_inferred_events = simulation.unset_pass_through()
+  # Now turn off record only through and grab the inferred events
+  newly_inferred_events = simulation.unset_record_only()
   return newly_inferred_events
 
 def match_and_filter(newly_inferred_events, expected_internal_events):
