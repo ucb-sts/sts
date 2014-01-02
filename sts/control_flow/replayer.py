@@ -165,7 +165,7 @@ class Replayer(ControlFlow):
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
         switch.use_delayed_commands()
-    self.run_simulation_forward(self.dag, post_bootstrap_hook)
+    self.run_simulation_forward(post_bootstrap_hook)
     if self.print_buffers_flag:
       self._print_buffers()
     return self.simulation
@@ -178,7 +178,7 @@ class Replayer(ControlFlow):
     for p in self.sync_callback.pending_state_changes():
       log.debug("- %s", p)
 
-  def run_simulation_forward(self, dag, post_bootstrap_hook=None):
+  def run_simulation_forward(self, post_bootstrap_hook=None):
     event_scheduler = self.create_event_scheduler(self.simulation)
     event_scheduler.set_input_logger(self._input_logger)
     self.event_scheduler_stats = event_scheduler.stats
@@ -193,15 +193,15 @@ class Replayer(ControlFlow):
     self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
 
     try:
-      for i, event in enumerate(dag.events):
+      for i, event in enumerate(self.dag.events):
         try:
           self.compute_interpolated_time(event)
           if self.default_dp_permit:
             self.dp_checker.check_dataplane(i, self.simulation)
           if isinstance(event, InputEvent):
-            self._check_early_state_changes(dag, i, event)
-          self._check_new_state_changes(dag, i)
-          self._check_unexpected_cp_messages(dag, i)
+            self._check_early_state_changes(self.dag, i, event)
+          self._check_new_state_changes(self.dag, i)
+          self._check_unexpected_cp_messages(self.dag, i)
           # TODO(cs): quasi race-condition here. If unexpected state change
           # happens *while* we're waiting for event, we basically have a
           # deadlock (if controller logging is set to blocking) until the
