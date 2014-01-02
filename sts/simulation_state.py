@@ -254,6 +254,7 @@ class Simulation(object):
     observed_events += self.openflow_buffer.unset_pass_through()
     if hasattr(self.controller_sync_callback, "unset_pass_through"):
       observed_events += self.controller_sync_callback.unset_pass_through()
+    observed_events.sort(key=lambda e: e.time.as_float())
     return observed_events
 
   def clean_up(self):
