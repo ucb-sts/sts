@@ -23,7 +23,7 @@ from config.experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology
 from sts.simulation_state import SimulationConfig
 from sts.control_flow import RecordingSyncCallback
-from sts.control_flow.snapshot_utils import snapshot_controller, snapshot_proceed
+from sts.control_flow.snapshot_utils import Snapshotter
 from sts.entities import SnapshotPopen
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
@@ -65,9 +65,10 @@ class SnapshotTest(unittest.TestCase):
     c1 = simulation.controller_manager.controllers[0]
     c1_pid = c1.pid
 
-    snapshot_controller(simulation, c1)
+    snapshotter = Snapshotter(simulation, c1)
+    snapshotter.snapshot_controller()
     time.sleep(1)
-    snapshot_proceed(simulation, c1)
+    snapshotter.snapshot_proceed()
 
     self.assertEqual(1, len(simulation.controller_manager.controllers))
     c2 = simulation.controller_manager.controllers[0]
@@ -80,9 +81,10 @@ class SnapshotTest(unittest.TestCase):
     self._check_controller_dead(c1_pid)
 
     # snapshotting should work multiple times
-    snapshot_controller(simulation, c2)
+    snapshotter = Snapshotter(simulation, c2)
+    snapshotter.snapshot_controller()
     time.sleep(1)
-    snapshot_proceed(simulation, c2)
+    snapshotter.snapshot_proceed()
 
     self.assertEqual(1, len(simulation.controller_manager.controllers))
     c3 = simulation.controller_manager.controllers[0]

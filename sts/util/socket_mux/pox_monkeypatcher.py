@@ -61,7 +61,7 @@ def launch(snapshot_address=None):
     # Snapshotting protocol (over a domain socket):
 
     # In STS:
-    #  - temporarily remove true_io_worker from MultiplexedSelect
+    #  - set simulation to "record-only" mode
     #  - send "SNAPSHOT" to controller
 
     # In controller upon receiving "SNAPSHOT":
@@ -74,12 +74,12 @@ def launch(snapshot_address=None):
     # In STS after peek()ing:
     #  - double check that READY <PID> was received
     #  - kill parent process
-    #  - close STSSocketDemultiplexer.true_io_worker.socket
     #  - send "PROCEED" to domain socket
+    #  - close STSSocketDemultiplexer.true_io_worker.socket
     #  - create a new socket and connect it to the same (address, port) pair
     #    as before
     #  - override STSSocketDemultiplexer.true_io_worker.socket
-    #  - add true_io_worker back to MultiplexedSelect
+    #  - unset "record-only" mode
     #  - proceed
 
     # In child, upon recv()ing "PROCEED":
