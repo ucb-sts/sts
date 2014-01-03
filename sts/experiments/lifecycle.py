@@ -18,7 +18,7 @@ import re
 import socket
 import sys
 import json
-from sts.util.convenience import timestamp_string, find
+from sts.util.convenience import timestamp_string, find, backtick, system
 import subprocess
 
 sts_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -70,12 +70,6 @@ def walk_dirs_up(path):
 
 def find_git_dir(results_dir):
   return find(lambda f: os.path.exists(os.path.join(f, ".git" )), walk_dirs_up(results_dir))
-
-def backtick(cmd, *args, **kwargs):
-  return subprocess.Popen(cmd, *args, shell=True, stdout=subprocess.PIPE, **kwargs).stdout.read().strip()
-
-def system(cmd, *args, **kwargs):
-  return subprocess.call(cmd, *args, shell=True, **kwargs)
 
 def git_has_uncommitted_files(d):
   return system("git diff-files --quiet --ignore-submodules --", cwd=d) > 0 \

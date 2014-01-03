@@ -26,6 +26,7 @@ import types
 import struct
 import shutil
 import base64
+import subprocess
 
 # don't use the standard instance - we don't want to be seeded
 true_random = random.Random()
@@ -171,4 +172,10 @@ class IPAddressSpace(object):
     if address in IPAddressSpace._claimed_addresses:
       raise RuntimeError("Out of IP addresses in prefix %s" % ip_prefix)
     return address
+
+def backtick(cmd, *args, **kwargs):
+  return subprocess.Popen(cmd, *args, shell=True, stdout=subprocess.PIPE, **kwargs).stdout.read().strip()
+
+def system(cmd, *args, **kwargs):
+  return subprocess.call(cmd, *args, shell=True, **kwargs)
 
