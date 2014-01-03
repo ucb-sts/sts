@@ -55,6 +55,7 @@ class Replayer(ControlFlow):
                delay_flow_mods=False,
                **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
+    self.logical_time = 0
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
     else:
@@ -160,7 +161,6 @@ class Replayer(ControlFlow):
       self.fail_to_interactive_on_persistent_violations
     self.simulation.openflow_buffer.pass_through_whitelisted_messages =\
       self.pass_through_whitelisted_messages
-    self.logical_time = 0
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))

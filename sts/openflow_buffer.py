@@ -151,14 +151,14 @@ class OpenFlowBuffer(EventMixin):
     # Avoid memory leak:
     if multiset[pending_message] == []:
       del multiset[pending_message]
-    return (forwarder, message)
+    return (forwarder, message, receive)
 
   def schedule(self, pending_message):
     '''
     Cause the switch to process the pending message associated with
     the fingerprint and controller connection.
     '''
-    (forwarder, message) = self._pop_pending_message(pending_message)
+    (forwarder, message, receive) = self._pop_pending_message(pending_message)
     if receive:
       forwarder.allow_message_receipt(message)
     else:
