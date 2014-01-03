@@ -18,8 +18,10 @@ import time
 import abc
 from collections import Counter
 
+from sts.replay_event import WaitTime
 from sts.event_dag import EventDag
 from sts.control_flow.replayer import Replayer
+from sts.control_flow.base import RecordingSyncCallback
 from sts.control_flow.snapshot_utils import *
 from sts.replay_event import InternalEvent
 
@@ -78,16 +80,23 @@ class SnapshotPeeker(Peeker):
                                          default_wait_time_seconds=default_wait_time_seconds,
                                          epsilon_time=epsilon_time)
 
-  def peek(self, dag):
-    # Inferred events includes input events and internal events
-    inferred_events = []
-
+  def setup_simulation(self):
     # TODO(cs): currently assumes that STSSyncProto is not used alongside
     # snapshotting.
-    simulation = simulation_config.bootstrap(RecordingSyncCallback(None))
+    simulation = self.simulation_cfg.bootstrap(RecordingSyncCallback(None))
     simulation.openflow_buffer.pass_through_whitelisted_messages = True
     simulation.connect_to_controllers()
     controller = simulation.controller_manager.controllers[0]
+    return (simulation, controller)
+
+  def peek(self, dag):
+    if dag.input_events == []:
+      return dag
+
+    # Inferred events includes input events and internal events
+    inferred_events = []
+
+    (simulation, controller) = self.setup_simulation()
 
     # Internal events inferred in the previous iteration of the following for
     # loop
@@ -103,14 +112,16 @@ class SnapshotPeeker(Peeker):
       expected_internal_events = \
          get_expected_internal_events(inject_input, following_input, dag.events)
 
+      inferred_events += events_inferred_last_iteration
+      if inject_input is not None:
+        inferred_events.append(inject_input)
+
       if expected_internal_events == []:
         # Optimization: if no internal events occured between this input and the
         # next, no need to peek(), just replay the next input
         log.debug("Optimization: no expected internal events")
         Peeker.ambiguous_counts[0.0] += 1
         events_inferred_last_iteration = []
-        if inject_input is not None:
-          inferred_events.append(inject_input)
         continue
 
       # Play forward the internal events inferred from last round and the
@@ -123,26 +134,28 @@ class SnapshotPeeker(Peeker):
         dag_interval = EventDag(events_inferred_last_iteration + [inject_input])
 
       assert(dag_interval.events != [])
-      replayer = Replayer(self.simulation_cfg, dag_interval,
-                          pass_through_whitelisted_messages=True)
-      replay.run_simulation_forward()
-
-      # Now peek() for internal events following inject_input
-      snapshotter = Snapshotter(simulation, controller)
-      snapshotter.snapshot_controller()
-
       wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
-      found_events = play_forward(simulation, wait_time_seconds)
+      found_events = self.find_internal_events(dag_interval, wait_time_seconds)
       events_inferred_last_iteration = match_and_filter(found_events, expected_internal_events)
 
-      # Finally, bring the controller back to the state it was at just after
-      # injecting inject_input
-      snapshotter.snapshot_proceed()
+    inferred_events += events_inferred_last_iteration
+    return EventDag(inferred_events)
 
-      inferred_events += events_inferred_last_iteration
-      if inject_input is not None:
-        inferred_events.append(inject_input)
+  def find_internal_events(self, dag_interval, wait_time_seconds):
+    replayer = Replayer(self.simulation_cfg, dag_interval,
+                        pass_through_whitelisted_messages=True)
+    replay.run_simulation_forward()
 
+    # Now peek() for internal events following inject_input
+    snapshotter = Snapshotter(simulation, controller)
+    snapshotter.snapshot_controller()
+
+    found_events = play_forward(simulation, wait_time_seconds)
+
+    # Finally, bring the controller back to the state it was at just after
+    # injecting inject_input
+    snapshotter.snapshot_proceed()
+    return found_events
 
 class PrefixPeeker(Peeker):
   ''' O(n^2) peeker that replays each prefix of the subseqeuence from the beginning. '''
@@ -240,13 +253,13 @@ class PrefixPeeker(Peeker):
     self._prefix_trie[current_input_prefix] = inferred_events
     return (current_input_prefix, inferred_events)
 
-def get_inject_input(inject_input_index, input_events):
+def get_inject_input(inject_input_idx, input_events):
   ''' Return the input at inject_input_index, or None if
   index is negative'''
   if inject_input_idx < 0:
-    inject_input = None
+    return None
   else:
-    inject_input = input_events[inject_input_idx]
+    return input_events[inject_input_idx]
 
 def get_following_input(inject_input_idx, input_events):
   ''' Return the event following inject_input_index, or None if

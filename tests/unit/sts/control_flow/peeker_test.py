@@ -22,8 +22,11 @@ from sts.control_flow.peeker import *
 # TODO: move Mock internal events to lib
 from tests.unit.sts.event_dag_test import MockInternalEvent
 from tests.unit.sts.mcs_finder_test import MockInputEvent
-from sts.replay_event import InternalEvent 
+from sts.replay_event import InternalEvent
 from sts.event_dag import EventDag
+from config.experiment_config_lib import ControllerConfig
+from sts.simulation_state import SimulationConfig
+from sts.util.convenience import IPAddressSpace
 import logging
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
@@ -39,17 +42,24 @@ def handle_int(sigspec, frame):
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
 
-class PrefixPeekerTest(unittest.TestCase):
+class PeekerTest(unittest.TestCase):
   def setUp(self):
     self.input_trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
     self.dag = EventDag(self.input_trace)
-    self.peeker = PrefixPeeker(None)
+    self.prefix_peeker = PrefixPeeker(None)
+    IPAddressSpace._claimed_addresses.clear()
+    ControllerConfig._controller_labels.clear()
+    controller_cfg = ControllerConfig(start_cmd="sleep")
+    simulation_cfg = SimulationConfig(controller_configs=[controller_cfg])
+    self.snapshot_peeker = SnapshotPeeker(simulation_cfg)
+    self.snapshot_peeker.setup_simulation = lambda: (None, None)
 
   def test_basic_noop(self):
     """ test_basic_noop: running on a dag with no input events returns the same dag """
     events = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
-    new_dag = self.peeker.peek(EventDag(events))
-    self.assertEquals(events, new_dag.events)
+    for peeker in [self.prefix_peeker, self.snapshot_peeker]:
+      new_dag = peeker.peek(EventDag(events))
+      self.assertEquals(events, new_dag.events)
 
   def test_basic_no_prune(self):
     inp1 = MockInputEvent(fingerprint="a")
@@ -59,40 +69,45 @@ class PrefixPeekerTest(unittest.TestCase):
     events = [ inp1, inp2, int1, inp3 ]
 
     def fake_find_internal_events(replay_dag, wait_time):
-      if replay_dag.events == [ inp1 ]:
+      if replay_dag.events[-1] == inp1:
         return []
-      elif replay_dag.events == [ inp1, inp2 ]:
+      elif replay_dag.events[-1] == inp2:
         return [ int1 ]
-      elif replay_dag.events == [ inp1, inp2, int1, inp3 ]:
+      elif replay_dag.events[-1] == inp3:
+        return []
+      elif [ type(e) for e in replay_dag.events ] == [WaitTime]:
         return []
       else:
         raise AssertionError("Unexpected event sequence queried: %s" % replay_dag.events)
 
-    self.peeker.find_internal_events = fake_find_internal_events
-    new_dag = self.peeker.peek(EventDag(events))
-    self.assertEquals(events, new_dag.events)
+    for peeker in [self.prefix_peeker, self.snapshot_peeker]:
+      peeker.find_internal_events = fake_find_internal_events
+      new_dag = peeker.peek(EventDag(events))
+      self.assertEquals(events, new_dag.events)
 
   def test_basic_prune(self):
-    inp1 = MockInputEvent(fingerprint="a")
     inp2 = MockInputEvent(fingerprint="b")
     int1 = MockInternalEvent(fingerprint="c")
     inp3 =  MockInputEvent(fingerprint="d")
     int2 = MockInternalEvent(fingerprint="e")
-    all_events = [ inp1, inp2, int1, inp3, int2 ]
     sub_events = [ inp2, int1, inp3, int2 ]
 
     def fake_find_internal_events(replay_dag, wait_time):
-      if replay_dag.events == [ inp2 ]:
+      if replay_dag.events[-1] == inp2:
+        # int1 disappears
         return []
-      elif replay_dag.events == [ inp2, inp3 ]:
+      elif replay_dag.events[-1] == inp3:
+        # int2 does not
         return [ int2 ]
+      elif [ type(e) for e in replay_dag.events ] == [WaitTime]:
+        return []
       else:
         raise AssertionError("Unexpected event sequence queried: %s" % replay_dag.events)
 
-    self.peeker.find_internal_events = fake_find_internal_events
-    new_dag = self.peeker.peek(EventDag(sub_events))
-    self.assertEquals( [inp2, inp3, int2 ], new_dag.events)
-
+    for peeker in [self.prefix_peeker, self.snapshot_peeker]:
+      peeker.find_internal_events = fake_find_internal_events
+      new_dag = peeker.peek(EventDag(sub_events))
+      self.assertEquals([inp2, inp3, int2], new_dag.events)
 
 class MatchFingerPrintTest(unittest.TestCase):
   def test_match_fingerprints_simple(self):
