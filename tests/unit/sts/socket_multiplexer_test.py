@@ -81,6 +81,8 @@ class MultiplexerTest(unittest.TestCase):
       d = mock_sock.recv(2048)
       self.assertEqual(self.client_messages[0], d)
     finally:
+      if ServerSocketDemultiplexer.instance is not None:
+        ServerSocketDemultiplexer.instance = None
       try:
         os.unlink(address)
       except OSError:
@@ -110,6 +112,8 @@ class MultiplexerTest(unittest.TestCase):
         # order should be deterministic
         self.assertEqual(self.client_messages[i], d)
     finally:
+      if ServerSocketDemultiplexer.instance is not None:
+        ServerSocketDemultiplexer.instance = None
       try:
         os.unlink(address)
       except OSError:

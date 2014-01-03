@@ -248,7 +248,7 @@ def get_inject_input(inject_input_index, input_events):
   else:
     inject_input = input_events[inject_input_idx]
 
-def get_following_input(inject_input_index, input_events):
+def get_following_input(inject_input_idx, input_events):
   ''' Return the event following inject_input_index, or None if
   inject_input_index is the last input '''
   if inject_input_idx < len(input_events) - 1:

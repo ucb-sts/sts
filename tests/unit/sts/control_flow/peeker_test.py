@@ -39,11 +39,11 @@ def handle_int(sigspec, frame):
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
 
-class PeekerTest(unittest.TestCase):
+class PrefixPeekerTest(unittest.TestCase):
   def setUp(self):
     self.input_trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
     self.dag = EventDag(self.input_trace)
-    self.peeker = Peeker(None)
+    self.peeker = PrefixPeeker(None)
 
   def test_basic_noop(self):
     """ test_basic_noop: running on a dag with no input events returns the same dag """
