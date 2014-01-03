@@ -4,6 +4,14 @@ from sts.topology import MeshTopology
 from sts.control_flow import Fuzzer
 from sts.input_traces.input_logger import InputLogger
 from sts.simulation_state import SimulationConfig
+from sts.util.convenience import backtick
+
+def get_additional_metadata():
+  path = "/home/rcs/vagrant_onosdev"
+  return {
+    'commit' : backtick("git rev-parse HEAD", cwd=path),
+    'branch' : backtick("git rev-parse --abbrev-ref HEAD", cwd=path)
+  }
 
 # Use ONOS as our controller.
 # N.B. ./scripts/conf_setup.sh automatically clears the cassandra image. If

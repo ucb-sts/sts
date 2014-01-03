@@ -14,6 +14,16 @@ SimulationConfigs can optionally take the following contructor parameters:
   patch_panel_class => a sts.topology.PatchPanel class (not object!)
   dataplane_trace   => a path to a dataplane trace file
                        (e.g. dataplane_traces/ping_pong_same_subnet.trace)
+  violation_persistence_threshold => number of logical time units to observe a
+                                     violation before we declare that it is
+                                     persistent
   switch_init_sleep_seconds => number of seconds to wait for switches to
                                connect to controllers before starting the
                                simulation. Defaults to False (no wait).
+  monkey_patch_select => whether to use STS's custom deterministic
+                         select. Requires that the controller is
+                         monkey-patched too
+
+Config files may also optionally define a function `get_additional_metadata`,
+that takes no arguments and returns a dictionary storing metadata about the
+experiment (e.g. the current commit hash of the controller under test).

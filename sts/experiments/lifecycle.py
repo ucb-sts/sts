@@ -27,7 +27,7 @@ sts_modules = ( ("sts", sts_path),
                 ("pox", sts_path + "/pox")
                 )
 
-def dump_metadata(metadata_file):
+def dump_metadata(metadata_file, additional_metadata=None):
   with open(metadata_file, "w") as t:
     metadata = { 'timestamp' : timestamp_string(),
                'argv' : sys.argv,
@@ -48,7 +48,8 @@ def dump_metadata(metadata_file):
                  module : { 'commit' : backtick("git rev-parse HEAD", cwd=path),
                             'branch' : backtick("git rev-parse --abbrev-ref HEAD", cwd=path)
                           } for module, path in sts_modules
-               }
+               },
+               'additional_metadata': additional_metadata,
              }
     t.write(json.dumps(metadata, sort_keys=True, indent=2, separators=(',', ": ")) + "\n")
 

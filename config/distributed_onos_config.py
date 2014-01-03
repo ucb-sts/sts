@@ -15,6 +15,13 @@ if 'CLUSTER' not in os.environ:
                      '''export ONOS_CLUSTER_NR_NODES=2\n'''
                      '''export PATH=${HOME}/vagrant_onosdev/ONOS/cluster-mgmt/bin:$PATH''')
 
+def get_additional_metadata():
+  path = "/home/rcs/vagrant_onosdev"
+  return {
+    'commit' : backtick("git rev-parse HEAD", cwd=path),
+    'branch' : backtick("git rev-parse --abbrev-ref HEAD", cwd=path)
+  }
+
 # Use ONOS as our controller.
 # TODO(cs): first make sure to clean up any preexisting ONOS instances.
 # N.B. this command is for the entire cluster, not individual nodes.

@@ -67,7 +67,12 @@ def setup_experiment(args, config):
     exp_lifecycle.publish_prepare(config.exp_name, config.results_dir)
 
   # Record machine information for this experiment
-  exp_lifecycle.dump_metadata("%s/metadata" % config.results_dir)
+  additional_metadata = None
+  if hasattr(config, get_additional_metadata):
+    additional_metadata = config.get_additional_metadata()
+
+  exp_lifecycle.dump_metadata("%s/metadata" % config.results_dir,
+                              additional_metadata=additional_metadata)
 
   # Copy over config file
   config_file = re.sub(r'\.pyc$', '.py', config.__file__)
