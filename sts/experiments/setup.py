@@ -68,7 +68,7 @@ def setup_experiment(args, config):
 
   # Record machine information for this experiment
   additional_metadata = None
-  if hasattr(config, get_additional_metadata):
+  if hasattr(config, "get_additional_metadata"):
     additional_metadata = config.get_additional_metadata()
 
   exp_lifecycle.dump_metadata("%s/metadata" % config.results_dir,
