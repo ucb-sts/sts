@@ -18,7 +18,7 @@ import re
 import socket
 import sys
 import json
-from sts.util.convenience import timestamp_string
+from sts.util.convenience import timestamp_string, find
 import subprocess
 
 sts_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -67,12 +67,6 @@ def walk_dirs_up(path):
   while path != "" and path != "/":
     yield path
     path = os.path.dirname(path)
-
-def find(f, iterable):
-  for i in iterable:
-    if f(i):
-      return i
-  return None
 
 def find_git_dir(results_dir):
   return find(lambda f: os.path.exists(os.path.join(f, ".git" )), walk_dirs_up(results_dir))
