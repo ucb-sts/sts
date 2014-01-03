@@ -128,7 +128,8 @@ class SnapshotPeeker(Peeker):
       replay.run_simulation_forward()
 
       # Now peek() for internal events following inject_input
-      snapshot_controller(simulation, controller)
+      snapshotter = Snapshotter(simulation, controller)
+      snapshotter.snapshot_controller()
 
       wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
       found_events = play_forward(simulation, wait_time_seconds)
@@ -136,7 +137,7 @@ class SnapshotPeeker(Peeker):
 
       # Finally, bring the controller back to the state it was at just after
       # injecting inject_input
-      snapshot_proceed(simulation, controller)
+      snapshotter.snapshot_proceed()
 
       inferred_events += events_inferred_last_iteration
       if inject_input is not None:
