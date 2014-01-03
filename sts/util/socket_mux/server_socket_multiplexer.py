@@ -19,7 +19,7 @@ import logging
 import base64
 
 # The server generally goes through the following states:
-# 
+#
 # i.    Wait for controller to create a mock listen socket and call bind() on
 #       the mock listen socket.
 # ii.   Store the address/port from bind() in the mock listen socket.
@@ -37,11 +37,17 @@ import base64
 #       in step i.
 
 class ServerSocketDemultiplexer(SocketDemultiplexer):
+  # ServerSocketDemultiplexer should be a singleton
+  instance = None
+
   def __init__(self, true_io_worker, mock_listen_sock):
-    ''' Whenever we see a handshake from the client, hand new MockSockets to
-    mock_listen_sock so that they can be accept()'ed'''
     super(ServerSocketDemultiplexer, self).__init__(true_io_worker)
+    # Whenever we see a handshake from the client, hand new MockSockets to
+    # mock_listen_sock so that they can be accept()'ed
     self.mock_listen_sock = mock_listen_sock
+    if ServerSocketDemultiplexer.instance is not None:
+      raise RuntimeError("There's already a ServerSocketDemultiplexer instance")
+    ServerSocketDemultiplexer.instance = self
 
   def _on_receive(self, worker, json_hash):
     super(ServerSocketDemultiplexer, self)._on_receive(worker, json_hash)
@@ -71,6 +77,18 @@ class ServerSocketDemultiplexer(SocketDemultiplexer):
     MultiplexedSelect.fileno2ready_to_read[sock_id] = sock.ready_to_read
     self.id2socket[sock_id] = sock
     return sock
+
+def create_true_listen_socket(server_info, protocol, sock_type, blocking=0):
+  ''' Return a socket bound to server_info and set to listen '''
+  if hasattr(socket, "_old_socket"):
+    true_socket = socket._old_socket(protocol, sock_type)
+  else:
+    true_socket = socket.socket(protocol, sock_type)
+  true_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+  true_socket.bind(server_info)
+  true_socket.setblocking(blocking)
+  true_socket.listen(1)
+  return true_socket
 
 class ServerMockSocket(MockSocket):
   def __init__(self, protocol, sock_type, sock_id=-1, json_worker=None,
@@ -104,22 +122,15 @@ class ServerMockSocket(MockSocket):
     # TODO(cs): STS should tell pox_monkeypatcher exactly what ports it
     # intends to connect to. If bind() is called for some other port, delegate to
     # a real socket.
-    if hasattr(socket, "_old_socket"):
-      true_socket = socket._old_socket(self.protocol, self.sock_type)
-    else:
-      true_socket = socket.socket(self.protocol, self.sock_type)
-    true_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    true_socket.bind(self.server_info)
-    true_socket.setblocking(0)
-    true_socket.listen(1)
+    true_socket = create_true_listen_socket(self.server_info, self.protocol,
+                                            self.sock_type, blocking=0)
     # We give this true socket to select.select and
     # wait for the client SocketDemultiplexer connection
     self.set_true_listen_socket(true_socket, self,
                                 accept_callback=self._accept_callback)
 
   def _accept_callback(self, io_worker):
-    # Keep a reference so that it won't be gc'ed?
-    self.demux = ServerSocketDemultiplexer(io_worker, mock_listen_sock=self)
+    ServerSocketDemultiplexer(io_worker, mock_listen_sock=self)
     # revert the monkeypatch of socket.socket in case the server
     # makes auxiliary TCP connections
     if hasattr(socket, "_old_socket"):

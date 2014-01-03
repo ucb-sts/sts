@@ -32,7 +32,8 @@ def split_up(f, l):
       falses.append(elem)
   return (trues, falses)
 
-def kill_procs(child_processes, kill=None, verbose=True, timeout=5):
+def kill_procs(child_processes, kill=None, verbose=True, timeout=5,
+               close_fds=True):
   child_processes = filter(lambda e: e is not None, child_processes)
   def msg(msg):
     if(verbose):
@@ -79,18 +80,18 @@ def kill_procs(child_processes, kill=None, verbose=True, timeout=5):
         kill_procs(child_processes, kill=True)
         break
 
-  for child in all_dead:
-    for attr_name in "stdin", "stdout", "stderr":
-      if hasattr(child, attr_name):
-        try:
-          attr = getattr(child, attr_name)
-          if attr:
-            attr.close()
-        except:
-          msg("Error closing child io.")
-          tb = traceback.format_exc()
-          msg(tb)
-
+  if close_fds:
+    for child in all_dead:
+      for attr_name in "stdin", "stdout", "stderr":
+        if hasattr(child, attr_name):
+          try:
+            attr = getattr(child, attr_name)
+            if attr:
+              attr.close()
+          except:
+            msg("Error closing child io.")
+            tb = traceback.format_exc()
+            msg(tb)
 
   if len(child_processes) == 0:
     msg(' OK\n')

@@ -34,6 +34,7 @@ from sts.syncproto.sts_syncer import STSSyncConnectionManager
 import sts.snapshot as snapshot
 from sts.util.socket_mux.base import MultiplexedSelect
 from sts.util.socket_mux.sts_socket_multiplexer import STSSocketDemultiplexer, STSMockSocket
+from sts.util.convenience import find
 from pox.lib.util import connect_socket_with_backoff
 
 import select
@@ -241,18 +242,39 @@ class Simulation(object):
     self.exit_code = code
 
   def set_pass_through(self):
-    ''' Set to pass-through during bootstrap, so that switch initialization
-    messages don't get buffered '''
+    ''' Cause all message receipts to be passed through to switches without
+    being buffered.'''
+    # Set to pass-through during bootstrap, so that switch initialization
+    # messages don't get buffered
     self.openflow_buffer.set_pass_through()
     if hasattr(self.controller_sync_callback, "set_pass_through"):
       self.controller_sync_callback.set_pass_through()
 
+  def set_record_only(self):
+    ''' Cause all message receipts to be recorded, but not buffered nor sent
+    on to the network. All state changes will be recorded and ack'ed'''
+    self.openflow_buffer.set_record_only()
+    if hasattr(self.controller_sync_callback, "set_pass_through"):
+      self.controller_sync_callback.set_pass_through()
+
   def unset_pass_through(self):
-    ''' unset pass-through mode '''
+    ''' unset pass-through mode and return a sorted list of the events that
+    were observed'''
     observed_events = []
     observed_events += self.openflow_buffer.unset_pass_through()
     if hasattr(self.controller_sync_callback, "unset_pass_through"):
       observed_events += self.controller_sync_callback.unset_pass_through()
+    observed_events.sort(key=lambda e: e.time.as_float())
+    return observed_events
+
+  def unset_record_only(self):
+    ''' unset record-only mode and return a sorted list of the events that
+    were observed'''
+    observed_events = []
+    observed_events += self.openflow_buffer.unset_record_only()
+    if hasattr(self.controller_sync_callback, "unset_pass_through"):
+      observed_events += self.controller_sync_callback.unset_pass_through()
+    observed_events.sort(key=lambda e: e.time.as_float())
     return observed_events
 
   def clean_up(self):
@@ -346,3 +368,16 @@ class Simulation(object):
     # create_connection should not be called again -- revert monkeypatch in
     # case STS wants to open other sockets (e.g., xmlrplclib)
     revert_socket_monkeypatch()
+
+  def get_demuxer_for_server_info(self, server_info):
+    '''
+    server_info is the address of the controller, either a tuple
+    (address, port) or a path to a unix domain socket
+
+    Raises a ValueError if there is no SocketDemultiplexer associated
+    with the given server_info.
+    '''
+    demuxer = find(lambda d: d.server_info == server_info, self.demuxers)
+    if demuxer is None:
+      return ValueError("server_info %s does not have a demuxer" % server_info)
+    return demuxer
