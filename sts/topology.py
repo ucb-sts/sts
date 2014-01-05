@@ -391,7 +391,7 @@ class LinkTracker(object):
       network_link = self.port2internal_link[port]
       return (network_link.end_software_switch, network_link.end_port)
     else:
-      raise ValueError("Unknown port: %s" % str(port))
+      raise ValueError("Unknown port %s on node %s" % (str(port),str(node)))
 
   def _get_switch_by_dpid(self, dpid):
     if dpid not in self.dpid2switch:
