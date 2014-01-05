@@ -55,6 +55,8 @@ class Replayer(ControlFlow):
                delay_flow_mods=False,
                **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
+    # Label uniquely identifying this replay, set in init_results()
+    self.replay_id = "N/A"
     self.logical_time = 0
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -148,6 +150,7 @@ class Replayer(ControlFlow):
     msg.event(color.CYAN + ("Round %d" % self.logical_time) + color.WHITE)
 
   def init_results(self, results_dir):
+    self.replay_id = results_dir
     if self._input_logger:
       self._input_logger.open(results_dir)
 
@@ -220,6 +223,10 @@ class Replayer(ControlFlow):
           # If Interactive terminated due to ^D, return to our fuzzing loop,
           # prepared again to drop into Interactive on ^C.
           self.old_interrupt = signal.signal(signal.SIGINT, interrupt)
+        except Exception:
+          log.critical("Exception raised while scheduling event %s, replay %s"
+                       % (str(event), self.replay_id))
+          raise
     finally:
       if self.old_interrupt:
         signal.signal(signal.SIGINT, self.old_interrupt)
