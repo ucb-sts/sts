@@ -514,6 +514,11 @@ class HostMigration(InputEvent):
             self.old_ingress_port_no, self.new_ingress_dpid,
             self.new_ingress_port_no, self.host_id)
 
+  def pretty_print_fingerprint(self):
+      return "[h%d]: (s%d,p%d) -> (s%d,p%d)" % (self.host_id,
+              self.old_ingress_dpid, self.old_ingress_port_no,
+              self.new_ingress_dpid, self.new_ingress_port_no)
+
 class PolicyChange(InputEvent):
   ''' Not currently supported '''
   def __init__(self, request_type, label=None, round=-1, time=None):

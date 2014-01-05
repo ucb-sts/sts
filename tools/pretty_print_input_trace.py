@@ -28,7 +28,9 @@ def round_printer(event):
 
 def fingerprint_printer(event):
   fingerprint = None
-  if hasattr(event, 'fingerprint'):
+  if hasattr(event, "pretty_print_fingerprint"):
+    fingerprint = event.pretty_print_fingerprint()
+  elif hasattr(event, 'fingerprint'):
     # the first element of the fingerprint tuple is always the class name, so
     # we skip it over
     # TODO(cs): make sure that dict fields are always in the same order
