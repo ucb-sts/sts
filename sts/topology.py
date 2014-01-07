@@ -156,7 +156,11 @@ class PatchPanel(object):
 
   def handle_DpPacketOut(self, event):
     self.register_interface_pair(event)
-    (node, port) = self.get_connected_port(event.node, event.port)
+    try:
+      (node, port) = self.get_connected_port(event.node, event.port)
+    except ValueError:
+      log.warn("no such port %s on node %s" % (str(event.port), str(event.node)))
+
     if type(node) == Host:
       self.deliver_packet(node, event.packet, port)
     else:
@@ -600,8 +604,13 @@ class Topology(object):
     if not self.link_tracker.port_connected(dp_event.port):
       return False
 
-    (next_hop, next_port) = self.get_connected_port(dp_event.switch,
-                                                    dp_event.port)
+    try:
+      (next_hop, next_port) = self.get_connected_port(dp_event.switch,
+                                                      dp_event.port)
+    except ValueError:
+      log.warn("no such port %s on node %s" % (str(event.port), str(event.node)))
+      return False
+
     if type(dp_event.node) == Host or type(next_hop) == Host:
       # TODO(cs): model access link failures
       return True
