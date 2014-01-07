@@ -118,6 +118,8 @@ def _prefix_thread(f, func):
 
 def popen_filtered(name, args, cwd=None, env=None, redirect_output=True,
                    shell=False):
+  if shell and type(args) == list:
+    args = ' '.join(args)
   try:
     cmd = subprocess.Popen(args, stdout=subprocess.PIPE, shell=shell,
                            stderr=subprocess.PIPE, stdin=sys.stdin, cwd=cwd, env=env,
