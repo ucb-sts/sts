@@ -1336,7 +1336,7 @@ class DataplanePermit(InternalEvent):
   @property
   def fingerprint(self):
     ''' Fingerprint tuple format:
-    (class name, DPFingerprint, switch dpid, port no)
+    (class name, DPFingerprint, switch dpid, outgoing port no)
     See fingerprints/messages.py for format of DPFingerprint.
     '''
     return self._fingerprint
