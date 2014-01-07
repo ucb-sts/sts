@@ -806,7 +806,8 @@ class Controller(object):
     kill_procs([self.process])
     if self.config.kill_cmd != "":
       self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
-      popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd, self.config.cwd)
+      popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd,
+                     self.config.cwd, shell=True)
     self._unregister_proc(self.process)
     self.process = None
     self.state = ControllerState.DEAD
@@ -846,7 +847,9 @@ class Controller(object):
                            self.config.address, self.cid,
                            host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address))
     else:
-      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd)
+      self.process = popen_filtered("[%s]" % self.label,
+                                    self.config.expanded_start_cmd,
+                                    self.config.cwd, shell=True)
     self._register_proc(self.process)
     self._check_snapshot_connect()
     self.state = ControllerState.ALIVE
@@ -999,7 +1002,9 @@ class POXController(Controller):
                            host_ip_addr_str=IPAddressSpace.find_unclaimed_address(ip_prefix=self.config.address),
                            cwd=self.config.cwd, env=env)
     else:
-      self.process = popen_filtered("[%s]" % self.label, self.config.expanded_start_cmd, self.config.cwd, env)
+      self.process = popen_filtered("[%s]" % self.label,
+                                    self.config.expanded_start_cmd,
+                                    self.config.cwd, env, shell=True)
     self._register_proc(self.process)
     if self.config.sync:
       self.sync_connection = self.sync_connection_manager.connect(self, self.config.sync)
