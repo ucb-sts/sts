@@ -575,7 +575,8 @@ class Fuzzer(ControlFlow):
           new_switch = random.choice(live_edge_switches)
           new_switch_dpid = new_switch.dpid
           new_port_no = max(new_switch.ports.keys()) + 1
-          msg.event("Migrating host %s" % str(access_link.host))
+          msg.event("Migrating host %s, New switch %s, New port %s" %
+                    (str(access_link.host),str(new_switch_dpid),str(new_port_no)))
           self.simulation.topology.migrate_host(old_ingress_dpid,
                                                 old_ingress_port_no,
                                                 new_switch_dpid,
