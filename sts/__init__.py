@@ -25,7 +25,7 @@ def check_sw_version(path, remote_branch):
       given path is the same as the remote repo's remote_branch.
   '''
   def get_version(branch=""):
-    return os.popen("git show %s | head -1 | cut -d ' ' -f2" % branch).read()
+    return os.popen("git rev-parse HEAD" % branch).read()
 
   old_cwd = os.getcwd()
   try:
