@@ -160,6 +160,7 @@ class PatchPanel(object):
       (node, port) = self.get_connected_port(event.node, event.port)
     except ValueError:
       log.warn("no such port %s on node %s" % (str(event.port), str(event.node)))
+      return
 
     if type(node) == Host:
       self.deliver_packet(node, event.packet, port)
@@ -608,7 +609,7 @@ class Topology(object):
       (next_hop, next_port) = self.get_connected_port(dp_event.switch,
                                                       dp_event.port)
     except ValueError:
-      log.warn("no such port %s on node %s" % (str(event.port), str(event.node)))
+      log.warn("no such port %s on node %s" % (str(dp_event.port), str(dp_event.switch)))
       return False
 
     if type(dp_event.node) == Host or type(next_hop) == Host:
