@@ -251,6 +251,8 @@ class Replayer(ControlFlow):
 
       if self.invariant_check:
         # Wait a bit in case the bug takes awhile to happen
+        # TODO(cs): may be redundant with WaitTime events at the end of the
+        # trace.
         log.debug("Sleeping %d seconds after run" % self.end_wait_seconds)
         time.sleep(self.end_wait_seconds)
 
