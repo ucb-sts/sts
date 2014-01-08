@@ -70,6 +70,7 @@ def main(args):
   columns.append(["subsequence", lambda row: row[0]])
   columns.append(["# inputs", lambda row: row[1]])
   for idx, e in enumerate(full_trace.input_events):
+    # See: http://stackoverflow.com/questions/233673/lexical-closures-in-python
     def bind_closure(index):
       return lambda row: row[index+2]
     columns.append([e.label, bind_closure(idx)])
