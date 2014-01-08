@@ -432,18 +432,18 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
       else:
         return ", ".join(action(a) for a in e.actions)
 
-    t = Tabular( ("Prio", lambda e: e.priority),
-                ("in_port", lambda e: e.match.in_port),
-                ("dl_type", dl_type),
-                ("dl_src", lambda e: e.match.dl_src),
-                ("dl_dst", lambda e: e.match.dl_dst),
-                ("nw_proto", nw_proto),
-                ("nw_src", lambda e: e.match.nw_src),
-                ("nw_dst", lambda e: e.match.nw_dst),
-                ("tp_src", lambda e: e.match.tp_src),
-                ("tp_dst", lambda e: e.match.tp_dst),
-                ("actions", actions),
-                )
+    t = Tabular((("Prio", lambda e: e.priority),
+                 ("in_port", lambda e: e.match.in_port),
+                 ("dl_type", dl_type),
+                 ("dl_src", lambda e: e.match.dl_src),
+                 ("dl_dst", lambda e: e.match.dl_dst),
+                 ("nw_proto", nw_proto),
+                 ("nw_src", lambda e: e.match.nw_src),
+                 ("nw_dst", lambda e: e.match.nw_dst),
+                 ("tp_src", lambda e: e.match.tp_src),
+                 ("tp_dst", lambda e: e.match.tp_dst),
+                 ("actions", actions),
+                ))
     t.show(self.table.entries)
 
 class Link (object):

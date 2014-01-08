@@ -14,7 +14,7 @@
 # limitations under the License.
 
 class Tabular(object):
-  def __init__(self, *cols):
+  def __init__(self, cols):
     self.cols = cols
 
   def show(self, data):
