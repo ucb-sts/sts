@@ -112,6 +112,15 @@ class Stats(object):
         s += "\t  %s : %d\n" % (event_name, count)
     return s
 
+def check_for_violation_signature(trace, signature):
+  for event in reversed(trace):
+    if type(event) == replay_events.WaitTime:
+      continue
+    if type(event) != replay_events.InvariantViolation:
+       # No InvariantViolation occured at the end of the trace
+       return False
+    return signature in event.violations
+
 def main(args):
   def load_format_file(format_file):
     if format_file.endswith('.py'):
@@ -157,6 +166,13 @@ def main(args):
           field_formatters[field](event)
         stats.update(event)
 
+    if check_for_violation_signature(trace, args.violation_signature):
+      print "Violation occurs at end of trace: %s" % args.violation_signature
+    elif args.violation_signature is not None:
+      print ("Violation does not occur at end of trace: %s",
+             args.violation_signature)
+    print
+
   if args.stats:
     print "Stats: %s" % stats
 
@@ -179,6 +195,12 @@ if __name__ == '__main__':
                       default=True)
   parser.add_argument('-d', '--dp-trace-path', dest="dp_trace_path",
                       help="for older traces, specify path to the TrafficInjection packets",
+                      default=None)
+  parser.add_argument('-s', '--violation-signature', dest="violation_signature",
+                      help=('''Check whether the given violation signature '''
+                            '''(return value from InvariantChecker), '''
+                            '''specified as a string, occurs at the end '''
+                            '''of the trace'''),
                       default=None)
   args = parser.parse_args()
 

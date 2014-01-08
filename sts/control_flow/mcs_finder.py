@@ -388,6 +388,8 @@ class MCSFinder(ControlFlow):
         # Wait a bit in case the bug takes awhile to happen
         self.log("Sleeping %d seconds after run" % self.end_wait_seconds)
         time.sleep(self.end_wait_seconds)
+        # TODO(cs): this does not verify whether the violation is persistent
+        # or transient. Perhaps it should?
         violations = self.invariant_check(simulation)
         if violations != []:
           input_logger.log_input_event(InvariantViolation(violations))
