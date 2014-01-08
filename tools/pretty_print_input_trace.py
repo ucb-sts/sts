@@ -120,6 +120,7 @@ def check_for_violation_signature(trace, signature):
        # No InvariantViolation occured at the end of the trace
        return False
     return signature in event.violations
+  return False
 
 def main(args):
   def load_format_file(format_file):
