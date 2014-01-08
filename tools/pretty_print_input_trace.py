@@ -114,6 +114,12 @@ class Stats(object):
 
 def check_for_violation_signature(trace, signature):
   for event in reversed(trace):
+    # TODO(cs): this algorithm is broken in the case that InvariantViolations
+    # were part of the original events.trace as internal/special events. The
+    # last InvariantViolation in the trace is not necessarily the one that
+    # was checked by mcs_finder. A cleaner way to check for violations would be
+    # to store whether or not a violation was found for each run in runtime
+    # stats.
     if type(event) == replay_events.WaitTime:
       continue
     if type(event) != replay_events.InvariantViolation:
