@@ -142,6 +142,10 @@ class Replayer(ControlFlow):
             **{ k: v for k,v in kwargs.items()
                 if k in EventScheduler.kwargs })
 
+    unknown_kwargs = [ k for k in kwargs.keys() if k not in EventScheduler.kwargs ]
+    if unknown_kwargs != []:
+      raise ValueError("Unknown kwargs %s" % str(unknown_kwargs))
+
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
       self._input_logger.log_input_event(event, **kws)
