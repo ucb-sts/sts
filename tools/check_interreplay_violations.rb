@@ -7,6 +7,8 @@
 # easily accessible way. It should be replaced with a simple tool that parses
 # the appropriate information in runtime_stats.json.
 
+require 'json'
+
 replay_number = 0
 replay_to_violation = {}
 
@@ -22,6 +24,5 @@ File.foreach(ARGV[0]) do |line|
   end
 end
 
-replay_to_violation.keys.sort.each do |key|
-  puts "Replay #{key} violation #{replay_to_violation[key]}"
-end
+puts JSON.pretty_generate(replay_to_violation)
+
