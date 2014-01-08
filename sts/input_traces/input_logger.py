@@ -42,8 +42,9 @@ control_flow = Replayer(simulation_config, "%s",
                         wait_on_deterministic_values=%s,
                         allow_unexpected_messages=False,
                         delay_flow_mods=%s,
-                        pass_through_whitelisted_messages=True)
-# Invariant check: %s
+                        pass_through_whitelisted_messages=True,
+                        invariant_check_name=%s,
+                        bug_signature=%s)
 '''
 
 # TODO(cs): add input_logger to interactive_replayer in case they want to
@@ -61,6 +62,7 @@ control_flow = InteractiveReplayer(simulation_config, "%s")
 # wait_on_deterministic_values=%s
 # delay_flow_mods=%s
 # Invariant check: %s
+# Bug signature: %s
 '''
 
 openflow_replay_config_template = '''
@@ -76,6 +78,7 @@ control_flow = OpenFlowReplayer(simulation_config, "%s")
 # wait_on_deterministic_values=%s
 # delay_flow_mods=%s
 # Invariant check: %s
+# Bug signature: %s
 '''
 
 mcs_config_template = '''
@@ -90,7 +93,8 @@ simulation_config = %s
 control_flow = EfficientMCSFinder(simulation_config, "%s",
                                   wait_on_deterministic_values=%s,
                                   delay_flow_mods=%s,
-                                  invariant_check_name=%s)
+                                  invariant_check_name=%s,
+                                  bug_signature=%s)
 '''
 
 log = logging.getLogger("input_logger")
@@ -169,11 +173,16 @@ class InputLogger(object):
     if hasattr(control_flow, "delay_flow_mods"):
       delay_flow_mods = control_flow.delay_flow_mods
 
+    bug_signature = ""
+    if hasattr(control_flow, "bug_signature"):
+      bug_signature = control_flow.bug_signature
+
     for path, template in path_templates:
       with open(path, 'w') as cfg_out:
         config_string = template % (str(simulation_cfg),
                                     self.output_path,
                                     str(wait_on_deterministic_values),
                                     str(delay_flow_mods),
-                                    "'%s'" % str(control_flow.invariant_check_name))
+                                    "'%s'" % str(control_flow.invariant_check_name),
+                                    "'%s'" % str(bug_signature))
         cfg_out.write(config_string)

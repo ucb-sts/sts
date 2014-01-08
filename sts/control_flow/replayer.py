@@ -19,6 +19,7 @@ control flow for running the simulation forward.
     iteratively prunes until the MCS has been found
 '''
 
+from sts.replay_event import InvariantViolation
 from sts.control_flow.interactive import Interactive
 from sts.control_flow.event_scheduler import EventScheduler
 from sts.replay_event import *
@@ -29,9 +30,11 @@ from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.util.convenience import find, find_index, base64_encode
 from sts.topology import BufferedPatchPanel
 from sts.entities import FuzzSoftwareSwitch
+from config.invariant_checks import name_to_invariant_check
 
 import signal
 import logging
+import time
 
 log = logging.getLogger("Replayer")
 
@@ -52,8 +55,16 @@ class Replayer(ControlFlow):
                end_in_interactive=False, input_logger=None,
                allow_unexpected_messages=False,
                pass_through_whitelisted_messages=True,
-               delay_flow_mods=False,
+               delay_flow_mods=False, invariant_check_name="",
+               bug_signature="", end_wait_seconds=0.5,
                **kwargs):
+    '''
+     - If invariant_check_name is not None, check it at the end for the
+       execution
+     - If bug_signature is not None, check whether this particular signature
+       appears in the output of the invariant check at the end of the
+       execution
+    '''
     ControlFlow.__init__(self, simulation_cfg)
     # Label uniquely identifying this replay, set in init_results()
     self.replay_id = "N/A"
@@ -107,6 +118,16 @@ class Replayer(ControlFlow):
     # statistics purposes.
     self.passed_unexpected_messages = []
     self.delay_flow_mods = delay_flow_mods
+    self.end_wait_seconds = end_wait_seconds
+    self.bug_signature = bug_signature
+    self.invariant_check_name = invariant_check_name
+    self.invariant_check = None
+    if self.invariant_check_name:
+      if self.invariant_check_name not in name_to_invariant_check:
+        raise ValueError('''Unknown invariant check %s.\n'''
+                         '''Invariant check name must be defined in config.invariant_checks''',
+                         self.invariant_check_name)
+      self.invariant_check = name_to_invariant_check[self.invariant_check_name]
 
     if self.pass_through_whitelisted_messages:
       for event in self.dag.events:
@@ -227,6 +248,29 @@ class Replayer(ControlFlow):
           log.critical("Exception raised while scheduling event %s, replay %s"
                        % (str(event), self.replay_id))
           raise
+
+      if self.invariant_check:
+        # Wait a bit in case the bug takes awhile to happen
+        log.debug("Sleeping %d seconds after run" % self.end_wait_seconds)
+        time.sleep(self.end_wait_seconds)
+
+        # TODO(cs): this does not verify whether the violation is persistent
+        # or transient. Perhaps it should?
+        violations = self.invariant_check(self.simulation)
+        self.simulation.violation_found = False
+        if violations != []:
+          self._log_input_event(InvariantViolation(violations))
+          msg.fail("Violations at end of trace: %s" % str(violations))
+          if self.bug_signature:
+            if self.bug_signature in violations:
+              self.simulation.violation_found = True
+              msg.success("Violation found %s" % self.bug_signature)
+            else:
+              msg.fail("Violation does not match violation signature!")
+          else:
+            self.simulation.violation_found = True
+        else:
+          msg.success("No correctness violations!")
     finally:
       if self.old_interrupt:
         signal.signal(signal.SIGINT, self.old_interrupt)

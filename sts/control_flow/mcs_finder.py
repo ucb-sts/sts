@@ -45,7 +45,8 @@ import re
 
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
-               invariant_check_name=None,
+               invariant_check_name="",
+               bug_signature="",
                transform_dag=None, end_wait_seconds=0.5,
                mcs_trace_path=None, extra_log=None, runtime_stats_path=None,
                wait_on_deterministic_values=False,
@@ -65,12 +66,13 @@ class MCSFinder(ControlFlow):
     self.sync_callback = None
     self._log = logging.getLogger("mcs_finder")
 
-    if invariant_check_name is None:
+    if invariant_check_name == "":
       raise ValueError("Must specify invariant check")
     if invariant_check_name not in name_to_invariant_check:
       raise ValueError('''Unknown invariant check %s.\n'''
                        '''Invariant check name must be defined in config.invariant_checks''',
                        invariant_check_name)
+    self.invariant_check_name = invariant_check_name
     self.invariant_check = name_to_invariant_check[invariant_check_name]
 
     if type(superlog_path_or_dag) == str:
@@ -85,9 +87,9 @@ class MCSFinder(ControlFlow):
     if last_invariant_violation is None:
       raise ValueError("No invariant violation found in dag...")
     violations = last_invariant_violation.violations
+    self.bug_signature = bug_signature
     if len(violations) > 1:
-      self.bug_signature = None
-      while self.bug_signature is None:
+      while self.bug_signature == "":
         msg.interactive("\n------------------------------------------\n")
         msg.interactive("Multiple violations detected! Choose one for MCS Finding:")
         for i, violation in enumerate(violations):
@@ -99,7 +101,7 @@ class MCSFinder(ControlFlow):
           msg.fail("Must provide an integer between 1 and %d!" % len(violations))
           continue
         self.bug_signature = violations[int(violation_index)-1]
-    else:
+    if self.bug_signature == "":
       self.bug_signature = violations[0]
     msg.success("\nBug signature to match is %s. Proceeding with MCS finding!\n" % self.bug_signature)
 
@@ -377,28 +379,22 @@ class MCSFinder(ControlFlow):
                           allow_unexpected_messages=False,
                           pass_through_whitelisted_messages=True,
                           delay_flow_mods=self.delay_flow_mods,
+                          bug_signature=self.bug_signature,
+                          invariant_check_name=self.invariant_check_name,
+                          end_wait_seconds=self.end_wait_seconds,
                           **self.kwargs)
       replayer.init_results(results_dir)
       self._runtime_stats = RuntimeStats(subsequence_id)
-      violations = []
       simulation = None
       try:
         simulation = replayer.simulate()
         self._track_new_internal_events(simulation, replayer)
-        # Wait a bit in case the bug takes awhile to happen
-        self.log("Sleeping %d seconds after run" % self.end_wait_seconds)
-        time.sleep(self.end_wait_seconds)
-        # TODO(cs): this does not verify whether the violation is persistent
-        # or transient. Perhaps it should?
-        violations = self.invariant_check(simulation)
-        if violations != []:
-          input_logger.log_input_event(InvariantViolation(violations))
       except SystemExit:
         # One of the invariant checks bailed early. Oddly, this is not an
         # error for us, it just means that there were no violations...
         # [this logic is arguably broken]
         # Return no violations, and let Forker handle system exit for us.
-        violations = []
+        simulation.violation_found = False
       finally:
         input_logger.close(replayer, self.simulation_cfg, skip_mcs_cfg=True)
         if simulation is not None:
@@ -407,32 +403,22 @@ class MCSFinder(ControlFlow):
       if self.strict_assertion_checking:
         test_serialize_response(violations, self._runtime_stats.client_dict())
       timed_out_internal = [ e.label for e in new_dag.events if e.timed_out ]
-      return (violations, self._runtime_stats.client_dict(), timed_out_internal)
+      return (simulation.violation_found, self._runtime_stats.client_dict(), timed_out_internal)
 
     # TODO(cs): once play_forward() is no longer a closure, register it only once
     self.forker.register_task("play_forward", play_forward)
     results_dir = self.replay_log_tracker.get_replay_logger_dir(label)
     self.subsequence_id += 1
-    (violations, client_runtime_stats,
+    (violation_found, client_runtime_stats,
                  timed_out_internal) = self.forker.fork("play_forward",
                                                         results_dir,
                                                         self.subsequence_id)
     new_dag.set_events_as_timed_out(timed_out_internal)
 
-    bug_found = False
-    if violations != []:
-      msg.fail("Violations: %s" % str(violations))
-      if self.bug_signature in violations:
-        bug_found = True
-      else:
-        msg.fail("Bug does not match initial violation fingerprint!")
-    else:
-      msg.success("No correctness violations!")
-
     if not ignore_runtime_stats:
       self._runtime_stats.merge_client_dict(client_runtime_stats)
 
-    return bug_found
+    return violation_found
 
   def _optimize_event_dag(self):
     ''' Employs domain knowledge of event classes to reduce the size of event
