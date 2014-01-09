@@ -161,18 +161,17 @@ class MultiplexedSelect(IOMaster):
 
   def select(self, rl, wl, xl, timeout=0):
     ''' Note that this layer is *below* IOMaster's Select loop '''
+    # Always remove MockSockets or wrappers of MockSockets
+    # (don't mess with other non-socket fds)
+    mock_read_workers = [ s for s in rl if is_mocked(s) ]
+    mock_write_workers = [ w for w in wl if is_mocked(w) ]
+
     # If this isn't the main thread, use normal select
-    if (threading.current_thread().name != "MainThread" and
-        threading.current_thread().name != "BackgroundIOThread"):
+    if mock_read_workers == [] and mock_write_workers == []:
       if hasattr(select, "_old_select"):
         return select._old_select(rl, wl, xl, timeout)
       else:
         return select.select(rl, wl, xl, timeout)
-
-    # Always remove MockSockets or wrappers of MockSockets
-    # (don't mess with other non-socket fds)
-    mock_read_socks = [ s for s in rl if is_mocked(s) ]
-    mock_write_workers = [ w for w in wl if is_mocked(w) ]
 
     (rl, wl, xl) = [ [s for s in l if not is_mocked(s) ]
                         for l in [rl, wl, xl] ]
@@ -183,7 +182,7 @@ class MultiplexedSelect(IOMaster):
 
     # If any of our mock sockets are ready to read, and our true_socket
     # doesn't have pending writes, return immediately
-    ready_to_read_mock = [ s for s in mock_read_socks if self.ready_to_read(s) ]
+    ready_to_read_mock = [ s for s in mock_read_workers if self.ready_to_read(s) ]
     if (ready_to_read_mock != [] or mock_write_workers != []) and our_wl == []:
       return sort_sockets(ready_to_read_mock, mock_write_workers, [])
 
@@ -191,11 +190,11 @@ class MultiplexedSelect(IOMaster):
       (rl, wl, xl) = select._old_select(rl+our_rl, wl+our_wl, xl+our_xl, timeout)
     else:
       (rl, wl, xl) = select.select(rl+our_rl, wl+our_wl, xl+our_xl, timeout)
-    (rl, wl, xl) = self.handle_socks_rwe(rl, wl, xl, mock_read_socks,
+    (rl, wl, xl) = self.handle_socks_rwe(rl, wl, xl, mock_read_workers,
                                          mock_write_workers)
     return (rl, wl, xl)
 
-  def handle_socks_rwe(self, rl, wl, xl, mock_read_socks, mock_write_workers):
+  def handle_socks_rwe(self, rl, wl, xl, mock_read_workers, mock_write_workers):
     if self.pinger in rl:
       self.pinger.pongAll()
       rl.remove(self.pinger)
@@ -234,7 +233,7 @@ class MultiplexedSelect(IOMaster):
             self._workers.discard(true_io_worker)
 
     # Now add MockSockets that are ready to read
-    rl += [ s for s in mock_read_socks if self.ready_to_read(s) ]
+    rl += [ s for s in mock_read_workers if self.ready_to_read(s) ]
     # As well as MockSockets that are ready to write.
     # This will cause the IOMaster above to flush the
     # io_worker's buffers into our true_io_worker.
