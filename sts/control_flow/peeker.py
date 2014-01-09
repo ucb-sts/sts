@@ -144,7 +144,7 @@ class SnapshotPeeker(Peeker):
   def find_internal_events(self, dag_interval, wait_time_seconds):
     replayer = Replayer(self.simulation_cfg, dag_interval,
                         pass_through_whitelisted_messages=True)
-    replay.run_simulation_forward()
+    replayer.run_simulation_forward()
 
     # Now peek() for internal events following inject_input
     snapshotter = Snapshotter(simulation, controller)
