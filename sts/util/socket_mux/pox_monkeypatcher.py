@@ -53,7 +53,7 @@ def launch(snapshot_address=None):
       return ServerMockSocket(protocol, sock_type,
                  set_true_listen_socket=mux_select.set_true_listen_socket)
     else:
-      socket._old_socket(protocol, sock_type)
+      return socket._old_socket(protocol, sock_type)
   socket.socket = socket_patch
   # TODO(cs): will mux_select be GC'ed?
 
