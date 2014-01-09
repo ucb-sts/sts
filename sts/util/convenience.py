@@ -27,6 +27,7 @@ import struct
 import shutil
 import base64
 import subprocess
+from sts.util.console import msg
 
 # don't use the standard instance - we don't want to be seeded
 true_random = random.Random()
@@ -178,4 +179,9 @@ def backtick(cmd, *args, **kwargs):
 
 def system(cmd, *args, **kwargs):
   return subprocess.call(cmd, *args, shell=True, **kwargs)
+
+def show_flow_tables(simulation):
+  for switch in simulation.topology.switches:
+    msg.interactive("Switch %s" % switch.dpid)
+    switch.show_flow_table()
 

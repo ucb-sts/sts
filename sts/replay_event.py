@@ -34,7 +34,7 @@ The format of other additional fields is documented in
 each event's __init__() method.
 '''
 
-from sts.util.convenience import base64_decode_openflow
+from sts.util.convenience import base64_decode_openflow, show_flow_tables
 from sts.util.console import msg
 from sts.entities import Link
 from sts.openflow_buffer import PendingReceive, PendingSend, OpenFlowBuffer
@@ -51,6 +51,7 @@ import json
 from collections import namedtuple
 from sts.syncproto.base import SyncTime
 from pox.lib.util import TimeoutError
+from pox.openflow.libopenflow_01 import ofp_flow_mod
 log = logging.getLogger("events")
 
 def dictify_fingerprint(fingerprint):
@@ -1042,6 +1043,8 @@ class ControlMessageReceive(ControlMessageBase):
       return True
     message_waiting = simulation.openflow_buffer.message_receipt_waiting(pending_receive)
     if message_waiting:
+      if type(self.get_packet()) == ofp_flow_mod:
+        show_flow_tables(simulation)
       simulation.openflow_buffer.schedule(pending_receive)
       return True
     return False
@@ -1378,11 +1381,6 @@ class ProcessFlowMod(ControlMessageBase):
   def pending_receive(self):
     # TODO(cs): inefficient to keep reconrstructing this tuple.
     return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
-
-  def show_flow_tables(self, simulation):
-    for switch in simulation.topology.switches:
-      msg.interactive("Switch %s" % switch.dpid)
-      switch.show_flow_table()
 
   @staticmethod
   def from_json(json_hash):
