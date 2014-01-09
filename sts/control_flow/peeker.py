@@ -21,7 +21,7 @@ from collections import Counter
 from sts.replay_event import WaitTime
 from sts.event_dag import EventDag
 from sts.control_flow.replayer import Replayer
-from sts.control_flow.base import RecordingSyncCallback
+from sts.control_flow.base import ReplaySyncCallback
 from sts.control_flow.snapshot_utils import *
 from sts.replay_event import InternalEvent
 
@@ -83,7 +83,7 @@ class SnapshotPeeker(Peeker):
   def setup_simulation(self):
     # TODO(cs): currently assumes that STSSyncProto is not used alongside
     # snapshotting.
-    simulation = self.simulation_cfg.bootstrap(RecordingSyncCallback(None))
+    simulation = self.simulation_cfg.bootstrap(ReplaySyncCallback(None))
     simulation.openflow_buffer.pass_through_whitelisted_messages = True
     simulation.connect_to_controllers()
     controller = simulation.controller_manager.controllers[0]
