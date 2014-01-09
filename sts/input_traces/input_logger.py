@@ -184,5 +184,5 @@ class InputLogger(object):
                                     str(wait_on_deterministic_values),
                                     str(delay_flow_mods),
                                     "'%s'" % str(control_flow.invariant_check_name),
-                                    "'%s'" % str(bug_signature))
+                                    '"%s"' % str(bug_signature))
         cfg_out.write(config_string)
