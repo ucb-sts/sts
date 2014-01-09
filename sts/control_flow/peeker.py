@@ -292,14 +292,16 @@ def get_expected_internal_events(left_input, right_input, events_list):
   return [ i for i in events_list[left_idx:right_idx]
            if isinstance(i, InternalEvent) ]
 
-def play_forward(simulation, wait_time_seconds):
+def play_forward(simulation, wait_time_seconds, flush_buffers=False):
   # Directly after the last input has been injected, flush the internal
   # event buffers in case there were unaccounted internal events
   # Note that there isn't a race condition between flush()'ing and
   # incoming internal events, since sts is single-threaded
-  # TODO(cs): flush() is no longer needed!
-  simulation.openflow_buffer.flush()
-  simulation.controller_sync_callback.flush()
+  # TODO(cs): flush() is no longer needed! And it doesn't make sense when
+  # the replay is a single WaitTime.
+  if flush_buffers:
+    simulation.openflow_buffer.flush()
+    simulation.controller_sync_callback.flush()
 
   # Now set all internal event buffers (GodScheduler for
   # ControlMessageReceives and ReplaySyncCallback for state changes)
@@ -307,11 +309,12 @@ def play_forward(simulation, wait_time_seconds):
   simulation.set_record_only()
 
   # Note that this is the monkey patched version of time.sleep
-  log.debug("peek()'ing for %f seconds" % wait_time_seconds)
+  log.info("peek()'ing for %f seconds" % wait_time_seconds)
   time.sleep(wait_time_seconds)
 
   # Now turn off record only through and grab the inferred events
   newly_inferred_events = simulation.unset_record_only()
+  log.debug("Recorded %d events" % len(newly_inferred_events))
   return newly_inferred_events
 
 def match_and_filter(newly_inferred_events, expected_internal_events):
