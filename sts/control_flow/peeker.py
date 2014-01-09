@@ -135,13 +135,13 @@ class SnapshotPeeker(Peeker):
 
       assert(dag_interval.events != [])
       wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
-      found_events = self.find_internal_events(simulation, dag_interval, wait_time_seconds)
+      found_events = self.find_internal_events(simulation, controller, dag_interval, wait_time_seconds)
       events_inferred_last_iteration = match_and_filter(found_events, expected_internal_events)
 
     inferred_events += events_inferred_last_iteration
     return EventDag(inferred_events)
 
-  def find_internal_events(self, simulation, dag_interval, wait_time_seconds):
+  def find_internal_events(self, simulation, controller, dag_interval, wait_time_seconds):
     replayer = Replayer(self.simulation_cfg, dag_interval,
                         pass_through_whitelisted_messages=True)
     replayer.simulation = simulation
