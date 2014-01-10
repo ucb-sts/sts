@@ -261,7 +261,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     # max_backoff_seconds to a low number.
     connected_to_at_least_one = self.connect(self.create_connection,
                                              down_controller_ids=down_controller_ids,
-                                             max_backoff_seconds=5)
+                                             max_backoff_seconds=3)
     if connected_to_at_least_one:
       self.failed = False
     return connected_to_at_least_one
