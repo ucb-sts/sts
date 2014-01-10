@@ -84,10 +84,13 @@ def setup_experiment(args, config):
   # Check configuration warnings
   log = logging.getLogger("setup")
 
+  con = config.control_flow.simulation_cfg.controller_configs
+  import pdb; pdb.set_trace()
+
   def builtin_pox_controller(c):
     # pox/ is already accounted for in metadata.
     return ("POXController" in str(c.controller_class) and
-            re.match("^pox[/]?", c.cwd))
+            re.match("^pox[/]?", c.cwd) is not None)
 
   if (not hasattr(config, "get_additional_metadata") and
       find(lambda c: not builtin_pox_controller(c),
