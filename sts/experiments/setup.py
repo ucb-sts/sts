@@ -85,7 +85,6 @@ def setup_experiment(args, config):
   log = logging.getLogger("setup")
 
   con = config.control_flow.simulation_cfg.controller_configs
-  import pdb; pdb.set_trace()
 
   def builtin_pox_controller(c):
     # pox/ is already accounted for in metadata.
