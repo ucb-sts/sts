@@ -63,8 +63,11 @@ def mkdir_p(dst):
       raise
 
 def rm_rf(dst):
-  if os.path.exists(dst):
-    shutil.rmtree(dst)
+  try:
+    if os.path.exists(dst):
+      shutil.rmtree(dst)
+  except OSError:
+    pass
 
 def create_python_dir(results_dir):
   mkdir_p(results_dir)
