@@ -16,7 +16,7 @@
 
 from sts.util.console import Tee
 import sts.experiments.lifecycle as exp_lifecycle
-from sts.util.convenience import timestamp_string, create_clean_python_dir, create_python_dir
+from sts.util.convenience import timestamp_string, create_clean_python_dir, create_python_dir, find
 
 import os
 import shutil
@@ -81,3 +81,15 @@ def setup_experiment(args, config):
     if os.path.abspath(config_file) != os.path.abspath(canonical_config_file):
       shutil.copy(config_file, canonical_config_file)
 
+  # Check configuration warnings
+  log = logging.getLogger("setup")
+
+  def builtin_pox_controller(c):
+    # pox/ is already accounted for in metadata.
+    return (str(c.controller_class) == "POXController" and
+            re.match("^pox[/]?", c.cwd))
+
+  if (not hasattr(config, "get_additional_metadata") and
+      find(lambda c: not builtin_pox_controller(c),
+           config.control_flow.simulation_cfg.controller_configs) != []):
+    log.warn("No get_additional_metadata() defined for config file")
