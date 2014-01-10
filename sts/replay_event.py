@@ -1373,7 +1373,7 @@ class ProcessFlowMod(ControlMessageBase):
     message_waiting = switch.openflow_buffer.message_receipt_waiting(self.pending_receive)
     if message_waiting:
       switch.openflow_buffer.schedule(self.pending_receive)
-      self.show_flow_tables(simulation)
+      show_flow_tables(simulation)
       return True
     return False
 
