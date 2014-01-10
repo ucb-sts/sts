@@ -86,10 +86,10 @@ def setup_experiment(args, config):
 
   def builtin_pox_controller(c):
     # pox/ is already accounted for in metadata.
-    return (str(c.controller_class) == "POXController" and
+    return ("POXController" in str(c.controller_class) and
             re.match("^pox[/]?", c.cwd))
 
   if (not hasattr(config, "get_additional_metadata") and
       find(lambda c: not builtin_pox_controller(c),
-           config.control_flow.simulation_cfg.controller_configs) != []):
+           config.control_flow.simulation_cfg.controller_configs) is not None):
     log.warn("No get_additional_metadata() defined for config file")
