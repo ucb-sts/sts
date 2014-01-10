@@ -114,6 +114,7 @@ class OpenFlowBuffer(EventMixin):
     else:
       replay_event_class = sts.replay_event.ControlMessageReceive
 
+    pending_message = message_event.pending_message
     replay_event = replay_event_class(pending_message.dpid,
                                       pending_message.controller_id,
                                       pending_message.fingerprint,
