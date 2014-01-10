@@ -24,8 +24,8 @@ def check_sw_version(path, remote_branch):
   ''' Return whether the latest commit of the git repo located at the
       given path is the same as the remote repo's remote_branch.
   '''
-  def get_version(branch=""):
-    return os.popen("git rev-parse HEAD" % branch).read()
+  def get_version(branch="HEAD"):
+    return os.popen("git rev-parse %s" % branch).read()
 
   old_cwd = os.getcwd()
   try:
