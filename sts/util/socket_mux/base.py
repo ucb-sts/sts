@@ -199,7 +199,7 @@ class MultiplexedSelect(IOMaster):
       self.pinger.pongAll()
       rl.remove(self.pinger)
 
-    for true_io_worker in self._workers:
+    for true_io_worker in list(self._workers):
       if true_io_worker in xl:
         raise RuntimeError("Error in true socket")
 
