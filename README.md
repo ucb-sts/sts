@@ -72,7 +72,7 @@ $ (cd sts/hassel/hsa-python && source setup.sh)
 $ (cd sts/hassel/hassel-c && make -j)
 ```
 
-You will need a [bitbucket](https://bitbucket.org/) account in order to clone the submodule. Note also that Hassel-C may not compile on Macintosh computers.
+Note that Hassel-C may not compile on Macintosh computers.
 
 To use the advanced replay features of STS, you may need to install pytrie:
 ```
