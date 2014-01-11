@@ -57,6 +57,7 @@ class Replayer(ControlFlow):
                pass_through_whitelisted_messages=True,
                delay_flow_mods=False, invariant_check_name="",
                bug_signature="", end_wait_seconds=0.5,
+               transform_dag=None,
                **kwargs):
     '''
      - If invariant_check_name is not None, check it at the end for the
@@ -119,6 +120,7 @@ class Replayer(ControlFlow):
     self.passed_unexpected_messages = []
     self.delay_flow_mods = delay_flow_mods
     self.end_wait_seconds = end_wait_seconds
+    self.transform_dag = transform_dag
     self.bug_signature = bug_signature
     self.invariant_check_name = invariant_check_name
     self.invariant_check = None
@@ -207,6 +209,9 @@ class Replayer(ControlFlow):
       log.debug("- %s", p)
 
   def run_simulation_forward(self, post_bootstrap_hook=None):
+    if self.transform_dag:
+      self.dag = self.transform_dag(self.dag)
+
     event_scheduler = self.create_event_scheduler(self.simulation)
     event_scheduler.set_input_logger(self._input_logger)
     self.event_scheduler_stats = event_scheduler.stats
