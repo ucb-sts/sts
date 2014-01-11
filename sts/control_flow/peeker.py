@@ -92,6 +92,7 @@ class SnapshotPeeker(Peeker):
   def peek(self, dag):
     if dag.input_events == []:
       return dag
+    # post: len(dag.input_events) > 0
 
     # Inferred events includes input events and internal events
     inferred_events = []
@@ -99,14 +100,11 @@ class SnapshotPeeker(Peeker):
     (simulation, controller) = self.setup_simulation()
 
     # Internal events inferred in the previous iteration of the following for
-    # loop
-    events_inferred_last_iteration = []
+    # loop, intialized to the internal events that occur before the first
+    # input event.
+    events_inferred_last_iteration = self.prime_snapshot_loop(simulation, controller, dag)
 
-    # Note that there may be internal events before the first input, so we
-    # start the input index at -1. On the first iteration we inject a WaitTime
-    # that does not get placed into the final result, that serves solely to
-    # infer those internal events.
-    for inject_input_idx in xrange(-1, len(dag.input_events)):
+    for inject_input_idx in xrange(0, len(dag.input_events)):
       log.debug("peek()'ing after input %d" % (inject_input_idx))
 
       inject_input = get_inject_input(inject_input_idx, dag.input_events)
@@ -115,8 +113,7 @@ class SnapshotPeeker(Peeker):
          get_expected_internal_events(inject_input, following_input, dag.events)
 
       inferred_events += events_inferred_last_iteration
-      if inject_input is not None:
-        inferred_events.append(inject_input)
+      inferred_events.append(inject_input)
 
       if expected_internal_events == []:
         # Optimization: if no internal events occured between this input and the
@@ -126,16 +123,7 @@ class SnapshotPeeker(Peeker):
         events_inferred_last_iteration = []
         continue
 
-      # Play forward the internal events inferred from last round and the
-      # input to be injected
-      if inject_input is None:
-        wait_time = WaitTime(following_input.time.as_float() -
-                             dag.events[0].time.as_float())
-        dag_interval = EventDag([wait_time])
-      else:
-        dag_interval = EventDag(events_inferred_last_iteration + [inject_input])
-
-      assert(dag_interval.events != [])
+      dag_interval = EventDag(events_inferred_last_iteration + [inject_input])
       wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
       found_events = self.find_internal_events(simulation, controller, dag_interval, wait_time_seconds)
       events_inferred_last_iteration = match_and_filter(found_events, expected_internal_events)
@@ -143,13 +131,24 @@ class SnapshotPeeker(Peeker):
     inferred_events += events_inferred_last_iteration
     return EventDag(inferred_events)
 
+  def prime_snapshot_loop(self, simulation, controller, dag):
+    ''' peek() for internal events preceding the first input '''
+    assert(len(dag.input_events) > 0)
+    assert(len(dag.events) > 0)
+    wait_time_seconds = (dag.input_events[0].time.as_float() -
+                         dag.events[0].time.as_float() +
+                         self.epsilon_time)
+    return self.snapshot_and_play_forward(simulation, controller, wait_time_seconds)
+
   def find_internal_events(self, simulation, controller, dag_interval, wait_time_seconds):
     replayer = Replayer(self.simulation_cfg, dag_interval,
                         pass_through_whitelisted_messages=True)
     replayer.simulation = simulation
     replayer.run_simulation_forward()
-
     # Now peek() for internal events following inject_input
+    return self.snapshot_and_play_forward(simulation, controller, wait_time_seconds)
+
+  def snapshot_and_play_forward(self, simulation, controller, wait_time_seconds):
     snapshotter = Snapshotter(simulation, controller)
     snapshotter.snapshot_controller()
 
