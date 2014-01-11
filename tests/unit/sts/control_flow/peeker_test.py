@@ -42,6 +42,7 @@ def handle_int(sigspec, frame):
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
 
+
 class PeekerTest(unittest.TestCase):
   def setUp(self):
     self.input_trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
@@ -53,6 +54,9 @@ class PeekerTest(unittest.TestCase):
     simulation_cfg = SimulationConfig(controller_configs=[controller_cfg])
     self.snapshot_peeker = SnapshotPeeker(simulation_cfg)
     self.snapshot_peeker.setup_simulation = lambda: (None, None)
+    # N.B. this assumes that no internal events occur before the first input
+    # event.
+    self.snapshot_peeker.snapshot_and_play_forward = lambda *args: []
 
   def test_basic_noop(self):
     """ test_basic_noop: running on a dag with no input events returns the same dag """
@@ -75,15 +79,21 @@ class PeekerTest(unittest.TestCase):
         return [ int1 ]
       elif replay_dag.events[-1] == inp3:
         return []
-      elif [ type(e) for e in replay_dag.events ] == [WaitTime]:
-        return []
       else:
         raise AssertionError("Unexpected event sequence queried: %s" % replay_dag.events)
 
-    for peeker in [self.prefix_peeker, self.snapshot_peeker]:
-      peeker.find_internal_events = fake_find_internal_events
-      new_dag = peeker.peek(EventDag(events))
-      self.assertEquals(events, new_dag.events)
+    # first, prefix peeker
+    self.prefix_peeker.find_internal_events = fake_find_internal_events
+    new_dag = self.prefix_peeker.peek(EventDag(events))
+    self.assertEquals(events, new_dag.events)
+
+    # next, snapshot peeker
+    # Hack alert! throw away first two args
+    def snapshotter_fake_find_internal_events(s, c, dag_interval, wait_time):
+      return fake_find_internal_events(dag_interval, wait_time)
+    self.snapshot_peeker.find_internal_events = snapshotter_fake_find_internal_events
+    new_dag = self.snapshot_peeker.peek(EventDag(events))
+    self.assertEquals(events, new_dag.events)
 
   def test_basic_prune(self):
     inp2 = MockInputEvent(fingerprint="b")
@@ -99,15 +109,21 @@ class PeekerTest(unittest.TestCase):
       elif replay_dag.events[-1] == inp3:
         # int2 does not
         return [ int2 ]
-      elif [ type(e) for e in replay_dag.events ] == [WaitTime]:
-        return []
       else:
         raise AssertionError("Unexpected event sequence queried: %s" % replay_dag.events)
 
-    for peeker in [self.prefix_peeker, self.snapshot_peeker]:
-      peeker.find_internal_events = fake_find_internal_events
-      new_dag = peeker.peek(EventDag(sub_events))
-      self.assertEquals([inp2, inp3, int2], new_dag.events)
+    # first, prefix peeker
+    self.prefix_peeker.find_internal_events = fake_find_internal_events
+    new_dag = self.prefix_peeker.peek(EventDag(sub_events))
+    self.assertEquals([inp2, inp3, int2], new_dag.events)
+
+    # next, snapshot peeker
+    # Hack alert! throw away first two args
+    def snapshotter_fake_find_internal_events(s, c, dag_interval, wait_time):
+      return fake_find_internal_events(dag_interval, wait_time)
+    self.snapshot_peeker.find_internal_events = snapshotter_fake_find_internal_events
+    new_dag = self.snapshot_peeker.peek(EventDag(sub_events))
+    self.assertEquals([inp2, inp3, int2], new_dag.events)
 
 class MatchFingerPrintTest(unittest.TestCase):
   def test_match_fingerprints_simple(self):
