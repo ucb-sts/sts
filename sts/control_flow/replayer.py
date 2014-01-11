@@ -183,6 +183,9 @@ class Replayer(ControlFlow):
 
   def simulate(self, post_bootstrap_hook=None):
     ''' Caller *must* call simulation.clean_up() '''
+    if self.transform_dag:
+      self.dag = self.transform_dag(self.dag)
+
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
     # TODO(aw): remove this hack
@@ -209,9 +212,6 @@ class Replayer(ControlFlow):
       log.debug("- %s", p)
 
   def run_simulation_forward(self, post_bootstrap_hook=None):
-    if self.transform_dag:
-      self.dag = self.transform_dag(self.dag)
-
     event_scheduler = self.create_event_scheduler(self.simulation)
     event_scheduler.set_input_logger(self._input_logger)
     self.event_scheduler_stats = event_scheduler.stats
