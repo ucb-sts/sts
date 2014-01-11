@@ -89,6 +89,7 @@ def setup_experiment(args, config):
   def builtin_pox_controller(c):
     # pox/ is already accounted for in metadata.
     return ("POXController" in str(c.controller_class) and
+            c.cwd is not None and
             re.match("^pox[/]?", c.cwd) is not None)
 
   if (not hasattr(config, "get_additional_metadata") and
