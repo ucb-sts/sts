@@ -103,7 +103,9 @@ class SnapshotPeeker(Peeker):
     events_inferred_last_iteration = []
 
     # Note that there may be internal events before the first input, so we
-    # start the input index at -1
+    # start the input index at -1. On the first iteration we inject a WaitTime
+    # that does not get placed into the final result, that serves solely to
+    # infer those internal events.
     for inject_input_idx in xrange(-1, len(dag.input_events)):
       log.debug("peek()'ing after input %d" % (inject_input_idx))
 
