@@ -346,7 +346,9 @@ class MCSFinder(ControlFlow):
     Returns a tuple (bug found, 0-indexed iteration at which bug was found)
     '''
     if self.transform_dag:
+      log.info("Transforming dag")
       new_dag = self.transform_dag(new_dag)
+      log.info("Proceeding with normal replay")
 
     for i in range(0, self.max_replays_per_subsequence):
       bug_found = self.replay(new_dag, label,

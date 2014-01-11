@@ -141,6 +141,7 @@ def launch(snapshot_address=None):
         log.debug("Sending READY")
         snapshot_sock.send("READY %d" % os.getpid())
         command = snapshot_sock.recv(100)
+        log.debug("Read command %s" % command)
         snapshot_sock.setblocking(0)
         if command == "PROCEED":
           proceed()

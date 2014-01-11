@@ -184,7 +184,9 @@ class Replayer(ControlFlow):
   def simulate(self, post_bootstrap_hook=None):
     ''' Caller *must* call simulation.clean_up() '''
     if self.transform_dag:
+      log.info("Transforming dag")
       self.dag = self.transform_dag(self.dag)
+      log.info("Proceeding with normal replay")
 
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     assert(isinstance(self.simulation.patch_panel, BufferedPatchPanel))
