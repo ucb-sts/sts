@@ -36,6 +36,7 @@ log = logging.getLogger("pox_syncer")
 
 # POX Module launch method
 def launch(interpose_on_logging=True, blocking=False):
+  interpose_on_logging = str(interpose_on_logging).lower() == "true"
   blocking = str(blocking).lower() == "true"
   if "sts_sync" in os.environ:
     sts_sync = os.environ["sts_sync"]
