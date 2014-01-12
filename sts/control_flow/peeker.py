@@ -24,6 +24,8 @@ from sts.control_flow.replayer import Replayer
 from sts.control_flow.base import ReplaySyncCallback
 from sts.control_flow.snapshot_utils import *
 from sts.replay_event import InternalEvent
+from sts.util.rpc_forker import LocalForker
+from sts.input_traces.log_parser import parse
 
 log = logging.getLogger("sts")
 
@@ -79,6 +81,7 @@ class SnapshotPeeker(Peeker):
     super(SnapshotPeeker, self).__init__(simulation_cfg,
                                          default_wait_time_seconds=default_wait_time_seconds,
                                          epsilon_time=epsilon_time)
+    self.forker = LocalForker()
 
   def setup_simulation(self):
     # TODO(cs): currently assumes that STSSyncProto is not used alongside
@@ -152,10 +155,29 @@ class SnapshotPeeker(Peeker):
     snapshotter = Snapshotter(simulation, controller)
     snapshotter.snapshot_controller()
 
-    found_events = play_forward(simulation, wait_time_seconds)
+    # Here we also fork() ourselves (the network simulator), since we need
+    # switches to respond to messages, and potentially change their state in
+    # order to properly peek().
+    # TODO(cs): I believe that to be technically correct we need to use Chandy-Lamport
+    # here, since STS + POX = a distributed system.
+    def play_forward_and_marshal():
+      # Can't marshal the simulation object, so use this method as a closure
+      # instead.
+      # N.B. depends on LocalForker() -- cannot be used with RemoteForker().
+      # TODO(cs): even though DataplaneDrops are technically InputEvents, they
+      # may time out, and we might do well to try to infer this somehow.
+      found_events = play_forward(simulation, wait_time_seconds)
+      return [ e.to_json() for e in found_events ]
+
+    self.forker.register_task("snapshot_fork_task", play_forward_and_marshal)
+    # N.B. play_forward cleans up the simulation, including snaphotted controller
+    unmarshalled_found_events = self.forker.fork("snapshot_fork_task")
+    found_events = parse(unmarshalled_found_events)
 
     # Finally, bring the controller back to the state it was at just after
     # injecting inject_input
+    # N.B. this must be invoked in the parent process (not a forker.fork()ed
+    # child), since it mutates class variables in Controller.
     snapshotter.snapshot_proceed()
     return found_events
 
@@ -240,7 +262,6 @@ class PrefixPeeker(Peeker):
     log.debug("Replaying prefix")
     simulation = replayer.simulate()
     newly_inferred_events = play_forward(simulation, wait_time_seconds)
-    simulation.clean_up()
     return newly_inferred_events
 
   def _update_trie(self, current_input_prefix, inject_input, inferred_events,
@@ -315,6 +336,8 @@ def play_forward(simulation, wait_time_seconds, flush_buffers=False):
 
   # Now turn off pass through and grab the inferred events
   newly_inferred_events = simulation.unset_pass_through()
+  # Finally, clean up.
+  simulation.clean_up()
   log.debug("Recorded %d events" % len(newly_inferred_events))
   return newly_inferred_events
 

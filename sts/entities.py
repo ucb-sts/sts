@@ -891,9 +891,12 @@ class Controller(object):
   def snapshot_proceed(self):
     '''
     Tell the previously fork()ed controller process to wake up, and connect
-    a new socket to the fork()ed controller's (OpenFlow) port.
+    a new socket to the fork()ed controller's (OpenFlow) port. Also
+    de-registers the old controller process and registers the new controller
+    process.
 
-    Kills and cleans up the old controller process if necessary.
+    Note that it is the responsibility of the caller to kill the previously
+    fork()ed controller process.
 
     This method may block if the fork()ed process is not ready to proceed.
 
@@ -911,8 +914,8 @@ class Controller(object):
       raise ValueError("Unknown response %s" % response)
     pid = int(match.group('pid'))
 
-    # Kill old process, and overwrite with new child
-    kill_procs([self.process], close_fds=False)
+    # De-registers the old controller process and registers the new controller
+    # process.
     self._unregister_proc(self.process)
     self.process = SnapshotPopen(pid)
     self._register_proc(self.process)
