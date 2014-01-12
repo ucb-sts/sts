@@ -42,10 +42,10 @@ class OpenflowBufferTest(unittest.TestCase):
                                          topology_params=topology_params,
                                          multiplex_sockets=True)
     simulation = simulation_config.bootstrap(RecordingSyncCallback(None))
-    simulation.set_record_only()
+    simulation.set_pass_through()
     simulation.connect_to_controllers()
     time.sleep(1)
-    observed_events = simulation.unset_record_only()
+    observed_events = simulation.unset_pass_through()
     print "Observed events: %s" % str(observed_events)
     self.assertTrue(observed_events != [])
 
