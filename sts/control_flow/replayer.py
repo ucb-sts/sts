@@ -57,7 +57,7 @@ class Replayer(ControlFlow):
                pass_through_whitelisted_messages=True,
                delay_flow_mods=False, invariant_check_name="",
                bug_signature="", end_wait_seconds=0.5,
-               transform_dag=None,
+               transform_dag=None, pass_through_sends=False,
                **kwargs):
     '''
      - If invariant_check_name is not None, check it at the end for the
@@ -112,6 +112,7 @@ class Replayer(ControlFlow):
     self._input_logger = input_logger
     self.allow_unexpected_messages = allow_unexpected_messages
     self.pass_through_whitelisted_messages = pass_through_whitelisted_messages
+    self.pass_through_sends = pass_through_sends
     # How many logical rounds to peek ahead when deciding if a message is
     # expected or not.
     self.expected_message_round_window = 3
@@ -196,6 +197,11 @@ class Replayer(ControlFlow):
       self.fail_to_interactive_on_persistent_violations
     self.simulation.openflow_buffer.pass_through_whitelisted_messages =\
       self.pass_through_whitelisted_messages
+    if self.pass_through_sends:
+      self.simulation.openflow_buffer.pass_through_sends_only()
+      for e in self.dag.events:
+        if type(e) == ControlMessageSend:
+          e.pass_through_sends = True
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))

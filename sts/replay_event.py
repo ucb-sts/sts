@@ -1017,6 +1017,7 @@ class ControlMessageBase(InternalEvent):
 
     self._fingerprint = fingerprint
     self.ignore_whitelisted_packets = False
+    self.pass_through_sends = False
 
   def get_packet(self):
     # Avoid serialization exceptions, but we still want to memoize.
@@ -1082,7 +1083,8 @@ class ControlMessageSend(ControlMessageBase):
   '''
   def proceed(self, simulation):
     pending_send = self.pending_send
-    if self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_send.fingerprint):
+    if (self.pass_through_sends or
+        (self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_send.fingerprint))):
       return True
     message_waiting = simulation.openflow_buffer.message_send_waiting(pending_send)
     if message_waiting:

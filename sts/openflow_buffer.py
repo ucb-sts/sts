@@ -64,6 +64,7 @@ class OpenFlowBuffer(EventMixin):
     self.pendingsend2conn_messages = defaultdict(list)
     self._delegate_input_logger = None
     self.pass_through_whitelisted_packets = False
+    self.pass_through_sends = False
 
   def _pass_through_handler(self, message_event):
     ''' handler for pass-through mode '''
@@ -95,6 +96,9 @@ class OpenFlowBuffer(EventMixin):
     self.passed_through_events = []
     self._delegate_input_logger = input_logger
     self.addListener(PendingMessage, self._pass_through_handler)
+
+  def pass_through_sends_only(self):
+    self.pass_through_sends = True
 
   def unset_pass_through(self):
     '''Unset pass through mode, and return any events that were passed through
@@ -162,7 +166,8 @@ class OpenFlowBuffer(EventMixin):
   def insert_pending_send(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
-    if self.pass_through_whitelisted_packets and self.in_whitelist(fingerprint):
+    if (self.pass_through_sends or
+        (self.pass_through_whitelisted_packets and self.in_whitelist(fingerprint))):
       conn.allow_message_send(ofp_message)
       return
     conn_message = (conn, ofp_message)
