@@ -25,6 +25,7 @@ from config.experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology
 from sts.simulation_state import SimulationConfig
 from sts.control_flow import RecordingSyncCallback
+from sts.util.convenience import IPAddressSpace
 
 class OpenflowBufferTest(unittest.TestCase):
   def basic_test(self):
@@ -33,6 +34,8 @@ class OpenflowBufferTest(unittest.TestCase):
                  '''sts.util.socket_mux.pox_monkeypatcher '''
                  '''openflow.of_01 --address=__address__ --port=__port__''')
 
+    IPAddressSpace._claimed_addresses.clear()
+    ControllerConfig._controller_labels.clear()
     controllers = [ControllerConfig(start_cmd, cwd="pox")]
     topology_class = MeshTopology
     topology_params = "num_switches=2"

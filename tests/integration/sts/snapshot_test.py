@@ -25,6 +25,7 @@ from sts.simulation_state import SimulationConfig
 from sts.control_flow import RecordingSyncCallback
 from sts.control_flow.snapshot_utils import Snapshotter
 from sts.entities import SnapshotPopen
+from sts.util.convenience import IPAddressSpace
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
@@ -51,6 +52,8 @@ class SnapshotTest(unittest.TestCase):
                  '''sts.util.socket_mux.pox_monkeypatcher --snapshot_address=../snapshot_socket '''
                  '''openflow.of_01 --address=__address__ --port=__port__''')
 
+    IPAddressSpace._claimed_addresses.clear()
+    ControllerConfig._controller_labels.clear()
     controllers = [ControllerConfig(start_cmd, cwd="pox", snapshot_address="./snapshot_socket")]
     topology_class = MeshTopology
     topology_params = "num_switches=2"
