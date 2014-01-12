@@ -377,10 +377,11 @@ class Fuzzer(ControlFlow):
 
   def check_dataplane(self, pass_through=False):
     ''' Decide whether to delay, drop, or deliver packets '''
-    def drop(dp_event):
+    def drop(dp_event, log_event=True):
       self.simulation.patch_panel.drop_dp_event(dp_event)
-      self._log_input_event(DataplaneDrop(dp_event.fingerprint,
-                                          host_id=dp_event.get_host_id(),
+      if log_event:
+        self._log_input_event(DataplaneDrop(dp_event.fingerprint,
+                                            host_id=dp_event.get_host_id(),
                                           dpid=dp_event.get_switch_id()))
     def permit(dp_event):
       self.simulation.patch_panel.permit_dp_event(dp_event)
@@ -394,7 +395,7 @@ class Fuzzer(ControlFlow):
       if pass_through:
         permit(dp_event)
       elif not self.simulation.topology.ok_to_send(dp_event):
-        drop(dp_event)
+        drop(dp_event, log_event=False)
       elif (self.random.random() >= self.params.dataplane_drop_rate or in_whitelist(dp_event)):
         permit(dp_event)
       else:
