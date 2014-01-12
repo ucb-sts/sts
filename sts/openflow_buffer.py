@@ -65,50 +65,14 @@ class OpenFlowBuffer(EventMixin):
     self._delegate_input_logger = None
     self.pass_through_whitelisted_packets = False
 
-  def set_pass_through(self, input_logger=None):
-    ''' Cause all message receipts to pass through immediately without being
-    buffered'''
-    self.recorded_events = []
-    self._delegate_input_logger = input_logger
-    self.addListener(PendingMessage, self._pass_through_handler)
-
-  def set_record_only(self):
-    ''' Cause all message receipts to be recorded, but not buffered nor sent
-    on to the network'''
-    self.recorded_events = []
-    self.addListener(PendingMessage, self._pop_and_record_handler)
-
-  def unset_pass_through(self):
-    '''Unset pass through mode, and return any events that were passed through
-    since pass through mode was set'''
-    self.removeListener(self._pass_through_handler)
-    passed_events = self.recorded_events
-    self.recorded_events = []
-    return passed_events
-
-  def unset_record_only(self):
-    '''Unset record-only mode, and return any events that were recorded
-    since record-only mode was set'''
-    self.removeListener(self._pop_and_record_handler)
-    passed_events = self.recorded_events
-    self.recorded_events = []
-    return passed_events
-
   def _pass_through_handler(self, message_event):
     ''' handler for pass-through mode '''
+    # TODO(cs): figure out a better way to resolve circular dependency
+    import sts.replay_event
     pending_message = message_event.pending_message
     # Pass through
     self.schedule(pending_message)
-    self._record_handler(message_event)
-
-  def _pop_and_record_handler(self, message_event):
-    pending_message = message_event.pending_message
-    self._pop_pending_message(pending_message)
-    self._record_handler(message_event)
-
-  def _record_handler(self, message_event):
-    # TODO(cs): figure out a better way to resolve circular dependency
-    import sts.replay_event
+    # Record
     if message_event.send_event:
       replay_event_class = sts.replay_event.ControlMessageSend
     else:
@@ -123,7 +87,22 @@ class OpenFlowBuffer(EventMixin):
       # TODO(cs): set event.round somehow?
       self._delegate_input_logger.log_input_event(replay_event)
     else:
-      self.recorded_events.append(replay_event)
+      self.passed_through_events.append(replay_event)
+
+  def set_pass_through(self, input_logger=None):
+    ''' Cause all message receipts to pass through immediately without being
+    buffered'''
+    self.passed_through_events = []
+    self._delegate_input_logger = input_logger
+    self.addListener(PendingMessage, self._pass_through_handler)
+
+  def unset_pass_through(self):
+    '''Unset pass through mode, and return any events that were passed through
+    since pass through mode was set'''
+    self.removeListener(self._pass_through_handler)
+    passed_events = self.passed_through_events
+    self.passed_through_events = []
+    return passed_events
 
   def message_receipt_waiting(self, pending_message):
     '''
@@ -137,7 +116,11 @@ class OpenFlowBuffer(EventMixin):
     '''
     return pending_message in self.pendingsend2conn_messages
 
-  def _pop_pending_message(self, pending_message):
+  def schedule(self, pending_message):
+    '''
+    Cause the switch to process the pending message associated with
+    the fingerprint and controller connection.
+    '''
     # TODO(cs): test whether this actually works! not sure about namedtuples..
     receive = type(pending_message) == PendingReceive
     if receive:
@@ -152,14 +135,7 @@ class OpenFlowBuffer(EventMixin):
     # Avoid memory leak:
     if multiset[pending_message] == []:
       del multiset[pending_message]
-    return (forwarder, message, receive)
 
-  def schedule(self, pending_message):
-    '''
-    Cause the switch to process the pending message associated with
-    the fingerprint and controller connection.
-    '''
-    (forwarder, message, receive) = self._pop_pending_message(pending_message)
     if receive:
       forwarder.allow_message_receipt(message)
     else:

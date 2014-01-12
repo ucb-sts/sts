@@ -242,36 +242,16 @@ class Simulation(object):
     self.exit_code = code
 
   def set_pass_through(self):
-    ''' Cause all message receipts to be passed through to switches without
-    being buffered.'''
-    # Set to pass-through during bootstrap, so that switch initialization
-    # messages don't get buffered
+    ''' Set to pass-through during bootstrap, so that switch initialization
+    messages don't get buffered '''
     self.openflow_buffer.set_pass_through()
     if hasattr(self.controller_sync_callback, "set_pass_through"):
       self.controller_sync_callback.set_pass_through()
 
-  def set_record_only(self):
-    ''' Cause all message receipts to be recorded, but not buffered nor sent
-    on to the network. All state changes will be recorded and ack'ed'''
-    self.openflow_buffer.set_record_only()
-    if hasattr(self.controller_sync_callback, "set_pass_through"):
-      self.controller_sync_callback.set_pass_through()
-
   def unset_pass_through(self):
-    ''' unset pass-through mode and return a sorted list of the events that
-    were observed'''
+    ''' unset pass-through mode '''
     observed_events = []
     observed_events += self.openflow_buffer.unset_pass_through()
-    if hasattr(self.controller_sync_callback, "unset_pass_through"):
-      observed_events += self.controller_sync_callback.unset_pass_through()
-    observed_events.sort(key=lambda e: e.time.as_float())
-    return observed_events
-
-  def unset_record_only(self):
-    ''' unset record-only mode and return a sorted list of the events that
-    were observed'''
-    observed_events = []
-    observed_events += self.openflow_buffer.unset_record_only()
     if hasattr(self.controller_sync_callback, "unset_pass_through"):
       observed_events += self.controller_sync_callback.unset_pass_through()
     observed_events.sort(key=lambda e: e.time.as_float())
