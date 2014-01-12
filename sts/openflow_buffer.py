@@ -86,7 +86,7 @@ class OpenFlowBuffer(EventMixin):
     if self._delegate_input_logger is not None:
       # TODO(cs): set event.round somehow?
       self._delegate_input_logger.log_input_event(replay_event)
-    else:
+    else: # TODO(cs): why is this an else:?
       self.passed_through_events.append(replay_event)
 
   def set_pass_through(self, input_logger=None):
