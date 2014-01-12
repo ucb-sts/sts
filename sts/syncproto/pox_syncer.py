@@ -35,7 +35,7 @@ from logging import Logger
 log = logging.getLogger("pox_syncer")
 
 # POX Module launch method
-def launch(blocking=False):
+def launch(interpose_on_logging=True, blocking=False):
   blocking = str(blocking).lower() == "true"
   if "sts_sync" in os.environ:
     sts_sync = os.environ["sts_sync"]
@@ -44,7 +44,9 @@ def launch(blocking=False):
     io_master = POXIOMaster()
     io_master.start(core.scheduler)
 
-    sync_master = POXSyncMaster(io_master, blocking=blocking)
+    sync_master = POXSyncMaster(io_master,
+                                interpose_on_logging=interpose_on_logging,
+                                blocking=blocking)
     sync_master.start(sts_sync)
   else:
     log.info("no sts_sync variable found in environment. Not starting pox_syncer")
@@ -66,9 +68,10 @@ class POXIOMaster(IOMaster, Task):
       self.handle_workers_rwe(rlist, wlist, elist)
 
 class POXSyncMaster(object):
-  def __init__(self, io_master, blocking=True):
-    self.io_master = io_master
+  def __init__(self, io_master, interpose_on_logging=True, blocking=True):
     self._in_get_time = False
+    self.io_master = io_master
+    self.interpose_on_logging = interpose_on_logging
     self.blocking = blocking
     self.core_up = False
     core.addListener(UpEvent, self.handle_UpEvent)
@@ -89,15 +92,16 @@ class POXSyncMaster(object):
     time._orig_time = time.time
     time.time = self.get_time
 
-    # Patch Logger.* for state changes
-    # All logging.Logger log methods go through a private method _log
-    Logger._orig_log = Logger._log
-    def new_log(log_self, level, msg, *args, **kwargs):
-      Logger._orig_log(log_self, level, msg, *args, **kwargs)
-      if self.blocking and self.core_up:
-        print "Waiting on ACK.."
-      self.state_change(msg, *args)
-    Logger._log = new_log
+    if self.interpose_on_logging:
+      # Patch Logger.* for state changes
+      # All logging.Logger log methods go through a private method _log
+      Logger._orig_log = Logger._log
+      def new_log(log_self, level, msg, *args, **kwargs):
+        Logger._orig_log(log_self, level, msg, *args, **kwargs)
+        if self.blocking and self.core_up:
+          print "Waiting on ACK.."
+        self.state_change(msg, *args)
+      Logger._log = new_log
 
   def get_time(self):
     """ Hack alert: python logging use time.time(). That means that log statements in the determinism
