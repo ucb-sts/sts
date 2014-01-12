@@ -203,14 +203,13 @@ class Fuzzer(ControlFlow):
     self.traffic_generator.set_topology(self.simulation.topology)
     self.unblocked_controller_pairs = self._compute_unblocked_controller_pairs()
 
-    self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 0.0
+    self.delay_flow_mods = self.params.ofp_cmd_passthrough_rate != 1.0
     self.fail_flow_mods = self.params.ofp_flow_mod_failure_rate != 0.0
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
-        if self.delay_flow_mods:
-          switch.use_delayed_commands()
-          switch.randomize_flow_mods()
+        switch.use_delayed_commands()
+        switch.randomize_flow_mods()
     return self.loop()
 
   def loop(self):
@@ -450,7 +449,7 @@ class Fuzzer(ControlFlow):
                                                  b64_packet=b64_packet))
 
   def check_pending_commands(self):
-    ''' If Fuzzer is configured to delay flow mods, this decides whether 
+    ''' If Fuzzer is configured to delay flow mods, this decides whether
     each switch is allowed to process a buffered flow mod '''
 
     def should_fail_flow_mod(command):
@@ -461,14 +460,14 @@ class Fuzzer(ControlFlow):
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
         # first decide if we should try to process the next command from the switch
-        if (self.random.random() < self.params.ofp_cmd_passthrough_rate) and switch.has_pending_commands():
+        if switch.has_pending_commands() and (self.random.random() < self.params.ofp_cmd_passthrough_rate):
           (cmd, pending_receipt) = switch.get_next_command()
           # then check whether we should make the attempt to process the next command fail
           if should_fail_flow_mod(cmd):
             eventclass = FailFlowMod
           else:
             eventclass = ProcessFlowMod
-          switch.process_delayed_command(pending_receipt)
+            switch.process_delayed_command(pending_receipt)
           b64_packet = base64_encode(cmd)
           self._log_input_event(eventclass(pending_receipt.dpid,
                                            pending_receipt.controller_id,
