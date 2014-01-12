@@ -73,7 +73,9 @@ class Peeker(object):
 class SnapshotPeeker(Peeker):
   ''' O(n) peeker that takes controller snapshots at each input, peeks
   forward, then restarts the snapshot up until the next input'''
-  def __init__(self, simulation_cfg, default_wait_time_seconds=0.5, epsilon_time=0.2):
+  def __init__(self, simulation_cfg, default_wait_time_seconds=0.5,
+               epsilon_time=0.2, default_dp_permit=False,
+               pass_through_sends=False):
     if len(simulation_cfg.controller_configs) != 1:
       raise ValueError("Only one controller supported for snapshotting")
     if simulation_cfg.controller_configs[0].sync is not None:
@@ -82,6 +84,12 @@ class SnapshotPeeker(Peeker):
                                          default_wait_time_seconds=default_wait_time_seconds,
                                          epsilon_time=epsilon_time)
     self.forker = LocalForker()
+    if not default_dp_permit:
+      raise ValueError('''Non-default DP Permit not currently supported '''
+                       '''Please implement the TODO near the sleep() call '''
+                       '''in play_forward()''')
+    self.default_dp_permit = default_dp_permit
+    self.pass_through_sends = pass_through_sends
 
   def setup_simulation(self):
     # TODO(cs): currently assumes that STSSyncProto is not used alongside
@@ -96,6 +104,11 @@ class SnapshotPeeker(Peeker):
     if dag.input_events == []:
       return dag
     # post: len(dag.input_events) > 0
+
+    unsupported_types = [ProcessFlowMod, FailFlowMod, DataplaneDrop]
+    if find(lambda e: type(e) in unsupported_types, dag.events) is not None:
+      raise ValueError('''Delayed flow_mods not yet supported. Please '''
+                       '''implement the TODO near the sleep() call in play_forward()''')
 
     # Inferred events includes input events and internal events
     inferred_events = []
@@ -145,8 +158,11 @@ class SnapshotPeeker(Peeker):
 
   def find_internal_events(self, simulation, controller, dag_interval, wait_time_seconds):
     replayer = Replayer(self.simulation_cfg, dag_interval,
-                        pass_through_whitelisted_messages=True)
+                        pass_through_whitelisted_messages=True,
+                        default_dp_permit=self.default_dp_permit)
     replayer.simulation = simulation
+    if self.pass_through_sends:
+      replayer.set_pass_through_sends(simulation)
     replayer.run_simulation_forward()
     # Now peek() for internal events following inject_input
     return self.snapshot_and_play_forward(simulation, controller, wait_time_seconds)
@@ -167,6 +183,9 @@ class SnapshotPeeker(Peeker):
       # TODO(cs): even though DataplaneDrops are technically InputEvents, they
       # may time out, and we might do well to try to infer this somehow.
       found_events = play_forward(simulation, wait_time_seconds)
+      # TODO(cs): DataplaneDrops are a special case of an InputEvent that may
+      # time out. We should check whether the input for this peek() was a
+      # DataplaneDrop, and return whether it timed out.
       return [ e.to_json() for e in found_events ]
 
     self.forker.register_task("snapshot_fork_task", play_forward_and_marshal)
@@ -332,6 +351,11 @@ def play_forward(simulation, wait_time_seconds, flush_buffers=False):
 
   # Note that this is the monkey patched version of time.sleep
   log.info("peek()'ing for %f seconds" % wait_time_seconds)
+  # TODO(cs): sleep()'ing allows us to infer ControlMessageReceive events, but
+  # it doesn't help with infering other events that can timeout, such as
+  # DataplanePermit/Drops or Process/FailFlowMods. Rather than sleeping perhaps
+  # we should set BufferedPatchPanel + Switches to "pass-through + record",
+  # and loop here instead of sleep()ing.
   time.sleep(wait_time_seconds)
 
   # Now turn off pass through and grab the inferred events

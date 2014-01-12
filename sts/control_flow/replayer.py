@@ -182,6 +182,12 @@ class Replayer(ControlFlow):
     if self._input_logger:
       self._input_logger.open(results_dir)
 
+  def set_pass_through_sends(self, simulation):
+    simulation.openflow_buffer.pass_through_sends_only()
+    for e in self.dag.events:
+      if type(e) == ControlMessageSend:
+        e.pass_through_sends = True
+
   def simulate(self, post_bootstrap_hook=None):
     ''' Caller *must* call simulation.clean_up() '''
     if self.transform_dag:
@@ -198,10 +204,7 @@ class Replayer(ControlFlow):
     self.simulation.openflow_buffer.pass_through_whitelisted_messages =\
       self.pass_through_whitelisted_messages
     if self.pass_through_sends:
-      self.simulation.openflow_buffer.pass_through_sends_only()
-      for e in self.dag.events:
-        if type(e) == ControlMessageSend:
-          e.pass_through_sends = True
+      self.set_pass_through_sends(self.simulation)
     if self.delay_flow_mods:
       for switch in self.simulation.topology.switches:
         assert(isinstance(switch, FuzzSoftwareSwitch))
