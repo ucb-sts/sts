@@ -1403,6 +1403,7 @@ class FailFlowMod(ControlMessageBase):
   ''' Logged whenever the network-wide OpenFlowBuffer decides to fail an otherwise valid
   buffered (local to each switch) OpenFlow flow_mod message instead of letting the switch process it '''
   # TODO(jl): Update visualization tool to recognize this replay event
+  # TODO(cs): is this really an internal event?
 
   def proceed(self, simulation):
     switch = simulation.topology.get_switch(self.dpid)
