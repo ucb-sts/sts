@@ -152,10 +152,16 @@ class SnapshotPeeker(Peeker):
     ''' peek() for internal events preceding the first input '''
     assert(len(dag.input_events) > 0)
     assert(len(dag.events) > 0)
+
+    expected_internal_events = \
+       get_expected_internal_events(None, dag.input_events[0], dag.events)
+
     wait_time_seconds = (dag.input_events[0].time.as_float() -
                          dag.events[0].time.as_float() +
                          self.epsilon_time)
-    return self.snapshot_and_play_forward(simulation, controller, wait_time_seconds)
+
+    found_events = self.snapshot_and_play_forward(simulation, controller, wait_time_seconds)
+    return match_and_filter(found_events, expected_internal_events)
 
   def find_internal_events(self, simulation, controller, dag_interval, wait_time_seconds):
     replayer = Replayer(self.simulation_cfg, dag_interval,
