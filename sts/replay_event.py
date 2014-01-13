@@ -197,6 +197,27 @@ def extract_label_time(json_hash):
   round = json_hash['round']
   return (label, time, round)
 
+class ConnectToControllers(InputEvent):
+  ''' Logged at the beginning of the execution. Causes all switches to open
+  TCP connections their their parent controller(s).
+  '''
+  def __init__(self, label=None, round=-1, time=None, prunable=False):
+    if not prunable:
+      raise ValueError("ConnectToControllers should never be prunable")
+    super(ConnectToControllers, self).__init__(label=label, round=round,
+                                               time=time, prunable=prunable)
+
+  def proceed(self, simulation):
+    simulation.connect_to_controllers()
+    return True
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
+    return ConnectToControllers(label=label, time=time, round=round,
+                                timeout_disallowed=timeout_disallowed)
+
+
 class SwitchFailure(InputEvent):
   ''' Crashes a switch, by disconnecting its TCP connection with the
   controller(s).'''
@@ -969,7 +990,7 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
                     ControlChannelBlock, ControlChannelUnblock,
                     DataplaneDrop, BlockControllerPair, UnblockControllerPair,
-                    LinkDiscovery]
+                    LinkDiscovery, ConnectToControllers]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
@@ -1282,21 +1303,6 @@ class DeterministicValue(InternalEvent):
     return DeterministicValue(controller_id, name, value, round=round,
                               label=label, time=time, timeout_disallowed=timeout_disallowed)
 
-# TODO(cs): this should really be an input event. But need to make sure that
-# it can be pruned safely
-class ConnectToControllers(InternalEvent):
-  ''' Logged at the beginning of the execution. Causes all switches to open
-  TCP connections their their parent controller(s).
-  '''
-  def proceed(self, simulation):
-    simulation.connect_to_controllers()
-    return True
-
-  @staticmethod
-  def from_json(json_hash):
-    (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
-    return ConnectToControllers(label=label, time=time, round=round,
-                                timeout_disallowed=timeout_disallowed)
 
 class DataplanePermit(InternalEvent):
   ''' DataplanePermit allows a packet to move from one port to another in the
@@ -1435,8 +1441,8 @@ class FailFlowMod(ControlMessageBase):
     return "FailFlowMod:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
 
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
-                       ConnectToControllers, ControllerStateChange,
-                       DeterministicValue, DataplanePermit, ProcessFlowMod, FailFlowMod]
+                       ControllerStateChange, DeterministicValue,
+                       DataplanePermit, ProcessFlowMod, FailFlowMod]
 
 # Special events:
 
