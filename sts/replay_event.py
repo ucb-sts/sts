@@ -986,6 +986,20 @@ class LinkDiscovery(InputEvent):
     link_attrs = json_hash['link_attrs']
     return LinkDiscovery(controller_id, link_attrs, round=round, label=label, time=time)
 
+class NOPInput(InputEvent):
+  ''' Does nothing. Useful for fenceposting. '''
+  def proceed(self, simulation):
+    return True
+
+  @property
+  def fingerprint(self):
+    return (self.__class__.__name__,)
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round) = extract_label_time(json_hash)
+    return NOPInput(round=round, label=label, time=time)
+
 # N.B. When adding inputs to this list, make sure to update input susequence
 # validity checking in event_dag.py.
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
@@ -993,7 +1007,7 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
                     ControlChannelBlock, ControlChannelUnblock,
                     DataplaneDrop, BlockControllerPair, UnblockControllerPair,
-                    LinkDiscovery, ConnectToControllers]
+                    LinkDiscovery, ConnectToControllers, NOPInput]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #

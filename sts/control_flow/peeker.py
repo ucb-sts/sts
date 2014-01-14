@@ -18,12 +18,12 @@ import time
 import abc
 from collections import Counter
 
-from sts.replay_event import WaitTime, ProcessFlowMod, FailFlowMod, DataplaneDrop
+from sts.replay_event import WaitTime, ProcessFlowMod, FailFlowMod, DataplaneDrop, ConnectToControllers
 from sts.event_dag import EventDag
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.base import ReplaySyncCallback
 from sts.control_flow.snapshot_utils import *
-from sts.replay_event import InternalEvent
+from sts.replay_event import InternalEvent, NOPInput
 from sts.util.rpc_forker import LocalForker
 from sts.util.convenience import find
 from sts.input_traces.log_parser import parse
@@ -95,13 +95,20 @@ class SnapshotPeeker(Peeker):
   def setup_simulation(self):
     # TODO(cs): currently assumes that STSSyncProto is not used alongside
     # snapshotting.
+    # N.B. bootstrap() does not connect switches to controllers.
+    # ConnectionToControllers is an input event, which we peek() for like
+    # any other input event.
     simulation = self.simulation_cfg.bootstrap(ReplaySyncCallback(None))
     simulation.openflow_buffer.pass_through_whitelisted_messages = True
-    simulation.connect_to_controllers()
     controller = simulation.controller_manager.controllers[0]
     return (simulation, controller)
 
   def peek(self, dag):
+    '''
+    If dag.events == [], returns immediately.
+
+    If dag.events != [], assumes that isinstance(dag.events[0], ConnectToControllers)
+    '''
     if dag.input_events == []:
       return dag
     # post: len(dag.input_events) > 0
@@ -111,70 +118,88 @@ class SnapshotPeeker(Peeker):
       raise ValueError('''Delayed flow_mods not yet supported. Please '''
                        '''implement the TODO near the sleep() call in play_forward()''')
 
-    # Inferred events includes input events and internal events
-    inferred_events = []
+    if not isinstance(dag.events[0], ConnectToControllers):
+      raise ValueError("First event must be ConnectToControllers")
 
-    (simulation, controller) = self.setup_simulation()
+    simulation = None
+    try:
+      # Inferred events includes input events and internal events
+      inferred_events = []
 
-    # Internal events inferred in the previous iteration of the following for
-    # loop, intialized to the internal events that occur before the first
-    # input event.
-    events_inferred_last_iteration = self.prime_snapshot_loop(simulation, controller, dag)
+      (simulation, controller) = self.setup_simulation()
 
-    for inject_input_idx in xrange(0, len(dag.input_events)):
-      log.debug("peek()'ing after input %d" % (inject_input_idx))
+      # dag.input_events returns only prunable input events. We also need
+      # include ConnectToControllers, which is a non-prunable input event.
+      assert(dag.input_events[0] != dag.events[0])
+      snapshot_inputs = [dag.events[0]] + dag.input_events
 
-      inject_input = get_inject_input(inject_input_idx, dag.input_events)
-      following_input = get_following_input(inject_input_idx, dag.input_events)
-      expected_internal_events = \
-         get_expected_internal_events(inject_input, following_input, dag.events)
+      # The input event from the previous iteration, followed by the internal
+      # events that were inferred from the previous peek().
+      # Since we assume that the first event is always ConnectToControllers,
+      # there are never internal events (nor input events) preceding the
+      # initial ConnectToControllers.
+      # TODO(cs): might not want to contrain the caller's dag in this way.
+      events_inferred_last_iteration = []
 
+      for inject_input_idx in xrange(0, len(snapshot_inputs)):
+        inject_input = get_inject_input(inject_input_idx, snapshot_inputs)
+        following_input = get_following_input(inject_input_idx, snapshot_inputs)
+        expected_internal_events = \
+           get_expected_internal_events(inject_input, following_input, dag.events)
+
+        log.debug("peek()'ing after input %d (%s)" %
+                  (inject_input_idx, str(inject_input)))
+
+        inferred_events += events_inferred_last_iteration
+
+        if expected_internal_events == []:
+          # Optimization: if no internal events occured between this input and the
+          # next, no need to peek(), just replay the next input
+          log.debug("Optimization: no expected internal events")
+          Peeker.ambiguous_counts[0.0] += 1
+          events_inferred_last_iteration = [inject_input]
+          continue
+
+        # We replay events_inferred_last_iteration (internal events preceding
+        # inject_input), as well as a NOPInput with the same timestamp as inject_input
+        # to ensure that the timing is the same before peek()ing.
+        fencepost = NOPInput(time=inject_input.time, round=inject_input.round)
+        dag_interval = EventDag(events_inferred_last_iteration + [fencepost])
+        wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
+        found_events = self.find_internal_events(simulation, controller,
+                                                 dag_interval, inject_input,
+                                                 wait_time_seconds)
+        events_inferred_last_iteration = [inject_input]
+        events_inferred_last_iteration += match_and_filter(found_events, expected_internal_events)
+
+      # Don't forget the final iteration's output
       inferred_events += events_inferred_last_iteration
-      inferred_events.append(inject_input)
+    finally:
+      if simulation is not None:
+        simulation.clean_up()
 
-      if expected_internal_events == []:
-        # Optimization: if no internal events occured between this input and the
-        # next, no need to peek(), just replay the next input
-        log.debug("Optimization: no expected internal events")
-        Peeker.ambiguous_counts[0.0] += 1
-        events_inferred_last_iteration = []
-        continue
-
-      dag_interval = EventDag(events_inferred_last_iteration + [inject_input])
-      wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
-      found_events = self.find_internal_events(simulation, controller, dag_interval, wait_time_seconds)
-      events_inferred_last_iteration = match_and_filter(found_events, expected_internal_events)
-
-    inferred_events += events_inferred_last_iteration
     return EventDag(inferred_events)
 
-  def prime_snapshot_loop(self, simulation, controller, dag):
-    ''' peek() for internal events preceding the first input '''
-    assert(len(dag.input_events) > 0)
-    assert(len(dag.events) > 0)
-
-    expected_internal_events = \
-       get_expected_internal_events(None, dag.input_events[0], dag.events)
-
-    wait_time_seconds = (dag.input_events[0].time.as_float() -
-                         dag.events[0].time.as_float() +
-                         self.epsilon_time)
-
-    found_events = self.snapshot_and_play_forward(simulation, controller, wait_time_seconds)
-    return match_and_filter(found_events, expected_internal_events)
-
-  def find_internal_events(self, simulation, controller, dag_interval, wait_time_seconds):
+  def find_internal_events(self, simulation, controller, dag_interval,
+                           inject_input, wait_time_seconds):
+    assert(dag_interval.events != [])
+    initial_wait_seconds = (inject_input.time.as_float() -
+                            dag_interval.events[-1].time.as_float())
+    # TODO(cs): set EventScheduler's epsilon_seconds parameter?
     replayer = Replayer(self.simulation_cfg, dag_interval,
                         pass_through_whitelisted_messages=True,
-                        default_dp_permit=self.default_dp_permit)
+                        default_dp_permit=self.default_dp_permit,
+                        initial_wait=initial_wait_seconds)
     replayer.simulation = simulation
     if self.pass_through_sends:
       replayer.set_pass_through_sends(simulation)
     replayer.run_simulation_forward()
-    # Now peek() for internal events following inject_input
-    return self.snapshot_and_play_forward(simulation, controller, wait_time_seconds)
 
-  def snapshot_and_play_forward(self, simulation, controller, wait_time_seconds):
+    # Now peek() for internal events following inject_input
+    return self.snapshot_and_play_forward(simulation, controller,
+                                          inject_input, wait_time_seconds)
+
+  def snapshot_and_play_forward(self, simulation, controller, inject_input, wait_time_seconds):
     snapshotter = Snapshotter(simulation, controller)
     snapshotter.snapshot_controller()
 
@@ -189,7 +214,7 @@ class SnapshotPeeker(Peeker):
       # N.B. depends on LocalForker() -- cannot be used with RemoteForker().
       # TODO(cs): even though DataplaneDrops are technically InputEvents, they
       # may time out, and we might do well to try to infer this somehow.
-      found_events = play_forward(simulation, wait_time_seconds)
+      found_events = play_forward(simulation, inject_input, wait_time_seconds)
       # TODO(cs): DataplaneDrops are a special case of an InputEvent that may
       # time out. We should check whether the input for this peek() was a
       # DataplaneDrop, and return whether it timed out.
@@ -270,8 +295,12 @@ class PrefixPeeker(Peeker):
         Peeker.ambiguous_counts[0.0] += 1
       else:
         wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
-        replay_dag = EventDag(inferred_events + [ inject_input ])
-        found_events = self.find_internal_events(replay_dag, wait_time_seconds)
+        # We inject a NOPInput with the same timestamp as inject_input
+        # to ensure that the timing is the same before peek()ing, then replay
+        # inject_input in play_forward()
+        fencepost = NOPInput(time=inject_input.time, round=inject_input.round)
+        replay_dag = EventDag(inferred_events + [ fencepost ])
+        found_events = self.find_internal_events(replay_dag, inject_input, wait_time_seconds)
         newly_inferred_events = match_and_filter(found_events, expected_internal_events)
 
       (current_input_prefix,
@@ -281,13 +310,13 @@ class PrefixPeeker(Peeker):
 
     return EventDag(inferred_events)
 
-  def find_internal_events(self, replay_dag, wait_time_seconds):
+  def find_internal_events(self, replay_dag, inject_input, wait_time_seconds):
     ''' Replay the replay_dag, then wait for wait_time_seconds and collect internal
         events that occur. Return the list of internal events. '''
     replayer = Replayer(self.simulation_cfg, replay_dag)
     log.debug("Replaying prefix")
     simulation = replayer.simulate()
-    newly_inferred_events = play_forward(simulation, wait_time_seconds)
+    newly_inferred_events = play_forward(simulation, inject_input, wait_time_seconds)
     return newly_inferred_events
 
   def _update_trie(self, current_input_prefix, inject_input, inferred_events,
@@ -340,13 +369,12 @@ def get_expected_internal_events(left_input, right_input, events_list):
   return [ i for i in events_list[left_idx:right_idx]
            if isinstance(i, InternalEvent) ]
 
-def play_forward(simulation, wait_time_seconds, flush_buffers=False):
-  # Directly after the last input has been injected, flush the internal
+def play_forward(simulation, inject_input, wait_time_seconds, flush_buffers=False):
+  # Directly before the last input has been injected, flush the internal
   # event buffers in case there were unaccounted internal events
   # Note that there isn't a race condition between flush()'ing and
   # incoming internal events, since sts is single-threaded
-  # TODO(cs): flush() is no longer needed! And it doesn't make sense when
-  # the replay is a single WaitTime.
+  # TODO(cs): flush() is no longer needed!
   if flush_buffers:
     simulation.openflow_buffer.flush()
     simulation.controller_sync_callback.flush()
@@ -356,7 +384,13 @@ def play_forward(simulation, wait_time_seconds, flush_buffers=False):
   # to "pass-through and record"
   simulation.set_pass_through()
 
+  # we inject input after setting pass_through, since some internal
+  # events may occur immediately after the input is injected.
+  inject_input.proceed(simulation)
+
   # Note that this is the monkey patched version of time.sleep
+  # TODO(cs): should we subtract the time it took to inject input from
+  # wait_time_seconds?
   log.info("peek()'ing for %f seconds" % wait_time_seconds)
   # TODO(cs): sleep()'ing allows us to infer ControlMessageReceive events, but
   # it doesn't help with infering other events that can timeout, such as
@@ -373,9 +407,10 @@ def play_forward(simulation, wait_time_seconds, flush_buffers=False):
   return newly_inferred_events
 
 def match_and_filter(newly_inferred_events, expected_internal_events):
-  log.debug("Matching fingerprints")
-  log.debug("Expected: %s" % str(expected_internal_events))
-  log.debug("Inferred: %s" % str(newly_inferred_events))
+  if log.getEffectiveLevel() >= logging.DEBUG:
+    log.debug("Matching fingerprints")
+    log.debug("Expected: %s" % str(expected_internal_events))
+    log.debug("Inferred: %s" % str(newly_inferred_events))
   # TODO(cs): currently not calling this, out of paranoia. May inadvertently
   # prune expected internal events -- largely serves as an optimization
   #newly_inferred_events = match_fingerprints(newly_inferred_events,
@@ -386,7 +421,9 @@ def match_and_filter(newly_inferred_events, expected_internal_events):
                                  expected_internal_events)
   newly_inferred_events = correct_timestamps(newly_inferred_events,
                                              expected_internal_events)
-  log.debug("Matched events: %s" % str(newly_inferred_events))
+
+  if log.getEffectiveLevel() >= logging.DEBUG:
+    log.debug("Matched events: %s" % str(newly_inferred_events))
   return newly_inferred_events
 
 def count_overlapping_fingerprints(newly_inferred_events,
@@ -479,6 +516,8 @@ def correct_timestamps(new_events, old_events):
   '''
   # Lazy strategy: assign all new timestamps to the last timestamp of
   # old_events
+  # TODO(cs): match up more carefully, since the timestamps affect how long
+  # EventScheduler waits.
   latest_old_ts = old_events[-1].time
   for e in new_events:
     e.time = latest_old_ts

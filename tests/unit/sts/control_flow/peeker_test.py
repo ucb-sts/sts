@@ -22,7 +22,7 @@ from sts.control_flow.peeker import *
 # TODO: move Mock internal events to lib
 from tests.unit.sts.event_dag_test import MockInternalEvent
 from tests.unit.sts.mcs_finder_test import MockInputEvent
-from sts.replay_event import InternalEvent
+from sts.replay_event import InternalEvent, ConnectToControllers
 from sts.event_dag import EventDag
 from config.experiment_config_lib import ControllerConfig
 from sts.simulation_state import SimulationConfig
@@ -42,6 +42,19 @@ def handle_int(sigspec, frame):
 signal.signal(signal.SIGINT, handle_int)
 signal.signal(signal.SIGTERM, handle_int)
 
+class MockConnectToControllers(ConnectToControllers):
+  def __init__(self, fingerprint=None, **kwargs):
+    kwargs['prunable'] = False
+    super(MockConnectToControllers, self).__init__(**kwargs)
+    self._fingerprint = fingerprint
+    self.prunable = False
+
+  @property
+  def fingerprint(self):
+    return self._fingerprint
+
+  def proceed(self, simulation):
+    return True
 
 class PeekerTest(unittest.TestCase):
   def setUp(self):
@@ -52,32 +65,34 @@ class PeekerTest(unittest.TestCase):
     ControllerConfig._controller_labels.clear()
     controller_cfg = ControllerConfig(start_cmd="sleep")
     simulation_cfg = SimulationConfig(controller_configs=[controller_cfg])
-    self.snapshot_peeker = SnapshotPeeker(simulation_cfg)
+    self.snapshot_peeker = SnapshotPeeker(simulation_cfg,
+                                          default_dp_permit=True)
     self.snapshot_peeker.setup_simulation = lambda: (None, None)
     # N.B. this assumes that no internal events occur before the first input
     # event.
     self.snapshot_peeker.snapshot_and_play_forward = lambda *args: []
 
   def test_basic_noop(self):
-    """ test_basic_noop: running on a dag with no input events returns the same dag """
-    events = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
-    for peeker in [self.prefix_peeker, self.snapshot_peeker]:
-      new_dag = peeker.peek(EventDag(events))
-      self.assertEquals(events, new_dag.events)
+    """ test_basic_noop: running on a dag with no internal events returns the same dag """
+    events = [MockConnectToControllers(fingerprint=("class",0))] + [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
+    new_dag = self.prefix_peeker.peek(EventDag(events))
+    self.assertEquals(events, new_dag.events)
+    new_dag = self.snapshot_peeker.peek(EventDag(events))
+    self.assertEquals(events, new_dag.events)
 
   def test_basic_no_prune(self):
-    inp1 = MockInputEvent(fingerprint="a")
+    inp1 = MockConnectToControllers(fingerprint="a")
     inp2 = MockInputEvent(fingerprint="b")
     int1 = MockInternalEvent(fingerprint="c")
     inp3 =  MockInputEvent(fingerprint="d")
     events = [ inp1, inp2, int1, inp3 ]
 
-    def fake_find_internal_events(replay_dag, wait_time):
-      if replay_dag.events[-1] == inp1:
+    def fake_find_internal_events(replay_dag, inject_input, wait_time):
+      if inject_input == inp1:
         return []
-      elif replay_dag.events[-1] == inp2:
+      elif inject_input == inp2:
         return [ int1 ]
-      elif replay_dag.events[-1] == inp3:
+      elif inject_input == inp3:
         return []
       else:
         raise AssertionError("Unexpected event sequence queried: %s" % replay_dag.events)
@@ -89,24 +104,25 @@ class PeekerTest(unittest.TestCase):
 
     # next, snapshot peeker
     # Hack alert! throw away first two args
-    def snapshotter_fake_find_internal_events(s, c, dag_interval, wait_time):
-      return fake_find_internal_events(dag_interval, wait_time)
+    def snapshotter_fake_find_internal_events(s, c, dag_interval,
+                                              inject_input, wait_time):
+      return fake_find_internal_events(dag_interval, inject_input, wait_time)
     self.snapshot_peeker.find_internal_events = snapshotter_fake_find_internal_events
     new_dag = self.snapshot_peeker.peek(EventDag(events))
     self.assertEquals(events, new_dag.events)
 
   def test_basic_prune(self):
-    inp2 = MockInputEvent(fingerprint="b")
+    inp2 = MockConnectToControllers(fingerprint="b")
     int1 = MockInternalEvent(fingerprint="c")
     inp3 =  MockInputEvent(fingerprint="d")
     int2 = MockInternalEvent(fingerprint="e")
     sub_events = [ inp2, int1, inp3, int2 ]
 
-    def fake_find_internal_events(replay_dag, wait_time):
-      if replay_dag.events[-1] == inp2:
+    def fake_find_internal_events(replay_dag, inject_input, wait_time):
+      if inject_input == inp2:
         # int1 disappears
         return []
-      elif replay_dag.events[-1] == inp3:
+      elif inject_input == inp3:
         # int2 does not
         return [ int2 ]
       else:
@@ -119,8 +135,9 @@ class PeekerTest(unittest.TestCase):
 
     # next, snapshot peeker
     # Hack alert! throw away first two args
-    def snapshotter_fake_find_internal_events(s, c, dag_interval, wait_time):
-      return fake_find_internal_events(dag_interval, wait_time)
+    def snapshotter_fake_find_internal_events(s, c, dag_interval,
+                                              inject_input, wait_time):
+      return fake_find_internal_events(dag_interval, inject_input, wait_time)
     self.snapshot_peeker.find_internal_events = snapshotter_fake_find_internal_events
     new_dag = self.snapshot_peeker.peek(EventDag(sub_events))
     self.assertEquals([inp2, inp3, int2], new_dag.events)
