@@ -111,6 +111,7 @@ class Forker(object):
     # needed? See ServerProxy.__call__ in:
     # http://hg.python.org/cpython/file/2.7/Lib/xmlrpclib.py
     proxy("close")()
+    log.debug("Completed task %s on child %s" % (task_name, child_url,))
     return child_return
 
   def _initialize_child_rpc_server(self, ip, port):
