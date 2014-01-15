@@ -10,6 +10,7 @@ import sts.replay_event as replay_events
 from sts.input_traces.log_parser import parse
 from sts.util.tabular import Tabular
 from sts.event_dag import EventDag
+from collections import Counter
 
 def parse_json(subsequence_violations_path):
   with open(subsequence_violations_path) as json_data:
@@ -33,16 +34,10 @@ class Stats(object):
   def update(self, event):
     if isinstance(event, replay_events.InputEvent):
       event_name = str(event.__class__.__name__)
-      if event_name in self.input_events.keys():
-        self.input_events[event_name] += 1
-      else:
-        self.input_events[event_name] = 1
+      self.input_events[event_name] += 1
     else:
       event_name = str(event.__class__.__name__)
-      if event_name in self.internal_events.keys():
-        self.internal_events[event_name] += 1
-      else:
-        self.internal_events[event_name] = 1
+      self.internal_events[event_name] += 1
 
   @property
   def input_event_count(self):
