@@ -97,8 +97,7 @@ def port_used(address='127.0.0.1', port=6633):
     s.listen(1)
     s.close()
     return False
-  except Exception:
-    # TODO(cs): catch specific errors
+  except socket.error:
     return True
 
 def find_port(port_spec):
