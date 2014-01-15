@@ -56,6 +56,18 @@ def default_boot_controllers(controller_configs, snapshot_service,
     controllers.append(controller)
   return ControllerManager(controllers)
 
+def remove_monkey_patch():
+  revert_socket_monkeypatch()
+  revert_select_monkeypatch()
+
+def revert_socket_monkeypatch():
+  if hasattr(socket, "_old_socket"):
+    socket.socket = socket._old_socket
+
+def revert_select_monkeypatch():
+  if hasattr(select, "_old_select"):
+    select.select = select._old_select
+
 class SimulationConfig(object):
   """
   Maintains the configuration for:
@@ -126,13 +138,6 @@ class SimulationConfig(object):
 
        May be invoked multiple times!
     '''
-    def remove_monkey_patch():
-      if hasattr(select, "_old_select"):
-        # Revert the previous monkeypatch to allow the new true_sockets to
-        # connect
-        select.select = select._old_select
-        socket.socket = socket._old_socket
-
     def initialize_io_loop():
       ''' boot the IOLoop (needed for the controllers) '''
       _io_master = IOMaster()
@@ -165,6 +170,37 @@ class SimulationConfig(object):
                        self._topology_params, comma))
       return topology
 
+    def monkeypatch_select(multiplex_sockets, controller_manager):
+      mux_select = None
+      demuxers = []
+      if multiplex_sockets:
+        log.debug("Monkeypatching STS select")
+        revert_select_monkeypatch()
+        revert_socket_monkeypatch()
+        # Monkey patch select to use our deterministic version
+        mux_select = MultiplexedSelect()
+        for c in controller_manager.controller_configs:
+          # Connect the true sockets
+          true_socket = connect_socket_with_backoff(address=c.address, port=c.port)
+          true_socket.setblocking(0)
+          io_worker = mux_select.create_worker_for_socket(true_socket)
+          demux = STSSocketDemultiplexer(io_worker, c.server_info)
+          demuxers.append(demux)
+
+        # Monkey patch select.select
+        select._old_select = select.select
+        select.select = mux_select.select
+        # Monkey patch socket.socket
+        socket._old_socket = socket.socket
+        def socket_patch(protocol, sock_type):
+          if sock_type == socket.SOCK_STREAM:
+            return STSMockSocket(protocol, sock_type)
+          else:
+            socket._old_socket(protocol, sock_type)
+        socket.socket = socket_patch
+
+      return (mux_select, demuxers)
+
     # Instantiate the pieces needed for Simulation's constructor
     remove_monkey_patch()
     io_master = initialize_io_loop()
@@ -188,9 +224,13 @@ class SimulationConfig(object):
     else:
       violation_tracker = ViolationTracker()
 
+    # Connect up MuxSelect if enabled
+    (mux_select, demuxers) = monkeypatch_select(self.multiplex_sockets,
+                                                controller_manager)
+
     simulation = Simulation(topology, controller_manager, dataplane_trace,
                             openflow_buffer, io_master, controller_patch_panel,
-                            patch_panel, sync_callback, self.multiplex_sockets,
+                            patch_panel, sync_callback, mux_select, demuxers,
                             violation_tracker, self._kill_controllers_on_exit)
     self.current_simulation = simulation
     return simulation
@@ -222,7 +262,7 @@ class Simulation(object):
   '''
   def __init__(self, topology, controller_manager, dataplane_trace,
                openflow_buffer, io_master, controller_patch_panel, patch_panel,
-               controller_sync_callback, multiplex_sockets,
+               controller_sync_callback, mux_select, demuxers,
                violation_tracker, kill_controllers_on_exit):
     self.topology = topology
     self.controller_manager = controller_manager
@@ -233,10 +273,11 @@ class Simulation(object):
     self.controller_patch_panel = controller_patch_panel
     self.patch_panel = patch_panel
     self.controller_sync_callback = controller_sync_callback
-    self.multiplex_sockets = multiplex_sockets
     self.violation_tracker = violation_tracker
     self._kill_controllers_on_exit = kill_controllers_on_exit
     self.exit_code = 0
+    self.mux_select = mux_select
+    self.demuxers = demuxers
 
   def set_exit_code(self, code):
     self.exit_code = code
@@ -286,44 +327,6 @@ class Simulation(object):
 
   def connect_to_controllers(self):
     ''' Connect all switches to all controllers '''
-    def revert_socket_monkeypatch():
-      if hasattr(socket, "_old_socket"):
-        socket.socket = socket._old_socket
-
-    def revert_select_monkeypatch():
-      if hasattr(select, "_old_select"):
-        select.select = select._old_select
-
-    def monkeypatch_select():
-      log.debug("Monkeypatching STS select")
-      mux_select = None
-      demuxers = []
-      if self.multiplex_sockets:
-        revert_select_monkeypatch()
-        revert_socket_monkeypatch()
-        # Monkey patch select to use our deterministic version
-        mux_select = MultiplexedSelect()
-        for c in self.controller_manager.controller_configs:
-          # Connect the true sockets
-          true_socket = connect_socket_with_backoff(address=c.address, port=c.port)
-          true_socket.setblocking(0)
-          io_worker = mux_select.create_worker_for_socket(true_socket)
-          demux = STSSocketDemultiplexer(io_worker, c.server_info)
-          demuxers.append(demux)
-
-        # Monkey patch select.select
-        select._old_select = select.select
-        select.select = mux_select.select
-        # Monkey patch socket.socket
-        socket._old_socket = socket.socket
-        def socket_patch(protocol, sock_type):
-          if sock_type == socket.SOCK_STREAM:
-            return STSMockSocket(protocol, sock_type)
-          else:
-            socket._old_socket(protocol, sock_type)
-        socket.socket = socket_patch
-
-      return (mux_select, demuxers)
 
     def create_connection(controller_info, switch, max_backoff_seconds=1024):
       ''' Connect switches to controllers. May raise a TimeoutError '''
@@ -339,8 +342,6 @@ class Simulation(object):
       io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(socket))
       connection = DeferredOFConnection(io_worker, controller_info.cid, switch.dpid, self.openflow_buffer)
       return connection
-
-    (self.mux_select, self.demuxers) = monkeypatch_select()
 
     self.topology.connect_to_controllers(self.controller_manager.controller_configs,
                                          create_connection=create_connection)
