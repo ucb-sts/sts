@@ -1,6 +1,0 @@
-Implementation options:
-  i.   Add "pass_through + record" mode for BufferedPatchPanel. Drawback: I
-       think this may lead to infinite recursion if there are loops installed
-       in the network.
-  ii.  Use Replayer's DataplaneChecker? Not sure how this will be scheduled
-       during peek()'s time.sleep() though.
