@@ -136,8 +136,7 @@ class MultiplexedSelect(IOMaster):
   # runs below the normal IOMaster. MultiplexedSelect subclasses IOMaster only to
   # wrap its true socket(s) in an internal IOWorker. Also note that the normal
   # IOMaster's pinger sockets will in fact be MockSockets. We have the only
-  # real pinger socket (MultiplexedSelect must be instantiated before
-  # socket.socket is overridden).
+  # real pinger socket.
 
   # The caller may pass in classes that wrap our MockSockets. select() can
   # only rely on the fileno() to tell whether the socket is ready to read.

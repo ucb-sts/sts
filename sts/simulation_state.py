@@ -56,13 +56,7 @@ def default_boot_controllers(controller_configs, snapshot_service,
     controllers.append(controller)
   return ControllerManager(controllers)
 
-def remove_monkey_patch():
-  revert_socket_monkeypatch()
   revert_select_monkeypatch()
-
-def revert_socket_monkeypatch():
-  if hasattr(socket, "_old_socket"):
-    socket.socket = socket._old_socket
 
 def revert_select_monkeypatch():
   if hasattr(select, "_old_select"):
@@ -176,7 +170,6 @@ class SimulationConfig(object):
       if multiplex_sockets:
         log.debug("Monkeypatching STS select")
         revert_select_monkeypatch()
-        revert_socket_monkeypatch()
         # Monkey patch select to use our deterministic version
         mux_select = MultiplexedSelect()
         for c in controller_manager.controller_configs:
@@ -190,19 +183,11 @@ class SimulationConfig(object):
         # Monkey patch select.select
         select._old_select = select.select
         select.select = mux_select.select
-        # Monkey patch socket.socket
-        socket._old_socket = socket.socket
-        def socket_patch(protocol, sock_type):
-          if sock_type == socket.SOCK_STREAM:
-            return STSMockSocket(protocol, sock_type)
-          else:
-            socket._old_socket(protocol, sock_type)
-        socket.socket = socket_patch
 
       return (mux_select, demuxers)
 
     # Instantiate the pieces needed for Simulation's constructor
-    remove_monkey_patch()
+    revert_select_monkeypatch()
     io_master = initialize_io_loop()
     sync_connection_manager = STSSyncConnectionManager(io_master,
                                                        sync_callback)
@@ -277,6 +262,7 @@ class Simulation(object):
     self._kill_controllers_on_exit = kill_controllers_on_exit
     self.exit_code = 0
     self.mux_select = mux_select
+    self.multiplex_sockets = mux_select is not None
     self.demuxers = demuxers
 
   def set_exit_code(self, code):
@@ -330,25 +316,26 @@ class Simulation(object):
 
     def create_connection(controller_info, switch, max_backoff_seconds=1024):
       ''' Connect switches to controllers. May raise a TimeoutError '''
+      # TODO(cs): move this into a ConnectionFactory class
       while controller_info.address == "__address__":
         log.debug("Waiting for controller address for %s..." % controller_info.label)
         time.sleep(5)
-      # TODO(cs): move this into a ConnectionFactory class
-      socket = connect_socket_with_backoff(controller_info.address,
-                                           controller_info.port,
-                                           max_backoff_seconds=max_backoff_seconds)
+      if self.multiplex_sockets:
+        socket_ctor = STSMockSocket
+      else:
+        socket_ctor = socket.socket
+      sock = connect_socket_with_backoff(controller_info.address,
+                                         controller_info.port,
+                                         max_backoff_seconds=max_backoff_seconds,
+                                         socket_ctor=socket_ctor)
       # Set non-blocking
-      socket.setblocking(0)
-      io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(socket))
+      sock.setblocking(0)
+      io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(sock))
       connection = DeferredOFConnection(io_worker, controller_info.cid, switch.dpid, self.openflow_buffer)
       return connection
 
     self.topology.connect_to_controllers(self.controller_manager.controller_configs,
                                          create_connection=create_connection)
-
-    # create_connection should not be called again -- revert monkeypatch in
-    # case STS wants to open other sockets (e.g., xmlrplclib)
-    revert_socket_monkeypatch()
 
   def get_demuxer_for_server_info(self, server_info):
     '''

@@ -22,10 +22,7 @@
 #  - create a STSSocketDemultiplexer for them
 #  - override select.select with MultiplexedSelect (this will create a true
 #    socket for the pinger)
-#  - override socket.socket
-#    - takes two params: protocol, socket type
-#    - if not SOCK_STREAM type, return a normal socket
-#    - else, return STSMockSocket
+#  - return STSMocketSockets to all switches rather than socket.sockets
 
 from base import *
 from sts.util.convenience import base64_decode
