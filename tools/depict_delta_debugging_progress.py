@@ -8,6 +8,7 @@ import json
 import glob
 import sys
 import os
+from trace_utils import parse_json, parse_event_trace
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -26,20 +27,6 @@ class InterReplayDirectory(object):
 
   def __repr__(self):
     return self.dir_str
-
-def parse_json(subsequence_violations_path):
-  with open(subsequence_violations_path) as json_data:
-    d = json.load(json_data)
-    # Convert strings to integers
-    for k,v in d.iteritems():
-      if type(k) != int:
-        del d[k]
-        d[int(k)] = v
-    return d
-
-def parse_event_trace(trace_path):
-  with open(trace_path) as input_file:
-    return EventDag(parse(input_file))
 
 def format_trace(label, trace, full_trace):
   row = [label, len(trace.input_events)]
