@@ -44,7 +44,6 @@ signal.signal(signal.SIGTERM, handle_int)
 
 class MockConnectToControllers(ConnectToControllers):
   def __init__(self, fingerprint=None, **kwargs):
-    kwargs['prunable'] = False
     super(MockConnectToControllers, self).__init__(**kwargs)
     self._fingerprint = fingerprint
     self.prunable = False
