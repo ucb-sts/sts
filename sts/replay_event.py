@@ -201,12 +201,10 @@ class ConnectToControllers(InputEvent):
   ''' Logged at the beginning of the execution. Causes all switches to open
   TCP connections their their parent controller(s).
   '''
-  def __init__(self, label=None, round=-1, time=None, prunable=False,
+  def __init__(self, label=None, round=-1, time=None,
                timeout_disallowed=True):
-    if prunable:
-      raise ValueError("ConnectToControllers should never be prunable")
-    super(ConnectToControllers, self).__init__(label=label, round=round,
-                                               time=time, prunable=prunable)
+    super(ConnectToControllers, self).__init__(label=label, round=round, time=time)
+    self.prunable = False
     # timeout_disallowed is only for backwards compatibility
     self.timeout_disallowed = timeout_disallowed
 
