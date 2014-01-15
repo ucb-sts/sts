@@ -89,9 +89,9 @@ def kill_procs(child_processes, kill=None, verbose=True, timeout=5,
             if attr:
               attr.close()
           except IOError:
-            msg("close() called on %s during concurrent operation" % attr_name)
+            msg("close() called on %s during concurrent operation\n" % attr_name)
           except:
-            msg("Error closing child io.")
+            msg("Error closing child io.\n")
             tb = traceback.format_exc()
             msg(tb)
 
