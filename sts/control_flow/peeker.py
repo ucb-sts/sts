@@ -411,16 +411,14 @@ def match_and_filter(newly_inferred_events, expected_internal_events):
     log.debug("Matching fingerprints")
     log.debug("Expected: %s" % str(expected_internal_events))
     log.debug("Inferred: %s" % str(newly_inferred_events))
-  # TODO(cs): currently not calling this, out of paranoia. May inadvertently
-  # prune expected internal events -- largely serves as an optimization
-  #newly_inferred_events = match_fingerprints(newly_inferred_events,
-  #                                           expected_internal_events)
-  # TODO(cs): need to prune any successors of e_i, in case we waited too
-  # long
-  count_overlapping_fingerprints(newly_inferred_events,
-                                 expected_internal_events)
-  newly_inferred_events = correct_timestamps(newly_inferred_events,
+
+  newly_inferred_events = match_fingerprints(newly_inferred_events,
                                              expected_internal_events)
+  #count_overlapping_fingerprints(newly_inferred_events,
+  #                               expected_internal_events)
+  # TODO(cs): correct timestamps of unexpected internal events.
+  #newly_inferred_events = correct_timestamps(newly_inferred_events,
+  #                                           expected_internal_events)
 
   if log.getEffectiveLevel() >= logging.DEBUG:
     log.debug("Matched events: %s" % str(newly_inferred_events))
@@ -446,11 +444,15 @@ def count_overlapping_fingerprints(newly_inferred_events,
     percent_redundant = 0.0
   Peeker.ambiguous_counts[percent_redundant] += 1
 
-# Truncate the newly inferred events based on the expected
-# predecessors of next_input+1
-# inferred_events (and ignore internal events that come afterward)
-# TODO(cs): perhaps these should be unordered
-def match_fingerprints(newly_inferred_events, expected_internal_events):
+def deprecated_match_fingerprints(newly_inferred_events, expected_internal_events):
+  ''' Deprecated. '''
+  # Truncate the newly inferred events based on the expected
+  # predecessors of next_input+1
+  # inferred_events (and ignore internal events that come afterward)
+
+  # TODO(cs): need to prune any successors of e_i, in case we waited too
+  # long
+
   # Find the last internal event in expected_internal_events that
   # matches an event in newly_inferred_events. That is the new causal
   # parent of following_input
@@ -507,6 +509,32 @@ def match_fingerprints(newly_inferred_events, expected_internal_events):
       return newly_inferred_events
   # Else, no expected internal event was observed.
   return []
+
+def match_fingerprints(newly_inferred_events, expected_internal_events):
+  # TODO(cs): we currently enforce something stronger than
+  # happens-before: we enforce a total ordering of events (the serial order
+  # recorded in the original trace). I wonder if enforcing a
+  # partial ordering would make replay more effective?
+  # N.B. expected_internal_events are ordered, whereas newly_inferred_events
+  # may not be.
+  inferred_fingerprints = set([e.fingerprint for e in
+                               newly_inferred_events])
+  if len(inferred_fingerprints) != len(newly_inferred_events):
+    log.warn("Overlapping fingerprints in peek() (%d unique, %d total)" %
+             (len(inferred_fingerprints),len(newly_inferred_events)))
+
+  expected_fingerprints = set([e.fingerprint
+                               for e in expected_internal_events])
+  if len(expected_fingerprints) != len(expected_internal_events):
+    log.warn("Overlapping expected fingerprints (%d unique, %d total)" %
+             (len(expected_fingerprints),len(expected_internal_events)))
+
+  # TODO(cs): simplification for now: let's try not letting unexpected internal events through
+  ordered_inferred_events = []
+  for e in expected_internal_events:
+    if e.fingerprint in inferred_fingerprints:
+      ordered_inferred_events.append(e)
+  return ordered_inferred_events
 
 def correct_timestamps(new_events, old_events):
   ''' Set new_events' timestamps to approximately the same timestamp as
