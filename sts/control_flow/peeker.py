@@ -530,6 +530,8 @@ def match_fingerprints(newly_inferred_events, expected_internal_events):
              (len(expected_fingerprints),len(expected_internal_events)))
 
   # TODO(cs): simplification for now: let's try not letting unexpected internal events through
+  # Actually, an easier way to implement this would be to allow any unmatched
+  # events through, i.e. set Replayer to "pass through unexpected" mode.
   ordered_inferred_events = []
   for e in expected_internal_events:
     if e.fingerprint in inferred_fingerprints:
