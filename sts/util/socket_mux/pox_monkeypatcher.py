@@ -61,7 +61,7 @@ def launch(snapshot_address=None):
     # Snapshotting protocol (over a domain socket):
 
     # In STS:
-    #  - set simulation to "record-only" mode
+    #  - fork() simulation
     #  - send "SNAPSHOT" to controller
 
     # In controller upon receiving "SNAPSHOT":
@@ -93,6 +93,7 @@ def launch(snapshot_address=None):
     # N.B. the synchronization of this snapshot protocol isn't perfect.
     # For example it's possible that the snapshot protocol itself perturbs
     # the behavior of the forked controller.
+    # TODO(cs): set socket buffers to zero?
 
     # N.B. probably shouldn't run STSSyncProto with snapshotting, since we're
     # messing with sockets.
