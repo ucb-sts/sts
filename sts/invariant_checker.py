@@ -448,6 +448,9 @@ class ViolationTracker(object):
       (start_time, end_time), where start_time is the logical time at which the violation
       is first observed, and end time that at which the violation is last observed
     '''
+    # TODO(cs): persistence_threshold should be specified *per invariant*. For
+    # example, there are some invariants such as "controller's should not
+    # crash" that should never be violated.
     self.persistence_threshold = persistence_threshold
     self.violation2time = {}
     self.buffer_persistent_violations = buffer_persistent_violations
