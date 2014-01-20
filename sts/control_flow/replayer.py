@@ -35,6 +35,7 @@ from config.invariant_checks import name_to_invariant_check
 import signal
 import logging
 import time
+import sys
 
 log = logging.getLogger("Replayer")
 
@@ -103,6 +104,10 @@ class Replayer(ControlFlow):
       event.passive = default_dp_permit
 
     self.dp_checker = None
+    if (not default_dp_permit and
+        [ e for e in self.dag.events if type(e) == DataplaneDrop ] == []):
+      print >> sys.stderr, ('''No DataplaneDrops to replay. We suggest you '''
+                            '''set Replayer's default_dp_permit=True ''')
     if default_dp_permit:
       self.dp_checker = DataplaneChecker(self.dag)
 
