@@ -95,4 +95,5 @@ def setup_experiment(args, config):
   if (not hasattr(config, "get_additional_metadata") and
       find(lambda c: not builtin_pox_controller(c),
            config.control_flow.simulation_cfg.controller_configs) is not None):
-    log.warn("No get_additional_metadata() defined for config file")
+    log.warn('''No get_additional_metadata() defined for config file. See '''
+             '''config/nox_routing.py for an example.''')
