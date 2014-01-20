@@ -835,7 +835,7 @@ class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
   def __init__(self, num_pods=4, create_io_worker=None, gui=False):
     if num_pods < 2:
-      raise "Can't handle Fat Trees with less than 2 pods"
+      raise ValueError("Can't handle Fat Trees with less than 2 pods")
     Topology.__init__(self, create_io_worker=create_io_worker, gui=gui)
     self.cores = []
     self.aggs = []
