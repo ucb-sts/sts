@@ -1080,7 +1080,7 @@ class ControlMessageReceive(ControlMessageBase):
       return True
     message_waiting = simulation.openflow_buffer.message_receipt_waiting(pending_receive)
     if message_waiting:
-      if logging.getEffectiveLevel() == logging.DEBUG and type(base64_decode_openflow(self.b64_packet)) == ofp_flow_mod:
+      if log.getEffectiveLevel() == logging.DEBUG and type(base64_decode_openflow(self.b64_packet)) == ofp_flow_mod:
         show_flow_tables(simulation)
       simulation.openflow_buffer.schedule(pending_receive)
       return True
