@@ -432,7 +432,6 @@ class ViolationTracker(object):
   '''
   Tracks all invariant violations and decides whether each one is transient or persistent
   '''
-
   def __init__(self, persistence_threshold=0, buffer_persistent_violations=False):
     '''
     persistence_threshold: number of logical time units a violation must persist

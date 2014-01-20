@@ -10,7 +10,8 @@ def check_everything(simulation):
   # Check other invariants without checking liveness
   checks = [ InvariantChecker.check_loops,
              InvariantChecker.python_check_blackholes,
-             InvariantChecker.check_connectivity ]
+             InvariantChecker.check_connectivity,
+             check_for_invalid_ports ]
   for check in checks:
     violations += check(simulation, check_liveness_first=False)
   violations = list(set(violations))
@@ -43,12 +44,22 @@ def check_for_loops_blackholes(simulation):
       return result
   return []
 
+def check_for_invalid_ports(simulation):
+  ''' Check if any of the switches have been asked to forward packets out
+  ports that don't exist '''
+  violations = []
+  for sw in simulation.topology.switches:
+    if sw.port_violations != []:
+      violations += [ str(v) for v in sw.port_violations ]
+  return violations
+
 # Note: make sure to add new custom invariant checks to this dictionary!
 name_to_invariant_check = {
   "check_everything" : check_everything,
   "check_for_loops_or_connectivity" : check_for_loops_or_connectivity,
   "check_for_loops_blackholes_or_connectivity" : check_for_loops_blackholes_or_connectivity,
   "check_for_loops_blackholes" : check_for_loops_blackholes,
+  "check_for_invalid_ports" : check_for_invalid_ports,
   "InvariantChecker.check_liveness" :  InvariantChecker.check_liveness,
   "InvariantChecker.check_loops" :  InvariantChecker.check_loops,
   "InvariantChecker.python_check_loops" :  InvariantChecker.python_check_loops,

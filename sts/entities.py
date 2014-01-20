@@ -190,6 +190,16 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self.randomize_flow_mod_order = False
     # Uninitialized RNG (initialize through randomize_flow_mods())
     self.random = None
+    self.port_violations = []
+
+  def _output_packet(self, packet, out_port, in_port):
+    try:
+      return super(FuzzSoftwareSwitch, self)._output_packet(packet, out_port, in_port)
+    except ValueError as e:
+      self.log.warn("invalid arguments %s" % str(e))
+      if type(out_port) == ofp_phy_port:
+        out_port = out_port.port_no
+      self.port_violations.append((self.dpid, out_port))
 
   def add_controller_info(self, info):
     self.controller_info.append(info)
