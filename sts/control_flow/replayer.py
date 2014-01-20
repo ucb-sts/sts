@@ -49,6 +49,16 @@ class Replayer(ControlFlow):
   # Interpolated time parameter. *not* the event scheduling epsilon:
   time_epsilon_microseconds = 500
 
+  kwargs = set(['create_event_scheduler', 'print_buffers',
+                'wait_on_deterministic_values', 'default_dp_permit',
+                'fail_to_interactive', 'fail_to_interactive_on_persistent_violations',
+                'end_in_interactive', 'input_logger',
+                'allow_unexpected_messages',
+                'pass_through_whitelisted_messages',
+                'delay_flow_mods', 'invariant_check_name',
+                'bug_signature', 'end_wait_seconds',
+                'transform_dag', 'pass_through_sends'])
+
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
                print_buffers=True, wait_on_deterministic_values=False, default_dp_permit=False,
                fail_to_interactive=False, fail_to_interactive_on_persistent_violations=False,

@@ -45,17 +45,15 @@ import re
 
 class MCSFinder(ControlFlow):
   def __init__(self, simulation_cfg, superlog_path_or_dag,
-               invariant_check_name="",
-               bug_signature="",
-               transform_dag=None, end_wait_seconds=0.5,
+               invariant_check_name="", bug_signature="", transform_dag=None,
                mcs_trace_path=None, extra_log=None, runtime_stats_path=None,
-               wait_on_deterministic_values=False,
                max_replays_per_subsequence=1,
                optimized_filtering=False, forker=LocalForker(),
                replay_final_trace=True, strict_assertion_checking=False,
-               delay_flow_mods=False,
                no_violation_verification_runs=None,
                **kwargs):
+    ''' Note that you may pass in any keyword argument for Replayer to
+    MCSFinder, except 'bug_signature' and 'invariant_check_name' '''
     super(MCSFinder, self).__init__(simulation_cfg)
     # number of subsequences delta debugging has examined so far, for
     # distingushing runtime stats from different intermediate runs.
@@ -109,8 +107,9 @@ class MCSFinder(ControlFlow):
     # A second log with just our MCS progress log messages
     self._extra_log = extra_log
     self.kwargs = kwargs
-    self.end_wait_seconds = end_wait_seconds
-    self.wait_on_deterministic_values = wait_on_deterministic_values
+    unknown_kwargs = [ k for k in kwargs.keys() if k not in Replayer.kwargs ]
+    if unknown_kwargs != []:
+      raise ValueError("Unknown kwargs %s" % str(unknown_kwargs))
     if no_violation_verification_runs is not None:
       raise ValueError('''no_violation_verification_runs parameter is deprecated. '''
                        '''Use max_replays_per_subsequence.''')
@@ -121,7 +120,6 @@ class MCSFinder(ControlFlow):
     self.forker = forker
     self.replay_final_trace = replay_final_trace
     self.strict_assertion_checking = strict_assertion_checking
-    self.delay_flow_mods = delay_flow_mods
 
   def log(self, s):
     ''' Output a message to both self._log and self._extra_log '''
@@ -376,14 +374,9 @@ class MCSFinder(ControlFlow):
       # Set up replayer.
       input_logger = InputLogger()
       replayer = Replayer(self.simulation_cfg, new_dag,
-                          wait_on_deterministic_values=self.wait_on_deterministic_values,
                           input_logger=input_logger,
-                          allow_unexpected_messages=False,
-                          pass_through_whitelisted_messages=True,
-                          delay_flow_mods=self.delay_flow_mods,
                           bug_signature=self.bug_signature,
                           invariant_check_name=self.invariant_check_name,
-                          end_wait_seconds=self.end_wait_seconds,
                           **self.kwargs)
       replayer.init_results(results_dir)
       self._runtime_stats = RuntimeStats(subsequence_id)
