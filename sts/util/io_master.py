@@ -40,9 +40,6 @@ class STSIOWorker(IOWorker):
     return self.socket.fileno()
 
   def send(self, data):
-    if threading.current_thread().name != "MainThread" and threading.current_thread().name != "BackgroundIOThread":
-      raise RuntimeError("Wrong thread: %s" % threading.current_thread())
-
     """ send data from the client side. fire and forget. """
     return IOWorker.send(self, data)
 
