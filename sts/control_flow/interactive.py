@@ -235,7 +235,7 @@ class Interactive(ControlFlow):
   checking for invariants at the users' discretion
   '''
   def __init__(self, simulation_cfg, input_logger=None,
-               pass_through_of_messages=True):
+               pass_through_of_messages=True, default_dp_permit=True):
     ControlFlow.__init__(self, simulation_cfg)
     self.sync_callback = RecordingSyncCallback(input_logger)
     self.logical_time = 0
@@ -245,6 +245,7 @@ class Interactive(ControlFlow):
     # a reasonable way -- the user has no (easy) way to examine and route
     # OpenFlowBuffer's pending_receives and pending_sends.
     self.pass_through_of_messages = pass_through_of_messages
+    self.default_dp_permit = default_dp_permit
     # TODO(cs): future feature: allow the user to interactively choose the order
     # events occur for each round, whether to delay, drop packets, fail nodes,
     # etc.
@@ -363,14 +364,17 @@ class Interactive(ControlFlow):
     self._forwarded_this_step = 0
     print "-------------------"
     print "Advanced to step %d" % self.logical_time
-    self.show_queued_events()
+    self.process_queued_dp_events()
 
-  def show_queued_events(self):
+  def process_queued_dp_events(self):
     queued = self.simulation.patch_panel.queued_dataplane_events
-    if len(queued) > 0:
+    if not self.default_dp_permit and len(queued) > 0:
       log.debug("Queued Dataplane events:")
       for (i, e) in enumerate(queued):
         log.debug("%d: %s on %s:%s" % (i, e, e.node, e.port))
+    else: # self.default_dp_permit
+      while self.dataplane_forward() is not None:
+        pass
 
   def list_controllers(self):
     cm = self.simulation.controller_manager
