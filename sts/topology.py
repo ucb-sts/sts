@@ -70,7 +70,8 @@ def get_switchs_host_port(switch):
   return switch.ports[sorted(switch.ports.keys())[-1]]
 
 def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
-                get_switch_port=get_switchs_host_port):
+                get_switch_port=get_switchs_host_port,
+                ip_format_str="10.%d.%d.2"):
   ''' Create a Host, wired up to the given ingress switches '''
   switches = ingress_switch_or_switches
   if type(switches) != list:
@@ -95,7 +96,7 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
     if ips:
       ip_addr = ips.pop(0)
     else:
-      ip_addr = IPAddr("123.123.%d.%d" % (switch.dpid, port.port_no))
+      ip_addr = IPAddr(ip_format_str % (switch.dpid, port.port_no))
 
     name = "eth%d" % switch.dpid
     interface = HostInterface(mac, ip_addr, name)
@@ -749,7 +750,8 @@ class Topology(object):
       self.link_tracker.port2internal_link = {}
 
 class MeshTopology(Topology):
-  def __init__(self, num_switches=3, create_io_worker=None, netns_hosts=False, gui=False):
+  def __init__(self, num_switches=3, create_io_worker=None, netns_hosts=False,
+               gui=False, ip_format_str="10.%d.%d.2"):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers
@@ -758,6 +760,11 @@ class MeshTopology(Topology):
       - num_switches. The total number of switches to include in the mesh
       - netns_switches. Whether to create network namespace hosts instead of
         normal hosts.
+      - ip_format_str: a format string for assigning IP addresses to hosts.
+        Takes two digits to be interpolated, the switch dpid and the port
+        number. For example, "10.%d.%d.255" will assign hosts the IP address
+        10.DPID.PORT_NUMBER.255, where DPID is the dpid of their ingress
+        switch, and PORT_NUMBER is the number of the switch's access link.
     '''
     Topology.__init__(self, create_io_worker=create_io_worker, gui=gui)
 
@@ -773,7 +780,7 @@ class MeshTopology(Topology):
       host_access_link_pairs = [ create_netns_host(create_io_worker, switch)
                                  for switch in self.switches ]
     else:
-      host_access_link_pairs = [ create_host(switch) for switch in self.switches ]
+      host_access_link_pairs = [ create_host(switch, ip_format_str=ip_format_str) for switch in self.switches ]
     access_link_list_list = []
     for host, access_link_list in host_access_link_pairs:
       self.hid2host[host.hid] = host
