@@ -10,7 +10,8 @@ def get_additional_metadata():
   path = "nox_classic/build/src"
   return {
     'commit' : backtick("git rev-parse HEAD", cwd=path),
-    'branch' : backtick("git rev-parse --abbrev-ref HEAD", cwd=path)
+    'branch' : backtick("git rev-parse --abbrev-ref HEAD", cwd=path),
+    'remote' : backtick("git remote show origin", cwd=path),
   }
 
 # Use NOX as our controller
