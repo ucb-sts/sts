@@ -407,7 +407,7 @@ def play_forward(simulation, inject_input, wait_time_seconds, flush_buffers=Fals
   return newly_inferred_events
 
 def match_and_filter(newly_inferred_events, expected_internal_events):
-  if log.getEffectiveLevel() >= logging.DEBUG:
+  if log.getEffectiveLevel() <= logging.DEBUG:
     log.debug("Matching fingerprints")
     log.debug("Expected: %s" % str(expected_internal_events))
     log.debug("Inferred: %s" % str(newly_inferred_events))
@@ -420,7 +420,7 @@ def match_and_filter(newly_inferred_events, expected_internal_events):
   #newly_inferred_events = correct_timestamps(newly_inferred_events,
   #                                           expected_internal_events)
 
-  if log.getEffectiveLevel() >= logging.DEBUG:
+  if log.getEffectiveLevel() <= logging.DEBUG:
     log.debug("Matched events: %s" % str(newly_inferred_events))
   return newly_inferred_events
 
