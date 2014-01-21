@@ -65,6 +65,7 @@ class Replayer(ControlFlow):
                fail_to_interactive=False, fail_to_interactive_on_persistent_violations=False,
                end_in_interactive=False, input_logger=None,
                allow_unexpected_messages=False,
+               expected_message_round_window=3,
                pass_through_whitelisted_messages=True,
                delay_flow_mods=False, invariant_check_name="",
                bug_signature="", end_wait_seconds=0.5,
@@ -126,11 +127,11 @@ class Replayer(ControlFlow):
       fail_to_interactive_on_persistent_violations
     self._input_logger = input_logger
     self.allow_unexpected_messages = allow_unexpected_messages
+    self.expected_message_round_window = expected_message_round_window
     self.pass_through_whitelisted_messages = pass_through_whitelisted_messages
     self.pass_through_sends = pass_through_sends
     # How many logical rounds to peek ahead when deciding if a message is
     # expected or not.
-    self.expected_message_round_window = 3
     # String repesentations of unexpected messages we've passed through, for
     # statistics purposes.
     self.passed_unexpected_messages = []
