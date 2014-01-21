@@ -193,7 +193,7 @@ class SnapshotPeeker(Peeker):
 
     return EventDag(inferred_events)
 
-  def replay_interval(simulation, dag_interval, initial_wait_seconds):
+  def replay_interval(self, simulation, dag_interval, initial_wait_seconds):
     assert(dag_interval.events != [])
     # TODO(cs): set EventScheduler's epsilon_seconds parameter?
     replayer = Replayer(self.simulation_cfg, dag_interval,
