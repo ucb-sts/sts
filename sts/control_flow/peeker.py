@@ -252,12 +252,17 @@ class PrefixPeeker(Peeker):
     sequence of input events in dag)'''
     # TODO(cs): optimization: write the prefix trie to a file, in case we want to run
     # FindMCS again?
-    input_events = dag.input_events
-
-    if len(input_events) == 0:
+    if len(dag.input_events) == 0:
       # Postcondition: input_events[-1] is not None
       #                and self._events_list[-1] is not None
       return dag
+
+    # dag.input_events returns only prunable input events. We also need
+    # include ConnectToControllers, which is a non-prunable input event.
+    if not isinstance(dag.events[0], ConnectToControllers):
+      raise ValueError("First event must be ConnectToControllers")
+    assert(dag.input_events[0] != dag.events[0])
+    input_events = [dag.events[0]] + dag.input_events
 
     # Initilize current_input_prefix to the longest_match prefix we've
     # inferred previously (or [] if this is an entirely new prefix)
