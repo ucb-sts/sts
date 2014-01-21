@@ -18,7 +18,7 @@ import time
 import abc
 from collections import Counter
 
-from sts.replay_event import WaitTime, ProcessFlowMod, FailFlowMod, DataplaneDrop, ConnectToControllers
+from sts.replay_event import WaitTime, ProcessFlowMod, FailFlowMod, DataplaneDrop, ConnectToControllers, InputEvent
 from sts.event_dag import EventDag
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.base import ReplaySyncCallback
@@ -140,6 +140,7 @@ class SnapshotPeeker(Peeker):
       # initial ConnectToControllers.
       # TODO(cs): might not want to contrain the caller's dag in this way.
       events_inferred_last_iteration = []
+      optimization_triggered_last_iteration = False
 
       for inject_input_idx in xrange(0, len(snapshot_inputs)):
         inject_input = get_inject_input(inject_input_idx, snapshot_inputs)
@@ -157,8 +158,20 @@ class SnapshotPeeker(Peeker):
           # next, no need to peek(), just replay the next input
           log.debug("Optimization: no expected internal events")
           Peeker.ambiguous_counts[0.0] += 1
+          # If the optimization was run two iterations in a row, need to
+          # replay the previous input!
+          if optimization_triggered_last_iteration:
+            assert(len(events_inferred_last_iteration) == 1)
+            assert(isinstance(events_inferred_last_iteration[0], InputEvent))
+            fencepost = NOPInput(time=inject_input.time, round=inject_input.round)
+            dag_interval = EventDag(events_inferred_last_iteration + [fencepost])
+            self.replay_interval(simulation, dag_interval, 0)
+
           events_inferred_last_iteration = [inject_input]
+          optimization_triggered_iteration = True
           continue
+
+        optimization_triggered_iteration = False
 
         # We replay events_inferred_last_iteration (internal events preceding
         # inject_input), as well as a NOPInput with the same timestamp as inject_input
@@ -180,11 +193,8 @@ class SnapshotPeeker(Peeker):
 
     return EventDag(inferred_events)
 
-  def find_internal_events(self, simulation, controller, dag_interval,
-                           inject_input, wait_time_seconds):
+  def replay_interval(simulation, dag_interval, initial_wait_seconds):
     assert(dag_interval.events != [])
-    initial_wait_seconds = (inject_input.time.as_float() -
-                            dag_interval.events[-1].time.as_float())
     # TODO(cs): set EventScheduler's epsilon_seconds parameter?
     replayer = Replayer(self.simulation_cfg, dag_interval,
                         pass_through_whitelisted_messages=True,
@@ -195,6 +205,11 @@ class SnapshotPeeker(Peeker):
       replayer.set_pass_through_sends(simulation)
     replayer.run_simulation_forward()
 
+  def find_internal_events(self, simulation, controller, dag_interval,
+                           inject_input, wait_time_seconds):
+    initial_wait_seconds = (inject_input.time.as_float() -
+                            dag_interval.events[-1].time.as_float())
+    self.replay_interval(simulation, dag_interval, initial_wait_seconds)
     # Now peek() for internal events following inject_input
     return self.snapshot_and_play_forward(simulation, controller,
                                           inject_input, wait_time_seconds)
