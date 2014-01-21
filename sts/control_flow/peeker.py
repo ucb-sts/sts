@@ -517,25 +517,17 @@ def match_fingerprints(newly_inferred_events, expected_internal_events):
   # partial ordering would make replay more effective?
   # N.B. expected_internal_events are ordered, whereas newly_inferred_events
   # may not be.
-  inferred_fingerprints = set([e.fingerprint for e in
-                               newly_inferred_events])
-  if len(inferred_fingerprints) != len(newly_inferred_events):
-    log.warn("Overlapping fingerprints in peek() (%d unique, %d total)" %
-             (len(inferred_fingerprints),len(newly_inferred_events)))
+  inferred_fingerprints = Counter([e.fingerprint for e in newly_inferred_events])
 
-  expected_fingerprints = set([e.fingerprint
-                               for e in expected_internal_events])
-  if len(expected_fingerprints) != len(expected_internal_events):
-    log.warn("Overlapping expected fingerprints (%d unique, %d total)" %
-             (len(expected_fingerprints),len(expected_internal_events)))
-
-  # TODO(cs): simplification for now: let's try not letting unexpected internal events through
-  # Actually, an easier way to implement this would be to allow any unmatched
-  # events through, i.e. set Replayer to "pass through unexpected" mode.
+  # N.B. to allow unexpected messages through after peek() has finished, set
+  # Replayer's "allow_unexpected_messages" parameter.
   ordered_inferred_events = []
   for e in expected_internal_events:
     if e.fingerprint in inferred_fingerprints:
       ordered_inferred_events.append(e)
+      inferred_fingerprints[e.fingerprint] -= 1
+      if inferred_fingerprints[e.fingerprint] == 0:
+        del inferred_fingerprints[e.fingerprint]
   return ordered_inferred_events
 
 def correct_timestamps(new_events, old_events):
