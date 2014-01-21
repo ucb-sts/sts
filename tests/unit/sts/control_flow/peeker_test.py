@@ -70,6 +70,7 @@ class PeekerTest(unittest.TestCase):
     # N.B. this assumes that no internal events occur before the first input
     # event.
     self.snapshot_peeker.snapshot_and_play_forward = lambda *args: []
+    self.snapshot_peeker.replay_interval = lambda *args: []
 
   def test_basic_noop(self):
     """ test_basic_noop: running on a dag with no internal events returns the same dag """
