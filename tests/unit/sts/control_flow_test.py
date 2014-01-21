@@ -144,7 +144,7 @@ class ReplayerTest(unittest.TestCase):
   def setup_dataplane_simulation(self):
     controllers = []
     topology_class = MeshTopology
-    topology_params = "num_switches=2"
+    topology_params = "num_switches=2, ip_format_str='123.123.%d.%d'"
     patch_panel_class = BufferedPatchPanel
     dataplane_trace_path = "./dataplane_traces/ping_pong_same_subnet.trace"
     return SimulationConfig(controllers, topology_class, topology_params,
