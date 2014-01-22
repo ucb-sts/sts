@@ -24,7 +24,7 @@ from pox.openflow.nx_software_switch import NXSoftwareSwitch
 from pox.openflow.flow_table import FlowTableModification
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
-import pox.lib.packet.ethernet as eth
+import pox.lib.packet.ethernet as ethernet
 import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import EthAddr, IPAddr
 from pox.lib.util import connect_socket_with_backoff
@@ -34,6 +34,7 @@ from sts.openflow_buffer import OpenFlowBuffer
 from sts.util.network_namespace import launch_namespace
 from sts.util.convenience import IPAddressSpace
 from sts.util.tabular import Tabular
+from sts.util.network_namespace import *
 
 import Queue
 from itertools import count
@@ -685,10 +686,11 @@ class NamespaceHost(Host):
     self.io_worker = create_io_worker(self.socket)
     self.io_worker.set_receive_handler(self._io_worker_receive_handler)
 
-    self.interfaces = [HostInterface(self.guest_eth_addr, IPAddr(ip_addr_str))]
+    self.interfaces = [HostInterface(guest_eth_addr, IPAddr(ip_addr_str))]
     if name == "":
       name = "host:" + ip_addr_str
     self.name = name
+    self.log = logging.getLogger(name)
 
   def _io_worker_receive_handler(self, io_worker):
     '''
@@ -700,7 +702,7 @@ class NamespaceHost(Host):
     # packet. Since ethernet frames do not include length information, the
     # only way to correctly handle partial packets would be to get access to
     # framing information. Should probably look at what Mininet does.
-    packet = eth.ethernet(raw=message)
+    packet = ethernet(raw=message)
     if not packet.parsed:
       return
     io_worker.consume_receive_buf(packet.hdr_len + packet.payload_len)

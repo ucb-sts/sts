@@ -163,7 +163,7 @@ class PatchPanel(object):
       log.warn("no such port %s on node %s" % (str(event.port), str(event.node)))
       return
 
-    if type(node) == Host:
+    if isinstance(node, Host):
       self.deliver_packet(node, event.packet, port)
     else:
       self.forward_packet(node, event.packet, port)
@@ -613,7 +613,7 @@ class Topology(object):
       log.warn("no such port %s on node %s" % (str(dp_event.port), str(dp_event.switch)))
       return False
 
-    if type(dp_event.node) == Host or type(next_hop) == Host:
+    if isinstance(dp_event.node, Host) or isinstance(next_hop, Host):
       # TODO(cs): model access link failures
       return True
     else:
