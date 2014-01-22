@@ -111,6 +111,7 @@ def create_host(ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
 
 def create_netns_host(create_io_worker, ingress_switch,
                       ip_addr_str="",
+                      ip_format_str="10.%d.%d.2",
                       get_switch_port=get_switchs_host_port, cmd='xterm'):
   '''
   Create a host with a process running in a separate network namespace.
@@ -123,7 +124,7 @@ def create_netns_host(create_io_worker, ingress_switch,
   - ip_addr_str must be a string! not a IpAddr object
   '''
   if ip_addr_str == "":
-    ip_addr_str = "123.123.%d.%d" % (ingress_switch.dpid, get_switch_port(ingress_switch).port_no)
+    ip_addr_str = ip_format_str % (ingress_switch.dpid, get_switch_port(ingress_switch).port_no)
   host = NamespaceHost(ip_addr_str, create_io_worker, cmd=cmd)
   interface = host.interfaces[0]
   access_link = AccessLink(host, interface, ingress_switch, get_switch_port(ingress_switch))
