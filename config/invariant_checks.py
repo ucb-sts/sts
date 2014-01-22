@@ -54,17 +54,20 @@ def check_for_invalid_ports(simulation):
 # Note: make sure to add new custom invariant checks to this dictionary!
 name_to_invariant_check = {
   "check_everything" : check_everything,
+  "bail_on_connectivity" : bail_on_connectivity,
   "check_for_loops_or_connectivity" : check_for_loops_or_connectivity,
   "check_for_loops_blackholes_or_connectivity" : check_for_loops_blackholes_or_connectivity,
   "check_for_loops_blackholes" : check_for_loops_blackholes,
   "check_for_invalid_ports" : check_for_invalid_ports,
-  "InvariantChecker.check_liveness" :  InvariantChecker.check_liveness,
-  "InvariantChecker.check_loops" :  InvariantChecker.check_loops,
-  "InvariantChecker.python_check_loops" :  InvariantChecker.python_check_loops,
-  "InvariantChecker.python_check_connectivity" :  InvariantChecker.python_check_connectivity,
-  "InvariantChecker.check_connectivity" :  InvariantChecker.check_connectivity,
-  "InvariantChecker.check_blackholes" :  InvariantChecker.python_check_blackholes,
-  "InvariantChecker.check_correspondence" :  InvariantChecker.check_correspondence,
+  "InvariantChecker.check_liveness" : InvariantChecker.check_liveness,
+  "InvariantChecker.check_loops" : InvariantChecker.check_loops,
+  "InvariantChecker.python_check_loops" : InvariantChecker.python_check_loops,
+  "InvariantChecker.python_check_connectivity" : InvariantChecker.python_check_connectivity,
+  "InvariantChecker.python_check_persistent_connectivity" : InvariantChecker.python_check_persistent_connectivity,
+  "InvariantChecker.check_connectivity" : InvariantChecker.check_connectivity,
+  "InvariantChecker.check_persistent_connectivity" : InvariantChecker.check_persistent_connectivity,
+  "InvariantChecker.check_blackholes" : InvariantChecker.python_check_blackholes,
+  "InvariantChecker.check_correspondence" : InvariantChecker.check_correspondence,
 }
 
 # Now make sure that we always check if all controllers are down (should never

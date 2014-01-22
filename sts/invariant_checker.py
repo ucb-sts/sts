@@ -88,6 +88,7 @@ class InvariantChecker(object):
     violations = list(set(violations))
     return violations
 
+  # TODO(cs): this should be stored within simulation, not as class variables.
   # For check_connectivity and python_check_connectivity: return only unconnected pairs that persist
   interface_pair_map = {}     # (src_addr, dst_addr) -> timestamp
   pair_timeout = 3            # TODO(ao): arbitrary
@@ -170,8 +171,7 @@ class InvariantChecker(object):
                     "" if len(unconnected_pairs)==1 else "s", unconnected_pairs))
 
   @staticmethod
-  def check_connectivity(simulation):
-    ''' Return any pairs that couldn't reach each other '''
+  def _get_connected_pairs(simulation):
     # Effectively, run compute physical omega, ignore concrete values of headers, and
     # check that all pairs can reach each other
     physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
@@ -182,14 +182,42 @@ class InvariantChecker(object):
     for start_port, final_location_list in physical_omega.iteritems():
       for _, final_port in final_location_list:
         connected_pairs.add((start_port, final_port))
+    return connected_pairs
+
+  @staticmethod
+  def _remove_partitioned_pairs(pairs):
+    # Ignore partitioned pairs
+    partitioned_pairs = check_partitions(simulation.topology.switches,
+                                         simulation.topology.live_links,
+                                         simulation.topology.access_links)
+    if len(partitioned_pairs) != 0:
+      log.info("Partitioned pairs! %s" % str(partitioned_pairs))
+    pairs -= partitioned_pairs
+    return pairs
+
+  @staticmethod
+  def check_connectivity(simulation):
+    ''' Return any pairs of hosts where there does not exist a path in the
+    network between them '''
+    connected_pairs = InvariantChecker._get_connected_pairs(simulation)
+    all_pairs = InvariantChecker._get_all_pairs(simulation)
+    remaining_pairs = all_pairs - connected_pairs
+    remaining_pairs = InvariantChecker._remove_partitioned_pairs(remaining_pairs)
+    return [ str(p) for p in list(remaining_pairs) ]
+
+  @staticmethod
+  def check_persistent_connectivity(simulation):
+    ''' Return any pairs that are persistently unconnected, i.e. that have
+    attempted to communicate in the past, but aren't able to send message
+    between eachother'''
+    connected_pairs = InvariantChecker._get_connected_pairs(simulation)
     unconnected_pairs = InvariantChecker._get_unconnected_pairs(simulation, connected_pairs)
     violations = [ str(pair) for pair in unconnected_pairs ]
     violations = list(set(violations))
     return violations
 
   @staticmethod
-  def python_check_connectivity(simulation):
-    # Warning! depends on python Hassell -- may be really slow!
+  def _python_get_connected_pairs(simulation):
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
@@ -204,6 +232,26 @@ class InvariantChecker(object):
     for in_port, p_nodes in paths.iteritems():
       for p_node in p_nodes:
         connected_pairs.add((in_port, p_node["port"]))
+    return connected_pairs
+
+  @staticmethod
+  def python_check_connectivity(simulation):
+    ''' Return any pairs of hosts where there does not exist a path in the
+    network between them '''
+    # Warning! depends on python Hassell -- may be really slow!
+    connected_pairs = InvariantChecker._python_get_connected_pairs(simulation)
+    all_pairs = InvariantChecker._get_all_pairs(simulation)
+    remaining_pairs = all_pairs - connected_pairs
+    remaining_pairs = InvariantChecker._remove_partitioned_pairs(remaining_pairs)
+    return [ str(p) for p in list(remaining_pairs) ]
+
+  @staticmethod
+  def python_check_persistent_connectivity(simulation):
+    ''' Return any pairs that are persistently unconnected, i.e. that have
+    attempted to communicate in the past, but aren't able to send message
+    between eachother'''
+    # Warning! depends on python Hassell -- may be really slow!
+    connected_pairs = InvariantChecker._python_get_connected_pairs(simulation)
     unconnected_pairs = InvariantChecker._get_unconnected_pairs(simulation, connected_pairs)
     violations = [ str(pair) for pair in unconnected_pairs ]
     violations = list(set(violations))
