@@ -237,7 +237,7 @@ class MCSFinder(ControlFlow):
       self.mcs_log_tracker.dump_mcs_trace(self.dag, self)
     return ExitCode(0)
 
-  # N.B. always called within a child process.
+  # N.B. always called by the parent process.
   def _ddmin(self, dag, split_ways, precompute_cache=None, label_prefix=(),
              total_inputs_pruned=0):
     # This is the delta-debugging algorithm from:
@@ -318,11 +318,11 @@ class MCSFinder(ControlFlow):
                          total_inputs_pruned=total_inputs_pruned)
     return (dag, total_inputs_pruned)
 
-  # N.B. always called within a child process.
+  # N.B. always called by the parent process.
   def _track_iteration_size(self, total_inputs_pruned):
     self._runtime_stats.record_iteration_size(len(self.dag.input_events) - total_inputs_pruned)
 
-  # N.B. always called within a child process.
+  # N.B. always called by the parent process.
   def _check_violation(self, new_dag, subset_index, label):
     ''' Check if there were violations '''
     (bug_found, i) = self.replay_max_iterations(new_dag, label)
@@ -606,10 +606,10 @@ class MCSLogTracker(object):
 class RuntimeStats(object):
   ''' Tracks statistics and configuration information of the delta debugging runs '''
 
-  child_fields = ['iteration_size', 'violation_found_in_run', 'new_internal_events',
+  child_fields = ['new_internal_events',
                   'early_internal_events', 'timed_out_events',
                   'matched_events', 'buffered_message_receipts']
-  child_counters = ['violation_found_in_run']
+  child_counters = []
 
   def __init__(self, subsequence_id, runtime_stats_path=None):
     ''' runtime_stats_path should only be None if the stats of this replay run
@@ -620,10 +620,6 @@ class RuntimeStats(object):
     self.subsequence_id = subsequence_id
     self._runtime_stats_path = runtime_stats_path
     # -------------------- Stats set by child processes  -------------------- #
-    # { delta debugging subseqence # -> count of remaining events }
-    self.iteration_size = {}
-    # { verification attempt # -> count of times violation was found at this # }
-    self.violation_found_in_run = Counter()
     # { replay iteration -> [string representations new internal events] }
     self.new_internal_events = {}
     # { replay iteration -> [string representations messages buffered at end of run] }
@@ -636,6 +632,13 @@ class RuntimeStats(object):
     # { replay iteration -> { event type -> successful matches } }
     self.matched_events = {}
     # -------------------- Stats set by parent process -------------------- #
+    # { delta debugging subseqence # -> count of remaining events }
+    self.iteration_size = {}
+    # Counter for tracking delta debugging subsequence (assumes
+    # track_iteration_size() is called exactly once per subsequence)
+    self._iteration = 0
+    # { verification attempt # -> count of times violation was found at this # }
+    self.violation_found_in_run = Counter()
     self.total_inputs = 0
     self.total_events = 0
     self.original_duration_seconds = 0
@@ -724,15 +727,16 @@ class RuntimeStats(object):
     self.total_replays += 1
     self.total_inputs_replayed += number_inputs_replayed
 
-  # -------------------- Stats set by child processes  -------------------- #
-
   def record_iteration_size(self, iteration_size):
-    self.iteration_size[self.subsequence_id] = iteration_size
+    self.iteration_size[self._iteration] = iteration_size
+    self._iteration += 1
 
   def record_violation_found(self, verification_iteration):
     if type(self.violation_found_in_run) != Counter:
       self.violation_found_in_run = Counter(self.violation_found_in_run)
     self.violation_found_in_run[verification_iteration] += 1
+
+  # -------------------- Stats set by child processes  -------------------- #
 
   def record_buffered_message_receipts(self, buffered_message_receipts):
     self.buffered_message_receipts[self.subsequence_id] = buffered_message_receipts
