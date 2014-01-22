@@ -17,6 +17,7 @@
 from pox.lib.packet.ethernet import *
 from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
+from pox.lib.packet.arp import *
 from util.convenience import random_eth_addr, random_ip_addr
 from sts.dataplane_traces.trace import DataplaneEvent
 import random
@@ -29,11 +30,27 @@ class TrafficGenerator (object):
     self.random = random
     self.topology = None
     self._packet_generators = {
-      "icmp_ping" : self.icmp_ping
+      "arp_query" : self.arp_query,
+      "icmp_ping" : self.icmp_ping,
     }
 
   def set_topology(self, topology):
     self.topology = topology
+
+  def arp_query(self, src_interface, dst_interface, payload_content=None):
+    arp_req = arp()
+    hw_src = self._choose_eth_addr(src_interface)
+    arp_req.hwsrc = hw_src
+    arp_req.hwdst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
+    arp_req.opcode = arp.REQUEST
+    arp_req.protosrc = self._choose_ip_addr(src_interface)
+    arp_req.protodst = self._choose_ip_addr(dst_interface)
+    ether = ethernet()
+    ether.type = ethernet.ARP_TYPE
+    ether.dst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
+    ether.src = hw_src
+    ether.payload = arp_req
+    return ether
 
   def icmp_ping(self, src_interface, dst_interface, payload_content=None):
     ''' Return an ICMP ping packet; if an interface is none, random addresses are used '''

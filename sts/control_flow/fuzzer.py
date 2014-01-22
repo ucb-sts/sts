@@ -297,7 +297,7 @@ class Fuzzer(ControlFlow):
     return self.simulation
 
   def _send_initialization_packet(self, host, send_to_self=False):
-    traffic_type = "icmp_ping"
+    traffic_type = "arp_query"
     dp_event = self.traffic_generator.generate_and_inject(traffic_type, host, send_to_self=send_to_self)
     self._log_input_event(TrafficInjection(dp_event=dp_event, host_id=host.hid))
 
