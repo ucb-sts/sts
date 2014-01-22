@@ -1,19 +1,26 @@
 from sts.invariant_checker import InvariantChecker
 import sys
 
+class CheckAllControllersDownFirst(object):
+  def __init__(self, code_block):
+    self.code_block = code_block
+
+  def __call__(self, simulation):
+    all_down = InvariantChecker.all_controllers_dead(simulation)
+    if all_down != []:
+      return all_down
+    else:
+      return self.code_block(simulation)
+
 def check_everything(simulation):
-  # Check liveness once at the beginning
-  # If there are no more live controllers, stop
   violations = []
-  down_controllers = InvariantChecker.check_liveness(simulation)
-  violations = down_controllers
-  # Check other invariants without checking liveness
-  checks = [ InvariantChecker.check_loops,
+  checks = [ InvariantChecker.check_liveness,
+             InvariantChecker.check_loops,
              InvariantChecker.python_check_blackholes,
              InvariantChecker.check_connectivity,
              check_for_invalid_ports ]
   for check in checks:
-    violations += check(simulation, check_liveness_first=False)
+    violations += check(simulation)
   violations = list(set(violations))
   return violations
 
@@ -68,3 +75,7 @@ name_to_invariant_check = {
   "InvariantChecker.check_blackholes" :  InvariantChecker.python_check_blackholes,
   "InvariantChecker.check_correspondence" :  InvariantChecker.check_correspondence,
 }
+
+# Now make sure that we always check if all controllers are down (should never
+# happen) before checking any other invariant
+name_to_invariant_check = { k: CheckAllControllersDownFirst(v) for k,v in name_to_invariant_check.items() }

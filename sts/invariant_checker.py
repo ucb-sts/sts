@@ -42,6 +42,13 @@ class InvariantChecker(object):
   # determinstic (viz., always sort sets, hashes)
 
   @staticmethod
+  def all_controllers_dead(simulation):
+    simulation.controller_manager.check_controller_status()
+    if simulation.controller_manager.all_controllers_down():
+      return simulation.controller_manager.cids
+    return []
+
+  @staticmethod
   def check_liveness(simulation):
     ''' Very simple: have the controllers crashed? '''
     log.debug("Checking controller liveness...")
@@ -59,13 +66,9 @@ class InvariantChecker(object):
     return dead_controllers
 
   @staticmethod
-  def python_check_loops(simulation, check_liveness_first=True):
+  def python_check_loops(simulation):
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    if check_liveness_first:
-      simulation.controller_manager.check_controller_status()
-      if simulation.controller_manager.all_controllers_down():
-        return simulation.controller_manager.cids
     # Warning! depends on python Hassell -- may be really slow!
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
@@ -75,12 +78,8 @@ class InvariantChecker(object):
     return violations
 
   @staticmethod
-  def check_loops(simulation, check_liveness_first=True):
+  def check_loops(simulation):
     import headerspace.applications as hsa
-    if check_liveness_first:
-      simulation.controller_manager.check_controller_status()
-      if simulation.controller_manager.all_controllers_down():
-        return simulation.controller_manager.cids
     live_switches = simulation.topology.live_switches
     live_links = simulation.topology.live_links
     (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(live_switches, live_links)
@@ -171,13 +170,8 @@ class InvariantChecker(object):
                     "" if len(unconnected_pairs)==1 else "s", unconnected_pairs))
 
   @staticmethod
-  def check_connectivity(simulation, check_liveness_first=True):
+  def check_connectivity(simulation):
     ''' Return any pairs that couldn't reach each other '''
-    if check_liveness_first:
-      simulation.controller_manager.check_controller_status()
-      if simulation.controller_manager.all_controllers_down():
-        return simulation.controller_manager.cids
-
     # Effectively, run compute physical omega, ignore concrete values of headers, and
     # check that all pairs can reach each other
     physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
@@ -194,14 +188,10 @@ class InvariantChecker(object):
     return violations
 
   @staticmethod
-  def python_check_connectivity(simulation, check_liveness_first=True):
+  def python_check_connectivity(simulation):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    if check_liveness_first:
-      simulation.controller_manager.check_controller_status()
-      if simulation.controller_manager.all_controllers_down():
-        return simulation.controller_manager.cids
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     paths = hsa.find_reachability(NTF, TTF, simulation.topology.access_links)
@@ -220,7 +210,7 @@ class InvariantChecker(object):
     return violations
 
   @staticmethod
-  def python_check_blackholes(simulation, check_liveness_first=True):
+  def python_check_blackholes(simulation):
     '''Do any switches:
          - send packets into a down link?
          - drop packets that are supposed to go out their in_port?
@@ -244,10 +234,6 @@ class InvariantChecker(object):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    if check_liveness_first:
-      simulation.controller_manager.check_controller_status()
-      if simulation.controller_manager.all_controllers_down():
-        return simulation.controller_manager.cids
     NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
     TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
     blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
@@ -256,12 +242,8 @@ class InvariantChecker(object):
     return violations
 
   @staticmethod
-  def check_correspondence(simulation, check_liveness_first=True):
+  def check_correspondence(simulation):
     ''' Return if there were any policy-violations '''
-    if check_liveness_first:
-      simulation.controller_manager.check_controller_status()
-      if simulation.controller_manager.all_controllers_down():
-        return simulation.controller_manager.cids
     log.debug("Snapshotting live controllers...")
     controllers_with_violations = []
     for controller in simulation.controller_manager.live_controllers:

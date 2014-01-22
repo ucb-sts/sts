@@ -35,4 +35,4 @@ simulation_config = SimulationConfig(controller_configs=controllers,
 control_flow = Fuzzer(simulation_config, check_interval=1,
                       halt_on_violation=True,
                       input_logger=InputLogger(),
-                      invariant_check_name="check_for_invalid_ports")
+                      invariant_check_name="check_everything")
