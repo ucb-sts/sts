@@ -833,13 +833,23 @@ class MeshTopology(Topology):
 
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
-  def __init__(self, num_pods=4, create_io_worker=None, gui=False):
+  def __init__(self, num_pods=4, create_io_worker=None, gui=False,
+               use_portland_addressing=True, ip_format_str="10.%d.%d.255"):
+    ''' If not use_portland_addressing, use a format string for assigning
+        IP addresses to hosts. Takes two digits to be interpolated, the switch
+        dpid and the port number.
+        For example, "10.%d.%d.255" will assign hosts the IP address
+        10.DPID.PORT_NUMBER.255, where DPID is the dpid of their ingress
+        switch, and PORT_NUMBER is the number of the switch's access link.
+    '''
     if num_pods < 2:
       raise ValueError("Can't handle Fat Trees with less than 2 pods")
     Topology.__init__(self, create_io_worker=create_io_worker, gui=gui)
     self.cores = []
     self.aggs = []
     self.edges = []
+    self.use_portland_addressing = use_portland_addressing
+    self.ip_format_str = ip_format_str
 
     self.dpid2switch = {}
     self.hid2host = {}
@@ -900,13 +910,14 @@ class FatTree (Topology):
       edge.position = position
       portland_mac = EthAddr("00:00:00:%02x:%02x:%02x" %
                              (current_pod_id, position, edge_port_no))
-      # Uhh, unfortunately, OpenFlow 1.0 doesn't support prefix matching on MAC
-      # addresses. So we do prefix matching on IP addresses, which yields
-      # exactly the same # of flow entries for HSA, right?
-      portland_ip_addr = IPAddr("123.%d.%d.%d" %
-                                (current_pod_id, position, edge_port_no))
-      (host, host_access_links) = create_host(edge, portland_mac, portland_ip_addr,
-                                              lambda switch: switch.ports[edge_port_no])
+      if self.use_portland_addressing:
+        portland_ip_addr = IPAddr("123.%d.%d.%d" %
+                         (current_pod_id, position, edge_port_no))
+        (host, host_access_links) = create_host(edge, portland_mac, portland_ip_addr,
+                                                lambda switch: switch.ports[edge_port_no])
+      else:
+        (host, host_access_links) = create_host(edge, mac_or_macs=portland_mac, ip_format_str=self.ip_format_str,
+                                                get_switch_port=lambda switch: switch.ports[edge_port_no])
       host.pod_id = current_pod_id
       self.hid2host[host.hid] = host
       access_links = access_links.union(set(host_access_links))
