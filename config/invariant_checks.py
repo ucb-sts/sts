@@ -1,16 +1,16 @@
 from sts.invariant_checker import InvariantChecker
 import sys
 
-class CheckAllControllersDownFirst(object):
-  def __init__(self, code_block):
-    self.code_block = code_block
+class ComposeChecks(object):
+  def __init__(self, check1, check2):
+    self.check1 = check1
+    self.check2 = check2
 
   def __call__(self, simulation):
-    all_down = InvariantChecker.all_controllers_dead(simulation)
-    if all_down != []:
-      return all_down
-    else:
-      return self.code_block(simulation)
+    check1_results = self.check1(simulation)
+    if check1_results != []:
+      return check1_results
+    return self.check2(simulation)
 
 def check_everything(simulation):
   violations = []
@@ -31,25 +31,16 @@ def bail_on_connectivity(simulation):
     sys.exit(0)
   return []
 
-def check_for_loops_or_connectivity(simulation):
-  result = InvariantChecker.check_loops(simulation)
-  if result:
-    return result
-  return bail_on_connectivity(simulation)
+check_for_loops_or_connectivity = ComposeChecks(InvariantChecker.check_loops,
+                                                bail_on_connectivity)
 
-def check_for_loops_blackholes_or_connectivity(simulation):
-  for check in [InvariantChecker.check_loops, InvariantChecker.python_check_blackholes]:
-    result = check(simulation)
-    if result:
-      return result
-  return bail_on_connectivity(simulation)
+check_for_loops_blackholes_or_connectivity =\
+  ComposeChecks(
+    ComposeChecks(InvariantChecker.check_loops, InvariantChecker.python_check_blackholes),
+    bail_on_connectivity)
 
-def check_for_loops_blackholes(simulation):
-  for check in [InvariantChecker.check_loops, InvariantChecker.python_check_blackholes]:
-    result = check(simulation)
-    if result:
-      return result
-  return []
+check_for_loops_blackholes = ComposeChecks(InvariantChecker.check_loops,
+                                           InvariantChecker.python_check_blackholes)
 
 def check_for_invalid_ports(simulation):
   ''' Check if any of the switches have been asked to forward packets out
@@ -78,4 +69,4 @@ name_to_invariant_check = {
 
 # Now make sure that we always check if all controllers are down (should never
 # happen) before checking any other invariant
-name_to_invariant_check = { k: CheckAllControllersDownFirst(v) for k,v in name_to_invariant_check.items() }
+name_to_invariant_check = { k: ComposeChecks(InvariantChecker.all_controllers_dead, v) for k,v in name_to_invariant_check.items() }
