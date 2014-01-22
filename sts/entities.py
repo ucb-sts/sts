@@ -673,7 +673,7 @@ class NamespaceHost(Host):
   '''
   A host that launches a process in a separate namespace process.
   '''
-  def __init__(self, ip_addr_str, create_io_worker, name="", cmd="xterm"):
+  def __init__(self, ip_addr_str, create_io_worker, name="", cmd="/bin/bash sleep"):
     '''
     - ip_addr_str must be a string! not a IPAddr object
     - cmd: a string of the command to execute in the separate namespace
@@ -706,7 +706,8 @@ class NamespaceHost(Host):
     if not packet.parsed:
       return
     io_worker.consume_receive_buf(packet.hdr_len + packet.payload_len)
-    super(NamespaceHost, self).send(packet)
+    self.log.info("received packet from netns %s: " % str(packet))
+    super(NamespaceHost, self).send(self.interfaces[0], packet)
 
   def receive(self, interface, packet):
     '''
