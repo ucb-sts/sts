@@ -185,7 +185,7 @@ class InvariantChecker(object):
     return connected_pairs
 
   @staticmethod
-  def _remove_partitioned_pairs(pairs):
+  def _remove_partitioned_pairs(simulation, pairs):
     # Ignore partitioned pairs
     partitioned_pairs = check_partitions(simulation.topology.switches,
                                          simulation.topology.live_links,
@@ -202,7 +202,7 @@ class InvariantChecker(object):
     connected_pairs = InvariantChecker._get_connected_pairs(simulation)
     all_pairs = InvariantChecker._get_all_pairs(simulation)
     remaining_pairs = all_pairs - connected_pairs
-    remaining_pairs = InvariantChecker._remove_partitioned_pairs(remaining_pairs)
+    remaining_pairs = InvariantChecker._remove_partitioned_pairs(simulation, remaining_pairs)
     return [ str(p) for p in list(remaining_pairs) ]
 
   @staticmethod
@@ -242,7 +242,7 @@ class InvariantChecker(object):
     connected_pairs = InvariantChecker._python_get_connected_pairs(simulation)
     all_pairs = InvariantChecker._get_all_pairs(simulation)
     remaining_pairs = all_pairs - connected_pairs
-    remaining_pairs = InvariantChecker._remove_partitioned_pairs(remaining_pairs)
+    remaining_pairs = InvariantChecker._remove_partitioned_pairs(simulation, remaining_pairs)
     return [ str(p) for p in list(remaining_pairs) ]
 
   @staticmethod
