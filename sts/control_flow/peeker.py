@@ -18,7 +18,7 @@ import time
 import abc
 from collections import Counter
 
-from sts.replay_event import WaitTime, ProcessFlowMod, FailFlowMod, DataplaneDrop, ConnectToControllers, InputEvent
+from sts.replay_event import WaitTime, ProcessFlowMod, DataplaneDrop, ConnectToControllers, InputEvent
 from sts.event_dag import EventDag
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.base import ReplaySyncCallback
@@ -113,7 +113,7 @@ class SnapshotPeeker(Peeker):
       return dag
     # post: len(dag.input_events) > 0
 
-    unsupported_types = [ProcessFlowMod, FailFlowMod, DataplaneDrop]
+    unsupported_types = [ProcessFlowMod, DataplaneDrop]
     if find(lambda e: type(e) in unsupported_types, dag.events) is not None:
       raise ValueError('''Delayed flow_mods not yet supported. Please '''
                        '''implement the TODO near the sleep() call in play_forward()''')
@@ -414,7 +414,7 @@ def play_forward(simulation, inject_input, wait_time_seconds, flush_buffers=Fals
   log.info("peek()'ing for %f seconds" % wait_time_seconds)
   # TODO(cs): sleep()'ing allows us to infer ControlMessageReceive events, but
   # it doesn't help with infering other events that can timeout, such as
-  # DataplanePermit/Drops or Process/FailFlowMods. Rather than sleeping perhaps
+  # DataplanePermit/Drops or ProcessFlowMods. Rather than sleeping perhaps
   # we should set BufferedPatchPanel + Switches to "pass-through + record",
   # and loop here instead of sleep()ing.
   time.sleep(wait_time_seconds)

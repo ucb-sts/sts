@@ -50,7 +50,6 @@ controlplane_unblock_rate = 0.5
 ofp_message_receipt_rate = 0.5
 ofp_message_send_rate = 0.5
 ofp_cmd_passthrough_rate = 1.0
-ofp_flow_mod_failure_rate = 0.0
 link_failure_rate = 0.5
 link_recovery_rate = 0.5
 controller_crash_rate = 0.1

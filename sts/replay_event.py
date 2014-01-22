@@ -1421,42 +1421,9 @@ class ProcessFlowMod(ControlMessageBase):
   def __str__(self):
     return "ProcessFlowMod:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
 
-class FailFlowMod(ControlMessageBase):
-  ''' Logged whenever the network-wide OpenFlowBuffer decides to fail an otherwise valid
-  buffered (local to each switch) OpenFlow flow_mod message instead of letting the switch process it '''
-  # TODO(jl): Update visualization tool to recognize this replay event
-  # TODO(cs): is this really an internal event?
-
-  def proceed(self, simulation):
-    switch = simulation.topology.get_switch(self.dpid)
-    message_waiting = switch.openflow_buffer.message_receipt_waiting(self.pending_receive)
-    return True
-
-  @property
-  def pending_receive(self):
-    # TODO(cs): inefficient to keep reconrstructing this tuple.
-    return PendingReceive(self.dpid, self.controller_id, self.fingerprint[1])
-
-  @staticmethod
-  def from_json(json_hash):
-    (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
-    assert_fields_exist(json_hash, 'dpid', 'controller_id', 'fingerprint')
-    dpid = json_hash['dpid']
-    controller_id = json_hash['controller_id']
-    fingerprint = json_hash['fingerprint']
-    b64_packet = ""
-    if 'b64_packet' in json_hash:
-      b64_packet = json_hash['b64_packet']
-    return FailFlowMod(dpid, controller_id, fingerprint, b64_packet=b64_packet,
-                       round=round, label=label, time=time,
-                       timeout_disallowed=timeout_disallowed)
-
-  def __str__(self):
-    return "FailFlowMod:%s c %s -> s %s [%s]" % (self.label, self.controller_id, self.dpid, self.fingerprint[1].human_str())
-
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
                        ControllerStateChange, DeterministicValue,
-                       DataplanePermit, ProcessFlowMod, FailFlowMod]
+                       DataplanePermit, ProcessFlowMod]
 
 # Special events:
 
