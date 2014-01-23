@@ -51,6 +51,14 @@ def check_for_invalid_ports(simulation):
       violations += [ str(v) for v in sw.port_violations ]
   return violations
 
+def check_for_flow_entry(simulation):
+  # Temporary hack for "Overlapping flow entries" bug.
+  for sw in simulation.topology.switches:
+    for entry in sw.table.entries:
+      if entry.priority == 123:
+        return [entry]
+  return []
+
 # Note: make sure to add new custom invariant checks to this dictionary!
 name_to_invariant_check = {
   "check_everything" : check_everything,
@@ -59,6 +67,7 @@ name_to_invariant_check = {
   "check_for_loops_blackholes_or_connectivity" : check_for_loops_blackholes_or_connectivity,
   "check_for_loops_blackholes" : check_for_loops_blackholes,
   "check_for_invalid_ports" : check_for_invalid_ports,
+  "check_for_flow_entry" : check_for_flow_entry,
   "InvariantChecker.check_liveness" : InvariantChecker.check_liveness,
   "InvariantChecker.check_loops" : InvariantChecker.check_loops,
   "InvariantChecker.python_check_loops" : InvariantChecker.python_check_loops,
