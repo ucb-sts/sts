@@ -36,6 +36,7 @@ import signal
 import logging
 import time
 import sys
+from collections import defaultdict
 
 log = logging.getLogger("Replayer")
 
@@ -105,12 +106,15 @@ class Replayer(ControlFlow):
       event.passive = default_dp_permit
 
     self.dp_checker = None
-    if (not default_dp_permit and
-        [ e for e in self.dag.events if type(e) == DataplaneDrop ] == []):
+    no_dp_drops = [ e for e in self.dag.events if type(e) == DataplaneDrop ] == []
+    if not default_dp_permit and no_dp_drops:
       print >> sys.stderr, ('''No DataplaneDrops to replay. We suggest you '''
                             '''set Replayer's default_dp_permit=True ''')
     if default_dp_permit:
-      self.dp_checker = DataplaneChecker(self.dag)
+      if no_dp_drops:
+        self.dp_checker = AlwaysAllowDataplane(self.dag)
+      else:
+        self.dp_checker = DataplaneChecker(self.dag)
 
     self.print_buffers_flag = print_buffers
 
@@ -412,6 +416,18 @@ class Replayer(ControlFlow):
           self.passed_unexpected_messages.append(repr(log_event))
           self._log_input_event(log_event)
 
+class AlwaysAllowDataplane(object):
+  ''' A dataplane checker that always allows through events. Should not be
+  used if there are any DataplaneDrops in the trace; in that case, use
+  DataplaneChecker
+  '''
+  def __init__(self, event_dag):
+    self.stats = DataplaneCheckerStats(list(event_dag.events))
+
+  def check_dataplane(self, i, simulation):
+    for dp_event in simulation.patch_panel.queued_dataplane_events:
+      simulation.patch_panel.permit_dp_event(dp_event)
+
 # --- Note: use DataplaneChecker at your own risk. I have observed it fail to
 #     reproduce a bug that was reproducible with dataplane timeouts.
 # TODO(cs): should this go in event_scheduler.py?
@@ -463,7 +479,7 @@ class DataplaneChecker(object):
     # that we don't accidentally conflate distinct dp_events with the same
     # fingerprint
     self.current_dp_fingerprints.remove(event_fingerprint)
-    event_idx = self.fingerprint_2_event_idx[event_fingerprint]
+    event_idx = self.fingerprint_2_event_idx[event_fingerprint].pop()
     self.events.pop(event_idx)
     # First element of the tuple is the Event class name
     if event_fingerprint[0] == "DataplanePermit":
@@ -474,7 +490,7 @@ class DataplaneChecker(object):
   def update_window(self, current_round):
     ''' Update the current slop buffer ("the dp_events we expect to see") '''
     self.current_dp_fingerprints = []
-    self.fingerprint_2_event_idx = {}
+    self.fingerprint_2_event_idx = defaultdict(list)
     # TODO(cs): O(n) operation
     head_idx = find_index(lambda e: e.round == current_round - self.slop_buffer,
                           self.events)
@@ -488,7 +504,7 @@ class DataplaneChecker(object):
           type(self.events[i]) == DataplaneDrop):
         fingerprint = self.events[i].fingerprint
         self.current_dp_fingerprints.append(fingerprint)
-        self.fingerprint_2_event_idx[fingerprint] = i
+        self.fingerprint_2_event_idx[fingerprint].append(i)
 
   def check_dataplane(self, current_round, simulation):
     ''' Check dataplane events for before playing then next event.
