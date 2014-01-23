@@ -161,7 +161,7 @@ class MCSFinder(ControlFlow):
     self.replay_log_tracker = ReplayLogTracker(results_dir)
 
   # N.B. only called in the parent process.
-  def simulate(self, check_reproducability=True):
+  def simulate(self, check_reproducibility=True):
     self._runtime_stats.set_dag_stats(self.dag)
 
     # apply domain knowledge: treat failure/recovery pairs atomically, and
@@ -173,7 +173,7 @@ class MCSFinder(ControlFlow):
     if len(self.dag) == 0:
       raise RuntimeError("No supported input types?")
 
-    if check_reproducability:
+    if check_reproducibility:
       # First, run through without pruning to verify that the violation exists
       self._runtime_stats.record_replay_start()
 
