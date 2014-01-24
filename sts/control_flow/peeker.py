@@ -88,7 +88,7 @@ class SnapshotPeeker(Peeker):
       raise ValueError('''Non-default DP Permit not currently supported '''
                        '''Please implement the TODO near the sleep() call '''
                        '''in play_forward()''')
-    kwargs['default_dp_permit'] = False
+    kwargs['default_dp_permit'] = True
     self.kwargs = kwargs
     unknown_kwargs = [ k for k in kwargs.keys() if k not in Replayer.kwargs ]
     if unknown_kwargs != []:
