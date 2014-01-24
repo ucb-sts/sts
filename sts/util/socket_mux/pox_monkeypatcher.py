@@ -129,7 +129,7 @@ def launch(snapshot_address=None):
       log.debug("Done rewiring")
 
     def snapshot(snapshot_sock):
-      log.debug("Received SNAPSHOT signal. fork()ing")
+      log.debug("Received SNAPSHOT signal in %d. fork()ing" % os.getpid())
 
       if mux_select.true_listen_socks != []:
         # snapshotting should only be executed after the socket_mux
@@ -139,8 +139,9 @@ def launch(snapshot_address=None):
       pid = os.fork()
       if pid == 0: # Child
         snapshot_sock.setblocking(1)
-        log.debug("Sending READY")
-        snapshot_sock.send("READY %d" % os.getpid())
+        pid = os.getpid()
+        log.debug("Sending READY %d" % pid)
+        snapshot_sock.send("READY %d" % pid)
         command = snapshot_sock.recv(100)
         log.debug("Read command %s" % command)
         snapshot_sock.setblocking(0)
