@@ -397,6 +397,7 @@ def play_forward(simulation, inject_input, wait_time_seconds, flush_buffers=Fals
 
   # we inject input after setting pass_through, since some internal
   # events may occur immediately after the input is injected.
+  log.info("Injecting input %s" % str(inject_input))
   inject_input.proceed(simulation)
 
   # Note that this is the monkey patched version of time.sleep
