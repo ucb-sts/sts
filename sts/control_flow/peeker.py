@@ -404,12 +404,14 @@ def play_forward(simulation, inject_input, wait_time_seconds, flush_buffers=Fals
   # TODO(cs): should we subtract the time it took to inject input from
   # wait_time_seconds?
   log.info("peek()'ing for %f seconds" % wait_time_seconds)
-  # TODO(cs): sleep()'ing allows us to infer ControlMessageReceive events, but
-  # it doesn't help with infering other events that can timeout, such as
-  # DataplanePermit/Drops or ProcessFlowMods. Rather than sleeping perhaps
-  # we should set BufferedPatchPanel + Switches to "pass-through + record",
-  # and loop here instead of sleep()ing.
-  time.sleep(wait_time_seconds)
+  start_time = time.time()
+  while time.time() - start_time() < wait_time_seconds:
+    # Allow through dataplane sends
+    for dp_event in simulation.patch_panel.queued_dataplane_events:
+      # TODO(cs): record these DataplanePermits rather than enforcing
+      # default_dp_permit=True.
+      simulation.patch_panel.permit_dp_event(dp_event)
+    time.sleep(0.01)
 
   # Now turn off pass through and grab the inferred events
   newly_inferred_events = simulation.unset_pass_through()
