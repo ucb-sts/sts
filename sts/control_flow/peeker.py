@@ -432,8 +432,8 @@ def match_and_filter(newly_inferred_events, expected_internal_events):
     log.debug("Expected: %s" % (str(expected_internal_events)))
     log.debug("Inferred: %s" % (str(newly_inferred_events)))
 
-  newly_inferred_events = match_fingerprints(newly_inferred_events,
-                                             expected_internal_events)
+  (newly_inferred_events, unmatched_events) = match_fingerprints(newly_inferred_events,
+                                                                 expected_internal_events)
   #count_overlapping_fingerprints(newly_inferred_events,
   #                               expected_internal_events)
   # TODO(cs): correct timestamps of unexpected internal events.
@@ -442,7 +442,10 @@ def match_and_filter(newly_inferred_events, expected_internal_events):
 
   if log.getEffectiveLevel() <= logging.DEBUG:
     log.debug("Matched events: %s" % (str(newly_inferred_events)))
+    log.debug("Unmatched events: %s" % (str(unmatched_events)))
+
   log.info("Matched events total: %d" % (len(newly_inferred_events)))
+  log.info("Unmatched events total: %d" % (len(unmatched_events)))
   return newly_inferred_events
 
 def count_overlapping_fingerprints(newly_inferred_events,
@@ -543,13 +546,16 @@ def match_fingerprints(newly_inferred_events, expected_internal_events):
   # N.B. to allow unexpected messages through after peek() has finished, set
   # Replayer's "allow_unexpected_messages" parameter.
   ordered_inferred_events = []
+  unmatched_events = []
   for e in expected_internal_events:
     if e.fingerprint in inferred_fingerprints:
       ordered_inferred_events.append(e)
       inferred_fingerprints[e.fingerprint] -= 1
       if inferred_fingerprints[e.fingerprint] == 0:
         del inferred_fingerprints[e.fingerprint]
-  return ordered_inferred_events
+    else:
+      unmatched_events.append(e)
+  return (ordered_inferred_events, unmatched_events)
 
 def correct_timestamps(new_events, old_events):
   ''' Set new_events' timestamps to approximately the same timestamp as
