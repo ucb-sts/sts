@@ -18,7 +18,7 @@ import time
 import abc
 from collections import Counter
 
-from sts.replay_event import WaitTime, ProcessFlowMod, DataplaneDrop, ConnectToControllers, InputEvent
+from sts.replay_event import *
 from sts.event_dag import EventDag
 from sts.control_flow.replayer import Replayer
 from sts.control_flow.base import ReplaySyncCallback
