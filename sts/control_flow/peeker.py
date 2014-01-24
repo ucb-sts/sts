@@ -405,7 +405,7 @@ def play_forward(simulation, inject_input, wait_time_seconds, flush_buffers=Fals
   # wait_time_seconds?
   log.info("peek()'ing for %f seconds" % wait_time_seconds)
   start_time = time.time()
-  while time.time() - start_time() < wait_time_seconds:
+  while time.time() - start_time < wait_time_seconds:
     # Allow through dataplane sends
     for dp_event in simulation.patch_panel.queued_dataplane_events:
       # TODO(cs): record these DataplanePermits rather than enforcing
