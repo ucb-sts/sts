@@ -172,7 +172,7 @@ class SnapshotPeeker(Peeker):
           optimization_triggered_last_iteration = True
           continue
 
-        optimization_triggered_iteration = False
+        optimization_triggered_last_iteration = False
 
         # We replay events_inferred_last_iteration (internal events preceding
         # inject_input), as well as a NOPInput with the same timestamp as inject_input
