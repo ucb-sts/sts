@@ -193,7 +193,7 @@ class SnapshotPeeker(Peeker):
                         initial_wait=initial_wait_seconds,
                         **self.kwargs)
     replayer.simulation = simulation
-    if self.pass_through_sends:
+    if 'pass_through_sends' in self.kwargs and self.kwargs['pass_through_sends']:
       replayer.set_pass_through_sends(simulation)
     replayer.run_simulation_forward()
 
