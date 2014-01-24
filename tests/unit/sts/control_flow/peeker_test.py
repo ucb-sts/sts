@@ -55,6 +55,10 @@ class MockConnectToControllers(ConnectToControllers):
   def proceed(self, simulation):
     return True
 
+class MockSnapshotter(object):
+  def snapshot_proceed(*args):
+    pass
+
 class PeekerTest(unittest.TestCase):
   def setUp(self):
     self.input_trace = [ MockInputEvent(fingerprint=("class",f)) for f in range(1,7) ]
@@ -69,8 +73,9 @@ class PeekerTest(unittest.TestCase):
     self.snapshot_peeker.setup_simulation = lambda: (None, None)
     # N.B. this assumes that no internal events occur before the first input
     # event.
-    self.snapshot_peeker.snapshot_and_play_forward = lambda *args: []
+    self.snapshot_peeker.snapshot_and_play_forward = lambda *args: ([], None)
     self.snapshot_peeker.replay_interval = lambda *args: []
+    self.mock_snapshotter = MockSnapshotter()
 
   def test_basic_noop(self):
     """ test_basic_noop: running on a dag with no internal events returns the same dag """
@@ -106,7 +111,7 @@ class PeekerTest(unittest.TestCase):
     # Hack alert! throw away first two args
     def snapshotter_fake_find_internal_events(s, c, dag_interval,
                                               inject_input, wait_time):
-      return fake_find_internal_events(dag_interval, inject_input, wait_time)
+      return (fake_find_internal_events(dag_interval, inject_input, wait_time), self.mock_snapshotter)
     self.snapshot_peeker.find_internal_events = snapshotter_fake_find_internal_events
     new_dag = self.snapshot_peeker.peek(EventDag(events))
     self.assertEquals(events, new_dag.events)
@@ -137,7 +142,7 @@ class PeekerTest(unittest.TestCase):
     # Hack alert! throw away first two args
     def snapshotter_fake_find_internal_events(s, c, dag_interval,
                                               inject_input, wait_time):
-      return fake_find_internal_events(dag_interval, inject_input, wait_time)
+      return (fake_find_internal_events(dag_interval, inject_input, wait_time), self.mock_snapshotter)
     self.snapshot_peeker.find_internal_events = snapshotter_fake_find_internal_events
     new_dag = self.snapshot_peeker.peek(EventDag(sub_events))
     self.assertEquals([inp2, inp3, int2], new_dag.events)

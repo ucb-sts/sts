@@ -140,7 +140,6 @@ class SnapshotPeeker(Peeker):
       # initial ConnectToControllers.
       # TODO(cs): might not want to contrain the caller's dag in this way.
       events_inferred_last_iteration = []
-      optimization_triggered_last_iteration = False
 
       for inject_input_idx in xrange(0, len(snapshot_inputs)):
         inject_input = get_inject_input(inject_input_idx, snapshot_inputs)
@@ -153,32 +152,22 @@ class SnapshotPeeker(Peeker):
 
         inferred_events += events_inferred_last_iteration
 
-        if expected_internal_events == []:
-          # Optimization: if no internal events occured between this input and the
-          # next, no need to peek(), just replay the next input
-          log.debug("Optimization: no expected internal events")
-          Peeker.ambiguous_counts[0.0] += 1
-          # If the optimization was run two iterations in a row, need to
-          # replay the previous input!
-          if optimization_triggered_last_iteration:
-            assert(len(events_inferred_last_iteration) == 1)
-            assert(isinstance(events_inferred_last_iteration[0], InputEvent))
-            log.debug("Accounting for previous iteration's optimized input")
-            fencepost = NOPInput(time=inject_input.time, round=inject_input.round)
-            dag_interval = EventDag(events_inferred_last_iteration + [fencepost])
-            self.replay_interval(simulation, dag_interval, 0)
-
-          events_inferred_last_iteration = [inject_input]
-          optimization_triggered_last_iteration = True
-          continue
-
-        optimization_triggered_last_iteration = False
-
         # We replay events_inferred_last_iteration (internal events preceding
         # inject_input), as well as a NOPInput with the same timestamp as inject_input
         # to ensure that the timing is the same before peek()ing.
         fencepost = NOPInput(time=inject_input.time, round=inject_input.round)
         dag_interval = EventDag(events_inferred_last_iteration + [fencepost])
+
+        if expected_internal_events == []:
+          # Optimization: if no internal events occured between this input and the
+          # next, no need to peek(), just bring the simulation's state forward up to
+          # inject_input
+          log.debug("Optimization: no expected internal events")
+          Peeker.ambiguous_counts[0.0] += 1
+          self.replay_interval(simulation, dag_interval, 0)
+          events_inferred_last_iteration = [inject_input]
+          continue
+
         wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
         (found_events, snapshotter) = self.find_internal_events(simulation, controller,
                                                                 dag_interval, inject_input,
