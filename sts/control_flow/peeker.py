@@ -75,8 +75,7 @@ class SnapshotPeeker(Peeker):
   ''' O(n) peeker that takes controller snapshots at each input, peeks
   forward, then restarts the snapshot up until the next input'''
   def __init__(self, simulation_cfg, default_wait_time_seconds=0.5,
-               epsilon_time=0.2, default_dp_permit=False,
-               pass_through_sends=False):
+               epsilon_time=0.2, **kwargs):
     if len(simulation_cfg.controller_configs) != 1:
       raise ValueError("Only one controller supported for snapshotting")
     if simulation_cfg.controller_configs[0].sync is not None:
@@ -85,12 +84,14 @@ class SnapshotPeeker(Peeker):
                                          default_wait_time_seconds=default_wait_time_seconds,
                                          epsilon_time=epsilon_time)
     self.forker = LocalForker()
-    if not default_dp_permit:
+    if 'default_dp_permit' in kwargs and not kwargs['default_dp_permit']:
       raise ValueError('''Non-default DP Permit not currently supported '''
                        '''Please implement the TODO near the sleep() call '''
                        '''in play_forward()''')
-    self.default_dp_permit = default_dp_permit
-    self.pass_through_sends = pass_through_sends
+    self.kwargs = kwargs
+    unknown_kwargs = [ k for k in kwargs.keys() if k not in Replayer.kwargs ]
+    if unknown_kwargs != []:
+      raise ValueError("Unknown kwargs %s" % str(unknown_kwargs))
 
   def setup_simulation(self):
     # TODO(cs): currently assumes that STSSyncProto is not used alongside
@@ -188,9 +189,9 @@ class SnapshotPeeker(Peeker):
     assert(dag_interval.events != [])
     # TODO(cs): set EventScheduler's epsilon_seconds parameter?
     replayer = Replayer(self.simulation_cfg, dag_interval,
-                        pass_through_whitelisted_messages=True,
-                        default_dp_permit=self.default_dp_permit,
-                        initial_wait=initial_wait_seconds)
+                        default_dp_permit=False,
+                        initial_wait=initial_wait_seconds,
+                        **self.kwargs)
     replayer.simulation = simulation
     if self.pass_through_sends:
       replayer.set_pass_through_sends(simulation)
