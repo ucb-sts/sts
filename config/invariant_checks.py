@@ -56,7 +56,7 @@ def check_for_flow_entry(simulation):
   for sw in simulation.topology.switches:
     for entry in sw.table.entries:
       if entry.priority == 123:
-        return [entry]
+        return ["123Found"]
   return []
 
 # Note: make sure to add new custom invariant checks to this dictionary!
