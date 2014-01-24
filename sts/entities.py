@@ -727,6 +727,7 @@ class SnapshotPopen(object):
     # See https://code.google.com/p/psutil/wiki/Documentation
     # for the full API.
     self.p = psutil.Process(pid)
+    self.log = logging.getLogger("c%d" % pid)
 
   def poll(self):
     ''' A None value indicates that the process hasn't terminated yet. '''
@@ -740,6 +741,7 @@ class SnapshotPopen(object):
     return self.p.pid
 
   def kill(self):
+    self.log.info("Killing controller process %d" % self.pid)
     return self.p.kill()
 
   def terminate(self):
@@ -815,7 +817,7 @@ class Controller(object):
     if self.state != ControllerState.ALIVE:
       self.log.warn("Killing controller %s when it is not alive!" % self.label)
       return
-    msg.event("Killing controller %s" % self.cid)
+    msg.event("Killing controller %s (pid %d)" % (self.cid, self.pid))
     kill_procs([self.process])
     if self.config.kill_cmd != "":
       self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
