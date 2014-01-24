@@ -88,6 +88,7 @@ class SnapshotPeeker(Peeker):
       raise ValueError('''Non-default DP Permit not currently supported '''
                        '''Please implement the TODO near the sleep() call '''
                        '''in play_forward()''')
+    kwargs['default_dp_permit'] = False
     self.kwargs = kwargs
     unknown_kwargs = [ k for k in kwargs.keys() if k not in Replayer.kwargs ]
     if unknown_kwargs != []:
@@ -189,7 +190,6 @@ class SnapshotPeeker(Peeker):
     assert(dag_interval.events != [])
     # TODO(cs): set EventScheduler's epsilon_seconds parameter?
     replayer = Replayer(self.simulation_cfg, dag_interval,
-                        default_dp_permit=False,
                         initial_wait=initial_wait_seconds,
                         **self.kwargs)
     replayer.simulation = simulation
