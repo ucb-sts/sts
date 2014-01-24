@@ -403,8 +403,8 @@ class Replayer(ControlFlow):
                        pending_message.dpid,
                        pending_message.controller_id)
         if fingerprint not in expected_fingerprints:
-          log.debug("Allowing unexpected message %s" % message)
           message = self.simulation.openflow_buffer.schedule(pending_message)
+          log.debug("Allowed unexpected message %s" % message)
           b64_packet = base64_encode(message)
           # Monkeypatch a "new internal event" marker to be logged to the JSON trace
           # (All fields picked up by event.to_json())
