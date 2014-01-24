@@ -163,12 +163,13 @@ class SnapshotPeeker(Peeker):
           if optimization_triggered_last_iteration:
             assert(len(events_inferred_last_iteration) == 1)
             assert(isinstance(events_inferred_last_iteration[0], InputEvent))
+            log.debug("Accounting for previous iteration's optimized input")
             fencepost = NOPInput(time=inject_input.time, round=inject_input.round)
             dag_interval = EventDag(events_inferred_last_iteration + [fencepost])
             self.replay_interval(simulation, dag_interval, 0)
 
           events_inferred_last_iteration = [inject_input]
-          optimization_triggered_iteration = True
+          optimization_triggered_last_iteration = True
           continue
 
         optimization_triggered_iteration = False
