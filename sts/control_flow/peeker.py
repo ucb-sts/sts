@@ -28,7 +28,7 @@ from sts.util.rpc_forker import LocalForker
 from sts.util.convenience import find
 from sts.input_traces.log_parser import parse
 
-log = logging.getLogger("sts")
+log = logging.getLogger("peeker")
 
 # TODO(cs): is it problematic if we stop responding to OFP_PING / LLDP during
 # peek()?
@@ -425,10 +425,12 @@ def match_and_filter(newly_inferred_events, expected_internal_events):
                                if not isinstance(e, DataplanePermit) ]
   newly_inferred_events = [ e for e in newly_inferred_events
                             if not isinstance(e, DataplanePermit) ]
+  log.debug("Matching fingerprints")
+  log.info("Expected total: %d" % (len(expected_internal_events)))
+  log.info("Inferred total: %d" % (len(newly_inferred_events)))
   if log.getEffectiveLevel() <= logging.DEBUG:
-    log.debug("Matching fingerprints")
-    log.debug("Expected (%d): %s" % (len(expected_internal_events), str(expected_internal_events)))
-    log.debug("Inferred (%d): %s" % (len(newly_inferred_events), str(newly_inferred_events)))
+    log.debug("Expected: %s" % (str(expected_internal_events)))
+    log.debug("Inferred: %s" % (str(newly_inferred_events)))
 
   newly_inferred_events = match_fingerprints(newly_inferred_events,
                                              expected_internal_events)
@@ -439,7 +441,8 @@ def match_and_filter(newly_inferred_events, expected_internal_events):
   #                                           expected_internal_events)
 
   if log.getEffectiveLevel() <= logging.DEBUG:
-    log.debug("Matched events (%d): %s" % (len(newly_inferred_events), str(newly_inferred_events)))
+    log.debug("Matched events: %s" % (str(newly_inferred_events)))
+  log.info("Matched events total: %d" % (len(newly_inferred_events)))
   return newly_inferred_events
 
 def count_overlapping_fingerprints(newly_inferred_events,
