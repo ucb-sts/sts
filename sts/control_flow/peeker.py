@@ -47,7 +47,8 @@ class Peeker(object):
   # { class of event -> # occurences of ambiguity }
   ambiguous_events = Counter()
 
-  def __init__(self, simulation_cfg, default_wait_time_seconds=0.5, epsilon_time=0.2):
+  def __init__(self, simulation_cfg, default_wait_time_seconds=0.05,
+               epsilon_time=0.05):
     self.simulation_cfg = simulation_cfg
     self.default_wait_time_seconds = default_wait_time_seconds
     self.epsilon_time = epsilon_time
@@ -74,8 +75,8 @@ class Peeker(object):
 class SnapshotPeeker(Peeker):
   ''' O(n) peeker that takes controller snapshots at each input, peeks
   forward, then restarts the snapshot up until the next input'''
-  def __init__(self, simulation_cfg, default_wait_time_seconds=0.5,
-               epsilon_time=0.2, **kwargs):
+  def __init__(self, simulation_cfg, default_wait_time_seconds=0.05,
+               epsilon_time=0.05, **kwargs):
     if len(simulation_cfg.controller_configs) != 1:
       raise ValueError("Only one controller supported for snapshotting")
     if simulation_cfg.controller_configs[0].sync is not None:
@@ -240,7 +241,8 @@ class SnapshotPeeker(Peeker):
 
 class PrefixPeeker(Peeker):
   ''' O(n^2) peeker that replays each prefix of the subseqeuence from the beginning. '''
-  def __init__(self, simulation_cfg, default_wait_time_seconds=0.5, epsilon_time=0.2):
+  def __init__(self, simulation_cfg, default_wait_time_seconds=0.05,
+               epsilon_time=0.05):
     super(PrefixPeeker, self).__init__(simulation_cfg,
                                        default_wait_time_seconds=default_wait_time_seconds,
                                        epsilon_time=epsilon_time)
