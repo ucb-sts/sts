@@ -179,11 +179,12 @@ class SnapshotPeeker(Peeker):
         fencepost = NOPInput(time=inject_input.time, round=inject_input.round)
         dag_interval = EventDag(events_inferred_last_iteration + [fencepost])
         wait_time_seconds = self.get_wait_time_seconds(inject_input, following_input)
-        found_events = self.find_internal_events(simulation, controller,
-                                                 dag_interval, inject_input,
-                                                 wait_time_seconds)
+        (found_events, snapshotter) = self.find_internal_events(simulation, controller,
+                                                                dag_interval, inject_input,
+                                                                wait_time_seconds)
         events_inferred_last_iteration = [inject_input]
         events_inferred_last_iteration += match_and_filter(found_events, expected_internal_events)
+        snapshotter.snapshot_proceed()
 
       # Don't forget the final iteration's output
       inferred_events += events_inferred_last_iteration
@@ -244,8 +245,7 @@ class SnapshotPeeker(Peeker):
     # injecting inject_input
     # N.B. this must be invoked in the parent process (not a forker.fork()ed
     # child), since it mutates class variables in Controller.
-    snapshotter.snapshot_proceed()
-    return found_events
+    return (found_events, snapshotter)
 
 class PrefixPeeker(Peeker):
   ''' O(n^2) peeker that replays each prefix of the subseqeuence from the beginning. '''
