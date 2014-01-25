@@ -764,7 +764,11 @@ class SnapshotPopen(object):
 
   def kill(self):
     self.log.info("Killing controller process %d" % self.pid)
-    return self.p.kill()
+    try:
+      return self.p.kill()
+    except psutil._error.NoSuchProcess:
+      self.log.info("controller process %d already dead?" % self.pid)
+      return None # Already dead
 
   def terminate(self):
     return self.p.terminate()
