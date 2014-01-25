@@ -90,6 +90,8 @@ class SnapshotPeeker(Peeker):
                        '''Please implement the TODO near the sleep() call '''
                        '''in play_forward()''')
     kwargs['default_dp_permit'] = True
+    if 'pass_through_whitelisted_messages' not in kwargs:
+      kwargs['pass_through_whitelisted_messages'] = True
     self.kwargs = kwargs
     unknown_kwargs = [ k for k in kwargs.keys() if k not in Replayer.kwargs ]
     if unknown_kwargs != []:
@@ -102,7 +104,7 @@ class SnapshotPeeker(Peeker):
     # ConnectionToControllers is an input event, which we peek() for like
     # any other input event.
     simulation = self.simulation_cfg.bootstrap(ReplaySyncCallback(None))
-    simulation.openflow_buffer.pass_through_whitelisted_messages = True
+    simulation.openflow_buffer.pass_through_whitelisted_messages = self.kwargs['pass_through_whitelisted_messages']
     controller = simulation.controller_manager.controllers[0]
     return (simulation, controller)
 
