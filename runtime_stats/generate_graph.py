@@ -20,11 +20,7 @@ import string
 import argparse
 import json
 import os
-
-parser = argparse.ArgumentParser(description="generate a plot")
-parser.add_argument('input', metavar="INPUT",
-                    help='''The input json file''')
-args = parser.parse_args()
+from collections import namedtuple
 
 def write_data_file(dat_filename, stats):
   ''' Write out the datapoints '''
@@ -34,25 +30,49 @@ def write_data_file(dat_filename, stats):
     for key in sorted_keys:
       dat.write(str(key) + " " + str(stats["iteration_size"][key]) + '\n')
 
-# Load the json
-with open(args.input) as json_input:
-  stats = json.load(json_input)
+def load_json(json_input):
+  with open(json_input) as json_input_file:
+    return json.load(json_input_file)
 
-gpi_filename = string.replace(args.input, ".json", ".gpi")
-output_filename = string.replace(args.input, ".json", ".pdf")
-dat_filename = string.replace(args.input, ".json", ".dat")
+DataInfo = namedtuple('DataInfo', ['filename', 'title'])
 
-write_data_file(dat_filename, stats)
+def write_gpi_template(gpi_filename, output_filename, data_info_list, title):
+  with open(gpi_filename, "w") as gpi:
+    # Finish off the rest of the template
+    gpi.write(template)
+    gpi.write('''set title "%s"\n''' % title)
+    gpi.write('''set output "%s"\n''' % output_filename)
+    gpi.write('''plot ''')
+    first_iteration = True
+    for i, data_info in enumerate(data_info_list):
+      gpi.write('''"%s" index 0:1 title "%s" with steps ls %d''' %
+                (data_info.filename, data_info.title, i))
+      if i != len(data_info_list) - 1:
+        gpi.write(", \\\n")
+      else:
+        gpi.write("\n")
 
-with open(gpi_filename, "w") as gpi:
-  # Finish off the rest of the template
-  gpi.write(template)
-  gpi.write('''set output "%s"\n''' % output_filename)
+def invoke_gnuplot(gpi_filename):
+  os.system("gnuplot %s" % gpi_filename)
+
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser(description="generate a plot")
+  parser.add_argument('input', metavar="INPUT",
+                      help='''The input json file''')
+  args = parser.parse_args()
+
+  stats = load_json(args.input)
+
+  gpi_filename = string.replace(args.input, ".json", ".gpi")
+  output_filename = string.replace(args.input, ".json", ".pdf")
+  dat_filename = string.replace(args.input, ".json", ".dat")
+
+  title = ""
   if('prune_duration_seconds' in stats and 'replay_duration_seconds' in stats):
-    gpi.write('''set title "total runtime=%.1fs, original runtime=%.1fs"\n''' %
-            (stats["prune_duration_seconds"], stats["replay_duration_seconds"]))
-  gpi.write('''plot "%s" index 0:1 title "" with steps ls 1\n''' %
-            (dat_filename,))
+    title = ("total runtime=%.1fs, original runtime=%.1fs" %
+              (stats["prune_duration_seconds"], stats["replay_duration_seconds"]))
 
-# invoke gnuplot
-os.system("gnuplot %s" % gpi_filename)
+  write_data_file(dat_filename, stats)
+  data_info_list = [DataInfo(title="", filename=dat_filename)]
+  write_gpi_template(gpi_filename, output_filename, data_info_list, title)
+  invoke_gnuplot(gpi_filename)
