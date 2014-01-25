@@ -46,7 +46,7 @@ def write_gpi_template(gpi_filename, output_filename, data_info_list, title):
     first_iteration = True
     for i, data_info in enumerate(data_info_list):
       gpi.write('''"%s" index 0:1 title "%s" with steps ls %d''' %
-                (data_info.filename, data_info.title, i))
+                (data_info.filename, data_info.title, i+1))
       if i != len(data_info_list) - 1:
         gpi.write(", \\\n")
       else:
