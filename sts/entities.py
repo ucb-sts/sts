@@ -604,7 +604,7 @@ class Host (EventMixin):
     self.log = logging.getLogger(name)
     self.name = name
     self.hid = self._hids.next()
-    self.send_capabilities = True
+    self.send_capabilities = False
 
   def send(self, interface, packet):
     ''' Send a packet out a given interface '''
