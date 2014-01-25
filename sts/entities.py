@@ -763,6 +763,7 @@ class SnapshotPopen(object):
     return self.p.pid
 
   def kill(self):
+    import psutil
     self.log.info("Killing controller process %d" % self.pid)
     try:
       return self.p.kill()
@@ -771,8 +772,13 @@ class SnapshotPopen(object):
       return None # Already dead
 
   def terminate(self):
-    return self.p.terminate()
-
+    import psutil
+    self.log.info("Terminating controller process %d" % self.pid)
+    try:
+      return self.p.terminate()
+    except psutil._error.NoSuchProcess:
+      self.log.info("controller process %d already dead?" % self.pid)
+      return None # Already dead
 
 class ControllerState():
   ''' Represents different states of a controller '''
