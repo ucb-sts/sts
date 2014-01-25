@@ -25,6 +25,8 @@ from pox.openflow.flow_table import FlowTableModification
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
 import pox.lib.packet.ethernet as ethernet
+import pox.lib.packet.ipv4 as ipv4
+import pox.lib.packet.tcp as tcp
 import pox.openflow.libopenflow_01 as of
 from pox.lib.addresses import EthAddr, IPAddr
 from pox.lib.util import connect_socket_with_backoff
@@ -602,6 +604,7 @@ class Host (EventMixin):
     self.log = logging.getLogger(name)
     self.name = name
     self.hid = self._hids.next()
+    self.send_capabilities = True # TODO(cs): set to False. This is for an experiment
 
   def send(self, interface, packet):
     ''' Send a packet out a given interface '''
@@ -623,6 +626,25 @@ class Host (EventMixin):
       else:
         self.log.info("received invalid arp packet on interface %s: %s" % (interface.name, str(packet)))
         return None
+    elif self.send_capabilities and packet.type == ethernet.IP_TYPE and packet.next.protocol == ipv4.ICMP_PROTOCOL:
+      # Temporary hack: if we receive a ICMP packet, send a TCP RST to signal to POX
+      # that we do want to revoke the capability for this flow. See
+      # pox/pox/forwarding/capabilities_manager.py
+      self.log.info("Sending RST on interface %s: in reponse to: %s" % (interface.name, str(packet)))
+      t = tcp()
+      tcp.RST = True
+      i = ipv4()
+      i.protocol = ipv4.TCP_PROTOCOL
+      i.srcip = interface.ips[0]
+      i.dstip = packet.next.srcip
+      i.payload = t
+      ether = ethernet()
+      ether.type = ethernet.IP_TYPE
+      ether.src = interface.hw_addr
+      ether.dst = packet.src
+      ether.payload = i
+      self.send(interface, ether)
+
     self.log.info("Recieved packet %s on interface %s" % (str(packet), interface.name))
 
   def _check_arp_reply(self, arp_packet):
