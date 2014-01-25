@@ -60,7 +60,7 @@ class Fuzzer(ControlFlow):
                record_deterministic_values=False,
                mock_link_discovery=False,
                never_drop_whitelisted_packets=True,
-               initialization_rounds=0):
+               initialization_rounds=0, send_all_to_all=False):
     '''
     Options:
       - fuzzer_params: path to event probabilities
@@ -122,9 +122,10 @@ class Fuzzer(ControlFlow):
     # learning), then send all-to-all packets until all pairs have been
     # pinged. Tell MCSFinder not to prune initial inputs during this period.
     self.initialization_rounds = initialization_rounds
-    # If initialization_rounds isn't 0, also make sure to send all-to-all
-    # pings before starting any events
-    self._pending_all_to_all = initialization_rounds != 0
+    # Always send packets destined for self at the end of initialization
+    self._pending_self_packets = self.initialization_rounds != 0
+    # Whether to send all-to-all pings before starting any events
+    self._pending_all_to_all = send_all_to_all
     # Our current place in the all-to-all cycle. Stop when == len(hosts)
     self._all_to_all_iterations = 0
     # How often (in terms of logical rounds) to inject all-to-all packets
@@ -194,7 +195,7 @@ class Fuzzer(ControlFlow):
                     '''fuzzer_params='%s'")''' % new_params_file)
 
   def _initializing(self):
-    return self.logical_time < self.initialization_rounds or self._pending_all_to_all
+    return self._pending_self_packets or self._pending_all_to_all
 
   def simulate(self):
     """Precondition: simulation.patch_panel is a buffered patch panel"""
@@ -242,8 +243,6 @@ class Fuzzer(ControlFlow):
         while self.simulation.openflow_buffer.pending_receives() == []:
           self.simulation.io_master.select(self.delay)
 
-      sent_self_packets = False
-
       while self.logical_time < end_time:
         self.logical_time += 1
         try:
@@ -256,13 +255,12 @@ class Fuzzer(ControlFlow):
             self.maybe_inject_trace_event()
           else:  # Initializing
             self.check_pending_messages(pass_through=True)
-            if not sent_self_packets and (self.logical_time % self._all_to_all_interval) == 0:
-              # Only need to send self packets once
-              self._send_initialization_packets(send_to_self=True)
-              sent_self_packets = True
-            elif self.logical_time > self.initialization_rounds:
-              # All-to-all mode
-              if (self.logical_time % self._all_to_all_interval) == 0:
+            if self.logical_time > self.initialization_rounds:
+              if self._pending_self_packets:
+                # Only need to send self packets once
+                self._send_initialization_packets(send_to_self=True)
+                self._pending_self_packets = False
+              elif self._pending_all_to_all and (self.logical_time % self._all_to_all_interval) == 0: # All-to-all mode
                 self._send_initialization_packets(send_to_self=False)
                 self._all_to_all_iterations += 1
                 if self._all_to_all_iterations > len(self.simulation.topology.hosts):
@@ -296,7 +294,7 @@ class Fuzzer(ControlFlow):
     return self.simulation
 
   def _send_initialization_packet(self, host, send_to_self=False):
-    traffic_type = "arp_query"
+    traffic_type = "icmp_ping" if send_to_self else "arp_query"
     dp_event = self.traffic_generator.generate_and_inject(traffic_type, host, send_to_self=send_to_self)
     self._log_input_event(TrafficInjection(dp_event=dp_event, host_id=host.hid))
 
@@ -537,7 +535,7 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.traffic_generation_rate:
           if len(host.interfaces) > 0:
             msg.event("Injecting a random packet")
-            traffic_type = "icmp_ping"
+            traffic_type = self.random.choice(["icmp_ping", "arp_query"])
             dp_event = self.traffic_generator.generate_and_inject(traffic_type, host)
             self._log_input_event(TrafficInjection(dp_event=dp_event))
 
