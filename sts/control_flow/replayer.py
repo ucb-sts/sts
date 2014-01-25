@@ -56,6 +56,7 @@ class Replayer(ControlFlow):
                 'fail_to_interactive', 'fail_to_interactive_on_persistent_violations',
                 'end_in_interactive', 'input_logger',
                 'allow_unexpected_messages',
+                'expected_message_round_window',
                 'pass_through_whitelisted_messages',
                 'delay_flow_mods', 'invariant_check_name',
                 'bug_signature', 'end_wait_seconds',
