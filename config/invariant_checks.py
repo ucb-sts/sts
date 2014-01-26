@@ -59,6 +59,25 @@ def check_for_flow_entry(simulation):
         return ["123Found"]
   return []
 
+class TimeOutOnConnectivity(object):
+  ''' If connectivity hasn't been established in X invocations of this
+  check, return a violation.
+  '''
+  def __init__(self, max_invocations=40):
+    self.max_invocations = max_invocations
+    self.invocations_since_connectivity = 0
+
+  def __call__(self, simulation):
+    unconnected = InvariantChecker.check_connectivity
+    if unconnected == []:
+      self.invocations_since_connectivity = 0
+      return []
+    else:
+      self.invocations_since_connectivity += 1
+      if self.invocations_since_connectivity >= self.max_invocations:
+        return [unconnected]
+      return []
+
 # Note: make sure to add new custom invariant checks to this dictionary!
 name_to_invariant_check = {
   "check_everything" : check_everything,
@@ -68,6 +87,7 @@ name_to_invariant_check = {
   "check_for_loops_blackholes" : check_for_loops_blackholes,
   "check_for_invalid_ports" : check_for_invalid_ports,
   "check_for_flow_entry" : check_for_flow_entry,
+  "time_out_on_connectivity" : TimeOutOnConnectivity(),
   "InvariantChecker.check_liveness" : InvariantChecker.check_liveness,
   "InvariantChecker.check_loops" : InvariantChecker.check_loops,
   "InvariantChecker.python_check_loops" : InvariantChecker.python_check_loops,
