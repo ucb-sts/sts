@@ -302,6 +302,7 @@ class Interactive(ControlFlow):
       c.cmd_group("Dataplane")
       c.cmd(self.dataplane_trace_feed,  "dp_inject",        alias="dpi",    help_msg="Inject the next dataplane event from the trace")
       c.cmd(self.dataplane_ping,        "dp_ping",          alias="dpp",    help_msg="Generate and inject a new ping packet")
+      c.cmd(self.dataplane_syn,         "dp_syn",           alias="dps",    help_msg="Generate and inject a new TCP SYN packet")
       c.cmd(self.dataplane_forward,     "dp_forward",       alias="dpf",    help_msg="Forward a pending dataplane event")
       c.cmd(self.dataplane_drop,        "dp_drop",          alias="dpd",    help_msg="Drop a pending dataplane event")
       c.cmd(self.dataplane_delay,       "dp_delay",         alias="dpe",    help_msg="Delay a pending dataplane event")
@@ -550,6 +551,19 @@ class Interactive(ControlFlow):
     self._log_input_event(TrafficInjection(dp_event=dp_event))
     send()
 
+  def dataplane_syn(self, from_hid=None, to_hid=None):
+    if (from_hid is not None) and \
+       (from_hid not in self.simulation.topology.hid2host.keys()):
+      print "Unknown host %s" % from_hid
+      return
+    if (to_hid is not None) and \
+       (to_hid not in self.simulation.topology.hid2host.keys()):
+      print "Unknown host %s" % to_hid
+      return
+    dp_event = self.traffic_generator.generate_and_inject("tcp_syn", from_hid, to_hid,
+                                    payload_content=raw_input("Enter TCP SYN payload content:\n"))
+    self._log_input_event(TrafficInjection(dp_event=dp_event))
+  
   def _select_dataplane_event(self, sel=None):
     queued = self.simulation.patch_panel.queued_dataplane_events
     if len(queued) == 0:

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+from pox.lib.packet.tcp import *
 from pox.lib.packet.ethernet import *
 from pox.lib.packet.ipv4 import *
 from pox.lib.packet.icmp import *
@@ -21,6 +21,7 @@ from pox.lib.packet.arp import *
 from util.convenience import random_eth_addr, random_ip_addr
 from sts.dataplane_traces.trace import DataplaneEvent
 import random
+import itertools
 
 class TrafficGenerator (object):
   '''
@@ -28,10 +29,13 @@ class TrafficGenerator (object):
   '''
   def __init__(self, random=random.Random()):
     self.random = random
+    # used to ensure generated port numbers don't overlap
+    self.port_numbers = itertools.count()
     self.topology = None
     self._packet_generators = {
       "arp_query" : self.arp_query,
       "icmp_ping" : self.icmp_ping,
+      "tcp_syn" : self.tcp_syn,
     }
 
   def set_topology(self, topology):
@@ -71,6 +75,27 @@ class TrafficGenerator (object):
     e.payload = i
     return e
 
+  def tcp_syn(self, src_interface, dst_interface, payload_content=None):
+    ''' Return a TCP SYN packet; uses arbitrary but unique port numbers '''
+    e = ethernet()
+    e.src = self._choose_eth_addr(src_interface)
+    e.dst = self._choose_eth_addr(dst_interface)
+    e.type = ethernet.IP_TYPE
+    i = ipv4()
+    i.protocol = ipv4.TCP_PROTOCOL
+    i.srcip = self._choose_ip_addr(src_interface)
+    i.dstip = self._choose_ip_addr(dst_interface)
+    syn = tcp()
+    syn.SYN = 1
+    syn.srcport = self.port_numbers.next()
+    syn.dstport = self.port_numbers.next()
+    if payload_content == "" or payload_content is None:
+      payload_content = "TCP SYN"
+    syn.payload = payload_content
+    i.payload = syn
+    e.payload = i
+    return e
+ 
   def generate(self, packet_type, src_host=None, dst_host=None,
                send_to_self=False, payload_content=None):
     ''' Generate a packet, return a function to have source host send it, and return the corresponding event '''
