@@ -53,4 +53,3 @@ mcs_log.txt
 
 # ignore software version update timestamp
 sts/last-version-check
-build/*
