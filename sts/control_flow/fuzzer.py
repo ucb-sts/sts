@@ -356,9 +356,9 @@ class Fuzzer(ControlFlow):
   def maybe_inject_trace_event(self):
     if (self.simulation.dataplane_trace and
         (self.logical_time % self.traffic_inject_interval) == 0):
-      (dp_event, host) = self.simulation.dataplane_trace.inject_trace_event()
       self._log_input_event(TrafficInjection(dp_event=dp_event,
                                              host_id=host.hid))
+      (dp_event, host) = self.simulation.dataplane_trace.inject_trace_event()
 
   def trigger_events(self):
     self.check_dataplane()
