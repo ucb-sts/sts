@@ -17,15 +17,17 @@
 from collections import defaultdict, namedtuple
 from sts.fingerprints.messages import *
 from pox.lib.revent import Event, EventMixin
+from sts.syncproto.base import SyncTime
 from sts.util.convenience import base64_encode
 import logging
 log = logging.getLogger("openflow_buffer")
 
 class PendingMessage(Event):
-  def __init__(self, pending_message, b64_packet, send_event=False):
+  def __init__(self, pending_message, b64_packet, time=None, send_event=False):
     # TODO(cs): boolean flag is ugly. Should use subclasses, but EventMixin
     # doesn't support addListener() on super/subclasses.
     super(PendingMessage, self).__init__()
+    self.time = time if time else SyncTime.now()
     self.pending_message = pending_message
     self.b64_packet = b64_packet
     self.send_event = send_event
@@ -68,11 +70,11 @@ class OpenFlowBuffer(EventMixin):
 
   def _pass_through_handler(self, message_event):
     ''' handler for pass-through mode '''
+
+    # NOTE(aw): FIRST record event, then schedule execution to maintain causality
     # TODO(cs): figure out a better way to resolve circular dependency
     import sts.replay_event
     pending_message = message_event.pending_message
-    # Pass through
-    self.schedule(pending_message)
     # Record
     if message_event.send_event:
       replay_event_class = sts.replay_event.ControlMessageSend
@@ -80,15 +82,18 @@ class OpenFlowBuffer(EventMixin):
       replay_event_class = sts.replay_event.ControlMessageReceive
 
     pending_message = message_event.pending_message
-    replay_event = replay_event_class(pending_message.dpid,
-                                      pending_message.controller_id,
-                                      pending_message.fingerprint,
-                                      b64_packet=message_event.b64_packet)
+    replay_event = replay_event_class(dpid=pending_message.dpid,
+                                      controller_id=pending_message.controller_id,
+                                      fingerprint=pending_message.fingerprint,
+                                      b64_packet=message_event.b64_packet,
+                                      time=message_event.time)
     if self._delegate_input_logger is not None:
       # TODO(cs): set event.round somehow?
       self._delegate_input_logger.log_input_event(replay_event)
     else: # TODO(cs): why is this an else:?
       self.passed_through_events.append(replay_event)
+    # Pass through
+    self.schedule(pending_message)
 
   def set_pass_through(self, input_logger=None):
     ''' Cause all message receipts to pass through immediately without being
