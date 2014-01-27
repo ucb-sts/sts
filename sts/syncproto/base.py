@@ -33,7 +33,9 @@ def unpatched_time():
   else:
     return time.time()
 
+MILLION = 1000000
 class SyncTime(collections.namedtuple('SyncTime', ('seconds', 'microSeconds'))):
+  last_returned_time_usec = 0
   """ ValueObject that models the microsecond timestamps used in STS Sync Messages """
   def __new__(cls, seconds, microSeconds):
     return super(cls, SyncTime).__new__(cls, seconds, microSeconds)
@@ -43,10 +45,16 @@ class SyncTime(collections.namedtuple('SyncTime', ('seconds', 'microSeconds'))):
     # if time.time has been patched by sts then we don't want to fall into this
     # trap ourselves
     if(hasattr(time, "_orig_time")):
-      now = time._orig_time()
+      time_float = time._orig_time()
     else:
-      now = time.time()
-    return SyncTime( int(now), int((now * 1000000) % 1000000))
+      time_float = time.time()
+    time_usec = int(time_float * MILLION)
+    if time_usec <= SyncTime.last_returned_time_usec:
+      time_usec = SyncTime.last_returned_time_usec + 1
+
+    now = SyncTime( time_usec / MILLION, time_usec % MILLION)
+    SyncTime.last_returned_time_usec = time_usec
+    return now
 
   def as_float(self):
     return float(self.seconds) + float(self.microSeconds) / 1e6
