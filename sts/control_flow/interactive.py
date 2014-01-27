@@ -419,35 +419,35 @@ class Interactive(ControlFlow):
   def kill_switch(self, dpid):
     topology = self.simulation.topology
     switch = topology.get_switch(dpid)
-    topology.crash_switch(switch)
     self._log_input_event(SwitchFailure(switch.dpid))
+    topology.crash_switch(switch)
 
   def start_switch(self, dpid):
     topology = self.simulation.topology
     switch = topology.get_switch(dpid)
     down_controller_ids = map(lambda c: c.cid, self.simulation.controller_manager.down_controllers)
-    topology.recover_switch(switch, down_controller_ids=down_controller_ids)
     self._log_input_event(SwitchRecovery(switch.dpid))
+    topology.recover_switch(switch, down_controller_ids=down_controller_ids)
 
   def cut_link(self, dpid1, dpid2):
     topology = self.simulation.topology
     link = topology.get_link(dpid1, dpid2)
-    topology.sever_link(link)
     self._log_input_event(LinkFailure(
                           link.start_software_switch.dpid,
                           link.start_port.port_no,
                           link.end_software_switch.dpid,
                           link.end_port.port_no))
+    topology.sever_link(link)
 
   def repair_link(self, dpid1, dpid2):
     topology = self.simulation.topology
     link = topology.get_link(dpid1, dpid2)
-    topology.repair_link(link)
     self._log_input_event(LinkRecovery(
                           link.start_software_switch.dpid,
                           link.start_port.port_no,
                           link.end_software_switch.dpid,
                           link.end_port.port_no))
+    topology.repair_link(link)
 
   def migrate_host(self, hid, dpid):
     topology = self.simulation.topology
@@ -458,15 +458,15 @@ class Interactive(ControlFlow):
     old_ingress_port_no = access_link.switch_port.port_no
     new_switch = topology.get_switch(dpid)
     new_port_no = max(new_switch.ports.keys()) + 1
-    self.simulation.topology.migrate_host(old_ingress_dpid,
-                                          old_ingress_port_no,
-                                          dpid,
-                                          new_port_no)
     self._log_input_event(HostMigration(old_ingress_dpid,
                                         old_ingress_port_no,
                                         dpid,
                                         new_port_no,
                                         access_link.host.hid))
+    self.simulation.topology.migrate_host(old_ingress_dpid,
+                                          old_ingress_port_no,
+                                          dpid,
+                                          new_port_no)
     self._send_initialization_packet(access_link.host, send_to_self=True)
 
   # TODO(cs): ripped directly from fuzzer. Redundant!
@@ -585,23 +585,23 @@ class Interactive(ControlFlow):
   def block_controller_traffic(self, cid1, cid2):
     ''' Drop all messages sent from controller 1 to controller 2 until
     unblock_controller_pair is called. '''
+    self._log_input_event(BlockControllerPair(cid1, cid2))
     if self.simulation.controller_patch_panel is not None:
       self.simulation.controller_patch_panel.block_controller_pair(cid1, cid2)
     else:
       (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
                     for cid in [cid1, cid2] ]
       c1.block_peer(c2)
-    self._log_input_event(BlockControllerPair(cid1, cid2))
 
   def unblock_controller_traffic(self, cid1, cid2):
     ''' Stop dropping messages sent from controller 1 to controller 2 '''
+    self._log_input_event(UnblockControllerPair(cid1, cid2))
     if self.simulation.controller_patch_panel is not None:
       self.simulation.controller_patch_panel.unblock_controller_pair(cid1, cid2)
     else:
       (c1, c2) = [ self.simulation.controller_manager.get_controller(cid)
                     for cid in [cid1, cid2] ]
       c1.unblock_peer(c2)
-    self._log_input_event(UnblockControllerPair(cid1, cid2))
 
   # TODO(cs): add support for control channel blocking + link,
   # controller failures, openflow buffering
