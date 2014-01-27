@@ -9,18 +9,27 @@
 
 require 'json'
 
-replay_number = 0
+replay_number = -1
 replay_to_violation = {}
+unknown_replay_results = []
 
 File.foreach(ARGV[0]) do |line|
-  if line =~ /Current subset:/
+  if line =~ /Sleeping/ # /Current subset:/
     replay_number += 1
+    unknown_replay_results << replay_number
   end
   if line =~ /No violation in/
-    replay_to_violation[replay_number] = false
+    unknown_replay_results.each do |i|
+      replay_to_violation[i] = false
+    end
+    unknown_replay_results = []
   end
   if line =~ /Violation!/
     replay_to_violation[replay_number] = true
+    unknown_replay_results.each do |i|
+      replay_to_violation[i] = false unless i == replay_number
+    end
+    unknown_replay_results = []
   end
 end
 
