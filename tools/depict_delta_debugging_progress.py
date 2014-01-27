@@ -28,15 +28,30 @@ class InterReplayDirectory(object):
   def __repr__(self):
     return self.dir_str
 
-def format_trace(label, trace, full_trace):
-  row = [label, len(trace.input_events)]
-  isect = set(trace.input_events).intersection(set(full_trace.input_events))
-  for input_event in full_trace.input_events:
-    if input_event in isect:
-      row.append(1)
-    else:
-      row.append(0)
-  return row
+
+class TraceFormatter(object):
+  def __init__(self, full_trace):
+    self.full_trace = full_trace
+    self.all_input_events = set(full_trace.input_events)
+    self.input_to_round_eliminated = {}
+
+  def format_trace(self, label, trace):
+    ''' Assumes that subsequences are processed in-order, and that each
+    given subsequence resulted in a violation '''
+    row = [label, len(trace.input_events)]
+    isect = set(trace.input_events).intersection(self.all_input_events)
+    for i, input_event in enumerate(self.full_trace.input_events):
+      if input_event in isect:
+        row.append(1)
+      else:
+        # An input is eliminated the first time a trace that does not include
+        # it triggers a bug
+        if i not in self.input_to_round_eliminated:
+          self.input_to_round_eliminated[i] = label
+        row.append(0)
+    mcs_size = len(self.all_input_events) - len(self.input_to_round_eliminated)
+    row.insert(2, mcs_size)
+    return row
 
 def main(args):
   # Grab JSON of which subsequences triggered a bug.
@@ -51,15 +66,17 @@ def main(args):
   repro_dir = subsequence_dirs.pop(0)
   assert(os.path.basename(str(repro_dir)) == "interreplay_0_reproducibility")
   full_trace = parse_event_trace(str(repro_dir) + "/events.trace")
+  trace_formatter = TraceFormatter(full_trace)
 
   # Now format each subsequence
   columns = []
   columns.append(["subsequence", lambda row: row[0]])
   columns.append(["# inputs", lambda row: row[1]])
+  columns.append(["MCS size", lambda row: row[2]])
   for idx, e in enumerate(full_trace.input_events):
     # See: http://stackoverflow.com/questions/233673/lexical-closures-in-python
     def bind_closure(index):
-      return lambda row: row[index+2]
+      return lambda row: row[index+3]
     columns.append([e.label, bind_closure(idx)])
   t = Tabular(columns)
   rows = []
@@ -67,11 +84,11 @@ def main(args):
     if "_final_mcs_trace" in str(subsequence_dir):
       # Make sure to always print the final MCS
       trace = parse_event_trace(str(subsequence_dir) + "/events.trace")
-      rows.append(format_trace("MCS", trace, full_trace))
+      rows.append(trace_formatter.format_trace("MCS", trace))
     elif replay_idx_to_violation[subsequence_dir.index]:
       # Otherwise only consider subsequences that resulted in a violation
       trace = parse_event_trace(str(subsequence_dir) + "/events.trace")
-      rows.append(format_trace(subsequence_dir.index, trace, full_trace))
+      rows.append(trace_formatter.format_trace(subsequence_dir.index, trace))
 
   t.show(rows)
 
