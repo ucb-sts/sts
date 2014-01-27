@@ -42,7 +42,8 @@ control_flow = Replayer(simulation_config, "%s",
                         wait_on_deterministic_values=%s,
                         allow_unexpected_messages=False,
                         delay_flow_mods=%s,
-                        pass_through_whitelisted_messages=True,
+                        default_dp_permit=False,
+                        pass_through_whitelisted_messages=False,
                         invariant_check_name=%s,
                         bug_signature=%s)
 '''
