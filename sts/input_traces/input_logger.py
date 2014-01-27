@@ -93,6 +93,8 @@ simulation_config = %s
 
 control_flow = EfficientMCSFinder(simulation_config, "%s",
                                   wait_on_deterministic_values=%s,
+                                  default_dp_permit=False,
+                                  pass_through_whitelisted_messages=False,
                                   delay_flow_mods=%s,
                                   invariant_check_name=%s,
                                   bug_signature=%s)
