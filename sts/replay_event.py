@@ -1455,9 +1455,11 @@ class InvariantViolation(SpecialEvent):
   @staticmethod
   def from_json(json_hash):
     (label, time, round) = extract_label_time(json_hash)
-    assert_fields_exist(json_hash, 'violations', 'persistent')
+    assert_fields_exist(json_hash, 'violations')
     violations = json_hash['violations']
-    persistent = json_hash['persistent']
+    persistent = True
+    if 'persistent' in json_hash:
+      persistent = json_hash['persistent']
     return InvariantViolation(violations, label=label, round=round, time=time, persistent=persistent)
 
 all_special_events = [InvariantViolation]
