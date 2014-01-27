@@ -535,7 +535,7 @@ class Fuzzer(ControlFlow):
         if self.random.random() < self.params.traffic_generation_rate:
           if len(host.interfaces) > 0:
             msg.event("Injecting a random packet")
-            traffic_type = self.random.choice(["icmp_ping", "arp_query"])
+            traffic_type = "icmp_ping"
             dp_event = self.traffic_generator.generate_and_inject(traffic_type, host)
             self._log_input_event(TrafficInjection(dp_event=dp_event))
 
