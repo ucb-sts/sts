@@ -91,7 +91,7 @@ class SnapshotPeeker(Peeker):
                        '''in play_forward()''')
     kwargs['default_dp_permit'] = True
     if 'pass_through_whitelisted_messages' not in kwargs:
-      kwargs['pass_through_whitelisted_messages'] = True
+      kwargs['pass_through_whitelisted_messages'] = False
     self.kwargs = kwargs
     unknown_kwargs = [ k for k in kwargs.keys() if k not in Replayer.kwargs ]
     if unknown_kwargs != []:

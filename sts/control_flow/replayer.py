@@ -68,7 +68,7 @@ class Replayer(ControlFlow):
                end_in_interactive=False, input_logger=None,
                allow_unexpected_messages=False,
                expected_message_round_window=3,
-               pass_through_whitelisted_messages=True,
+               pass_through_whitelisted_messages=False,
                delay_flow_mods=False, invariant_check_name="",
                bug_signature="", end_wait_seconds=0.5,
                transform_dag=None, pass_through_sends=False,
