@@ -563,8 +563,8 @@ class Interactive(ControlFlow):
     if not dp_event:
       return
     if self.simulation.topology.ok_to_send(dp_event):
-      self.simulation.patch_panel.permit_dp_event(dp_event)
       self._log_input_event(DataplanePermit(dp_event.fingerprint))
+      self.simulation.patch_panel.permit_dp_event(dp_event)
       self._forwarded_this_step += 1
     else:
       print "Not ready to send event %s" % event
@@ -573,10 +573,10 @@ class Interactive(ControlFlow):
     dp_event = self._select_dataplane_event(event)
     if not dp_event:
       return
-    self.simulation.patch_panel.drop_dp_event(dp_event)
     self._log_input_event(DataplaneDrop(dp_event.fingerprint,
                                         host_id=dp_event.get_host_id(),
                                         dpid=dp_event.get_switch_id()))
+    self.simulation.patch_panel.drop_dp_event(dp_event)
 
   def dataplane_delay(self, event=None):
     dp_event = self._select_dataplane_event(event)
