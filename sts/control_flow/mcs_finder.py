@@ -273,7 +273,7 @@ class MCSFinder(ControlFlow):
       violation = self._check_violation(new_dag, i, label)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
-        self.mcs_log_tracker.maybe_dump_intermediate_mcs(new_dag,
+        self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned,
                                                          subset_label(label), self)
 
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
@@ -301,7 +301,7 @@ class MCSFinder(ControlFlow):
       violation = self._check_violation(new_dag, i, label)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
-        self.mcs_log_tracker.maybe_dump_intermediate_mcs(new_dag,
+        self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned,
                                                          subset_label(label), self)
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         return self._ddmin(new_dag, max(split_ways - 1, 2),
@@ -513,7 +513,7 @@ class EfficientMCSFinder(MCSFinder):
       if violation:
         self.log("Violation found in %dth half. Recursing" % i)
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
-        self.mcs_log_tracker.maybe_dump_intermediate_mcs(new_dag, "", self)
+        self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned, new_dag, "", self)
         return self._ddmin(new_dag, carryover_inputs,
                            recursion_level=recursion_level+1,
                            label_prefix=prefix,
@@ -562,7 +562,7 @@ class MCSLogTracker(object):
     self.mcs_trace_path = mcs_trace_path
     self.simulation_cfg = simulation_cfg
     self.peeker_exists = peeker_exists
-    self.min_size = sys.maxint
+    self.max_inputs_pruned = 0
     self.count = 0
     self.runtime_stats = runtime_stats
     self.runtime_stats.set_peeker(self.peeker_exists)
@@ -578,10 +578,10 @@ class MCSLogTracker(object):
     runtime_stats.ambiguous_events = dict(Peeker.ambiguous_events)
     runtime_stats.write_runtime_stats()
 
-  def maybe_dump_intermediate_mcs(self, dag, label, control_flow):
-    if len(dag.events) < self.min_size:
+  def maybe_dump_intermediate_mcs(self, total_inputs_pruned, dag, label, control_flow):
+    if total_inputs_pruned > self.max_inputs_pruned:
       # Only dump if MCS decreases in size
-      self.min_size = len(dag.events)
+      self.max_inputs_pruned = total_inputs_pruned
       self.count += 1
       dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self.count, label.replace("/", "_")))
       create_clean_python_dir(dst)
