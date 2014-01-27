@@ -268,8 +268,8 @@ class Interactive(ControlFlow):
       self._input_logger.open(results_dir)
 
   def default_connect_to_controllers(self, simulation):
-    simulation.connect_to_controllers()
     self._log_input_event(ConnectToControllers())
+    simulation.connect_to_controllers()
 
   def simulate(self, simulation=None, boot_controllers=default_boot_controllers,
                connect_to_controllers=None,
@@ -388,8 +388,8 @@ class Interactive(ControlFlow):
     c = cm.get_controller_by_label(label)
     if c:
       print "Killing controller: %s %s" % (label, repr(c))
-      cm.kill_controller(c)
       self._log_input_event(ControllerFailure(c.cid))
+      cm.kill_controller(c)
     else:
       print "Controller with label %s not found" %label
 
@@ -398,8 +398,8 @@ class Interactive(ControlFlow):
     c = cm.get_controller_by_label(label)
     if c:
       print "Killing controller: %s %s" % (label, repr(c))
-      cm.reboot_controller(c)
       self._log_input_event(ControllerRecovery(c.cid))
+      cm.reboot_controller(c)
     else:
       print "Controller with label %s not found" %label
 
