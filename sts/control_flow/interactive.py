@@ -472,8 +472,9 @@ class Interactive(ControlFlow):
   # TODO(cs): ripped directly from fuzzer. Redundant!
   def _send_initialization_packet(self, host, send_to_self=False):
     traffic_type = "icmp_ping"
-    dp_event = self.traffic_generator.generate_and_inject(traffic_type, host, send_to_self=send_to_self)
+    (dp_event, send) = self.traffic_generator.generate(traffic_type, host, send_to_self=send_to_self)
     self._log_input_event(TrafficInjection(dp_event=dp_event, host_id=host.hid))
+    send()
 
   def show_flow_table(self, dpid=None):
     topology = self.simulation.topology
@@ -541,9 +542,10 @@ class Interactive(ControlFlow):
        (to_hid not in self.simulation.topology.hid2host.keys()):
       print "Unknown host %s" % to_hid
       return
-    dp_event = self.traffic_generator.generate_and_inject("icmp_ping", from_hid, to_hid,
+    (dp_event, send) = self.traffic_generator.generate("icmp_ping", from_hid, to_hid,
                                     payload_content=raw_input("Enter payload content:\n"))
     self._log_input_event(TrafficInjection(dp_event=dp_event))
+    send()
 
   def _select_dataplane_event(self, sel=None):
     queued = self.simulation.patch_panel.queued_dataplane_events

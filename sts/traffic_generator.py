@@ -71,9 +71,9 @@ class TrafficGenerator (object):
     e.payload = i
     return e
 
-  def generate_and_inject(self, packet_type, src_host=None, dst_host=None,
-                          send_to_self=False, payload_content=None):
-    ''' Generate a packet, have the source host send it, and return the corresponding event '''
+  def generate(self, packet_type, src_host=None, dst_host=None,
+               send_to_self=False, payload_content=None):
+    ''' Generate a packet, return a function to have source host send it, and return the corresponding event '''
     if packet_type not in self._packet_generators:
       raise AttributeError("Unknown event type %s" % str(packet_type))
     if self.topology is None:
@@ -88,8 +88,9 @@ class TrafficGenerator (object):
 
     packet = self._packet_generators[packet_type](src_interface, dst_interface,
                                                   payload_content=payload_content)
-    src_host.send(src_interface, packet)
-    return DataplaneEvent(src_interface, packet)
+    def send():
+      src_host.send(src_interface, packet)
+    return (DataplaneEvent(src_interface, packet), send)
 
   def _choose_host(self, host, hosts):
     '''

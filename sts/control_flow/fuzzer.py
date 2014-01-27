@@ -234,8 +234,8 @@ class Fuzzer(ControlFlow):
 
     try:
       # Always connect to controllers explicitly
-      self.simulation.connect_to_controllers()
       self._log_input_event(ConnectToControllers())
+      self.simulation.connect_to_controllers()
 
       if self.delay_startup:
         # Wait until the first OpenFlow message is received
@@ -295,8 +295,9 @@ class Fuzzer(ControlFlow):
 
   def _send_initialization_packet(self, host, send_to_self=False):
     traffic_type = "icmp_ping" if send_to_self else "arp_query"
-    dp_event = self.traffic_generator.generate_and_inject(traffic_type, host, send_to_self=send_to_self)
+    (dp_event, send) = self.traffic_generator.generate(traffic_type, host, send_to_self=send_to_self)
     self._log_input_event(TrafficInjection(dp_event=dp_event, host_id=host.hid))
+    send()
 
   def _send_initialization_packets(self, send_to_self=False):
     for host in self.simulation.topology.hosts:
@@ -374,14 +375,14 @@ class Fuzzer(ControlFlow):
   def check_dataplane(self, pass_through=False):
     ''' Decide whether to delay, drop, or deliver packets '''
     def drop(dp_event, log_event=True):
-      self.simulation.patch_panel.drop_dp_event(dp_event)
       if log_event:
         self._log_input_event(DataplaneDrop(dp_event.fingerprint,
                                             host_id=dp_event.get_host_id(),
                                           dpid=dp_event.get_switch_id()))
+      self.simulation.patch_panel.drop_dp_event(dp_event)
     def permit(dp_event):
-      self.simulation.patch_panel.permit_dp_event(dp_event)
       self._log_input_event(DataplanePermit(dp_event.fingerprint))
+      self.simulation.patch_panel.permit_dp_event(dp_event)
 
     def in_whitelist(dp_event):
       return (self.never_drop_whitelisted_packets and
@@ -407,43 +408,45 @@ class Fuzzer(ControlFlow):
       live_controllers = self.simulation.controller_manager.live_controllers
       if live_controllers != []:
         c = self.random.choice(list(live_controllers))
-        c.sync_connection.send_link_notification(attrs)
         self._log_input_event(LinkDiscovery(c.cid, attrs))
+        c.sync_connection.send_link_notification(attrs)
 
   def check_tcp_connections(self):
     ''' Decide whether to block or unblock control channels '''
     for (switch, connection) in self.simulation.topology.unblocked_controller_connections:
       if self.random.random() < self.params.controlplane_block_rate:
-        self.simulation.topology.block_connection(connection)
         self._log_input_event(ControlChannelBlock(switch.dpid,
                               connection.get_controller_id()))
+        self.simulation.topology.block_connection(connection)
 
     for (switch, connection) in self.simulation.topology.blocked_controller_connections:
       if self.random.random() < self.params.controlplane_unblock_rate:
-        self.simulation.topology.unblock_connection(connection)
         self._log_input_event(ControlChannelUnblock(switch.dpid,
                               controller_id=connection.get_controller_id()))
+        self.simulation.topology.unblock_connection(connection)
 
   def check_pending_messages(self, pass_through=False):
     for pending_receipt in self.simulation.openflow_buffer.pending_receives():
       # TODO(cs): this is a really dumb way to fuzz packet receipt scheduling
       if (self.random.random() < self.params.ofp_message_receipt_rate or
           pass_through):
-        message = self.simulation.openflow_buffer.schedule(pending_receipt)
+        message = self.simulation.openflow_buffer.get_message_receipt(pending_receipt)
         b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                     pending_receipt.controller_id,
                                                     pending_receipt.fingerprint,
                                                     b64_packet=b64_packet))
+        self.simulation.openflow_buffer.schedule(pending_receipt)
     for pending_send in self.simulation.openflow_buffer.pending_sends():
       if (self.random.random() < self.params.ofp_message_send_rate or
           pass_through):
-        message = self.simulation.openflow_buffer.schedule(pending_send)
+        message = self.simulation.openflow_buffer.get_message_send(pending_send)
         b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageSend(pending_send.dpid,
                                                  pending_send.controller_id,
                                                  pending_send.fingerprint,
                                                  b64_packet=b64_packet))
+        self.simulation.openflow_buffer.schedule(pending_send)
 
   def check_pending_commands(self):
     ''' If Fuzzer is configured to delay flow mods, this decides whether
@@ -455,12 +458,12 @@ class Fuzzer(ControlFlow):
         if switch.has_pending_commands() and (self.random.random() < self.params.ofp_cmd_passthrough_rate):
           (cmd, pending_receipt) = switch.get_next_command()
           eventclass = ProcessFlowMod
-          switch.process_delayed_command(pending_receipt)
           b64_packet = base64_encode(cmd)
           self._log_input_event(eventclass(pending_receipt.dpid,
                                            pending_receipt.controller_id,
                                            pending_receipt.fingerprint,
                                            b64_packet=b64_packet))
+          switch.process_delayed_command(pending_receipt)
 
   def check_switch_crashes(self):
     ''' Decide whether to crash or restart switches, links and controllers '''
@@ -469,8 +472,8 @@ class Fuzzer(ControlFlow):
       for software_switch in list(self.simulation.topology.live_switches):
         if self.random.random() < self.params.switch_failure_rate:
           crashed_this_round.add(software_switch)
-          self.simulation.topology.crash_switch(software_switch)
           self._log_input_event(SwitchFailure(software_switch.dpid))
+          self.simulation.topology.crash_switch(software_switch)
       return crashed_this_round
 
     def restart_switches(crashed_this_round):
@@ -486,11 +489,14 @@ class Fuzzer(ControlFlow):
             down_controller_ids = [ c.cid for c in self.simulation.controller_manager.controllers\
                                     if c.state == ControllerState.STARTING or\
                                        c.state == ControllerState.DEAD ]
+          self._log_input_event(SwitchRecovery(software_switch.dpid))
           connected = self.simulation.topology\
                           .recover_switch(software_switch,
                                           down_controller_ids=down_controller_ids)
-          if connected:
-            self._log_input_event(SwitchRecovery(software_switch.dpid))
+          if not connected:
+            raise RuntimeError('''Switch was not able to connect. Down '''
+                               '''controllers != actually down controllers? %s''' %
+                               str(down_controller_ids))
 
     crashed_this_round = crash_switches()
     try:
@@ -505,12 +511,12 @@ class Fuzzer(ControlFlow):
       for link in list(self.simulation.topology.live_links):
         if self.random.random() < self.params.link_failure_rate:
           cut_this_round.add(link)
-          self.simulation.topology.sever_link(link)
           self._log_input_event(LinkFailure(
                                 link.start_software_switch.dpid,
                                 link.start_port.port_no,
                                 link.end_software_switch.dpid,
                                 link.end_port.port_no))
+          self.simulation.topology.sever_link(link)
       return cut_this_round
 
     def repair_links(cut_this_round):
@@ -518,12 +524,12 @@ class Fuzzer(ControlFlow):
         if link in cut_this_round:
           continue
         if self.random.random() < self.params.link_recovery_rate:
-          self.simulation.topology.repair_link(link)
           self._log_input_event(LinkRecovery(
                                 link.start_software_switch.dpid,
                                 link.start_port.port_no,
                                 link.end_software_switch.dpid,
                                 link.end_port.port_no))
+          self.simulation.topology.repair_link(link)
 
     cut_this_round = sever_links()
     repair_links(cut_this_round)
@@ -536,8 +542,9 @@ class Fuzzer(ControlFlow):
           if len(host.interfaces) > 0:
             msg.event("Injecting a random packet")
             traffic_type = "icmp_ping"
-            dp_event = self.traffic_generator.generate_and_inject(traffic_type, host)
+            (dp_event, send) = self.traffic_generator.generate(traffic_type, host)
             self._log_input_event(TrafficInjection(dp_event=dp_event))
+            send()
 
   def check_controllers(self):
     def crash_controllers():
@@ -545,8 +552,8 @@ class Fuzzer(ControlFlow):
       for controller in self.simulation.controller_manager.live_controllers:
         if self.random.random() < self.params.controller_crash_rate:
           crashed_this_round.add(controller)
-          controller.kill()
           self._log_input_event(ControllerFailure(controller.cid))
+          controller.kill()
       return crashed_this_round
 
     def reboot_controllers(crashed_this_round):
@@ -554,8 +561,8 @@ class Fuzzer(ControlFlow):
         if controller in crashed_this_round:
           continue
         if self.random.random() < self.params.controller_recovery_rate:
-          controller.restart()
           self._log_input_event(ControllerRecovery(controller.cid))
+          controller.restart()
 
     crashed_this_round = crash_controllers()
     reboot_controllers(crashed_this_round)
@@ -572,15 +579,15 @@ class Fuzzer(ControlFlow):
           new_port_no = max(new_switch.ports.keys()) + 1
           msg.event("Migrating host %s, New switch %s, New port %s" %
                     (str(access_link.host),str(new_switch_dpid),str(new_port_no)))
-          self.simulation.topology.migrate_host(old_ingress_dpid,
-                                                old_ingress_port_no,
-                                                new_switch_dpid,
-                                                new_port_no)
           self._log_input_event(HostMigration(old_ingress_dpid,
                                               old_ingress_port_no,
                                               new_switch_dpid,
                                               new_port_no,
                                               access_link.host.hid))
+          self.simulation.topology.migrate_host(old_ingress_dpid,
+                                                old_ingress_port_no,
+                                                new_switch_dpid,
+                                                new_port_no)
           self._send_initialization_packet(access_link.host, send_to_self=True)
 
   def check_intracontroller_blocks(self):
@@ -593,6 +600,7 @@ class Fuzzer(ControlFlow):
       msg.event("Unblocking controllers %s, %s" % (cid1, cid2))
       blocked_this_round = (cid1, cid2)
       self.unblocked_controller_pairs.remove((cid1, cid2))
+      self._log_input_event(BlockControllerPair(cid1, cid2))
       if self.simulation.controller_patch_panel is not None:
         self.simulation.controller_patch_panel.block_controller_pair(cid1, cid2)
       else:
@@ -600,7 +608,6 @@ class Fuzzer(ControlFlow):
                       for cid in [cid1, cid2] ]
         c1.block_peer(c2)
         c2.block_peer(c1)
-      self._log_input_event(BlockControllerPair(cid1, cid2))
 
     if (len(self.blocked_controller_pairs) > 0 and
         self.random.random() < self.params.intracontroller_unblock_rate):
@@ -608,6 +615,7 @@ class Fuzzer(ControlFlow):
       msg.event("Blocking controllers %s, %s" % (cid1, cid2))
       self.blocked_controller_pairs.remove((cid1, cid2))
       self.unblocked_controller_pairs.append((cid1, cid2))
+      self._log_input_event(UnblockControllerPair(cid1, cid2))
       if self.simulation.controller_patch_panel is not None:
         self.simulation.controller_patch_panel.unblock_controller_pair(cid1, cid2)
       else:
@@ -615,7 +623,6 @@ class Fuzzer(ControlFlow):
                       for cid in [cid1, cid2] ]
         c1.unblock_peer(c2)
         c2.unblock_peer(c1)
-      self._log_input_event(UnblockControllerPair(cid1, cid2))
 
     if blocked_this_round is not None:
       self.blocked_controller_pairs.append(blocked_this_round)

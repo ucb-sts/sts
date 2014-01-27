@@ -125,6 +125,12 @@ class OpenFlowBuffer(EventMixin):
     '''
     return pending_message in self.pendingsend2conn_messages
 
+  def get_message_receipt(self, pending_message):
+    return self.pendingreceive2conn_messages[pending_message][0][1]
+
+  def get_message_send(self, pending_message):
+    return self.pendingsend2conn_messages[pending_message][0][1]
+
   def schedule(self, pending_message):
     '''
     Cause the switch to process the pending message associated with
