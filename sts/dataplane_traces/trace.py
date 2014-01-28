@@ -70,6 +70,14 @@ class Trace(object):
         raise RuntimeError("Dataplane trace does not type check (%s)" %
                            str(dp_event.interface))
 
+  def peek(self):
+    if len(self.dataplane_trace) == 0:
+      log.warn("No more trace inputs to inject!")
+      return None
+    dp_event = self.dataplane_trace[0]
+    host = self.interface2host[dp_event.interface]
+    return (dp_event, host)
+
   def inject_trace_event(self):
     if len(self.dataplane_trace) == 0:
       log.warn("No more trace inputs to inject!")

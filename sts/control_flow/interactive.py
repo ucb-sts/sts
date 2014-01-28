@@ -528,8 +528,11 @@ class Interactive(ControlFlow):
 
   def dataplane_trace_feed(self):
     if self.simulation.dataplane_trace:
-      (dp_event, host) = self.simulation.dataplane_trace.inject_trace_event()
-      self._log_input_event(TrafficInjection(dp_event=dp_event, host=host.hid))
+      (dp_event, host) = self.simulation.dataplane_trace.peek()
+      if dp_event is not None:
+        self._log_input_event(TrafficInjection(dp_event=dp_event,
+                                               host_id=host.hid))
+        self.simulation.dataplane_trace.inject_trace_event()
     else:
       print "No dataplane trace to inject from."
 
