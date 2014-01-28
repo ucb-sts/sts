@@ -45,16 +45,16 @@ def split_list(l, split_ways):
   return splits
 
 class AtomicInput(object):
-  def __init__(self, failure, recovery):
+  def __init__(self, failure, *recoveries):
     self.failure = failure
-    self.recovery = recovery
+    self.recoveries = recoveries
 
   @property
   def label(self):
-    return "a(%s,%s)" % (self.failure.label, self.recovery.label,)
+    return "a(%s,%s)" % (self.failure.label, [ r.label for r in self.recoveries ])
 
   def __repr__(self):
-    return "AtomicInput:%r%r" % (self.failure, self.recovery)
+    return "AtomicInput:%r%r" % (self.failure, self.recoveries)
 
 class EventDagView(object):
   def __init__(self, parent, events_list):
@@ -204,11 +204,12 @@ class EventDag(object):
         continue
 
       if type(e) in self._failure_types and e.dependent_labels != []:
-        if len(e.dependent_labels) != 1:
-          raise RuntimeError("Not expected to have more than one dependent label")
-        recovery = self._label2event[e.dependent_labels[0]]
-        skipped_recoveries.add(recovery)
-        atomic_inputs.append(AtomicInput(e, recovery))
+        recoveries = []
+        for label in e.dependent_labels:
+          recovery = self._label2event[label]
+          skipped_recoveries.add(recovery)
+          recoveries.append(recovery)
+        atomic_inputs.append(AtomicInput(e, recoveries))
       else:
         atomic_inputs.append(e)
     return atomic_inputs
@@ -218,7 +219,8 @@ class EventDag(object):
     for e in atomic_inputs:
       if type(e) == AtomicInput:
         inputs.append(e.failure)
-        inputs.append(e.recovery)
+        for recovery in e.recoveries:
+          inputs.append(recovery)
       else:
         inputs.append(e)
     inputs.sort(key=lambda e: self._event2idx[e])
