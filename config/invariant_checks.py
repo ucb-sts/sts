@@ -14,15 +14,13 @@ class ComposeChecks(object):
 
 def check_everything(simulation):
   violations = []
-  named_checks = [ (InvariantChecker.check_liveness, "liveness"),
-                   (InvariantChecker.check_loops, "loops"),
-                   (InvariantChecker.python_check_blackholes, "blackholes"),
-                   (InvariantChecker.check_connectivity, "connectivity"),
-                   (check_for_invalid_ports, "invalid_ports") ]
-  for check, name in checks:
-    violation = check(simulation)
-    if violation != []:
-      violations += (name, violation)
+  checks = [ InvariantChecker.check_liveness,
+             InvariantChecker.check_loops,
+             InvariantChecker.python_check_blackholes,
+             InvariantChecker.check_connectivity,
+             check_for_invalid_ports ]
+  for check in checks:
+    violations += check(simulation)
   violations = list(set(violations))
   return violations
 
