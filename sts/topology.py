@@ -633,8 +633,8 @@ class Topology(object):
     if down_controller_ids is None:
       down_controller_ids = set()
     if software_switch not in self.failed_switches:
-      raise RuntimeError("Switch %s not currently down. (Currently down: %s)" %
-                         (str(software_switch), str(self.failed_switches)))
+      log.warn("Switch %s not currently down. (Currently down: %s)" %
+                (str(software_switch), str(self.failed_switches)))
     connected_to_at_least_one = software_switch\
                                  .recover(down_controller_ids=down_controller_ids)
     if connected_to_at_least_one:
