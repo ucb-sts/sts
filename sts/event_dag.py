@@ -45,7 +45,7 @@ def split_list(l, split_ways):
   return splits
 
 class AtomicInput(object):
-  def __init__(self, failure, *recoveries):
+  def __init__(self, failure, recoveries):
     self.failure = failure
     self.recoveries = recoveries
 
