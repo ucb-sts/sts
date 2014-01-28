@@ -104,7 +104,7 @@ class SnapshotPeeker(Peeker):
     # ConnectionToControllers is an input event, which we peek() for like
     # any other input event.
     simulation = self.simulation_cfg.bootstrap(ReplaySyncCallback(None))
-    simulation.openflow_buffer.pass_through_whitelisted_messages = self.kwargs['pass_through_whitelisted_messages']
+    simulation.openflow_buffer.pass_through_whitelisted_packets = self.kwargs['pass_through_whitelisted_messages']
     controller = simulation.controller_manager.controllers[0]
     return (simulation, controller)
 

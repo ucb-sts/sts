@@ -222,7 +222,7 @@ class Replayer(ControlFlow):
     self.simulation.fail_to_interactive = self.fail_to_interactive
     self.simulation.fail_to_interactive_on_persistent_violations =\
       self.fail_to_interactive_on_persistent_violations
-    self.simulation.openflow_buffer.pass_through_whitelisted_messages =\
+    self.simulation.openflow_buffer.pass_through_whitelisted_packets =\
       self.pass_through_whitelisted_messages
     if self.pass_through_sends:
       self.set_pass_through_sends(self.simulation)

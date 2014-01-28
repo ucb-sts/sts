@@ -157,6 +157,9 @@ class InternalEvent(Event):
                                         prunable=prunable)
     self.timeout_disallowed = timeout_disallowed
 
+  def whitelisted(self):
+    return False
+
   def proceed(self, simulation):
     # There might be nothing happening for certain internal events, so default
     # to just doing nothing for proceed (i.e. proceeding automatically).
@@ -1076,8 +1079,6 @@ class ControlMessageReceive(ControlMessageBase):
   '''
   def proceed(self, simulation):
     pending_receive = self.pending_receive
-    if self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_receive.fingerprint):
-      return True
     message_waiting = simulation.openflow_buffer.message_receipt_waiting(pending_receive)
     if message_waiting:
       if log.getEffectiveLevel() == logging.DEBUG and type(base64_decode_openflow(self.b64_packet)) == ofp_flow_mod:
@@ -1085,6 +1086,10 @@ class ControlMessageReceive(ControlMessageBase):
       simulation.openflow_buffer.schedule(pending_receive)
       return True
     return False
+
+  def whitelisted(self):
+    pending_receive = self.pending_receive
+    return self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_receive.fingerprint)
 
   @property
   def pending_receive(self):
@@ -1119,14 +1124,16 @@ class ControlMessageSend(ControlMessageBase):
   '''
   def proceed(self, simulation):
     pending_send = self.pending_send
-    if (self.pass_through_sends or
-        (self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_send.fingerprint))):
-      return True
     message_waiting = simulation.openflow_buffer.message_send_waiting(pending_send)
     if message_waiting:
       simulation.openflow_buffer.schedule(pending_send)
       return True
     return False
+
+  def whitelisted(self):
+    pending_send = self.pending_send
+    return (self.pass_through_sends or
+        (self.ignore_whitelisted_packets and OpenFlowBuffer.in_whitelist(pending_send.fingerprint)))
 
   @property
   def pending_send(self):
@@ -1349,15 +1356,15 @@ class DataplanePermit(InternalEvent):
     # TODO(cs): passive is a bit of a hack, but this was easier.
     self.passive = passive
 
+  def whitelisted(self):
+    return self.passive
+
   def proceed(self, simulation):
-    if self.passive:
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1:])
+    if dp_event is not None:
+      simulation.patch_panel.permit_dp_event(dp_event)
       return True
-    else:
-      dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1:])
-      if dp_event is not None:
-        simulation.patch_panel.permit_dp_event(dp_event)
-        return True
-      return False
+    return False
 
   @property
   def fingerprint(self):

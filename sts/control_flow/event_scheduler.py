@@ -161,7 +161,10 @@ class EventScheduler(EventSchedulerBase):
     if isinstance(event, InputEvent):
       self.inject_input(event)
     elif isinstance(event, InternalEvent):
-      self.wait_for_internal(event)
+      if event.whitelisted():
+        self.delay_whitelisted_internal_event(event)
+      else:
+        self.wait_for_internal(event)
     self.update_event_time(event)
     self._log_event(event)
 
@@ -178,6 +181,15 @@ class EventScheduler(EventSchedulerBase):
     # is in the past... Andi, can you verify this?
     end = event.time.as_float()
     self._poll_event(event, end)
+
+  def delay_whitelisted_internal_event(self, event):
+    wait_time_seconds = self.wait_time(event)
+    log.debug("Event whitelisted %s, just delaying until predicted time %.0f ms)" %
+          ( repr(event).replace("\n", ""), wait_time_seconds * 1000) )
+    self.simulation.io_master.sleep(wait_time_seconds)
+    self.stats.event_matched(event)
+    self.update_event_time(event)
+    event.replay_time = SyncTime.now()
 
   def wait_for_internal(self, event):
     wait_time_seconds = self.wait_time(event)
