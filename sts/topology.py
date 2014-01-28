@@ -835,7 +835,7 @@ class MeshTopology(Topology):
 class FatTree (Topology):
   ''' Construct a FatTree topology with a given number of pods '''
   def __init__(self, num_pods=4, create_io_worker=None, gui=False,
-               use_portland_addressing=True, ip_format_str="10.%d.%d.255"):
+               use_portland_addressing=True, ip_format_str="123.123..%d.%d"):
     ''' If not use_portland_addressing, use a format string for assigning
         IP addresses to hosts. Takes two digits to be interpolated, the switch
         dpid and the port number.
