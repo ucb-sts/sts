@@ -201,12 +201,8 @@ class MCSFinder(ControlFlow):
     self._track_iteration_size(total_inputs_pruned)
     self.dag = dag
 
-    self.log("=== Total replays: %d ===" % self._runtime_stats.total_replays)
     self._runtime_stats.record_prune_end()
     self.mcs_log_tracker.dump_runtime_stats()
-    self.log("Final MCS (%d elements):" % len(self.dag.input_events))
-    for i in self.dag.input_events:
-      self.log(" - %s" % str(i))
 
     if self.replay_final_trace:
       #  Replaying the final trace achieves two goals:
@@ -230,6 +226,11 @@ class MCSFinder(ControlFlow):
                    '''parameter in your config file (e.g. max_replays_per_subsequence=10)\n'''
                    '''If that still doesn't work, see tools/visualization/visualize1D.html '''
                    '''for debugging''')
+
+    self.log("=== Total replays: %d ===" % self._runtime_stats.total_replays)
+    self.log("Final MCS (%d elements):" % len(self.dag.input_events))
+    for i in self.dag.input_events:
+      self.log(" - %s" % str(i))
 
     # N.B. dumping the MCS trace must occur after the final replay trace,
     # since we need to infer which events will time out for events.trace.notimeouts
