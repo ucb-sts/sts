@@ -752,7 +752,7 @@ class Topology(object):
 
 class MeshTopology(Topology):
   def __init__(self, num_switches=3, create_io_worker=None, netns_hosts=False,
-               gui=False, ip_format_str="10.%d.%d.2"):
+               gui=False, ip_format_str="123.123.%d.%d"):
     '''
     Populate the topology as a mesh of switches, connect the switches
     to the controllers
