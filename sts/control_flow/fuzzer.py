@@ -494,9 +494,9 @@ class Fuzzer(ControlFlow):
                           .recover_switch(software_switch,
                                           down_controller_ids=down_controller_ids)
           if not connected:
-            raise RuntimeError('''Switch was not able to connect. Down '''
-                               '''controllers != actually down controllers? %s''' %
-                               str(down_controller_ids))
+            log.warn('''Switch %s was not able to connect. Down '''
+                     '''controllers != actually down controllers? %s''' %
+                     (str(software_switch), str(down_controller_ids)))
 
     crashed_this_round = crash_switches()
     try:
