@@ -19,7 +19,7 @@ def check_everything(simulation):
                    (InvariantChecker.python_check_blackholes, "blackholes"),
                    (InvariantChecker.check_connectivity, "connectivity"),
                    (check_for_invalid_ports, "invalid_ports") ]
-  for check, name in named_checks:
+  for check, name in checks:
     violation = check(simulation)
     if violation != []:
       violations += (name, violation)
