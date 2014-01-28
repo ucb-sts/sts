@@ -22,7 +22,7 @@ def check_everything(simulation):
   for check, name in named_checks:
     violation = check(simulation)
     if violation != []:
-      violations += (name, violation)
+      violations += str((name, violation))
   violations = list(set(violations))
   return violations
 
