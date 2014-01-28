@@ -51,7 +51,7 @@ class Replayer(ControlFlow):
   # Interpolated time parameter. *not* the event scheduling epsilon:
   time_epsilon_microseconds = 500
 
-  kwargs = set(['create_event_scheduler', 'print_buffers',
+  kwargs = EventScheduler.kwargs | set(['create_event_scheduler', 'print_buffers',
                 'wait_on_deterministic_values', 'default_dp_permit',
                 'fail_to_interactive', 'fail_to_interactive_on_persistent_violations',
                 'end_in_interactive', 'input_logger',
