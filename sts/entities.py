@@ -484,10 +484,11 @@ class Link (object):
   def __eq__(self, other):
     if not type(other) == Link:
       return False
-    return (self.start_software_switch == other.start_software_switch and
-            self.start_port == other.start_port and
-            self.end_software_switch == other.end_software_switch and
-            self.end_port == other.end_port)
+    ret = (self.start_software_switch.dpid == other.start_software_switch.dpid and
+            self.start_port.port_no == other.start_port.port_no and
+            self.end_software_switch.dpid == other.end_software_switch.dpid and
+            self.end_port.port_no == other.end_port.port_no)
+    return ret
 
   def __ne__(self, other):
     # NOTE: __ne__ in python does *NOT* by default delegate to eq
@@ -495,8 +496,8 @@ class Link (object):
 
 
   def __hash__(self):
-    return (self.start_software_switch.__hash__() +  self.start_port.__hash__() +
-           self.end_software_switch.__hash__() +  self.end_port.__hash__())
+    return (self.start_software_switch.dpid.__hash__() +  self.start_port.port_no.__hash__() +
+           self.end_software_switch.dpid.__hash__() +  self.end_port.port_no.__hash__())
 
   def __repr__(self):
     return "(%d:%d) -> (%d:%d)" % (self.start_software_switch.dpid, self.start_port.port_no,
