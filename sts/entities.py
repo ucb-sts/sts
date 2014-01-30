@@ -1238,7 +1238,7 @@ class BigSwitchController(VMController):
 
 class ONOSController(VMController):
   def __init__(self, controller_config, sync_connection_manager,
-               snapshot_service, username="openflow", password="openflow"):
+               snapshot_service, username="mininet", password="mininet"):
     super(ONOSController, self).__init__(controller_config,
           sync_connection_manager, snapshot_service,
           username=username, password=password)
