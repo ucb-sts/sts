@@ -2,7 +2,7 @@
 template = """
 # Note you need gnuplot 4.4 for the pdfcairo terminal.
 
-set terminal pdfcairo font "Gill Sans,9" linewidth 4 rounded
+set terminal pdfcairo font "Gill Sans, 20" linewidth 4 rounded
 
 # Line style for axes
 set style line 80 lt rgb "#808080"
