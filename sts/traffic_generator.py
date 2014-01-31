@@ -86,7 +86,8 @@ class TrafficGenerator (object):
     i.srcip = self._choose_ip_addr(src_interface)
     i.dstip = self._choose_ip_addr(dst_interface)
     syn = tcp()
-    syn.SYN = 1
+    syn.SYN = True
+    syn.off = 5
     syn.srcport = self.port_numbers.next()
     syn.dstport = self.port_numbers.next()
     if payload_content == "" or payload_content is None:

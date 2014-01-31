@@ -33,6 +33,7 @@ from pox.lib.packet.icmp import *
 
 from sts.control_flow.base import ControlFlow, RecordingSyncCallback
 from sts.invariant_checker import InvariantChecker
+from config.invariant_checks import check_for_ofp_error
 
 log = logging.getLogger("interactive")
 
@@ -512,6 +513,10 @@ class Interactive(ControlFlow):
       self._log_input_event(CheckInvariants(round=self.logical_time, invariant_check_name="InvariantChecker.check_blackholes"))
       result = InvariantChecker.python_check_blackholes(self.simulation)
       message = "Blackholes: "
+    elif kind == "ofp_errors" or kind == "ofp":
+      self._log_input_event(CheckInvariants(round=self.logical_time, invariant_check_name="check_for_ofp_error"))
+      result = check_for_ofp_error(self.simulation)
+      message = "OFP Errors: "
     else:
       log.warn("Unknown invariant kind...")
       return

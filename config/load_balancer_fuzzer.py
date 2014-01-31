@@ -31,7 +31,10 @@ topology_params = "num_switches=3"
 simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_class=topology_class,
                                      multiplex_sockets=True,
-                                     topology_params=topology_params)
+                                     topology_params=topology_params,
+                                     dataplane_trace="dataplane_traces/load_balancer.trace")
 
-control_flow = Interactive(simulation_config,
-                      input_logger=InputLogger())
+control_flow = Fuzzer(simulation_config, check_interval=3,
+                      halt_on_violation=True,
+                      input_logger=InputLogger(),
+                      invariant_check_name="check_for_ofp_error")
