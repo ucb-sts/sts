@@ -68,9 +68,9 @@ if __name__ == '__main__':
   dat_filename = string.replace(args.input, ".json", ".dat")
 
   title = ""
-  if('prune_duration_seconds' in stats and 'replay_duration_seconds' in stats):
-    title = ("total runtime=%.1fs, original runtime=%.1fs" %
-              (stats["prune_duration_seconds"], stats["replay_duration_seconds"]))
+  #if('prune_duration_seconds' in stats and 'replay_duration_seconds' in stats):
+  #  title = ("total runtime=%.1fs, original runtime=%.1fs" %
+  #            (stats["prune_duration_seconds"], stats["replay_duration_seconds"]))
 
   write_data_file(dat_filename, stats)
   data_info_list = [DataInfo(title="", filename=dat_filename)]
