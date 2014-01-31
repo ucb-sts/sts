@@ -211,17 +211,19 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     self._setConnection(event.connection, event.ofp)
 
   def connect(self, create_connection, down_controller_ids=None,
-              max_backoff_seconds=1024):
+              max_backoff_seconds=1024, controller_infos=None):
     ''' - create_connection is a factory method for creating Connection objects
           which are connected to controllers. Takes a ControllerConfig object
           and a reference to a switch (self) as a parameter
     '''
+    if controller_infos is None:
+      controller_infos = self.controller_info
     # Keep around the connection factory for fail/recovery later
     if down_controller_ids is None:
       down_controller_ids = set()
     self.create_connection = create_connection
     connected_to_at_least_one = False
-    for info in self.controller_info:
+    for info in controller_infos:
       # Don't connect to down controllers
       if info.cid not in down_controller_ids:
         conn = create_connection(info, self,

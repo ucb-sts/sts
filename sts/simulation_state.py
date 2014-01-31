@@ -311,31 +311,30 @@ class Simulation(object):
   def io_master(self):
     return self._io_master
 
+  def create_connection(self, controller_info, switch, max_backoff_seconds=1024):
+    ''' Connect switches to controllers. May raise a TimeoutError '''
+    # TODO(cs): move this into a ConnectionFactory class
+    while controller_info.address == "__address__":
+      log.debug("Waiting for controller address for %s..." % controller_info.label)
+      time.sleep(5)
+    if self.multiplex_sockets:
+      socket_ctor = STSMockSocket
+    else:
+      socket_ctor = socket.socket
+    sock = connect_socket_with_backoff(controller_info.address,
+                                       controller_info.port,
+                                       max_backoff_seconds=max_backoff_seconds,
+                                       socket_ctor=socket_ctor)
+    # Set non-blocking
+    sock.setblocking(0)
+    io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(sock))
+    connection = DeferredOFConnection(io_worker, controller_info.cid, switch.dpid, self.openflow_buffer)
+    return connection
+
   def connect_to_controllers(self):
     ''' Connect all switches to all controllers '''
-
-    def create_connection(controller_info, switch, max_backoff_seconds=1024):
-      ''' Connect switches to controllers. May raise a TimeoutError '''
-      # TODO(cs): move this into a ConnectionFactory class
-      while controller_info.address == "__address__":
-        log.debug("Waiting for controller address for %s..." % controller_info.label)
-        time.sleep(5)
-      if self.multiplex_sockets:
-        socket_ctor = STSMockSocket
-      else:
-        socket_ctor = socket.socket
-      sock = connect_socket_with_backoff(controller_info.address,
-                                         controller_info.port,
-                                         max_backoff_seconds=max_backoff_seconds,
-                                         socket_ctor=socket_ctor)
-      # Set non-blocking
-      sock.setblocking(0)
-      io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(sock))
-      connection = DeferredOFConnection(io_worker, controller_info.cid, switch.dpid, self.openflow_buffer)
-      return connection
-
     self.topology.connect_to_controllers(self.controller_manager.controller_configs,
-                                         create_connection=create_connection)
+                                         create_connection=self.create_connection)
 
   def get_demuxer_for_server_info(self, server_info):
     '''

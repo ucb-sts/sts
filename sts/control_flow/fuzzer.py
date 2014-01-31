@@ -559,15 +559,25 @@ class Fuzzer(ControlFlow):
       return crashed_this_round
 
     def reboot_controllers(crashed_this_round):
+      restarted_this_round = []
       for controller in self.simulation.controller_manager.down_controllers:
         if controller in crashed_this_round:
           continue
         if self.random.random() < self.params.controller_recovery_rate:
           self._log_input_event(ControllerRecovery(controller.cid))
           controller.restart()
+          restarted_this_round.append(controller)
+      return restarted_this_round
 
     crashed_this_round = crash_controllers()
-    reboot_controllers(crashed_this_round)
+    restarted_this_round = reboot_controllers(crashed_this_round)
+    # Make sure to connect any switches that were headless before the
+    # controller rebooted
+    for controller in restarted_this_round:
+      for sw in self.simulation.topology.switches:
+        if controller.config in sw.controller_info:
+          sw.connect(self.simulation.create_connection,
+                     controller_infos=[controller.config])
 
   def check_migrations(self):
     for access_link in list(self.simulation.topology.access_links):
