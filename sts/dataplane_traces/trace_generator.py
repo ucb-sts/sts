@@ -25,7 +25,7 @@ from pox.lib.packet.arp import *
 import sts.topology as topo
 from collections import defaultdict
 import pickle
-from trace import DataplaneEvent
+from sts.dataplane_traces.trace import DataplaneEvent
 
 def write_trace_log(dataplane_events, filename):
   '''
