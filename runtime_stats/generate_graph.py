@@ -36,11 +36,12 @@ def load_json(json_input):
 
 DataInfo = namedtuple('DataInfo', ['filename', 'title'])
 
-def write_gpi_template(gpi_filename, output_filename, data_info_list, title):
+def write_gpi_template(gpi_filename, output_filename, data_info_list, title=""):
   with open(gpi_filename, "w") as gpi:
     # Finish off the rest of the template
     gpi.write(template)
-    gpi.write('''set title "%s"\n''' % title)
+    if title != "":
+      gpi.write('''set title "%s"\n''' % title)
     gpi.write('''set output "%s"\n''' % output_filename)
     gpi.write('''plot ''')
     first_iteration = True
@@ -67,12 +68,7 @@ if __name__ == '__main__':
   output_filename = string.replace(args.input, ".json", ".pdf")
   dat_filename = string.replace(args.input, ".json", ".dat")
 
-  title = ""
-  #if('prune_duration_seconds' in stats and 'replay_duration_seconds' in stats):
-  #  title = ("total runtime=%.1fs, original runtime=%.1fs" %
-  #            (stats["prune_duration_seconds"], stats["replay_duration_seconds"]))
-
   write_data_file(dat_filename, stats)
   data_info_list = [DataInfo(title="", filename=dat_filename)]
-  write_gpi_template(gpi_filename, output_filename, data_info_list, title)
+  write_gpi_template(gpi_filename, output_filename, data_info_list)
   invoke_gnuplot(gpi_filename)
