@@ -81,14 +81,17 @@ def main(args):
   t = Tabular(columns)
   rows = []
   for subsequence_dir in subsequence_dirs:
-    if "_final_mcs" in str(subsequence_dir):
-      # Make sure to always print the final MCS
-      trace = parse_event_trace(str(subsequence_dir) + "/events.trace")
-      rows.append(trace_formatter.format_trace("MCS", trace))
-    elif replay_idx_to_violation[subsequence_dir.index]:
-      # Otherwise only consider subsequences that resulted in a violation
-      trace = parse_event_trace(str(subsequence_dir) + "/events.trace")
-      rows.append(trace_formatter.format_trace(subsequence_dir.index, trace))
+    try:
+      if "_final_mcs" in str(subsequence_dir):
+        # Make sure to always print the final MCS
+        trace = parse_event_trace(str(subsequence_dir) + "/events.trace")
+        rows.append(trace_formatter.format_trace("MCS", trace))
+      elif replay_idx_to_violation[subsequence_dir.index]:
+        # Otherwise only consider subsequences that resulted in a violation
+        trace = parse_event_trace(str(subsequence_dir) + "/events.trace")
+        rows.append(trace_formatter.format_trace(subsequence_dir.index, trace))
+    except KeyError as e:
+      print >> sys.stderr, "WARN: No such subsequence: %s" % str(e)
 
   t.show(rows)
 
