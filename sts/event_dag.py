@@ -151,7 +151,7 @@ class EventDag(object):
   _recovery_types = set([SwitchRecovery, LinkRecovery, ControllerRecovery,
                          ControlChannelUnblock, UnblockControllerPair])
   # ignoring these input types
-  _ignored_input_types = set([WaitTime, CheckInvariants])
+  _ignored_input_types = set([WaitTime])
 
   def __init__(self, events, prefix_trie=None):
     '''events is a list of EventWatcher objects. Refer to log_parser.parse to
