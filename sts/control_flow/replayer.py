@@ -304,15 +304,14 @@ class Replayer(ControlFlow):
         if violations != []:
           self._log_input_event(InvariantViolation(violations))
           msg.fail("Violations at end of trace: %s" % str(violations))
-          # TODO(cs): XXX temporary hack!
-          #if self.bug_signature:
-          #  if self.bug_signature in violations:
-          #    self.simulation.violation_found = True
-          #    msg.success("Violation found %s" % self.bug_signature)
-          #  else:
-          #    msg.fail("Violation does not match violation signature!")
-          #else:
-          self.simulation.violation_found = True
+          if self.bug_signature:
+            if self.bug_signature in violations:
+              self.simulation.violation_found = True
+              msg.success("Violation found %s" % self.bug_signature)
+            else:
+              msg.fail("Violation does not match violation signature!")
+          else:
+            self.simulation.violation_found = True
         else:
           msg.success("No correctness violations!")
     finally:
