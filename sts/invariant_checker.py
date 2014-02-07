@@ -52,12 +52,10 @@ class InvariantChecker(object):
   def check_liveness(simulation):
     ''' Very simple: have the controllers crashed? '''
     log.debug("Checking controller liveness...")
-    dead_controllers = simulation.controller_manager.check_controller_status()
+    simulation.controller_manager.check_controller_status()
+    dead_controllers = list(simulation.controller_manager.down_controllers())
     if dead_controllers:
-      log.info("Problems found while checking controller liveness:")
-      for (c, msg) in dead_controllers:
-        log.info("Controller %s - %s" % (c.label, msg))
-      dead_controllers = [ c for (c, msg) in dead_controllers ]
+      log.info("Problems found while checking controller liveness.")
     if simulation.controller_manager.all_controllers_down():
       log.info("No live controllers left")
       return simulation.controller_manager.cids
