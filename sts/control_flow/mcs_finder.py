@@ -274,7 +274,7 @@ class MCSFinder(ControlFlow):
       violation = self._check_violation(new_dag, i, label)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
-        self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned,
+        self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned, new_dag,
                                                          subset_label(label), self)
 
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
@@ -302,7 +302,7 @@ class MCSFinder(ControlFlow):
       violation = self._check_violation(new_dag, i, label)
       if violation:
         self.log_violation("Subset %s reproduced violation. Subselecting." % subset_label(label))
-        self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned,
+        self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned, new_dag,
                                                          subset_label(label), self)
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         return self._ddmin(new_dag, max(split_ways - 1, 2),
