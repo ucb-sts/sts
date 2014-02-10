@@ -237,7 +237,7 @@ class Replayer(ControlFlow):
 
   def _print_buffers(self):
     log.debug("Pending Message Receives:")
-    for p in self.simulation.openflow_buffer.pending_receives():
+    for p in self.simulation.openflow_buffer.pending_receives:
       log.debug("- %s", p)
     log.debug("Pending State Changes:")
     for p in self.sync_callback.pending_state_changes():
