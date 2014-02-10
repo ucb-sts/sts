@@ -308,18 +308,24 @@ class Fuzzer(ControlFlow):
     # Note that there shouldn't be any pending state changes in record mode,
     # only pending message sends/receives.
     buffered_events = []
-    log.info("Pending Messages:")
-    for event_type, pending_queue in [
-            (ControlMessageReceive, self.simulation.openflow_buffer.pending_receives),
-            (ControlMessageSend, self.simulation.openflow_buffer.pending_sends)]:
-      for (dpid, controller_id) in pending_queue.conn_ids():
-        for p in pending_queue.get_message_ids(dpid, controller_id):
-          conn_mesages = pending_queue.get_all_by_message_id(p)
-          log.info("- %r", p)
-          for _, ofp_message in conn_messages:
-            b64_packet = base64_encode(ofp_message)
-            event = event_type(p.dpid, p.controller_id, p.fingerprint, b64_packet=b64_packet)
-            buffered_events.append(event)
+    log.info("Pending Receives:")
+    of_buf = self.simulation.openflow_buffer
+    for (dpid, controller_id) in of_buf.conns_with_pending_receives():
+      for p in of_buf.get_pending_receives(dpid, controller_id):
+        log.info("- %r", p)
+        message = of_buf.get_message_receipt(p)
+        b64_packet = base64_encode(message)
+        event = ControlMessageReceive(p.dpid, p.controller_id, p.fingerprint, b64_packet=b64_packet)
+        buffered_events.append(event)
+
+    log.info("Pending Sends:")
+    for (dpid, controller_id) in of_buf.conns_with_pending_sends():
+      for p in of_buf.get_pending_sends(dpid, controller_id):
+        log.info("- %r", p)
+        message = of_buf.get_message_send(p)
+        b64_packet = base64_encode(message)
+        event = ControlMessageSend(p.dpid, p.controller_id, p.fingerprint, b64_packet=b64_packet)
+        buffered_events.append(event)
 
     if self._input_logger is not None:
       self._input_logger.dump_buffered_events(buffered_events)
@@ -430,33 +436,32 @@ class Fuzzer(ControlFlow):
         self.simulation.topology.unblock_connection(connection)
 
   def check_pending_messages(self, pass_through=False):
-    pending_receives = self.simulation.openflow_buffer.pending_receives
-    for (dpid, controller_id) in pending_receives.conn_ids():
-      for pending_receipt in pending_receives.get_message_ids(dpid, controller_id):
-        if ( not pass_through and
+    of_buf = self.simulation.openflow_buffer
+    for (dpid, controller_id) in of_buf.conns_with_pending_receives():
+      for pending_receipt in of_buf.get_pending_receives(dpid, controller_id):
+        if (not pass_through and
             self.random.random() > self.params.ofp_message_receipt_rate):
           break
-        message = self.simulation.openflow_buffer.get_message_receipt(pending_receipt)
+        message = of_buf.get_message_receipt(pending_receipt)
         b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageReceive(pending_receipt.dpid,
                                                     pending_receipt.controller_id,
                                                     pending_receipt.fingerprint,
                                                     b64_packet=b64_packet))
-        self.simulation.openflow_buffer.schedule(pending_receipt)
+        of_buf.schedule(pending_receipt)
 
-    pending_sends = self.simulation.openflow_buffer.pending_sends
-    for (dpid, controller_id) in pending_sends.conn_ids():
-      for pending_send in pending_sends.get_message_ids(dpid, controller_id):
-        if ( not pass_through and
+    for (dpid, controller_id) in of_buf.conns_with_pending_sends():
+      for pending_send in of_buf.get_pending_sends(dpid, controller_id):
+        if (not pass_through and
             self.random.random() > self.params.ofp_message_send_rate):
           break
-        message = self.simulation.openflow_buffer.get_message_send(pending_send)
+        message = of_buf.get_message_send(pending_send)
         b64_packet = base64_encode(message)
         self._log_input_event(ControlMessageSend(pending_send.dpid,
                                                  pending_send.controller_id,
                                                  pending_send.fingerprint,
                                                  b64_packet=b64_packet))
-        self.simulation.openflow_buffer.schedule(pending_send)
+        of_buf.schedule(pending_send)
 
   def check_pending_commands(self):
     ''' If Fuzzer is configured to delay flow mods, this decides whether
