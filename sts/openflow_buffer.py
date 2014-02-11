@@ -231,19 +231,19 @@ class OpenFlowBuffer(EventMixin):
     self.raiseEventNoErrors(PendingMessage(message_id, b64_packet, send_event=True))
     return message_id
 
-  def conns_with_pending_receives(self, dpid, controller_id):
+  def conns_with_pending_receives(self):
     ''' Return the named_tuples (dpid, controller_id) of connections that have receive messages pending '''
-    return self.pending_receives.get_conn_ids()
+    return self.pending_receives.conn_ids()
 
-  def conns_with_pending_sends(self, dpid, controller_id):
+  def conns_with_pending_sends(self):
     ''' Return the named_tuples (dpid, controller_id) of connections that have receive messages pending '''
-    return self.pending_sends.get_conn_ids()
+    return self.pending_sends.conn_ids()
 
-  def pending_receives(self, dpid, controller_id):
+  def get_pending_receives(self, dpid, controller_id):
     ''' Return the message receipts which that are waiting to be scheduled for conn, in order '''
     return self.pending_receives.get_message_ids(dpid=dpid, controller_id=controller_id)
 
-  def pending_sends(self, dpid, controller_id):
+  def get_pending_sends(self, dpid, controller_id):
     ''' Return the message sends which that are waiting to be scheduled for conn, in order '''
     return self.pending_sends.get_message_ids(dpid=dpid, controller_id=controller_id)
 
