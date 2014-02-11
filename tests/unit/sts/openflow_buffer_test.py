@@ -104,7 +104,7 @@ class OpenFlowBufferTest(unittest.TestCase):
     buf.insert_pending_send(1,"c1",message,mock_conn)
     pending_send = PendingSend(1,"c1",OFFingerprint.from_pkt(message))
     self.assertTrue(buf.message_send_waiting(pending_send))
-    self.assertEquals([pending_send], buf.pending_send.get_message_ids(1, "c1"))
+    self.assertEquals([pending_send], buf.pending_sends.get_message_ids(1, "c1"))
     buf.schedule(pending_send)
     self.assertTrue(mock_conn.passed_message)
     self.assertFalse(buf.message_receipt_waiting(pending_send))
