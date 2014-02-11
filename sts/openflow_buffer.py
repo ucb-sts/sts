@@ -34,12 +34,15 @@ class PendingMessage(Event):
     self.send_event = send_event
 
 class PendingQueue(object):
+  '''Stores pending messages between switches and controllers'''
   ConnectionId = namedtuple('ConnectionId', ['dpid', 'controller_id'])
+
   def __init__(self):
     # { ConnectionId(dpid, controller_id) -> MessageId -> [conn_message1, conn_message2, ....]
     self.pending = defaultdict(lambda: OrderedDefaultDict(list))
 
   def insert(self, message_id, conn_message):
+    '''' message_id is a fingerprint named tuple, and conn_message is a ConnMessage named tuple'''
     conn_id = ConnectionId(dpid=message_id.dpid, controller_id=message_id.controller_id)
     self.pending[conn_id][message_id].append(conn_message)
 
@@ -55,6 +58,8 @@ class PendingQueue(object):
     conn_id = ConnectionId(dpid=message_id.dpid, controller_id=message_id.controller_id)
     message_id_map = self.pending[conn_id]
     msg_list = message_id_map[message_id]
+    if len(msg_list) == 0:
+      raise ValueError("Empty queue for message_id %s" % str(message_id))
     res = msg_list.pop(0)
     if len(msg_list) == 0:
       del message_id_map[message_id]
@@ -72,7 +77,7 @@ class PendingQueue(object):
   def __len__(self):
     return sum( len(msg_list)
         for message_id_map in self.pending.values()
-        for msg_list in message_id_map.values())
+        for msg_list in message_id_map.values() )
 
   def __iter__(self):
     return (message_id for message_id_map in self.pending.values() for message_id in message_id_map.keys())
@@ -108,8 +113,8 @@ class OpenFlowBuffer(EventMixin):
     # arrive at the switches.
     # { ConnectionId(dpid, controller_id) -> pending receive -> [(connection, pending ofp)_1, (connection, pending ofp)_2, ...] }
     self.pending_receives = PendingQueue()
-    self.pending_sends = PendingQueue()
     # { ConnectionId(dpid, controller_id) -> pending send -> [(connection, pending ofp)_1, (connection, pending ofp)_2, ...] }
+    self.pending_sends = PendingQueue()
     self._delegate_input_logger = None
     self.pass_through_whitelisted_packets = False
     self.pass_through_sends = False
@@ -128,7 +133,7 @@ class OpenFlowBuffer(EventMixin):
       replay_event_class = sts.replay_event.ControlMessageReceive
 
     replay_event = replay_event_class(dpid=message_id.dpid,
-                                      controller_id=pmessage_id.controller_id,
+                                      controller_id=message_id.controller_id,
                                       fingerprint=message_id.fingerprint,
                                       b64_packet=message_event.b64_packet,
                                       time=message_event.time)
@@ -171,13 +176,14 @@ class OpenFlowBuffer(EventMixin):
     return self.pending_sends.has_message_id(message_id)
 
   def get_message_receipt(self, message_id):
+    # pending receives are (conn, message) pairs. We return the message.
     return self.pending_receives.get_all_by_message_id(message_id)[0][1]
 
   def get_message_send(self, message_id):
+    # pending sends are (conn, message) pairs. We return the message.
     return self.pending_sends.get_all_by_message_id(message_id)[0][1]
 
   def schedule(self, message_id):
-    log.info("--- schedule: %s", message_id)
     '''
     Cause the switch to process the pending message associated with
     the fingerprint and controller connection.
@@ -208,7 +214,6 @@ class OpenFlowBuffer(EventMixin):
       return
     conn_message = (conn, ofp_message)
     message_id = PendingReceive(dpid, controller_id, fingerprint)
-    log.info("--- insert pending receive: %s", message_id)
     self.pending_receives.insert(message_id, conn_message)
     b64_packet = base64_encode(ofp_message)
     self.raiseEventNoErrors(PendingMessage(message_id, b64_packet))
@@ -231,20 +236,20 @@ class OpenFlowBuffer(EventMixin):
     self.raiseEventNoErrors(PendingMessage(message_id, b64_packet, send_event=True))
     return message_id
 
-  def conns_with_pending_receives(self, dpid, controller_id):
+  def conns_with_pending_receives(self):
     ''' Return the named_tuples (dpid, controller_id) of connections that have receive messages pending '''
-    return self.pending_receives.get_conn_ids()
+    return self.pending_receives.conn_ids()
 
-  def conns_with_pending_sends(self, dpid, controller_id):
+  def conns_with_pending_sends(self):
     ''' Return the named_tuples (dpid, controller_id) of connections that have receive messages pending '''
-    return self.pending_sends.get_conn_ids()
+    return self.pending_sends.conn_ids()
 
-  def pending_receives(self, dpid, controller_id):
-    ''' Return the message receipts which that are waiting to be scheduled for conn, in order '''
+  def get_pending_receives(self, dpid, controller_id):
+    ''' Return the message receipts (MessageIDs) that are waiting to be scheduled for conn, in order '''
     return self.pending_receives.get_message_ids(dpid=dpid, controller_id=controller_id)
 
-  def pending_sends(self, dpid, controller_id):
-    ''' Return the message sends which that are waiting to be scheduled for conn, in order '''
+  def get_pending_sends(self, dpid, controller_id):
+    ''' Return the message sends (MessageIDs) that are waiting to be scheduled for conn, in order '''
     return self.pending_sends.get_message_ids(dpid=dpid, controller_id=controller_id)
 
   def flush(self):
