@@ -128,7 +128,7 @@ class OpenFlowBuffer(EventMixin):
       replay_event_class = sts.replay_event.ControlMessageReceive
 
     replay_event = replay_event_class(dpid=message_id.dpid,
-                                      controller_id=pmessage_id.controller_id,
+                                      controller_id=message_id.controller_id,
                                       fingerprint=message_id.fingerprint,
                                       b64_packet=message_event.b64_packet,
                                       time=message_event.time)
