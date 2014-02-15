@@ -16,6 +16,7 @@
 import subprocess
 import threading
 import os
+import signal
 import sys
 import time
 import traceback
@@ -51,10 +52,16 @@ def kill_procs(child_processes, kill=None, verbose=True, timeout=5,
 
   msg("%s child controllers..." % ("Killing" if kill else "Terminating"))
   for child in child_processes:
-    if kill:
-      child.kill()
+    sig = signal.SIGKILL if kill else signal.SIGTERM
+    pgid = os.getpgid(child.pid)
+    if pgid == child.pid:
+      # if the child is the leader in its process group (happens because of
+      # the setsid in popen_filtered below), kill the entire process group
+      # this will take care of spawned children, e.g., the process forked
+      # by bash if shell=True
+      os.killpg(pgid, sig)
     else:
-      child.terminate()
+      os.kill(child.pid, sig)
 
   start_time = time.time()
   last_dot = start_time
@@ -123,6 +130,9 @@ def popen_filtered(name, args, cwd=None, env=None, redirect_output=True,
   if shell and type(args) == list:
     args = ' '.join(args)
   try:
+    # note: the preexec_fn below makes the process its own session leader.
+    # This means that a CTRL-C on the shell will not be passed on to the process,
+    # which enables us to jump between Fuzzing/Replay and Interactive mode
     cmd = subprocess.Popen(args, stdout=subprocess.PIPE, shell=shell,
                            stderr=subprocess.PIPE, stdin=sys.stdin, cwd=cwd, env=env,
                            preexec_fn=lambda: os.setsid())
