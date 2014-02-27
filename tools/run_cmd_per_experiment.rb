@@ -55,7 +55,7 @@ if __FILE__ == $0
   options = {}
   OptionParser.new do |opts|
     options[:command_path] = "/bin/ls"
-    opts.on("-c", "--command-path", "Path to command to run within each directory") do |c|
+    opts.on("-c", "--command-path", "Absolute path to a command to run within each directory") do |c|
       options[:command_path] = c
     end
 
