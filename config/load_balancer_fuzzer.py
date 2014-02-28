@@ -16,9 +16,9 @@ def get_additional_metadata():
 
 
 # Use POX as our controller
-start_cmd = ('''./pox.py --verbose --unthreaded-sh misc.ip_loadbalancer --ip=10.1.3.2 --servers=10.1.3.2,10.2.3.2 '''
+start_cmd = ('''./pox.py --verbose --unthreaded-sh misc.ip_loadbalancer --ip=123.123.1.3 --servers=123.123.2.3,123.123.1.3 '''
              '''sts.util.socket_mux.pox_monkeypatcher  '''
-             # --snapshot_address=/Users/cs/Research/UCB/code/sts/snapshot_socket'''
+             #''' --snapshot_address=/Users/cs/Research/UCB/code/sts/snapshot_socket'''
              #'''sts.syncproto.pox_syncer --blocking=False '''
              #'''openflow.discovery forwarding.topo_proactive '''
              ''' openflow.discovery '''
@@ -34,7 +34,7 @@ simulation_config = SimulationConfig(controller_configs=controllers,
                                      topology_params=topology_params,
                                      dataplane_trace="dataplane_traces/load_balancer.trace")
 
-control_flow = Fuzzer(simulation_config, check_interval=3,
+control_flow = Fuzzer(simulation_config, check_interval=10,
                       halt_on_violation=True,
                       input_logger=InputLogger(),
                       invariant_check_name="check_for_ofp_error")
