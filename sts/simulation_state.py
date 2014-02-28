@@ -36,6 +36,7 @@ from sts.util.socket_mux.base import MultiplexedSelect
 from sts.util.socket_mux.sts_socket_multiplexer import STSSocketDemultiplexer, STSMockSocket
 from sts.util.convenience import find
 from pox.lib.util import connect_socket_with_backoff
+from sts.control_flow.base import ReplaySyncCallback
 
 import select
 import socket
@@ -124,7 +125,7 @@ class SimulationConfig(object):
     self.interpose_on_controllers = interpose_on_controllers
     self.controller_patch_panel_class = controller_patch_panel_class
 
-  def bootstrap(self, sync_callback, boot_controllers=default_boot_controllers):
+  def bootstrap(self, sync_callback=None, boot_controllers=default_boot_controllers):
     '''Return a simulation object encapsulating the state of
        the system in its initial starting point:
        - boots controllers
@@ -132,6 +133,9 @@ class SimulationConfig(object):
 
        May be invoked multiple times!
     '''
+    if sync_callback is None:
+      sync_callback = ReplaySyncCallback(None)
+
     def initialize_io_loop():
       ''' boot the IOLoop (needed for the controllers) '''
       _io_master = IOMaster()
