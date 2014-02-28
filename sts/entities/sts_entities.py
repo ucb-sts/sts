@@ -38,6 +38,10 @@ from sts.util.convenience import IPAddressSpace
 from sts.util.tabular import Tabular
 from sts.util.network_namespace import *
 
+from sts.entities.base import HostAbstractClass, HostInterfaceAbstractClass
+from sts.entities.base import DirectedLinkAbstractClass
+from sts.entities.base import BiDirectionalLinkAbstractClass
+
 import Queue
 from itertools import count
 import logging
@@ -461,7 +465,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
                 ))
     t.show(self.table.entries)
 
-class Link (object):
+class Link (DirectedLinkAbstractClass):
   """
   A network link between two switches
 
@@ -469,19 +473,20 @@ class Link (object):
 
   Note: Directed!
   """
-  def __init__(self, start_software_switch, start_port, end_software_switch, end_port):
+  def __init__(self, start_software_switch, start_port,
+               end_software_switch, end_port):
     if type(start_port) == int:
       assert(start_port in start_software_switch.ports)
       start_port = start_software_switch.ports[start_port]
     if type(end_port) == int:
       assert(end_port in start_software_switch.ports)
       end_port = end_software_switch.ports[end_port]
+    super(Link, self).__init__(start_software_switch, start_port,
+                               end_software_switch, end_port)
     assert_type("start_port", start_port, ofp_phy_port, none_ok=False)
     assert_type("end_port", end_port, ofp_phy_port, none_ok=False)
     self.start_software_switch = start_software_switch
-    self.start_port = start_port
     self.end_software_switch = end_software_switch
-    self.end_port = end_port
 
   def __eq__(self, other):
     if not type(other) == Link:
@@ -510,26 +515,37 @@ class Link (object):
     return Link(self.end_software_switch, self.end_port,
                 self.start_software_switch, self.start_port)
 
-class AccessLink (object):
+class AccessLink (BiDirectionalLinkAbstractClass):
   '''
   Represents a bidirectional edge: host <-> ingress switch
   '''
   def __init__(self, host, interface, switch, switch_port):
+    super(AccessLink, self).__init__(host, interface, switch, switch_port)
     assert_type("interface", interface, HostInterface, none_ok=False)
     assert_type("switch_port", switch_port, ofp_phy_port, none_ok=False)
-    self.host = host
-    self.interface = interface
-    self.switch = switch
-    self.switch_port = switch_port
 
-class HostInterface (object):
-  ''' Represents a host's interface (e.g. eth0) '''
+  @property
+  def host(self):
+    return self.node1
+
+  @property
+  def interface(self):
+    return self.port1
+
+  @property
+  def switch(self):
+    return self.node2
+
+  @property
+  def switch_port(self):
+    return self.port2
+
+
+class HostInterface (HostInterfaceAbstractClass):
+  """ Represents a host's interface (e.g. eth0) """
+
   def __init__(self, hw_addr, ip_or_ips=[], name=""):
-    self.hw_addr = hw_addr
-    if type(ip_or_ips) != list:
-      ip_or_ips = [ip_or_ips]
-    self.ips = ip_or_ips
-    self.name = name
+    super(HostInterface, self).__init__(hw_addr, ip_or_ips, name)
 
   @property
   def port_no(self):
@@ -551,15 +567,18 @@ class HostInterface (object):
       return False
     return True
 
-  def __hash__(self):
-    hash_code = self.hw_addr.toInt().__hash__()
-    for ip in self.ips:
-      hash_code += ip.toUnsignedN().__hash__()
-    hash_code += self.name.__hash__()
-    return hash_code
+  @property
+  def _ips_hashes(self):
+    hashes = [ip.toUnsignedN().__hash__() for ip in self.ips]
+    return hashes
+
+  @property
+  def _hw_addr_hash(self):
+    return self.hw_addr.toInt().__hash__()
 
   def __str__(self, *args, **kwargs):
-    return "HostInterface:" + self.name + ":" + str(self.hw_addr) + ":" + str(self.ips)
+    return "HostInterface:" + self.name + ":" + \
+           str(self.hw_addr) + ":" + str(self.ips)
 
   def __repr__(self, *args, **kwargs):
     return self.__str__()
@@ -586,7 +605,7 @@ class HostInterface (object):
 #    |            |           |
 # switch_port  switch_port  switch_port
 
-class Host (EventMixin):
+class Host (EventMixin, HostAbstractClass):
   '''
   A very simple Host entity.
 
@@ -603,10 +622,8 @@ class Host (EventMixin):
     '''
     - interfaces A list of HostInterfaces
     '''
-    self.interfaces = interfaces
+    HostAbstractClass.__init__(self, interfaces, name)
     self.log = logging.getLogger(name)
-    self.name = name
-    self.hid = self._hids.next()
     self.send_capabilities = False
 
   def send(self, interface, packet):
@@ -1014,7 +1031,7 @@ class POXController(Controller):
       env['sts_sync'] = "ptcp:0.0.0.0:%d" % (int(port),)
 
     if self.config.sync or multiplex_sockets:
-      src_dir = os.path.join(os.path.dirname(__file__), "..")
+      src_dir = os.path.join(os.path.dirname(__file__), "../../")
       pox_ext_dir = os.path.join(self.config.cwd, "ext")
       if os.path.exists(pox_ext_dir):
         for f in ("sts/util/io_master.py", "sts/syncproto/base.py",
