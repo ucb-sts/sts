@@ -29,8 +29,18 @@ def format_time(time):
 
 class EventSchedulerStats(object):
   def __init__(self):
+    # Coarse grained event classes -> match counts
     self.event2matched = Counter()
+    # ControlMessageReceive packet classes -> match counts
+    self.msgrecv2matched = Counter()
+    # ControlMessageSend packet classes -> match counts
+    self.msgsend2matched = Counter()
+    # Coarse grained event classes -> timeout counts
     self.event2timeouts = Counter()
+    # ControlMessageReceive packet classes -> timeout counts
+    self.msgrecv2timeouts = Counter()
+    # ControlMessageSend packet classes -> timeout counts
+    self.msgsend2timeouts = Counter()
     self.replay_start = None
     self.record_start = None
 
@@ -44,12 +54,23 @@ class EventSchedulerStats(object):
 
   def event_matched(self, event):
     msg.replay_event_success(self.time(event) + " Successfully matched event "+str(event))
-    # TODO(cs): maybe want more info than just class name? (e.g. fingerprint)
     self.event2matched[event.__class__.__name__] += 1
+    if event.__class__.__name__ == "ControlMessageReceive":
+      pkt_class = event.get_packet().__class__.__name__
+      self.msgrecv2matched[pkt_class] += 1
+    if event.__class__.__name__ == "ControlMessageSend":
+      pkt_class = event.get_packet().__class__.__name__
+      self.msgsend2matched[pkt_class] += 1
 
   def event_timed_out(self, event):
     msg.replay_event_timeout(self.time(event) + " Event timed out "+str(event))
     self.event2timeouts[event.__class__.__name__] += 1
+    if event.__class__.__name__ == "ControlMessageReceive":
+      pkt_class = event.get_packet().__class__.__name__
+      self.msgrecv2timeouts[pkt_class] += 1
+    if event.__class__.__name__ == "ControlMessageSend":
+      pkt_class = event.get_packet().__class__.__name__
+      self.msgsend2timeouts[pkt_class] += 1
 
   def sorted_match_counts(self):
     for e, count in sorted(self.event2matched.items(),
@@ -61,6 +82,30 @@ class EventSchedulerStats(object):
                            key=operator.itemgetter(1)):
       yield (e, count,)
 
+  def get_matches_dict(self):
+    d = dict(self.event2matched)
+    if 'ControlMessageReceive' in d:
+      total = d['ControlMessageReceive']
+      d['ControlMessageReceive'] = dict(self.msgrecv2matched)
+      d['ControlMessageReceive']['total'] = total
+    if 'ControlMessageSend' in d:
+      total = d['ControlMessageSend']
+      d['ControlMessageSend'] = dict(self.msgsend2matched)
+      d['ControlMessageSend']['total'] = total
+    return d
+
+  def get_timeouts_dict(self):
+    d = dict(event2timouts)
+    if 'ControlMessageReceive' in d:
+      total = d['ControlMessageReceive']
+      d['ControlMessageReceive'] = dict(self.msgrecv2timeouts)
+      d['ControlMessageReceive']['total'] = total
+    if 'ControlMessageSend' in d:
+      total = d['ControlMessageSend']
+      d['ControlMessageSend'] = dict(self.msgsend2timeouts)
+      d['ControlMessageSend']['total'] = total
+    return d
+
   def __str__(self):
     total_matched = sum(self.event2matched.values())
     total_timeouts = sum(self.event2timeouts.values())
@@ -70,9 +115,23 @@ class EventSchedulerStats(object):
     s.append("Matches per event type:\n")
     for e, count in self.sorted_match_counts():
       s.append("  %s %d\n" % (e, count,))
+      if e == "ControlMessageReceive":
+        for pkt_class, c in self.msgrecv2matches.iteritems():
+          s.append("\t\t  %s : %d\n" % (pkt_class, c))
+      if e == "ControlMessageSend":
+        for pkt_class, c in self.msgsend2matches.iteritems():
+          s.append("\t\t  %s : %d\n" % (pkt_class, c))
+
     s.append("Timeouts per event type:\n")
     for e, count in self.sorted_timeout_counts():
       s.append("  %s %d\n" % (e, count,))
+      if e == "ControlMessageReceive":
+        for pkt_class, c in self.msgrecv2timeouts.iteritems():
+          s.append("\t\t  %s : %d\n" % (pkt_class, c))
+      if e == "ControlMessageSend":
+        for pkt_class, c in self.msgsend2timeouts.iteritems():
+          s.append("\t\t  %s : %d\n" % (pkt_class, c))
+
     return "".join(s)
 
 class EventSchedulerBase(object):

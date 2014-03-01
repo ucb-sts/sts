@@ -813,7 +813,8 @@ class Controller(object):
       else:
         self.kill() # make sure it is killed if this was started errantly
 
-  def __init__(self, controller_config, sync_connection_manager, snapshot_service):
+  def __init__(self, controller_config, sync_connection_manager=None,
+               snapshot_service=None):
     ''' idx is the unique index for the controller used mostly for logging purposes '''
     self.config = controller_config
     self.state = ControllerState.DEAD
@@ -983,7 +984,8 @@ class POXController(Controller):
   # N.B. controller-specific configuration is optional. The purpose of this
   # class is to load POX's syncproto module, which helps us reduce
   # non-determinism in POX.
-  def __init__(self, controller_config, sync_connection_manager, snapshot_service):
+  def __init__(self, controller_config, sync_connection_manager=None,
+               snapshot_service=None):
     super(POXController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self.welcome_msg = " =====> Starting POX Controller <===== "
 
@@ -1063,8 +1065,8 @@ class VMController(Controller):
   ''' Controllers that are run in virtual machines rather than processes '''
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, controller_config, sync_connection_manager,
-               snapshot_service, username="root", password=""):
+  def __init__(self, controller_config, sync_connection_manager=None,
+               snapshot_service=None, username="root", password=""):
     super(VMController, self).__init__(controller_config, sync_connection_manager, snapshot_service)
     self._ssh_client = None
     self.username = username
@@ -1200,8 +1202,8 @@ class VMController(Controller):
 
 class BigSwitchController(VMController):
 
-  def __init__(self, controller_config, sync_connection_manager,
-               snapshot_service, username="root", password=""):
+  def __init__(self, controller_config, sync_connection_manager=None,
+               snapshot_service=None, username="root", password=""):
     super(BigSwitchController, self).__init__(controller_config,
           sync_connection_manager, snapshot_service,
           username=username, password=password)
@@ -1239,8 +1241,8 @@ class BigSwitchController(VMController):
     self.state = ControllerState.STARTING
 
 class ONOSController(VMController):
-  def __init__(self, controller_config, sync_connection_manager,
-               snapshot_service, username="mininet", password="mininet"):
+  def __init__(self, controller_config, sync_connection_manager=None,
+               snapshot_service=None, username="mininet", password="mininet"):
     super(ONOSController, self).__init__(controller_config,
           sync_connection_manager, snapshot_service,
           username=username, password=password)

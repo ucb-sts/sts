@@ -464,8 +464,8 @@ class MCSFinder(ControlFlow):
     new_internal_events = replayer.unexpected_state_changes + replayer.passed_unexpected_messages
     self._runtime_stats.record_new_internal_events(new_internal_events)
     self._runtime_stats.record_early_internal_events(replayer.early_state_changes)
-    self._runtime_stats.record_timed_out_events(dict(replayer.event_scheduler_stats.event2timeouts))
-    self._runtime_stats.record_matched_events(dict(replayer.event_scheduler_stats.event2matched))
+    self._runtime_stats.record_timed_out_events(replayer.event_scheduler_stats.get_timeouts_dict())
+    self._runtime_stats.record_matched_events(replayer.event_scheduler_stats.get_matches_dict())
 
 
 # TODO(cs): Hack alert. Shouldn't be a subclass
