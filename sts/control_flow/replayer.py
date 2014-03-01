@@ -396,9 +396,12 @@ class Replayer(ControlFlow):
         expected_send_fingerprints.add((of_fingerprint, dpid, cid))
 
     # Now check pending messages.
+    pending_receive_queue = self.simulation.openflow_buffer.pending_receives
+    pending_receives  = [p for p in pending_receive_queue.get_message_ids(dpid, controller_id)
+                            for (dpid, controller_id) in pending_receive_queue.conn_ids()]
     for expected_fingerprints, messages in [
-         (expected_receive_fingerprints, self.simulation.openflow_buffer.pending_receives()),
-         (expected_send_fingerprints, self.simulation.openflow_buffer.pending_sends())]:
+         (expected_receive_fingerprints, self.simulation.openflow_buffer.pending_receives),
+         (expected_send_fingerprints, self.simulation.openflow_buffer.pending_sends)]:
       for pending_message in messages:
         fingerprint = (pending_message.fingerprint,
                        pending_message.dpid,
