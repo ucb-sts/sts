@@ -14,15 +14,15 @@
 
 
 import unittest
-from mock import patch, MagicMock
+import mock
 from pox.openflow.libopenflow_01 import ofp_phy_port
 
 from sts.entities.sts_entities import Link
 
 class LinkTest(unittest.TestCase):
-  @patch('sts.entities.sts_entities.FuzzSoftwareSwitch')
+  @mock.patch('sts.entities.sts_entities.FuzzSoftwareSwitch')
   def test_init(self, SwitchCls):
-    sw1 = MagicMock()
+    sw1 = mock.MagicMock()
     sw1.dpid = 1
     sw2 = SwitchCls()
     sw2.dpid = 2
@@ -38,9 +38,9 @@ class LinkTest(unittest.TestCase):
     self.assertEquals(p1, link.start_port)
     self.assertEquals(p2, link.end_port)
 
-  @patch('sts.entities.sts_entities.FuzzSoftwareSwitch')
+  @mock.patch('sts.entities.sts_entities.FuzzSoftwareSwitch')
   def test_eq(self, SwitchCls):
-    sw1 = MagicMock()
+    sw1 = mock.MagicMock()
     sw1.dpid = 1
     sw2 = SwitchCls()
     sw2.dpid = 2
@@ -55,9 +55,9 @@ class LinkTest(unittest.TestCase):
     self.assertEquals(link1, link1)
     self.assertNotEquals(link1, link2)
 
-  @patch('sts.entities.sts_entities.FuzzSoftwareSwitch')
+  @mock.patch('sts.entities.sts_entities.FuzzSoftwareSwitch')
   def test_reversed_link(self, SwitchCls):
-    sw1 = MagicMock()
+    sw1 = mock.MagicMock()
     sw1.dpid = 1
     sw2 = SwitchCls()
     sw2.dpid = 2
