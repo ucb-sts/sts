@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+"""
+Define base (mostly abstract) entities used by sts.
+"""
+
+
 import abc
 from itertools import count
 
@@ -23,10 +29,15 @@ class DirectedLinkAbstractClass(object):
   __metaclass__ = abc.ABCMeta
 
   def __init__(self, start_node, start_port, end_node, end_port):
+    """
+    Init new directed link.
+
+    start_port has to be member of start_node, likewise for end_port
+    """
     if hasattr(start_node, 'has_port'):
-      assert(start_node.has_port(start_node))
+      assert start_node.has_port(start_node)
     if hasattr(end_node, 'has_port'):
-      assert(end_node.has_port(end_node))
+      assert end_node.has_port(end_node)
     self._start_node = start_node
     self._start_port = start_port
     self._end_node = end_node
@@ -34,18 +45,22 @@ class DirectedLinkAbstractClass(object):
 
   @property
   def start_node(self):
+    """The starting node"""
     return self._start_node
 
   @property
   def start_port(self):
+    """The starting port"""
     return self._start_port
 
   @property
   def end_node(self):
+    """The destination node"""
     return self._end_node
 
   @property
   def end_port(self):
+    """The destination port"""
     return self._end_port
 
   def __eq__(self, other):
@@ -76,9 +91,9 @@ class BiDirectionalLinkAbstractClass(object):
 
   def __init__(self, node1, port1, node2, port2):
     if hasattr(node1, 'has_port'):
-      assert(node1.has_port(port1))
+      assert node1.has_port(port1)
     if hasattr(node2, 'has_port'):
-      assert(node2.has_port(port2))
+      assert node2.has_port(port2)
     self._node1 = node1
     self._port1 = port1
     self._node2 = node2
@@ -120,7 +135,10 @@ class BiDirectionalLinkAbstractClass(object):
 
 class HostInterfaceAbstractClass(object):
   """Represents a host's network interface (e.g. eth0)"""
-  def __init__(self, hw_addr, ips=[], name=""):
+
+  __metaclass__ = abc.ABCMeta
+
+  def __init__(self, hw_addr, ips=None, name=""):
     self._hw_addr = hw_addr
     ips = [] if ips is None else ips
     self._ips = ips if isinstance(ips, list) else [ips]
@@ -224,7 +242,7 @@ class HostAbstractClass(object):
     return port in self.interfaces
 
   def __str__(self):
-    "%s (%d)" % (self.name, self.hid)
+    return  "%s (%d)" % (self.name, self.hid)
 
   def __repr__(self):
     return "Host(%d)" % self.hid
