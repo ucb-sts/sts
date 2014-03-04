@@ -23,7 +23,7 @@ if sys.version_info < (2, 7):
                      '''See http://www.python.org/download/releases/2.7.4/''')
 
 from sts.util.procutils import kill_procs
-from sts.control_flow import Fuzzer
+from sts.control_flow.fuzzer import Fuzzer
 from sts.simulation_state import SimulationConfig
 import sts.experiments.setup as experiment_setup
 import sts.experiments.lifecycle as exp_lifecycle

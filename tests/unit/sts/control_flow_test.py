@@ -19,7 +19,7 @@ import os
 import signal
 
 from config.experiment_config_lib import ControllerConfig
-from sts.control_flow import Replayer
+from sts.control_flow.replayer import Replayer
 from sts.topology import FatTree, BufferedPatchPanel, MeshTopology
 from sts.simulation_state import SimulationConfig
 from sts.entities import Host

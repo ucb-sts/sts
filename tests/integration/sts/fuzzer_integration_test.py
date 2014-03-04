@@ -24,7 +24,7 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 simple_cfg = '''
 from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
-from sts.control_flow import Fuzzer
+from sts.control_flow.fuzzer import Fuzzer
 from sts.simulation_state import SimulationConfig
 
 # Use POX as our controller

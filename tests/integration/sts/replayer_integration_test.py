@@ -21,7 +21,7 @@ import os
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 simple_cfg = '''
-from sts.control_flow import Replayer
+from sts.control_flow.replayer import Replayer
 from sts.simulation_state import SimulationConfig
 
 simulation_config = SimulationConfig()

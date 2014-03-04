@@ -18,7 +18,7 @@ import sys
 import os
 import shutil
 
-from sts.control_flow import MCSFinder, EfficientMCSFinder
+from sts.control_flow.mcs_finder import MCSFinder, EfficientMCSFinder
 from sts.replay_event import InputEvent, InvariantViolation
 from sts.event_dag import EventDag
 import logging

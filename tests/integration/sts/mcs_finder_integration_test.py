@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(__file__) + "/../../..")
 
 simple_cfg = '''
 from config.experiment_config_lib import ControllerConfig
-from sts.control_flow import MCSFinder, Peeker
+from sts.control_flow.mcs_finder import MCSFinder
 from sts.simulation_state import SimulationConfig
 
 controllers = [ControllerConfig(start_cmd='./pox.py --verbose --no-cli openflow.of_01 --address=__address__ --port=__port__',

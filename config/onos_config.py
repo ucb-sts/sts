@@ -1,7 +1,7 @@
 
 from config.experiment_config_lib import ControllerConfig
 from sts.topology import MeshTopology
-from sts.control_flow import Fuzzer
+from sts.control_flow.fuzzer import Fuzzer
 from sts.input_traces.input_logger import InputLogger
 from sts.simulation_state import SimulationConfig
 from sts.util.convenience import backtick

@@ -31,7 +31,7 @@ import sts.dataplane_traces.trace_generator as tg
 replay_config_template = '''
 from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
-from sts.control_flow import Replayer
+from sts.control_flow.replayer import Replayer
 from sts.simulation_state import SimulationConfig
 from sts.input_traces.input_logger import InputLogger
 
@@ -53,7 +53,7 @@ control_flow = Replayer(simulation_config, "%s",
 interactive_replay_config_template = '''
 from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
-from sts.control_flow import InteractiveReplayer
+from sts.control_flow.interactive_replayer import InteractiveReplayer
 from sts.simulation_state import SimulationConfig
 from sts.input_traces.input_logger import InputLogger
 
@@ -69,7 +69,7 @@ control_flow = InteractiveReplayer(simulation_config, "%s")
 openflow_replay_config_template = '''
 from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
-from sts.control_flow import OpenFlowReplayer
+from sts.control_flow.openflow_replayer import OpenFlowReplayer
 from sts.simulation_state import SimulationConfig
 from sts.input_traces.input_logger import InputLogger
 
@@ -85,7 +85,7 @@ control_flow = OpenFlowReplayer(simulation_config, "%s")
 mcs_config_template = '''
 from config.experiment_config_lib import ControllerConfig
 from sts.topology import *
-from sts.control_flow import EfficientMCSFinder
+from sts.control_flow.mcs_finder import EfficientMCSFinder
 from sts.invariant_checker import InvariantChecker
 from sts.simulation_state import SimulationConfig
 
