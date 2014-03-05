@@ -27,6 +27,8 @@ import struct
 import shutil
 import base64
 import subprocess
+import warnings
+import functools
 from sts.util.console import msg
 
 # don't use the standard instance - we don't want to be seeded
@@ -187,3 +189,22 @@ def show_flow_tables(simulation):
     msg.interactive("Switch %s" % switch.dpid)
     switch.show_flow_table()
 
+
+def deprecated(func):
+  """
+  This is a decorator which can be used to mark functions
+  as deprecated. It will result in a warning being emitted
+  when the function is used.
+
+  Copied from https://wiki.python.org/moin/PythonDecoratorLibrary
+  """
+  @functools.wraps(func)
+  def new_func(*args, **kwargs):
+      warnings.warn_explicit(
+          "Call to deprecated function {}.".format(func.__name__),
+          category=DeprecationWarning,
+          filename=func.func_code.co_filename,
+          lineno=func.func_code.co_firstlineno + 1
+      )
+      return func(*args, **kwargs)
+  return new_func
