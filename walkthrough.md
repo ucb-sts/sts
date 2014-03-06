@@ -150,12 +150,14 @@ For example, we can list all switches in the network by accessing the
 We can also examine the current routing tables of a switch with the
 `show_flows` command:
 
-    STS [next] >show_flows 1
-    ----------------------------------------------------------------------------------------------------------------------
-    |  Prio | in_port | dl_type | dl_src | dl_dst            | nw_proto | nw_src | nw_dst | tp_src | tp_dst | actions    |
-    ----------------------------------------------------------------------------------------------------------------------
-    | 32768 |    None |    LLDP |   None | 01:23:20:00:00:01 |     None |   None |   None |   None |   None | CONTROLLER |
-    ----------------------------------------------------------------------------------------------------------------------
+<pre>
+STS [next] >show_flows 1
+----------------------------------------------------------------------------------------------------------------------
+|  Prio | in_port | dl_type | dl_src | dl_dst            | nw_proto | nw_src | nw_dst | tp_src | tp_dst | actions    |
+----------------------------------------------------------------------------------------------------------------------
+| 32768 |    None |    LLDP |   None | 01:23:20:00:00:01 |     None |   None |   None |   None |   None | CONTROLLER |
+----------------------------------------------------------------------------------------------------------------------
+</pre>
 
 From the prompt we can also check invariants, reorder or drop messages, and
 inject other network events such as link failures. Enter `help` for a full list of
@@ -191,34 +193,37 @@ The simplest way to start troubleshooting is by examining the event trace
 along with the console output. We rarely want to look at the event trace in its raw form though; we instead use a tool to
 parse and format the events:
 
-    $ ./tools/pretty_print_input_trace.py experiments/fuzz_pox_simple/events.trace
-    i1 ConnectToControllers (prunable)
-    fingerprint:  ()
-    --------------------------------------------------------------------
-    i2 ControlMessageReceive (prunable)
-    fingerprint:  (OFFingerprint{u'class': u'ofp_hello'}, 2, (u'c', u'1'))
-    ...
+<pre>
+$ ./tools/pretty_print_input_trace.py experiments/fuzz_pox_simple/events.trace
+i1 ConnectToControllers (prunable)
+fingerprint:  ()
+--------------------------------------------------------------------
+i2 ControlMessageReceive (prunable)
+fingerprint:  (OFFingerprint{u'class': u'ofp_hello'}, 2, (u'c', u'1'))
+...
+</pre>
 
 The output of this tool is highly configurable; see the
 [documentation](http://ucb-sts.github.io/sts/software_architecture.html#tools) for more
 information.
 
 It is sometimes also helpful to group together similar classes of event types.
-We can accomplish this easily with the another tool:
+We can accomplish this easily with another tool:
 
-    $ ./tools/tabulate_events.py experiments/fuzz_pox_simple/events.trace
-    ====================== Topology Change Events ======================
-    e32 SwitchFailure (prunable)
-    fingerprint:  (1,)
-    --------------------------------------------------------------------
-    e58 SwitchRecovery (prunable)
-    fingerprint:  (1,)
-    --------------------------------------------------------------------
-    ...
+<pre>
+$ ./tools/tabulate_events.py experiments/fuzz_pox_simple/events.trace
+====================== Topology Change Events ======================
+e32 SwitchFailure (prunable)
+fingerprint:  (1,)
+--------------------------------------------------------------------
+e58 SwitchRecovery (prunable)
+fingerprint:  (1,)
+--------------------------------------------------------------------
+...
 
-    ====================== Host Migration Events =======================
-    ...
-
+====================== Host Migration Events =======================
+...
+</pre>
 
 
 ### Replay Mode
@@ -349,25 +354,27 @@ the trace the invalid network configuration was installed.
 Like the other modes, we can use OpenFlowReplayer mode simply by passing its
 config file as an argument to `simulator.py`:
 
-    $ ./simulator.py -c experiments/fuzz_pox_simple/openflow_replay_config.py
-    INFO:simulation:Creating topology...
-    Injecting ControlMessageReceive:i2:(u'ControlMessageReceive', OFFingerprint{u'class': u'ofp_hello'}, 2, (u'c', u'1'))
-    ...
+<pre>
+$ ./simulator.py -c experiments/fuzz_pox_simple/openflow_replay_config.py
+INFO:simulation:Creating topology...
+Injecting ControlMessageReceive:i2:(u'ControlMessageReceive', OFFingerprint{u'class': u'ofp_hello'}, 2, (u'c', u'1'))
+...
 
-    Filtered flow mods:
-    ControlMessageReceive:i19:(u'ControlMessageReceive', OFFingerprint{u'hard_timeout': 0, u'out_port': 65535, u'priority': 32768, u'idle_timeout': 0, u'command': u'add', u'actions': (u'output(65533)',), u'flags': 0, u'class': u'ofp_flow_mod', u'match': u'dl_dst:01:23:20:00:00:01,dl_type:35020'}, 1, (u'c', u'1'))
-    ControlMessageReceive:i32:(u'ControlMessageReceive', OFFingerprint{u'hard_timeout': 0, u'out_port': 65535, u'priority': 32768, u'idle_timeout': 0, u'command': u'delete', u'actions': (), u'flags': 0, u'class': u'ofp_flow_mod', u'match': u'x^L'}, 2, (u'c', u'1'))
-    ...
+Filtered flow mods:
+ControlMessageReceive:i19:(u'ControlMessageReceive', OFFingerprint{u'hard_timeout': 0, u'out_port': 65535, u'priority': 32768, u'idle_timeout': 0, u'command': u'add', u'actions': (u'output(65533)',), u'flags': 0, u'class': u'ofp_flow_mod', u'match': u'dl_dst:01:23:20:00:00:01,dl_type:35020'}, 1, (u'c', u'1'))
+ControlMessageReceive:i32:(u'ControlMessageReceive', OFFingerprint{u'hard_timeout': 0, u'out_port': 65535, u'priority': 32768, u'idle_timeout': 0, u'command': u'delete', u'actions': (), u'flags': 0, u'class': u'ofp_flow_mod', u'match': u'x^L'}, 2, (u'c', u'1'))
+...
 
-    Flow tables:
-    Switch 1
-    -------------------------------------------------------------------------------------------------------------------------------------------
-    |  Prio | in_port | dl_type |            dl_src |            dl_dst | nw_proto |      nw_src |      nw_dst | tp_src | tp_dst |    actions |
-    -------------------------------------------------------------------------------------------------------------------------------------------
-    | 32768 |    None |    LLDP |              None | 01:23:20:00:00:01 |     None |        None |        None |   None |   None | CONTROLLER |
-    | 32768 |    None |      IP | 12:34:56:78:01:02 | 12:34:56:78:01:02 |     ICMP | 123.123.1.2 | 123.123.1.2 |      0 |      0 |  output(2) |
-    -------------------------------------------------------------------------------------------------------------------------------------------
-    ...
+Flow tables:
+Switch 1
+-------------------------------------------------------------------------------------------------------------------------------------------
+|  Prio | in_port | dl_type |            dl_src |            dl_dst | nw_proto |      nw_src |      nw_dst | tp_src | tp_dst |    actions |
+-------------------------------------------------------------------------------------------------------------------------------------------
+| 32768 |    None |    LLDP |              None | 01:23:20:00:00:01 |     None |        None |        None |   None |   None | CONTROLLER |
+| 32768 |    None |      IP | 12:34:56:78:01:02 | 12:34:56:78:01:02 |     ICMP | 123.123.1.2 | 123.123.1.2 |      0 |      0 |  output(2) |
+-------------------------------------------------------------------------------------------------------------------------------------------
+...
+</pre>
 
 After replaying all OpenFlow commands, OpenFlowReplayer infers which flow_mods show up in the final routing tables.
 
@@ -420,18 +427,19 @@ script will print all dataplane permits and
 drops, as well as ofp_packet_in's and out's associated with the
 TrafficInjection's packet:
 
-    $ ./tools/trace_traffic_injection.py experiments/fuzz_pox_simple/events.trace e22
-    e22 TrafficInjection (prunable)
-    fingerprint:  (Interface:HostInterface:eth2:12:34:56:78:02:02:[IPAddr('123.123.2.2')] Packet:[12:34:56:78:02:02>12:34:56:78:02:02:IP]|([v:4hl:5l:72t:64]ICMP cs:368c[123.123.2.2>123.123.2.2]){t:ECHO_REQUEST c:0 chk:637}{id:20585 seq:28263}, 2)
-    --------------------------------------------------------------------
-    i23 DataplanePermit (prunable)
-    fingerprint:  (DPFingerprint{u'dl_dst': u'12:34:56:78:02:02', u'nw_src': u'123.123.2.2', u'dl_src': u'12:34:56:78:02:02', u'nw_dst': u'123.123.2.2'}, 2, u'12:34:56:78:02:02')
-    --------------------------------------------------------------------
-    i28 ControlMessageSend (prunable)
-    fingerprint:  (OFFingerprint{u'data': DPFingerprint{u'dl_dst': u'12:34:56:78:02:02', u'nw_src': u'123.123.2.2', u'dl_src': u'12:34:56:78:02:02', u'nw_dst': u'123.123.2.2'}, u'class': u'ofp_packet_in', u'in_port': 2}, 2, (u'c', u'1'))
-    --------------------------------------------------------------------
-    ...
-
+<pre>
+$ ./tools/trace_traffic_injection.py experiments/fuzz_pox_simple/events.trace e22
+e22 TrafficInjection (prunable)
+fingerprint:  (Interface:HostInterface:eth2:12:34:56:78:02:02:[IPAddr('123.123.2.2')] Packet:[12:34:56:78:02:02>12:34:56:78:02:02:IP]|([v:4hl:5l:72t:64]ICMP cs:368c[123.123.2.2>123.123.2.2]){t:ECHO_REQUEST c:0 chk:637}{id:20585 seq:28263}, 2)
+--------------------------------------------------------------------
+i23 DataplanePermit (prunable)
+fingerprint:  (DPFingerprint{u'dl_dst': u'12:34:56:78:02:02', u'nw_src': u'123.123.2.2', u'dl_src': u'12:34:56:78:02:02', u'nw_dst': u'123.123.2.2'}, 2, u'12:34:56:78:02:02')
+--------------------------------------------------------------------
+i28 ControlMessageSend (prunable)
+fingerprint:  (OFFingerprint{u'data': DPFingerprint{u'dl_dst': u'12:34:56:78:02:02', u'nw_src': u'123.123.2.2', u'dl_src': u'12:34:56:78:02:02', u'nw_dst': u'123.123.2.2'}, u'class': u'ofp_packet_in', u'in_port': 2}, 2, (u'c', u'1'))
+--------------------------------------------------------------------
+...
+</pre>
 
 <!-- TODO: mention running delta debugging in parallel -->
 
