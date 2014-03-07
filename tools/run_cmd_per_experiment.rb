@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 # Requires ruby2.0+
 # Must be invoked from top-level sts directory
+# -r option will not work if there are unstaged changes.
 
 require 'optparse'
 require 'json'
