@@ -13,10 +13,12 @@
 # limitations under the License.
 
 
+import mock
 import unittest
 
 from sts.entities.base import HostAbstractClass
 from sts.entities.base import HostInterfaceAbstractClass
+from sts.entities.base import SSHEntity
 
 
 class HostAbstractClassTest(unittest.TestCase):
@@ -73,6 +75,62 @@ class HostInterfaceAbstractClassTest(unittest.TestCase):
     self.assertEquals(ips, iface.ips)
     self.assertEquals(name, iface.name)
     self.assertTrue(iface.__hash__())
+
+
+class SSHEntityTest(unittest.TestCase):
+
+  @mock.patch("paramiko.client.SSHClient")
+  def test_init(self, ssh_client_cls):
+    # Arrange
+    host = "localhost"
+    port = 22
+    username = None
+    password = None
+    key_filename = None
+    # Act
+    ssh = SSHEntity(host, port, username, password, key_filename)
+    ssh._ssh_cls = ssh_client_cls
+    client = ssh.ssh_client
+    # Assert
+    self.assertEquals(ssh.host, host)
+    self.assertEquals(ssh.port, port)
+    self.assertEquals(ssh.username, username)
+    self.assertEquals(ssh.password, password)
+    self.assertEquals(ssh.key_filename, key_filename)
+    self.assertEquals(ssh.key_filename, key_filename)
+    self.assertEquals(ssh.ssh_cls, ssh_client_cls)
+    self.assertEquals(client.set_missing_host_key_policy.call_count, 1)
+    client.connect.assert_called_once_with(hostname=host, port=port,
+                                           username=username, password=password,
+                                           key_filename=key_filename)
+
+  @mock.patch("paramiko.client.SSHClient")
+  def test_get_new_session(self, ssh_client_cls):
+    # Arrange
+    host = "localhost"
+    ssh = SSHEntity(host)
+    ssh._ssh_client = ssh_client_cls()
+    # Act
+    session = ssh.get_new_session()
+    # Assert
+    self.assertEquals(ssh._ssh_client.get_transport.call_count, 1)\
+
+  @mock.patch("paramiko.client.SSHClient")
+  def test_execute_remote_command(self, ssh_client_cls):
+    # Arrange
+    host = "localhost"
+    cmd = "ls"
+    ssh = SSHEntity(host)
+    ssh._ssh_cls = ssh_client_cls
+    session_mock = mock.Mock()
+    session_mock.recv.return_value = "dummy"
+    session_mock.recv.side_effect = lambda x: "dummy"
+    ssh.get_new_session = lambda: session_mock
+    # Act
+    ssh.execute_remote_command(cmd)
+    # Assert
+    session_mock.exec_command.assert_called_once_with(cmd)
+    self.assertTrue(session_mock.recv.call_count >= 1)
 
 
 if __name__ == '__main__':
