@@ -19,6 +19,7 @@ Define base (mostly abstract) entities used by sts.
 
 
 import abc
+import logging
 from itertools import count
 
 
@@ -246,3 +247,138 @@ class HostAbstractClass(object):
 
   def __repr__(self):
     return "Host(%d)" % self.hid
+
+
+class SSHEntity(object):
+  """
+  Controls an entity via ssh.
+
+  If username, password, and key_filename are None, the SSH will be use the
+  default ssh key loaded into the system and will work if the destination
+  host is configured to accept that key.
+
+  Options:
+    - host: the server address to connect to.
+    - port: the server port to connect to (default 22)
+    - username: the username to authenticate as (default local username)
+    - password: password to authenticate or to unlock the private key
+    - key_filename: private key for authentication
+  """
+  def __init__(self, host, port=22, username=None, password=None,
+               key_filename=None, ssh_cls=None):
+    self._host = host
+    self._port = port
+    self._username = username
+    self._password = password
+    self._key_filename = key_filename
+    self._ssh_client = None
+    self._ssh_cls = ssh_cls
+    if self._ssh_cls is None:
+      try:
+        import paramiko
+      except ImportError:
+        raise RuntimeError('''Must install paramiko to use ssh: \n'''
+                           ''' $ sudo pip install paramiko ''')
+      # Suppress normal SSH messages
+      logging.getLogger("paramiko").setLevel(logging.WARN)
+      self._ssh_cls = paramiko.SSHClient
+    self.log = logging.getLogger("SSHEntity")
+
+  @property
+  def host(self):
+    """The server address to connect to"""
+    return self._host
+
+  @property
+  def port(self):
+    """The server port to connect to"""
+    return self._port
+
+  @property
+  def username(self):
+    """The username to authenticate as (default local username)"""
+    return self._username
+
+  @property
+  def password(self):
+    """Password to authenticate or to unlock the private key."""
+    return self._password
+
+  @property
+  def key_filename(self):
+    """Private key for authentication"""
+    return self._key_filename
+
+  @property
+  def ssh_cls(self):
+    """
+    Returns reference to the SSH Client class
+    """
+    return self._ssh_cls
+
+  @property
+  def check_key_policy(self):
+    """
+    Returns the the policy for missing host keys
+
+    Default: accept all keys
+    """
+    try:
+      import paramiko
+    except ImportError:
+      raise RuntimeError('''Must install paramiko to use ssh: \n'''
+                         ''' $ sudo pip install paramiko ''')
+    return paramiko.AutoAddPolicy()
+
+  @property
+  def ssh_client(self):
+    """Returns instance of the ssh client
+
+    Will connect to the host if not already connected.
+    """
+    if self._ssh_client is None:
+      self._ssh_client = self.ssh_cls()
+      # Ignore host identify check
+      self._ssh_client.set_missing_host_key_policy(self.check_key_policy)
+      self._ssh_client.connect(hostname=self.host, port=self.port,
+                               username=self.username, password=self.password,
+                               key_filename=self.key_filename)
+    return self._ssh_client
+
+  def get_new_session(self):
+    """Return new ssh session handler to the host"""
+    ssh = self.ssh_client
+    transport = ssh.get_transport()
+    session = transport.open_channel(kind='session')
+    return session
+
+  def execute_remote_command(self, cmd, max_iterations=10):
+    """
+    Execute command remotely and return the stdout results
+    """
+    while max_iterations > 0:
+      try:
+        session = self.get_new_session()
+        session.exec_command(cmd)
+        reply = ""
+        while True:
+          if session.recv_ready():
+            reply += session.recv(100)  # arbitrary
+          if session.exit_status_ready():
+            break
+        session.close()
+        return reply
+      except Exception as exp:
+        self.log.warn("Exception in executing remote command \"%s\": %s" %
+                      (cmd, self.host))
+        print self.log.error(exp)
+        self._ssh_client = None
+        max_iterations -= 1
+    return ""
+
+  def __del__(self):
+    if self._ssh_client:
+      try:
+        self._ssh_client.close()
+      except Exception as exp:
+        self.log.warn("Error at closing ssh connection: '%s'" % exp)
