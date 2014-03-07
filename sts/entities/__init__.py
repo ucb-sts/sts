@@ -13,3 +13,4 @@
 # limitations under the License.
 
 from sts.entities.sts_entities import *
+from sts.entities.controllers import *
