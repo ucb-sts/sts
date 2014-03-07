@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 # Requires ruby2.0+
+# Must be invoked from top-level sts directory
 
 require 'optparse'
 
@@ -9,6 +10,41 @@ class Experiment
     @dir = dir
     @name = name
     @branch = branch
+  end
+end
+
+# Tracks (and modifies) the current branch/commit of a repository
+class Repository
+  attr_reader :name, :current_branch
+  def initialize(name, abs_path)
+    @name = name
+    @abs_path = abs_path
+    @original_branch = chdir { `git rev-parse --abbrev-ref HEAD`.chomp }
+    @current_branch = @original_branch
+  end
+
+  def maybe_change_branch(branch)
+    if branch != @current_branch
+      chdir { change_branch(branch) }
+    end
+  end
+
+  def restore_to_original_state
+    maybe_change_branch(@original_branch)
+  end
+
+  :private
+
+  def change_branch(branch)
+    system "git reset HEAD --hard 1>&2"
+    system "git checkout #{branch} 1>&2"
+    @current_branch = branch
+  end
+
+  def chdir(&block)
+    Dir.chdir(@abs_path) do
+      return block.call
+    end
   end
 end
 
@@ -32,26 +68,16 @@ synthetic_bugs = [
   Experiment.new("syn_mem_corruption_3switch_fuzzer_mcs", "Memory corruption")
 ]
 
-def walk_directories(experiments, command_path)
-  Dir.chdir("experiments/") do
-    current_branch = `git rev-parse --abbrev-ref HEAD`.chomp
-    original_branch = current_branch
-    experiments.each do |experiment|
-      if experiment.branch != current_branch
-        system "git reset HEAD --hard 1>&2"
-        system "git checkout #{experiment.branch} 1>&2"
-        current_branch = experiment.branch
-      end
-      Dir.chdir(experiment.dir) do
-        puts "====================  #{experiment.name}  ======================"
-        puts `#{command_path}`
-      end
-    end
-    if original_branch != current_branch
-      system "git reset HEAD --hard 1>&2"
-      system "git checkout #{original_branch} 1>&2"
+def walk_directories(experiments, options)
+  experiments_repo = Repository.new("experiments", Dir.pwd + "/experiments/")
+  experiments.each do |experiment|
+    experiments_repo.maybe_change_branch(experiment.branch)
+    Dir.chdir("experiments/" + experiment.dir) do
+      puts "====================  #{experiment.name}  ======================"
+      puts `#{options[:command_path]}`
     end
   end
+  experiments_repo.restore_to_original_state
 end
 
 if __FILE__ == $0
@@ -74,5 +100,5 @@ if __FILE__ == $0
     experiments = real_bugs + synthetic_bugs
   end
 
-  walk_directories(experiments, options[:command_path])
+  walk_directories(experiments, options)
 end
