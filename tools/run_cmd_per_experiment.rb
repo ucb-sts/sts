@@ -3,6 +3,7 @@
 # Must be invoked from top-level sts directory
 
 require 'optparse'
+require 'json'
 
 class Experiment
   attr_reader :dir, :name, :branch
@@ -21,25 +22,35 @@ class Repository
     @abs_path = abs_path
     @original_branch = chdir { `git rev-parse --abbrev-ref HEAD`.chomp }
     @current_branch = @original_branch
+    @original_commit = chdir { `git rev-parse HEAD`.chomp }
+    @current_commit = @original_commit
   end
 
-  def maybe_change_branch(branch)
+  def change_branch(branch)
     if branch != @current_branch
-      chdir { change_branch(branch) }
+      chdir do
+        system "git reset HEAD --hard 1>&2"
+        system "git checkout #{branch} 1>&2"
+        @current_branch = branch
+      end
     end
   end
 
-  def restore_to_original_state
-    maybe_change_branch(@original_branch)
+  def rollback(commit)
+    if commit != @current_commit
+      chdir do
+        system "git checkout #{commit}"
+        @current_commit = commit
+      end
+    end
   end
 
-  :private
-
-  def change_branch(branch)
-    system "git reset HEAD --hard 1>&2"
-    system "git checkout #{branch} 1>&2"
-    @current_branch = branch
+  def restore_original_state
+    change_branch(@original_branch)
+    rollback(@original_commit)
   end
+
+  private
 
   def chdir(&block)
     Dir.chdir(@abs_path) do
@@ -68,16 +79,44 @@ synthetic_bugs = [
   Experiment.new("syn_mem_corruption_3switch_fuzzer_mcs", "Memory corruption")
 ]
 
+def read_experiment_metadata
+   # Read metadata (json file). Current working directory must contain it.
+   metadata = {}
+   File.open("metadata") do |f|
+     metadata = JSON.load(f)
+   end
+   metadata
+end
+
 def walk_directories(experiments, options)
-  experiments_repo = Repository.new("experiments", Dir.pwd + "/experiments/")
+  experiments_repo = Repository.new("experiments", Dir.pwd + "/experiments")
+  if options[:rollback_sts]
+    sts_repo = Repository.new("sts", Dir.pwd)
+    hassel_repo = Repository.new("hassel", Dir.pwd + "/sts/hassel")
+    pox_repo = Repository.new("pox", Dir.pwd + "/pox")
+  end
+
   experiments.each do |experiment|
-    experiments_repo.maybe_change_branch(experiment.branch)
+    experiments_repo.change_branch(experiment.branch)
     Dir.chdir("experiments/" + experiment.dir) do
+      if options[:rollback_sts]
+        metadata = read_experiment_metadata
+        sts_repo.rollback(metadata["modules"]["sts"]["commit"])
+        pox_repo.rollback(metadata["modules"]["pox"]["commit"])
+        if metadata["modules"].include? "hassel"
+          hassel_repo.rollback(metadata["modules"]["hassel"]["commit"])
+        end
+      end
+
       puts "====================  #{experiment.name}  ======================"
       puts `#{options[:command_path]}`
     end
   end
-  experiments_repo.restore_to_original_state
+
+  experiments_repo.restore_original_state
+  if options[:rollback_sts]
+    [sts_repo, hassel_repo, pox_repo].each { |repo| repo.restore_original_state }
+  end
 end
 
 if __FILE__ == $0
@@ -91,6 +130,11 @@ if __FILE__ == $0
     options[:exclude_synthetic] = false
     opts.on("-e", "--exclude-synthetic", "Whether to exclude synthetic bug experiments") do
       options[:exclude_synthetic] = true
+    end
+
+    options[:rollback_sts] = false
+    opts.on("-r", "--rollback-sts", "Whether to rollback STS + dependencies to the versions specified in metadata.json") do
+      options[:rollback_sts] = true
     end
   end.parse!
 
