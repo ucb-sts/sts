@@ -561,12 +561,12 @@ class HostInterface (HostInterfaceAbstractClass):
     return True
 
   @property
-  def ips_hashes(self):
+  def _ips_hashes(self):
     hashes = [ip.toUnsignedN().__hash__() for ip in self.ips]
     return hashes
 
   @property
-  def hw_addr_hash(self):
+  def _hw_addr_hash(self):
     return self.hw_addr.toInt().__hash__()
 
   def __str__(self, *args, **kwargs):

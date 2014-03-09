@@ -55,11 +55,11 @@ class HostInterfaceAbstractClassTest(unittest.TestCase):
         return 1
 
       @property
-      def hw_addr_hash(self):
+      def _hw_addr_hash(self):
         return self.hw_addr.__hash__()
 
       @property
-      def ips_hashes(self):
+      def _ips_hashes(self):
         return [ip.__hash__() for ip in self.ips]
 
     return HostInterfaceTestImpl

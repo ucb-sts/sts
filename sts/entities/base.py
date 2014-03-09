@@ -166,19 +166,19 @@ class HostInterfaceAbstractClass(object):
     raise NotImplementedError()
 
   @abc.abstractproperty
-  def hw_addr_hash(self):
+  def _hw_addr_hash(self):
     """Hash for the HW address"""
     raise NotImplementedError()
 
   @abc.abstractproperty
-  def ips_hashes(self):
+  def _ips_hashes(self):
     """List of hashes for the IP addresses assigned to this interface"""
     raise NotImplementedError()
 
   def __hash__(self):
     """Generate unique hash for this interface"""
-    hash_code = self.hw_addr_hash
-    for ip_hash in self.ips_hashes:
+    hash_code = self._hw_addr_hash
+    for ip_hash in self._ips_hashes:
       hash_code += ip_hash
     hash_code += self.name.__hash__()
     return hash_code
