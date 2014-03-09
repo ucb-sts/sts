@@ -480,9 +480,7 @@ class Link (DirectedLinkAbstractClass):
     assert_type("start_port", start_port, ofp_phy_port, none_ok=False)
     assert_type("end_port", end_port, ofp_phy_port, none_ok=False)
     self.start_software_switch = start_software_switch
-    #self.start_port = start_port
     self.end_software_switch = end_software_switch
-    #self.end_port = end_port
 
   def __eq__(self, other):
     if not type(other) == Link:
