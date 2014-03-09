@@ -466,9 +466,8 @@ class Link (DirectedLinkAbstractClass):
 
   Note: Directed!
   """
-  def __init__(self, start_software_switch, start_port, end_software_switch, end_port):
-    super(Link, self).__init__(start_software_switch, start_port,
-                               end_software_switch, end_port)
+  def __init__(self, start_software_switch, start_port,
+               end_software_switch, end_port):
     if type(start_port) == int:
       assert(start_port in start_software_switch.ports)
       start_port = start_software_switch.ports[start_port]
