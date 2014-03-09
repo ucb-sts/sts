@@ -66,9 +66,9 @@ class DirectedLinkAbstractClass(object):
 
   def __eq__(self, other):
     return (self.start_node == getattr(other, 'start_node', None) and
-      self.start_port == getattr(other, 'start_port', None) and
-      self.end_node == getattr(other, 'end_node', None) and
-      self.end_port == getattr(other, 'end_port', None))
+            self.start_port == getattr(other, 'start_port', None) and
+            self.end_node == getattr(other, 'end_node', None) and
+            self.end_port == getattr(other, 'end_port', None))
 
   def __ne__(self, other):
     return not self.__eq__(other)
@@ -77,11 +77,10 @@ class DirectedLinkAbstractClass(object):
     return "(%d:%d) -> (%d:%d)" % (self.start_node, self.start_port,
                                    self.end_node, self.end_port)
 
-
   def create_reversed_link(self):
     """Create a Link that is in the opposite direction of this Link."""
     return DirectedLinkAbstractClass(self.end_node, self.end_port,
-                self.start_node, self.start_port)
+                                     self.start_node, self.start_port)
 
 
 class BiDirectionalLinkAbstractClass(object):
@@ -118,20 +117,20 @@ class BiDirectionalLinkAbstractClass(object):
 
   def __eq__(self, other):
     return ((self.node1 == getattr(other, 'node1', None) and
-      self.port1 == getattr(other, 'port1', None) and
-      self.node2 == getattr(other, 'node2', None) and
-      self.port2 == getattr(other, 'port2', None)) or
-      (self.node1 == getattr(other, 'node2', None) and
-      self.port1 == getattr(other, 'port2', None) and
-      self.node2 == getattr(other, 'node1', None) and
-      self.port2 == getattr(other, 'port1', None)))
+             self.port1 == getattr(other, 'port1', None) and
+             self.node2 == getattr(other, 'node2', None) and
+             self.port2 == getattr(other, 'port2', None)) or
+             (self.node1 == getattr(other, 'node2', None) and
+              self.port1 == getattr(other, 'port2', None) and
+              self.node2 == getattr(other, 'node1', None) and
+              self.port2 == getattr(other, 'port1', None)))
 
   def __ne__(self, other):
     return not self.__eq__(other)
 
   def __repr__(self):
     return "(%d:%d) <-> (%d:%d)" % (self.node1, self.port1,
-                                   self.node2, self.port2)
+                                    self.node2, self.port2)
 
 
 class HostInterfaceAbstractClass(object):
@@ -243,7 +242,7 @@ class HostAbstractClass(object):
     return port in self.interfaces
 
   def __str__(self):
-    return  "%s (%d)" % (self.name, self.hid)
+    return "%s (%d)" % (self.name, self.hid)
 
   def __repr__(self):
     return "Host(%d)" % self.hid
