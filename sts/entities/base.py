@@ -202,10 +202,10 @@ class HostAbstractClass(object):
     """
     Init new host
 
-    Options:
-      - interfaces: list of network interfaces attached to the host.
-      - name: human readable name of the host
-      - hid: unique ID for the host
+    Args:
+      interfaces: list of network interfaces attached to the host.
+      name: human readable name of the host
+      hid: unique ID for the host
     """
     self._interfaces = interfaces
     self._hid = hid if hid is not None else self._hids.next()
@@ -256,12 +256,12 @@ class SSHEntity(object):
   default ssh key loaded into the system and will work if the destination
   host is configured to accept that key.
 
-  Options:
-    - host: the server address to connect to.
-    - port: the server port to connect to (default 22)
-    - username: the username to authenticate as (default local username)
-    - password: password to authenticate or to unlock the private key
-    - key_filename: private key for authentication
+  Args:
+    host: the server address to connect to.
+    port: the server port to connect to (default 22)
+    username: the username to authenticate as (default local username)
+    password: password to authenticate or to unlock the private key
+    key_filename: private key for authentication
   """
   def __init__(self, host, port=22, username=None, password=None,
                key_filename=None, ssh_cls=None):
