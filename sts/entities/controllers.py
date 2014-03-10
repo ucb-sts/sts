@@ -58,26 +58,25 @@ class ControllerConfig(object):
   aspects of configurations (like finding free port) somewhere else.
   See: config.experiment_config_lib.py for dynamic configuration.
 
-  Options:
-    - start_cmd: command that starts the controller followed by a list of
-          command line tokens as arguments. You may make use of two
-          macros: __address__ expands to the address given in this
-          constructor and __port__ expands to the port given in this
-          constructor.
-      - kill_cmd: command that kills the controller followed by a list of
-          command line tokens as arguments
-      - restart_cmd: define this if restart is not as simple as kill then start
-          or to implement a soft restart command.
-      - address, port: controller socket info for listening to OpenFlow
-          connections from switches. address may be specified as "auto" to
-          automatically find a non-localhost IP address in the range
-          192.168.1.0/24, or "__address__" to use get_address_cmd
-          to choose an address.
-      - sync: A URI where this controller should listen for a STSSyncProto
-          connection. Example: "tcp:localhost:18899"
-      - cwd: the working directory for the controller
-      - cid: controller unique ID
-      - label: controller human readable label
+  Args:
+    start_cmd: command that starts the controller followed by a list of
+      command line tokens as arguments. You may make use of two
+      macros: __address__ expands to the address given in this constructor
+      and __port__ expands to the port given in this constructor.
+    kill_cmd: command that kills the controller followed by a list of
+      command line tokens as arguments
+    restart_cmd: define this if restart is not as simple as kill then start
+      or to implement a soft restart command.
+    address, port: controller socket info for listening to OpenFlow
+      connections from switches. address may be specified as "auto" to
+      automatically find a non-localhost IP address in the range
+      192.168.1.0/24, or "__address__" to use get_address_cmd
+      to choose an address.
+    sync: A URI where this controller should listen for a STSSyncProto
+      connection. Example: "tcp:localhost:18899"
+    cwd: the working directory for the controller
+    cid: controller unique ID
+    label: controller human readable label
   """
   def __init__(self, start_cmd, kill_cmd, restart_cmd=None,
                address="127.0.0.1", port=6633, sync=None,
@@ -192,10 +191,11 @@ class ControllerAbstractClass(object):
                snapshot_service=None):
     """
     Init a controller entity
-    Options:
-      - controller_config: controller specific configuration object
-      - sync_connection_manager: ???
-      - snapshot_service: a SnapshotService instance (sts/snapshot.py)
+
+    Args:
+      controller_config: controller specific configuration object
+      sync_connection_manager: ???
+      snapshot_service: a SnapshotService instance (sts/snapshot.py)
         for checking extracting the controller's current view of the network
         state.
     """
