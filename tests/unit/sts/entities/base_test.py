@@ -23,7 +23,7 @@ from sts.entities.base import SSHEntity
 
 class HostAbstractClassTest(unittest.TestCase):
 
-  def get_concrete_impl(self):
+  def get_concrete_class(self):
     """Simple mock for the abstract methods and properties"""
     class HostTestImpl(HostAbstractClass):
       def send(self, interface, packet):
@@ -36,7 +36,7 @@ class HostAbstractClassTest(unittest.TestCase):
     interfaces = ["eth1"]
     name = 'Host1'
     hid = 1
-    host_cls = self.get_concrete_impl()
+    host_cls = self.get_concrete_class()
     h = host_cls(interfaces=interfaces, name=name, hid=hid)
     self.assertEquals(interfaces, h.interfaces)
     self.assertEquals(name, h.name)
@@ -47,7 +47,7 @@ class HostAbstractClassTest(unittest.TestCase):
 
 class HostInterfaceAbstractClassTest(unittest.TestCase):
 
-  def get_concrete_impl(self):
+  def get_concrete_class(self):
     """Simple mock for the abstract methods and properties"""
     class HostInterfaceTestImpl(HostInterfaceAbstractClass):
       @property
@@ -69,7 +69,7 @@ class HostInterfaceAbstractClassTest(unittest.TestCase):
     ip = '192.168.56.1'
     ips = [ip]
     name = "eth0"
-    iface_cls = self.get_concrete_impl()
+    iface_cls = self.get_concrete_class()
     iface = iface_cls(hw_addr, ip, name)
     self.assertEquals(hw_addr, iface.hw_addr)
     self.assertEquals(ips, iface.ips)
