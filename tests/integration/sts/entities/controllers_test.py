@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO: Provide optional test for BigSwitch, ONOS, and other controllers
+# TODO (AH): Provide optional test for BigSwitch, ONOS, and other controllers
 
 
 import time
@@ -24,12 +24,12 @@ from sts.entities.controllers import POXController
 
 
 class POXControllerTest(unittest.TestCase):
-  # TODO: Test sync and namespaces
+  # TODO (AH): Test sync and namespaces
 
   def get_config(self):
-    start_cmd = "./pox.py --verbose --no-cli sts.syncproto.pox_syncer " +\
-                "--blocking=False openflow.of_01 --address=__address__ " +\
-                "--port=__port__"
+    start_cmd = ("./pox.py --verbose --no-cli sts.syncproto.pox_syncer "
+                 "--blocking=False openflow.of_01 --address=__address__ "
+                 "--port=__port__")
     kill_cmd = ""
     cwd = "pox"
     config = ControllerConfig(start_cmd=start_cmd, kill_cmd=kill_cmd, cwd=cwd)

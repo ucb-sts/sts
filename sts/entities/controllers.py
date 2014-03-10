@@ -17,7 +17,7 @@
 # limitations under the License.
 
 """
-Different OpenFlow controllers wrappers for STS
+OpenFlow controller wrappers for STS
 """
 
 import abc
@@ -73,7 +73,8 @@ class ControllerConfig(object):
           automatically find a non-localhost IP address in the range
           192.168.1.0/24, or "__address__" to use get_address_cmd
           to choose an address.
-      - sync: ???
+      - sync: A URI where this controller should listen for a STSSyncProto
+          connection. Example: "tcp:localhost:18899"
       - cwd: the working directory for the controller
       - cid: controller unique ID
       - label: controller human readable label
@@ -194,7 +195,9 @@ class ControllerAbstractClass(object):
     Options:
       - controller_config: controller specific configuration object
       - sync_connection_manager: ???
-      - snapshot_service: ???
+      - snapshot_service: a SnapshotService instance (sts/snapshot.py)
+        for checking extracting the controller's current view of the network
+        state.
     """
     self._config = controller_config
     self._state = ControllerState.DEAD
@@ -246,7 +249,7 @@ class ControllerAbstractClass(object):
 
   @abc.abstractproperty
   def blocked_peers(self):
-    """Return a list of block peer controllers (if any)"""
+    """Return a list of blocked peer controllers (if any)"""
     raise NotImplementedError()
 
   @abc.abstractmethod
