@@ -22,7 +22,7 @@ from sts.entities.controllers import ControllerState
 
 
 class ControllerAbstractClassTest(unittest.TestCase):
-  def get_concrete_impl(self):
+  def get_concrete_class(self):
     """Simple mock for the abstract methods and properties"""
     class ControllerImpl(ControllerAbstractClass):
       def is_remote(self):
@@ -54,7 +54,7 @@ class ControllerAbstractClassTest(unittest.TestCase):
     cid = 123
     config.label = label
     config.cid = cid
-    controller_cls = self.get_concrete_impl()
+    controller_cls = self.get_concrete_class()
     # Act
     c = controller_cls(config)
     # Assert
