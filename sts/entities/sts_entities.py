@@ -16,7 +16,8 @@
 # limitations under the License.
 
 """
-This module defines the simulated entities, such as openflow switches, links, and hosts.
+This module defines the basic simulated entities, such as openflow switches and
+links.
 """
 
 from pox.openflow.software_switch import DpPacketOut, OFConnection
@@ -31,19 +32,18 @@ import pox.openflow.libopenflow_01 as of
 from sts.openflow_buffer import OpenFlowBuffer
 
 from sts.util.tabular import Tabular
-from sts.util.network_namespace import *
 
-from sts.entities.base import HostAbstractClass, HostInterfaceAbstractClass
 from sts.entities.base import DirectedLinkAbstractClass
 from sts.entities.base import BiDirectionalLinkAbstractClass
+from sts.entities.hosts import HostInterface
 
 
 import Queue
-from itertools import count
 import logging
 import pickle
 import random
 import time
+
 
 class DeferredOFConnection(OFConnection):
   def __init__(self, io_worker, cid, dpid, openflow_buffer):
@@ -533,226 +533,6 @@ class AccessLink (BiDirectionalLinkAbstractClass):
   def switch_port(self):
     return self.port2
 
-
-class HostInterface (HostInterfaceAbstractClass):
-  """ Represents a host's interface (e.g. eth0) """
-
-  def __init__(self, hw_addr, ip_or_ips=[], name=""):
-    super(HostInterface, self).__init__(hw_addr, ip_or_ips, name)
-
-  @property
-  def port_no(self):
-    # Hack
-    return self.hw_addr.toStr()
-
-  def __eq__(self, other):
-    if type(other) != HostInterface:
-      return False
-    if self.hw_addr.toInt() != other.hw_addr.toInt():
-      return False
-    other_ip_ints = map(lambda ip: ip.toUnsignedN(), other.ips)
-    for ip in self.ips:
-      if ip.toUnsignedN() not in other_ip_ints:
-        return False
-    if len(other.ips) != len(self.ips):
-      return False
-    if self.name != other.name:
-      return False
-    return True
-
-  @property
-  def _ips_hashes(self):
-    hashes = [ip.toUnsignedN().__hash__() for ip in self.ips]
-    return hashes
-
-  @property
-  def _hw_addr_hash(self):
-    return self.hw_addr.toInt().__hash__()
-
-  def __str__(self, *args, **kwargs):
-    return "HostInterface:" + self.name + ":" + \
-           str(self.hw_addr) + ":" + str(self.ips)
-
-  def __repr__(self, *args, **kwargs):
-    return self.__str__()
-
-  def to_json(self):
-    return {'name' : self.name,
-            'ips' : [ ip.toStr() for ip in self.ips ],
-            'hw_addr' : self.hw_addr.toStr()}
-
-  @staticmethod
-  def from_json(json_hash):
-    name = json_hash['name']
-    ips = []
-    for ip in json_hash['ips']:
-      ips.append(IPAddr(str(ip)))
-    hw_addr = EthAddr(json_hash['hw_addr'])
-    return HostInterface(hw_addr, ip_or_ips=ips, name=name)
-
-#                Host
-#          /      |       \
-#  interface   interface  interface
-#    |            |           |
-# access_link acccess_link access_link
-#    |            |           |
-# switch_port  switch_port  switch_port
-
-class Host (EventMixin, HostAbstractClass):
-  '''
-  A very simple Host entity.
-
-  For more sophisticated hosts, we should spawn a separate VM!
-
-  If multiple host VMs are too heavy-weight for a single machine, run the
-  hosts on their own machines!
-  '''
-
-  _eventMixin_events = set([DpPacketOut])
-  _hids = count(1)
-
-  def __init__(self, interfaces, name=""):
-    '''
-    - interfaces A list of HostInterfaces
-    '''
-    HostAbstractClass.__init__(self, interfaces, name)
-    self.log = logging.getLogger(name)
-    self.send_capabilities = False
-
-  def send(self, interface, packet):
-    ''' Send a packet out a given interface '''
-    self.log.info("sending packet on interface %s: %s" % (interface.name, str(packet)))
-    self.raiseEvent(DpPacketOut(self, packet, interface))
-
-  def receive(self, interface, packet):
-    '''
-    Process an incoming packet from a switch
-
-    Called by PatchPanel
-    '''
-    if packet.type == ethernet.ARP_TYPE:
-      arp_reply = self._check_arp_reply(packet)
-      if arp_reply is not None:
-        self.log.info("received valid arp packet on interface %s: %s" % (interface.name, str(packet)))
-        self.send(interface, arp_reply)
-        return arp_reply
-      else:
-        self.log.info("received invalid arp packet on interface %s: %s" % (interface.name, str(packet)))
-        return None
-    elif self.send_capabilities and packet.type == ethernet.IP_TYPE and packet.next.protocol == ipv4.ICMP_PROTOCOL:
-      # Temporary hack: if we receive a ICMP packet, send a TCP RST to signal to POX
-      # that we do want to revoke the capability for this flow. See
-      # pox/pox/forwarding/capabilities_manager.py
-      self.log.info("Sending RST on interface %s: in reponse to: %s" % (interface.name, str(packet)))
-      t = tcp()
-      tcp.RST = True
-      i = ipv4()
-      i.protocol = ipv4.TCP_PROTOCOL
-      i.srcip = interface.ips[0]
-      i.dstip = packet.next.srcip
-      i.payload = t
-      ether = ethernet()
-      ether.type = ethernet.IP_TYPE
-      ether.src = interface.hw_addr
-      ether.dst = packet.src
-      ether.payload = i
-      self.send(interface, ether)
-
-    self.log.info("Recieved packet %s on interface %s" % (str(packet), interface.name))
-
-  def _check_arp_reply(self, arp_packet):
-    '''
-    Check whether incoming packet is a valid ARP request. If so, construct an ARP reply and send back
-    '''
-    arp_packet_payload = arp_packet.payload
-    if arp_packet_payload.opcode == arp.REQUEST:
-      interface_matched = self._if_valid_arp_request(arp_packet_payload)
-      if interface_matched is None:
-        return None
-      else:
-        # This ARP query is for this host, construct an reply packet
-        arp_reply = arp()
-        arp_reply.hwsrc = interface_matched.hw_addr
-        arp_reply.hwdst = arp_packet_payload.hwsrc
-        arp_reply.opcode = arp.REPLY
-        arp_reply.protosrc = arp_packet_payload.protodst
-        arp_reply.protodst = arp_packet_payload.protosrc
-        ether = ethernet()
-        ether.type = ethernet.ARP_TYPE
-        ether.src = interface_matched.hw_addr
-        ether.dst = arp_packet.src
-        ether.payload = arp_reply
-        return ether
-
-  def _if_valid_arp_request(self, arp_request_payload):
-    '''
-    Check if the ARP query requests any interface of this host. If so, return the corresponding interface.
-    '''
-    for interface in self.interfaces:
-      if arp_request_payload.protodst in interface.ips:
-        return interface
-    return None
-
-  @property
-  def dpid(self):
-    # Hack
-    return self.hid
-
-  def __str__(self):
-    return "%s (%d)" % (self.name, self.hid)
-
-  def __repr__(self):
-    return "Host(%d)" % self.hid
-
-class NamespaceHost(Host):
-  '''
-  A host that launches a process in a separate namespace process.
-  '''
-  def __init__(self, ip_addr_str, create_io_worker, name="", cmd="/bin/bash sleep"):
-    '''
-    - ip_addr_str must be a string! not a IPAddr object
-    - cmd: a string of the command to execute in the separate namespace
-      The default is "xterm", which opens up a new terminal window.
-    '''
-    self.hid = self._hids.next()
-    (self.guest, guest_eth_addr, host_device) = launch_namespace(cmd, ip_addr_str, self.hid)
-    self.socket = bind_raw_socket(host_device)
-    # Set up an io worker for our end of the socket
-    self.io_worker = create_io_worker(self.socket)
-    self.io_worker.set_receive_handler(self._io_worker_receive_handler)
-
-    self.interfaces = [HostInterface(guest_eth_addr, IPAddr(ip_addr_str))]
-    if name == "":
-      name = "host:" + ip_addr_str
-    self.name = name
-    self.log = logging.getLogger(name)
-
-  def _io_worker_receive_handler(self, io_worker):
-    '''
-    Read a packet from the Namespace and inject it into the network.
-    '''
-    message = io_worker.peek_receive_buf()
-    # Create an ethernet packet
-    # TODO(cs): this assumes that the raw socket returns exactly one ethernet
-    # packet. Since ethernet frames do not include length information, the
-    # only way to correctly handle partial packets would be to get access to
-    # framing information. Should probably look at what Mininet does.
-    packet = ethernet(raw=message)
-    if not packet.parsed:
-      return
-    io_worker.consume_receive_buf(packet.hdr_len + packet.payload_len)
-    self.log.info("received packet from netns %s: " % str(packet))
-    super(NamespaceHost, self).send(self.interfaces[0], packet)
-
-  def receive(self, interface, packet):
-    '''
-    Send an incoming packet from a switch to the Namespace.
-
-    Called by PatchPanel.
-    '''
-    self.log.info("received packet on interface %s: %s. Passing to netns" %
-                  (interface.name, str(packet)))
-    self.io_worker.send(packet.pack())
 
 
 class SnapshotPopen(object):

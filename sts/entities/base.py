@@ -20,7 +20,6 @@ Define base (mostly abstract) entities used by sts.
 
 import abc
 import logging
-from itertools import count
 
 
 class DirectedLinkAbstractClass(object):
@@ -131,121 +130,6 @@ class BiDirectionalLinkAbstractClass(object):
   def __repr__(self):
     return "(%s:%s) <-> (%s:%s)" % (self.node1, self.port1,
                                     self.node2, self.port2)
-
-
-class HostInterfaceAbstractClass(object):
-  """Represents a host's network interface (e.g. eth0)"""
-
-  __metaclass__ = abc.ABCMeta
-
-  def __init__(self, hw_addr, ips=None, name=""):
-    self._hw_addr = hw_addr
-    ips = [] if ips is None else ips
-    self._ips = ips if isinstance(ips, list) else [ips]
-    self._name = name
-
-  @property
-  def ips(self):
-    """List of IP addresses assigned to this interface"""
-    return self._ips
-
-  @property
-  def name(self):
-    """Human Readable name for this interface"""
-    return self._name
-
-  @property
-  def hw_addr(self):
-    """Hardware address of this interface"""
-    return self._hw_addr
-
-  @abc.abstractproperty
-  def port_no(self):
-    """Port number"""
-    raise NotImplementedError()
-
-  @abc.abstractproperty
-  def _hw_addr_hash(self):
-    """Hash for the HW address"""
-    raise NotImplementedError()
-
-  @abc.abstractproperty
-  def _ips_hashes(self):
-    """List of hashes for the IP addresses assigned to this interface"""
-    raise NotImplementedError()
-
-  def __hash__(self):
-    """Generate unique hash for this interface"""
-    hash_code = self._hw_addr_hash
-    for ip_hash in self._ips_hashes:
-      hash_code += ip_hash
-    hash_code += self.name.__hash__()
-    return hash_code
-
-  def __str__(self):
-    return "HostInterface:" + self.name + ":" + str(self.hw_addr) +\
-           ":" + str(self.ips)
-
-  def __repr__(self):
-    return self.__str__()
-
-
-class HostAbstractClass(object):
-  """
-  Host abstract representation.
-  """
-  __metaclass__ = abc.ABCMeta
-
-  _hids = count(1)
-
-  def __init__(self, interfaces, name="", hid=None):
-    """
-    Init new host
-
-    Args:
-      interfaces: list of network interfaces attached to the host.
-      name: human readable name of the host
-      hid: unique ID for the host
-    """
-    self._interfaces = interfaces
-    self._hid = hid if hid is not None else self._hids.next()
-    self._name = name if name else "Host%s" % self._hid
-
-  @property
-  def interfaces(self):
-    return self._interfaces
-
-  @property
-  def name(self):
-    return self._name
-
-  @property
-  def hid(self):
-    return self._hid
-
-  @abc.abstractmethod
-  def send(self, interface, packet):
-    """
-    Send packet on a specific interface.
-    """
-    raise NotImplementedError()
-
-  @abc.abstractmethod
-  def receive(self, interface, packet):
-    """
-    Receive a packet from a specific interface.
-    """
-    raise NotImplementedError()
-
-  def has_port(self, port):
-    """Return True if the port is one of the interfaces"""
-    return port in self.interfaces
-
-  def __str__(self):
-    return "%s (%d)" % (self.name, self.hid)
-
-  def __repr__(self):
-    return "Host(%d)" % self.hid
 
 
 class SSHEntity(object):
