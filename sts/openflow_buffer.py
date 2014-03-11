@@ -231,7 +231,6 @@ class OpenFlowBuffer(EventMixin):
     conn_message = (conn, ofp_message)
     message_id = PendingSend(dpid, controller_id, fingerprint)
     self.pending_sends.insert(message_id, conn_message)
-    log.info("--- insert pending send: %s", message_id)
     b64_packet = base64_encode(ofp_message)
     self.raiseEventNoErrors(PendingMessage(message_id, b64_packet, send_event=True))
     return message_id
