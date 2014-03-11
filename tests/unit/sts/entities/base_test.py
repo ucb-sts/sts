@@ -16,65 +16,7 @@
 import mock
 import unittest
 
-from sts.entities.base import HostAbstractClass
-from sts.entities.base import HostInterfaceAbstractClass
 from sts.entities.base import SSHEntity
-
-
-class HostAbstractClassTest(unittest.TestCase):
-
-  def get_concrete_class(self):
-    """Simple mock for the abstract methods and properties"""
-    class HostTestImpl(HostAbstractClass):
-      def send(self, interface, packet):
-        return True
-      def receive(self, interface, packet):
-        return True
-    return HostTestImpl
-
-  def test_init(self):
-    interfaces = ["eth1"]
-    name = 'Host1'
-    hid = 1
-    host_cls = self.get_concrete_class()
-    h = host_cls(interfaces=interfaces, name=name, hid=hid)
-    self.assertEquals(interfaces, h.interfaces)
-    self.assertEquals(name, h.name)
-    self.assertEquals(hid, h.hid)
-    self.assertTrue(h.has_port(interfaces[0]))
-    self.assertFalse(h.has_port("fake_interface"))
-
-
-class HostInterfaceAbstractClassTest(unittest.TestCase):
-
-  def get_concrete_class(self):
-    """Simple mock for the abstract methods and properties"""
-    class HostInterfaceTestImpl(HostInterfaceAbstractClass):
-      @property
-      def port_no(self):
-        return 1
-
-      @property
-      def _hw_addr_hash(self):
-        return self.hw_addr.__hash__()
-
-      @property
-      def _ips_hashes(self):
-        return [ip.__hash__() for ip in self.ips]
-
-    return HostInterfaceTestImpl
-
-  def test_init(self):
-    hw_addr = 'ff:ee:dd:cc:bb:aa'
-    ip = '192.168.56.1'
-    ips = [ip]
-    name = "eth0"
-    iface_cls = self.get_concrete_class()
-    iface = iface_cls(hw_addr, ip, name)
-    self.assertEquals(hw_addr, iface.hw_addr)
-    self.assertEquals(ips, iface.ips)
-    self.assertEquals(name, iface.name)
-    self.assertTrue(iface.__hash__())
 
 
 class SSHEntityTest(unittest.TestCase):

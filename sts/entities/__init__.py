@@ -14,3 +14,4 @@
 
 from sts.entities.sts_entities import *
 from sts.entities.controllers import *
+from sts.entities.hosts import *
