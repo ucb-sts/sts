@@ -35,7 +35,7 @@ def setup_experiment(args, config):
 
   if args.timestamp_results is not None:
     # Note that argparse returns a list
-    config.timestamp_results = args.timestamp_results[0]
+    config.timestamp_results = args.timestamp_results
 
   if hasattr(config, 'timestamp_results') and config.timestamp_results:
     now = timestamp_string()
