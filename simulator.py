@@ -60,8 +60,7 @@ parser.add_argument('-n', '--exp-name', dest="exp_name",
                     help='''experiment name (determines result directory name)''')
 
 parser.add_argument('-t', '--timestamp-results', dest="timestamp_results",
-                    default=None, nargs=1, action="store",
-                    type=lambda s: s.lower() in ('y', 'yes', 'on', 't', 'true', '1', 'yeay', 'ja', 'jepp'),
+                    default=False, action="store_true",
                     help='''whether to append a timestamp to the result directory name''')
 
 parser.add_argument('-p', '--publish', action="store_true", default=False,
