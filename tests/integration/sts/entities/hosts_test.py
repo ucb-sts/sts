@@ -43,3 +43,12 @@ class NamespaceHostTest(unittest.TestCase):
                          name=name, hid=hid)
     # Assert
     self.assertEquals(host.interfaces, interfaces)
+
+  def test_send(self):
+    # TODO (AH): test send, better done when I figure out what to do with topo
+    pass
+
+  def test_receive(self):
+    # TODO (AH): test receive, better done when I figure out what to do with
+    #            topology.py
+    pass
