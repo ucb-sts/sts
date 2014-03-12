@@ -139,8 +139,8 @@ class HostInterfaceTest(unittest.TestCase):
     ip = IPAddr(ip_str)
     name = "eth0"
     input_json = {'name': name,
-                'ips': [ip],
-                'hw_addr': hw_addr_str}
+                  'ips': [ip],
+                  'hw_addr': hw_addr_str}
     # Act
     interface = HostInterface.from_json(input_json)
     # Assert
