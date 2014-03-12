@@ -278,7 +278,7 @@ class Host(HostAbstractClass, EventMixin):
       # to POX that we do want to revoke the capability for this flow. See
       # pox/pox/forwarding/capabilities_manager.py
       self.log.info("Sending RST on interface %s: in "
-                    "reponse to: %s" % (interface.name, str(packet)))
+                    "response to: %s" % (interface.name, str(packet)))
       t = tcp()
       tcp.RST = True
       i = ipv4()
@@ -293,7 +293,7 @@ class Host(HostAbstractClass, EventMixin):
       ether.payload = i
       self.send(interface, ether)
 
-    self.log.info("Recieved packet %s on interface "
+    self.log.info("Received packet %s on interface "
                   "%s" % (str(packet), interface.name))
 
   def _check_arp_reply(self, arp_packet):
