@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import os
 import unittest
 
 from sts.entities.base import SSHEntity
@@ -55,4 +56,8 @@ class SSHEntityTest(unittest.TestCase):
     ret = ssh.execute_remote_command("ls " + home_dir)
     # Assert
     self.assertIsInstance(ret, basestring)
-    self.assertTrue(len(ret) > 0)
+    ret_list = ret.split()
+    ret_list.sort()
+    current_list = os.listdir(home_dir)
+    current_list.sort()
+    self.assertEquals(ret.split(), current_list)

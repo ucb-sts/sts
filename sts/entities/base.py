@@ -247,7 +247,7 @@ class SSHEntity(object):
         while True:
           if session.recv_ready():
             reply += session.recv(100)  # arbitrary
-          if session.exit_status_ready():
+          elif session.recv_ready() is False and session.exit_status_ready():
             break
         session.close()
         return reply

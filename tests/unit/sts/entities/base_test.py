@@ -65,8 +65,13 @@ class SSHEntityTest(unittest.TestCase):
     ssh = SSHEntity(host)
     ssh._ssh_cls = ssh_client_cls
     session_mock = mock.Mock()
+    session_mock.recv_ready.return_value = True
+    session_mock.exit_status_ready.return_value = True
     session_mock.recv.return_value = "dummy"
-    session_mock.recv.side_effect = lambda x: "dummy"
+    def change_status(y):
+      session_mock.recv_ready.return_value = False
+      return "dummy"
+    session_mock.recv.side_effect = change_status
     ssh.get_new_session = lambda: session_mock
     # Act
     ssh.execute_remote_command(cmd)
