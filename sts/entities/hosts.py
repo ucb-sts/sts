@@ -175,7 +175,10 @@ class HostAbstractClass(object):
       name: human readable name of the host
       hid: unique ID for the host
     """
+    interfaces = [] if interfaces is None else interfaces
     self._interfaces = interfaces
+    if not isinstance(interfaces, list):
+      self._interfaces = [interfaces]
     self._hid = hid if hid is not None else self._hids.next()
     self._name = name if name else "Host%s" % self._hid
 
@@ -355,9 +358,9 @@ class NamespaceHost(Host):
     """
     super(NamespaceHost, self).__init__(interfaces=interfaces, name=name,
                                         hid=hid)
-    assert len(interfaces) == 1, ("Currently only one interface per "
-                                  "host is supported")
-    interface = interfaces[0]
+    assert len(self.interfaces) == 1, ("Currently only one interface per "
+                                       "host is supported")
+    interface = self.interfaces[0]
 
     (self.guest, guest_eth_addr, host_device) = ns.launch_namespace(
       cmd, interface.ips[0].toStr(), self.hid, guest_hw_addr=interface.hw_addr)
