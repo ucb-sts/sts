@@ -37,6 +37,7 @@ from sts.util.convenience import IPAddressSpace
 from sts.util.convenience import deprecated
 
 from sts.entities.base import SSHEntity
+from sts.entities.sts_entities import SnapshotPopen
 
 
 class ControllerState(object):
@@ -78,12 +79,13 @@ class ControllerConfig(object):
     cid: controller unique ID
     label: controller human readable label
   """
-  def __init__(self, start_cmd, kill_cmd, restart_cmd=None,
+  def __init__(self, start_cmd, kill_cmd, restart_cmd=None, check_cmd=None,
                address="127.0.0.1", port=6633, sync=None,
                cwd=None, cid=None, label=None):
     self._start_cmd = start_cmd
     self._kill_cmd = kill_cmd
     self._restart_cmd = restart_cmd
+    self._check_cmd = check_cmd
     self._address = address
     self._port = port
     self._sync = sync
@@ -141,6 +143,15 @@ class ControllerConfig(object):
     return self._restart_cmd
 
   @property
+  def check_cmd(self):
+    """
+    The command to check the status the controller
+
+    The specific format of the command is dependent on the controller type
+    """
+    return self._check_cmd
+
+  @property
   def expanded_start_cmd(self):
     """Start command with substituted variables and arguments as a list"""
     return self._expand_vars(self.start_cmd).split()
@@ -154,6 +165,13 @@ class ControllerConfig(object):
   def expanded_restart_cmd(self):
     """Restart command with substituted variables and arguments as a list"""
     return self._expand_vars(self.restart_cmd).split()
+
+  @property
+  def expanded_check_cmd(self):
+    """
+    Check status command with substituted variables and arguments as a list
+    """
+    return self._expand_vars(self.check_cmd).split()
 
   @property
   def sync(self):
@@ -636,19 +654,41 @@ class POXController(Controller):
     self.state = ControllerState.ALIVE
 
 
-class VMController(Controller, SSHEntity):
+class VMController(Controller):
   """Controllers that are run in virtual machines rather than processes"""
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, controller_config, sync_connection_manager=None,
-               snapshot_service=None, username="root", password=""):
+  def __init__(self, controller_config, cmd_executor=None,
+               sync_connection_manager=None, snapshot_service=None,
+               username=None, password=None):
+    """
+    Args:
+      controller_config: see ControllerConfig
+      cmd_executer: a class that has execute_command method. If not specified
+                    SSHEntity will be used
+                    See SSHEntity and LocalEntity
+      username: overrides the username specified in controller_config (if any)
+      password: overrides the password specified in controller_config (if any)
+    """
     Controller.__init__(self, controller_config, sync_connection_manager,
                         snapshot_service)
-    SSHEntity.__init__(self, host=controller_config.address, port=22,
-                       username=username, password=password)
-    self._ssh_client = None
     self.username = username
     self.password = password
+    if self.username is None and hasattr(self.config, 'username'):
+      self.username = self.config.username
+    if self.password is None and hasattr(self.config, 'password'):
+      self.password = self.config.password
+    self.cmd_executor = cmd_executor
+    if self.cmd_executor is None:
+      key_filename = getattr(self.config, 'key_filename', None)
+      self.cmd_executor = SSHEntity(controller_config.address,
+                                    username=self.username,
+                                    password=self.password,
+                                    key_filename=key_filename,
+                                    cwd=getattr(self.config, "cwd", None),
+                                    redirect_output=True,
+                                    block=True)
+    assert hasattr(self.cmd_executor, "execute_command")
     self.commands = {}
     self.populate_commands()
     self.welcome_msg = " =====> Starting VM Controller <===== "
@@ -667,7 +707,10 @@ class VMController(Controller, SSHEntity):
     self.commands["start"] = " ".join(self.config.expanded_start_cmd)
     self.commands["kill"] = " ".join(self.config.expanded_kill_cmd)
     self.commands["restart"] = " ".join(self.config.expanded_restart_cmd)
-    self.commands["check"] = ""  # subclass dependent
+    if hasattr(self.config, "expanded_check_cmd"):
+      self.commands["check"] = " ".join(self.config.expanded_check_cmd)
+    else:
+      self.commands["check"] = getattr(self.config, "check_cmd", "")
 
   def kill(self):
     if self.state != ControllerState.ALIVE:
@@ -676,7 +719,7 @@ class VMController(Controller, SSHEntity):
       return
     kill_cmd = self.commands["kill"]
     self.log.info("Killing controller %s: %s" % (self.label, kill_cmd))
-    self.execute_local_command(kill_cmd)
+    self.cmd_executor.execute_command(kill_cmd)
     self.state = ControllerState.DEAD
 
   def start(self, multiplex_sockets=False):
@@ -687,8 +730,10 @@ class VMController(Controller, SSHEntity):
       return
     start_cmd = self.commands["start"]
     self.log.info("Launching controller %s: %s" % (self.label, start_cmd))
-    self.execute_local_command(start_cmd)
-    self.state = ControllerState.STARTING
+    ret = self.cmd_executor.execute_command(start_cmd)
+    if ret is not None:
+      self.log.info(ret)
+    self.state = ControllerState.ALIVE
 
   def restart(self):
     if self.state != ControllerState.DEAD:
@@ -697,38 +742,31 @@ class VMController(Controller, SSHEntity):
       return
     restart_cmd = self.commands["restart"]
     self.log.info("Relaunching controller %s: %s" % (self.label, restart_cmd))
-    self.execute_local_command(restart_cmd)
-    self.state = ControllerState.STARTING
-
-  # Run a command locally using Popen
-  def execute_local_command(self, cmd):
-    process = popen_filtered("[%s]" % self.label, cmd, self.config.cwd,
-                             shell=True)
-    output = ""
-    while True:
-      output += process.stdout.read(100)  # arbitrary
-      if output == '' and process.poll() is not None:
-        break
-    return output
+    self.cmd_executor.execute_command(restart_cmd)
+    self.state = ControllerState.ALIVE
 
   # SSH into the VM to check on controller process
   def check_status(self, simulation):
     check_cmd = self.commands["check"]
     self.log.info(
       "Checking status of controller %s: %s" % (self.label, check_cmd))
-    if self.state == ControllerState.STARTING:
-      return (True, "OK")
-    remote_status = self.execute_remote_command(check_cmd)
+    # By make sure the status cmd will return status rather than printing
+    old_redirect_status = self.cmd_executor.redirect_output
+    self.cmd_executor.redirect_output = False
+    # Execute the status command
+    remote_status = self.cmd_executor.execute_command(check_cmd)
+    # Restore to the old redirect status
+    ret = self.cmd_executor.redirect_output = old_redirect_status
     actual_state = ControllerState.DEAD
     # Alive means remote controller process exists
     if self.alive_status_string in remote_status:
       actual_state = ControllerState.ALIVE
-    if self.state == ControllerState.DEAD and\
-            actual_state == ControllerState.ALIVE:
+    if (self.state == ControllerState.DEAD and
+            actual_state == ControllerState.ALIVE):
       self.log.warn("%s is dead, but controller process found!" % self.label)
       self.state = ControllerState.ALIVE
-    if self.state == ControllerState.ALIVE and\
-            actual_state == ControllerState.DEAD:
+    if (self.state == ControllerState.ALIVE and
+            actual_state == ControllerState.DEAD):
       return (False, "Alive, but no controller process found!")
     return (True, "OK")
 
@@ -739,9 +777,9 @@ class VMController(Controller, SSHEntity):
       add_block_cmd = "sudo iptables -I %s 1 -s %s -j DROP" % (
         chain, peer_controller.config.address)
       # If already blocked, do nothing
-      if self.execute_remote_command(check_block_cmd) != "":
+      if self.cmd_executor.execute_command(check_block_cmd) != "":
         continue
-      self.execute_remote_command(add_block_cmd)
+      self.cmd_executor.execute_command(add_block_cmd)
 
   def unblock_peer(self, peer_controller):
     for chain in ['INPUT', 'OUTPUT']:
@@ -752,9 +790,9 @@ class VMController(Controller, SSHEntity):
       max_iterations = 10
       while max_iterations > 0:
         # If already unblocked, do nothing
-        if self.execute_remote_command(check_block_cmd) == "":
+        if self.cmd_executor.execute_command(check_block_cmd) == "":
           break
-        self.execute_remote_command(remove_block_cmd)
+        self.cmd_executor.execute_command(remove_block_cmd)
         max_iterations -= 1
 
 
@@ -779,7 +817,7 @@ class BigSwitchController(VMController):
 
   def start(self, multiplex_sockets=False):
     super(BigSwitchController, self).start()
-    self.execute_remote_command(self.commands["restart"])
+    self.cmd_executor.execute_command(self.commands["restart"])
 
   def kill(self):
     if self.state != ControllerState.ALIVE:
@@ -788,7 +826,7 @@ class BigSwitchController(VMController):
       return
     kill_cmd = self.commands["kill"]
     self.log.info("Killing controller %s: %s" % (self.label, kill_cmd))
-    self.execute_remote_command(kill_cmd)
+    self.cmd_executor.execute_command(kill_cmd)
     self.state = ControllerState.DEAD
 
   def restart(self):
@@ -798,20 +836,17 @@ class BigSwitchController(VMController):
       return
     restart_cmd = self.commands["restart"]
     self.log.info("Relaunching controller %s: %s" % (self.label, restart_cmd))
-    self.execute_remote_command(restart_cmd)
+    self.cmd_executor.execute_command(restart_cmd)
     self.state = ControllerState.STARTING
 
 
 class ONOSController(VMController):
   """ONOS Specific wrapper"""
-  def __init__(self, controller_config, sync_connection_manager=None,
-               snapshot_service=None, username="mininet", password="mininet"):
-    super(ONOSController, self).__init__(controller_config,
+  def __init__(self, controller_config, cmd_executor=None,
+               sync_connection_manager=None, snapshot_service=None,
+               username="mininet", password="mininet"):
+    super(ONOSController, self).__init__(controller_config, cmd_executor,
           sync_connection_manager, snapshot_service,
           username=username, password=password)
     self.welcome_msg = " =====> Starting ONOS Controller <===== "
     self.alive_status_string = "1 instance of onos running"
-
-  def populate_commands(self):
-    super(ONOSController, self).populate_commands()
-    self.commands["check"] = "cd ONOS; ./start-onos.sh status"

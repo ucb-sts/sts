@@ -18,9 +18,12 @@
 import time
 import unittest
 
+from sts.entities.base import LocalEntity
+from sts.entities.base import SSHEntity
 from sts.entities.controllers import ControllerConfig
 from sts.entities.controllers import ControllerState
 from sts.entities.controllers import POXController
+from sts.entities.controllers import ONOSController
 
 
 class POXControllerTest(unittest.TestCase):
@@ -81,3 +84,77 @@ class POXControllerTest(unittest.TestCase):
     self.assertEquals(check_status1[0], True)
     self.assertEquals(check_status2[0], True)
     self.assertEquals(check_status3[0], True)
+
+
+  def test_start(self):
+    # Arrange
+    config = self.get_config()
+    # Act
+    ctrl = POXController(controller_config=config)
+    ctrl.start(None)
+    time.sleep(5)
+    state1 = ctrl.state
+    check_status1 = ctrl.check_status(None)
+    ctrl.kill()
+    time.sleep(5)
+    state2 = ctrl.state
+    check_status2 = ctrl.check_status(None)
+    #Assert
+    self.assertEquals(state1, ControllerState.ALIVE)
+    self.assertEquals(state2, ControllerState.DEAD)
+    self.assertEquals(check_status1[0], True)
+    self.assertEquals(check_status2[0], True)
+
+
+class ONOSControllerTest(unittest.TestCase):
+  def get_config(self):
+    start_cmd = "./start-onos.sh start"
+    kill_cmd = "./start-onos.sh stop"
+    restart_cmd = "./start-onos.sh stop"
+    check = "./start-onos.sh status"
+    address = '192.168.56.11'
+    cwd = "ONOS"
+    config = ControllerConfig(address=address, start_cmd=start_cmd,
+                              kill_cmd=kill_cmd, restart_cmd=restart_cmd,
+                              check_cmd=check, cwd=cwd)
+    return config
+
+  def get_executor(self):
+    address = '192.168.56.11'
+    ssh = SSHEntity(address, username='mininet', password='mininet', cwd='ONOS',
+                    label='ONOSDEV', redirect_output=True)
+    return ssh
+
+  def setUp(self):
+    cmd_exec = LocalEntity(redirect_output=True)
+    cmd_exec.execute_command("onos stop")
+    cmd_exec.execute_command("cassandra start")
+    cmd_exec.execute_command("cassandra  start")
+
+  def tearDown(self):
+    cmd_exec = LocalEntity(redirect_output=True)
+    cmd_exec.execute_command("onos stop")
+    cmd_exec.execute_command("cassandra stop")
+    cmd_exec.execute_command("zk status stop")
+
+  def test_start_kill(self):
+    # Arrange
+    config = self.get_config()
+    cmd_exec = self.get_executor()
+
+    # Act
+    ctrl = ONOSController(controller_config=config, cmd_executor=cmd_exec)
+    ctrl.start(None)
+    time.sleep(20)
+    state1 = ctrl.state
+    check_status1 = ctrl.check_status(None)
+    # clean up
+    ctrl.kill()
+    time.sleep(5)
+    state2 = ctrl.state
+    check_status2 = ctrl.check_status(None)
+    #Assert
+    self.assertEquals(state1, ControllerState.ALIVE)
+    self.assertEquals(state2, ControllerState.DEAD)
+    self.assertEquals(check_status1[0], True)
+    self.assertEquals(check_status2[0], True)
