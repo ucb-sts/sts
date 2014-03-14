@@ -42,12 +42,11 @@ class ControllerAbstractClassTest(unittest.TestCase):
         return True
 
       def check_status(self, simulation):
-        return (ControllerState.ALIVE, "ALIVE")
+        return ControllerState.ALIVE, "ALIVE"
 
     return ControllerImpl
 
-  @mock.patch("sts.entities.controllers.ControllerConfig")
-  def test_init(self, controller_config_cls):
+  def test_init(self):
     # Arrange
     config = mock.MagicMock()
     label = "dummy_controller"
@@ -62,7 +61,6 @@ class ControllerAbstractClassTest(unittest.TestCase):
     self.assertEquals(c.state, ControllerState.DEAD)
     self.assertEquals(c.cid, cid)
     self.assertEquals(c.label, label)
-
 
 
 class ControllerTest(unittest.TestCase):
