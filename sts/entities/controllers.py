@@ -679,6 +679,8 @@ class VMController(Controller):
     if self.password is None and hasattr(self.config, 'password'):
       self.password = self.config.password
     self.cmd_executor = cmd_executor
+    if self.cmd_executor is None and hasattr(self.config, 'cmd_executor'):
+      self.cmd_executor = self.config.cmd_executer
     if self.cmd_executor is None:
       key_filename = getattr(self.config, 'key_filename', None)
       self.cmd_executor = SSHEntity(controller_config.address,
