@@ -20,6 +20,9 @@ Define base (mostly abstract) entities used by sts.
 
 import abc
 import logging
+from functools import partial
+
+from sts.util.procutils import popen_filtered
 
 
 class DirectedLinkAbstractClass(object):
@@ -135,27 +138,36 @@ class BiDirectionalLinkAbstractClass(object):
 class SSHEntity(object):
   """
   Controls an entity via ssh.
-
-  If username, password, and key_filename are None, the SSH will be use the
-  default ssh key loaded into the system and will work if the destination
-  host is configured to accept that key.
-
-  Args:
-    host: the server address to connect to.
-    port: the server port to connect to (default 22)
-    username: the username to authenticate as (default local username)
-    password: password to authenticate or to unlock the private key
-    key_filename: private key for authentication
   """
+
   def __init__(self, host, port=22, username=None, password=None,
-               key_filename=None, ssh_cls=None):
+               key_filename=None, cwd=None, label=None, redirect_output=False):
+    """
+    If username, password, and key_filename are None, the SSH will be use the
+    default ssh key loaded into the system and will work if the destination
+    host is configured to accept that key.
+
+    Args:
+      host: the server address to connect to.
+      port: the server port to connect to (default 22)
+      username: the username to authenticate as (default local username)
+      password: password to authenticate or to unlock the private key
+      key_filename: private key for authentication
+      cwd: working dir for commands
+      label: human readable label to associated with output
+      redirect_output: If true remote stdout & stderr are redirected to stdout
+    """
     self._host = host
     self._port = port
     self._username = username
     self._password = password
     self._key_filename = key_filename
     self._ssh_client = None
-    self._ssh_cls = ssh_cls
+    self._ssh_cls = None
+    self.redirect_output = redirect_output
+    self.cwd = cwd
+    self.label = label or ""
+
     if self._ssh_cls is None:
       try:
         import paramiko
@@ -235,29 +247,37 @@ class SSHEntity(object):
     session = transport.open_channel(kind='session')
     return session
 
-  def execute_remote_command(self, cmd, max_iterations=10):
+  def execute_command(self, cmd):
     """
     Execute command remotely and return the stdout results
     """
-    while max_iterations > 0:
-      try:
-        session = self.get_new_session()
-        session.exec_command(cmd)
-        reply = ""
-        while True:
-          if session.recv_ready():
-            reply += session.recv(100)  # arbitrary
-          elif session.recv_ready() is False and session.exit_status_ready():
-            break
-        session.close()
-        return reply
-      except Exception as exp:
-        self.log.warn("Exception in executing remote command \"%s\": %s" %
-                      (cmd, self.host))
-        print self.log.error(exp)
-        self._ssh_client = None
-        max_iterations -= 1
-    return ""
+    #  procutils was meant to be a leaf dependency
+    from sts.util.procutils import _prefix_thread
+    from sts.util.procutils import color_normal
+    from sts.util.procutils import color_error
+
+    if self.cwd is not None:
+      cmd = "cd " + self.cwd + " ;" + cmd
+
+    r_stdin, r_stdout, r_stderr = self.ssh_client.exec_command(cmd)
+
+    if self.redirect_output:
+      stdout_thread = _prefix_thread(r_stdout,
+                                     partial(color_normal, label=self.label))
+      stderr_thread = _prefix_thread(r_stderr,
+                                     partial(color_error, label=self.label))
+      return ""
+    else:
+      # dealing directly with the channel makes it easier to detect exit status
+      channel = r_stdout.channel
+      reply = ""
+      while True:
+        if channel.recv_ready():
+          reply += channel.recv(100)  # arbitrary
+        elif channel.recv_ready() is False and channel.exit_status_ready():
+          break
+      channel.close()
+      return reply
 
   def __del__(self):
     if self._ssh_client:
@@ -265,3 +285,35 @@ class SSHEntity(object):
         self._ssh_client.close()
       except Exception as exp:
         self.log.warn("Error at closing ssh connection: '%s'" % exp)
+
+
+class LocalEntity(object):
+  """
+  Controls an entity via local unix command.
+  """
+
+  def __init__(self, cwd=None, label=None, redirect_output=False):
+    """
+    Args:
+      cwd: working dir for commands
+      label: human readable label to associated with output
+      redirect_output: If true remote stdout & stderr are redirected to stdout
+    """
+    self.cwd = cwd
+    self.label = label or ""
+    self.redirect_output = redirect_output
+    self.log = logging.getLogger("LocalEntity")
+
+  def execute_command(self, cmd):
+    """
+    Execute command locally and return the stdout results
+    """
+    process = popen_filtered("[%s]" % self.label, cmd, self.cwd,
+                             shell=True, redirect_output=self.redirect_output)
+    output = ""
+    while True:
+      recv = process.stdout.read(100)  # arbitrary
+      output += recv
+      if recv == '' and process.poll() is not None:
+        break
+    return output

@@ -17,6 +17,7 @@ import os
 import unittest
 
 from sts.entities.base import SSHEntity
+from sts.entities.base import LocalEntity
 
 
 class SSHEntityTest(unittest.TestCase):
@@ -47,17 +48,54 @@ class SSHEntityTest(unittest.TestCase):
     # Assert
     self.assertIsNotNone(session)
 
-  def test_execute_remote_command(self):
+  def test_execute_command(self):
     # Arrange
     host, port, username, password = self.get_ssh_config()
     home_dir = "/"
     # Act
     ssh = SSHEntity(host, port, username, password)
-    ret = ssh.execute_remote_command("ls " + home_dir)
+    ret = ssh.execute_command("ls " + home_dir)
     # Assert
     self.assertIsInstance(ret, basestring)
     ret_list = ret.split()
     ret_list.sort()
     current_list = os.listdir(home_dir)
     current_list.sort()
-    self.assertEquals(ret.split(), current_list)
+    self.assertEquals(ret_list, current_list)
+
+  def test_execute_command_with_redirect(self):
+    # Arrange
+    host, port, username, password = self.get_ssh_config()
+    home_dir = "/"
+    # Act
+    ssh = SSHEntity(host, port, username, password, redirect_output=True)
+    ret = ssh.execute_command("ls " + home_dir)
+    # Assert
+    self.assertIsInstance(ret, basestring)
+    self.assertEquals(ret, "")
+
+
+class LocalEntityTest(unittest.TestCase):
+  def test_execute_command(self):
+    # Arrange
+    entity = LocalEntity('/')
+    home_dir = "/"
+    # Act
+    ret = entity.execute_command("ls " + home_dir)
+    # Assert
+    self.assertIsInstance(ret, basestring)
+    ret_list = ret.split()
+    ret_list.sort()
+    current_list = os.listdir(home_dir)
+    current_list.sort()
+    self.assertEquals(ret_list, current_list)
+
+  def test_execute_command_with_redirect(self):
+    # Arrange
+    entity = LocalEntity('/', redirect_output=True)
+    home_dir = "/"
+    # Act
+    ret = entity.execute_command("ls " + home_dir)
+    # Assert
+    self.assertIsInstance(ret, basestring)
+    self.assertEquals(ret, "")

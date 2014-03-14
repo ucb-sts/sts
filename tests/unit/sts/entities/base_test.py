@@ -15,6 +15,7 @@
 
 import mock
 import unittest
+from cStringIO import StringIO
 
 from sts.entities.base import SSHEntity
 
@@ -55,29 +56,47 @@ class SSHEntityTest(unittest.TestCase):
     # Act
     session = ssh.get_new_session()
     # Assert
-    self.assertEquals(ssh._ssh_client.get_transport.call_count, 1)\
+    self.assertEquals(ssh._ssh_client.get_transport.call_count, 1)
 
   @mock.patch("paramiko.client.SSHClient")
-  def test_execute_remote_command(self, ssh_client_cls):
+  def test_execute_command(self, ssh_client_cls):
     # Arrange
     host = "localhost"
     cmd = "ls"
     ssh = SSHEntity(host)
     ssh._ssh_cls = ssh_client_cls
+
     session_mock = mock.Mock()
     session_mock.recv_ready.return_value = True
     session_mock.exit_status_ready.return_value = True
     session_mock.recv.return_value = "dummy"
+    stream_mock = mock.Mock()
+    stream_mock.channel = session_mock
+    ssh.ssh_client.exec_command.return_value = None, stream_mock, None
     def change_status(y):
       session_mock.recv_ready.return_value = False
       return "dummy"
     session_mock.recv.side_effect = change_status
     ssh.get_new_session = lambda: session_mock
     # Act
-    ssh.execute_remote_command(cmd)
+    ssh.execute_command(cmd)
     # Assert
-    session_mock.exec_command.assert_called_once_with(cmd)
+    ssh.ssh_client.exec_command.assert_called_once_with(cmd)
     self.assertTrue(session_mock.recv.call_count >= 1)
+
+  @mock.patch("paramiko.client.SSHClient")
+  def test_execute_command_with_redirect(self, ssh_client_cls):
+    # Arrange
+    host = "localhost"
+    cmd = "ls"
+    ssh = SSHEntity(host, redirect_output=True)
+    ssh._ssh_cls = ssh_client_cls
+    ssh.ssh_client.exec_command.return_value = (StringIO(), StringIO(),
+                                                StringIO())
+    # Act
+    ssh.execute_command(cmd)
+    # Assert
+    ssh.ssh_client.exec_command.assert_called_once_with(cmd)
 
 
 if __name__ == '__main__':

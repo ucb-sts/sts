@@ -28,6 +28,7 @@ from pox.lib.revent import EventMixin
 import pox.lib.packet.ethernet as ethernet
 import pox.lib.packet.ipv4 as ipv4
 import pox.lib.packet.tcp as tcp
+from pox.lib.util import assert_type
 import pox.openflow.libopenflow_01 as of
 from sts.openflow_buffer import OpenFlowBuffer
 
