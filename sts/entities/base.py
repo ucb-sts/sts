@@ -141,7 +141,8 @@ class SSHEntity(object):
   """
 
   def __init__(self, host, port=22, username=None, password=None,
-               key_filename=None, cwd=None, label=None, redirect_output=False):
+               key_filename=None, cwd=None, label=None, redirect_output=False,
+               block=False):
     """
     If username, password, and key_filename are None, the SSH will be use the
     default ssh key loaded into the system and will work if the destination
@@ -156,6 +157,7 @@ class SSHEntity(object):
       cwd: working dir for commands
       label: human readable label to associated with output
       redirect_output: If true remote stdout & stderr are redirected to stdout
+      block: if True execute_command will block until the command is complete
     """
     self._host = host
     self._port = port
@@ -165,6 +167,7 @@ class SSHEntity(object):
     self._ssh_client = None
     self._ssh_cls = None
     self.redirect_output = redirect_output
+    self.block = block
     self.cwd = cwd
     self.label = label or ""
 
@@ -266,11 +269,16 @@ class SSHEntity(object):
                                      partial(color_normal, label=self.label))
       stderr_thread = _prefix_thread(r_stderr,
                                      partial(color_error, label=self.label))
+      if self.block:
+        channel = r_stdout.channel
+        while True:
+          if channel.recv_ready() is False and channel.exit_status_ready():
+            break
       return ""
     else:
       # dealing directly with the channel makes it easier to detect exit status
-      channel = r_stdout.channel
       reply = ""
+      channel = r_stdout.channel
       while True:
         if channel.recv_ready():
           reply += channel.recv(100)  # arbitrary
