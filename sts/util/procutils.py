@@ -20,6 +20,7 @@ import signal
 import sys
 import time
 import traceback
+from functools import partial
 
 from sts.util.console import color
 
@@ -125,6 +126,18 @@ def _prefix_thread(f, func):
   t.start()
   return t
 
+
+def color_normal(out_str, label):
+  """Return normal colored text, see _prefix_thread"""
+  return "%s%s %s%s\n" % (color.YELLOW, label, out_str.rstrip(), color.NORMAL)
+
+
+def color_error(out_str, label):
+  """Return error colored text, see _prefix_thread"""
+  return "%s%s %s%s\n" % (color.B_RED + color.YELLOW, label, out_str.rstrip(),
+                          color.NORMAL)
+
+
 def popen_filtered(name, args, cwd=None, env=None, redirect_output=True,
                    shell=False):
   if shell and type(args) == list:
@@ -139,7 +152,7 @@ def popen_filtered(name, args, cwd=None, env=None, redirect_output=True,
   except OSError as e:
     raise OSError("Error launching %s in directory %s: %s (error %d)" % (args, cwd, e.strerror, e.errno))
   if redirect_output:
-    cmd._stdout_thread = _prefix_thread(cmd.stdout, lambda l: "%s%s %s%s\n" % (color.YELLOW, name, l.rstrip(), color.NORMAL))
-    cmd._stderr_thread = _prefix_thread(cmd.stderr, lambda l: "%s%s %s%s\n" % (color.B_RED + color.YELLOW, name, l.rstrip(), color.NORMAL))
+    cmd._stdout_thread = _prefix_thread(cmd.stdout, partial(color_normal, label=name))
+    cmd._stderr_thread = _prefix_thread(cmd.stderr, partial(color_error, label=name))
   return cmd
 
