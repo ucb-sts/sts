@@ -63,7 +63,7 @@ end
 real_bugs = [
   Experiment.new("new_pyretic_loop_mcs/", "Pyretic loop"),
   Experiment.new("pox_early_packetin", "POX premature PacketIn"),
-  Experiment.new("updated_debug_branch_loop_v3_mcs", "POX migration blackhole"),
+  Experiment.new("updated_debug_branch_loop_v3_mcs", "POX in-flight blackhole"),
   Experiment.new("fuzz_pox_4mesh_blackhole_mcs", "POX migration blackhole", branch: "pox_blackhole"),
   Experiment.new("nox_mesh_4_loop_repro_verbose", "NOX discovery loop"),
   Experiment.new("zeta_final", "Floodlight loop", branch: "floodlight")
