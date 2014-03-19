@@ -35,8 +35,8 @@ of switches, with one host connected to each switch. For example, with N = 3:
 '''
 
 from sts.fingerprints.messages import DPFingerprint
-from invariant_checker import InvariantChecker
-from entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink, NamespaceHost
+from sts.invariant_checker import InvariantChecker
+from sts.entities import FuzzSoftwareSwitch, Link, Host, HostInterface, AccessLink, NamespaceHost
 from pox.openflow.software_switch import DpPacketOut, SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
 from pox.lib.revent import EventMixin
