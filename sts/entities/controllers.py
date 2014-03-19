@@ -847,6 +847,8 @@ class ONOSController(VMController):
   def __init__(self, controller_config, cmd_executor=None,
                sync_connection_manager=None, snapshot_service=None,
                username="mininet", password="mininet"):
+    if not getattr(controller_config, "check_cmd", None):
+      controller_config.check_cmd = "./start-onos.sh status"
     super(ONOSController, self).__init__(controller_config, cmd_executor,
           sync_connection_manager, snapshot_service,
           username=username, password=password)
