@@ -758,7 +758,7 @@ class VMController(Controller):
     # Execute the status command
     remote_status = self.cmd_executor.execute_command(check_cmd)
     # Restore to the old redirect status
-    ret = self.cmd_executor.redirect_output = old_redirect_status
+    self.cmd_executor.redirect_output = old_redirect_status
     actual_state = ControllerState.DEAD
     # Alive means remote controller process exists
     if self.alive_status_string in remote_status:
