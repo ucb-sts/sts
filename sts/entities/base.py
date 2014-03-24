@@ -297,7 +297,7 @@ class SSHEntity(object):
 
 class LocalEntity(object):
   """
-  Controls an entity via local command.
+  Controls an entity via local unix command.
   """
 
   def __init__(self, cwd=None, label=None, redirect_output=False):

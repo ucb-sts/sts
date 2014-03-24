@@ -145,7 +145,7 @@ class ControllerConfig(object):
   @property
   def check_cmd(self):
     """
-    The command to check the status the controller
+    The unix (bash) command to check the status the controller
 
     The specific format of the command is dependent on the controller type
     """
@@ -752,7 +752,10 @@ class VMController(Controller):
     check_cmd = self.commands["check"]
     self.log.info(
       "Checking status of controller %s: %s" % (self.label, check_cmd))
-    # By make sure the status cmd will return status rather than printing
+    # By make sure the status cmd will return status rather than
+    # printing it out on stdout. If the executor has redirect_output
+    # set to True there is not way to check the return status because it's
+    # printed out.
     old_redirect_status = self.cmd_executor.redirect_output
     self.cmd_executor.redirect_output = False
     # Execute the status command
