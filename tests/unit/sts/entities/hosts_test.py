@@ -19,6 +19,7 @@ import unittest
 from pox.lib.addresses import EthAddr
 from pox.lib.addresses import IPAddr
 from pox.lib.packet.ethernet import ethernet
+from pox.lib.packet.arp import arp
 
 from sts.entities.hosts import HostAbstractClass
 from sts.entities.hosts import HostInterfaceAbstractClass
@@ -150,6 +151,26 @@ class HostInterfaceTest(unittest.TestCase):
 
 
 class HostTest(unittest.TestCase):
+
+  def setUp(self):
+    # IP and MAC of requester host 1
+    self.H1_I1_IP = '1.1.1.1'
+    self.H1_I1_ETH = '\x01\x01\x01\x01\x01\x01'
+
+    # IP and MAC of receiver host 2, Interface 1
+    self.H2_I1_IP1 = '2.2.1.1'
+    self.H2_I1_ETH = '\x02\x02\x02\x02\x01\x01'
+    # Additional IP on the Interface 1
+    self.H2_I1_IP2 = '2.2.1.2'
+
+    # IP and MAC of receiver host 2, Interface 2
+    self.H2_I2_IP = '2.2.2.1'
+    self.H2_I2_ETH = '\x02\x02\x02\x02\x02\x01'
+
+    # IP and MAC of receiver host 3
+    self.H3_I3_IP = '3.3.3.1'
+    self.H3_I3_ETH = '\x03\x03\x03\x03\x03\x01'
+
   def test_init(self):
     # Arrange
     interfaces = [mock.Mock()]
@@ -175,9 +196,82 @@ class HostTest(unittest.TestCase):
     # Assert
     self.assertEquals(Host.raiseEvent.call_count, 1)
 
-  def test_receive(self):
-    pass
-    # TODO (AH): I'm still not sure about how receive works
+  def test_none_arp(self):
+    """Receive a non-ARP packet and ensure there is no reply"""
+    # Arrange
+    iface1 = HostInterface(EthAddr(self.H2_I1_ETH),
+                           [IPAddr(self.H2_I1_IP1), IPAddr(self.H2_I1_IP2)])
+    iface2 = HostInterface(EthAddr(self.H2_I2_ETH), [IPAddr(self.H2_I2_IP)])
+    interfaces = [iface1, iface2]
+    h = Host(interfaces)
+    ether = ethernet()
+    ether.type = ethernet.IP_TYPE
+    ether.dst = EthAddr(self.H2_I1_ETH)
+    ether.src = EthAddr(self.H1_I1_ETH)
+    # Act
+    # Get the action and reply packet
+    reply_packet = h.receive(interfaces[0], ether)
+    # Assert
+    self.assertIsNone(reply_packet)
+
+  def test_invalid_arp(self):
+    """Receive a ARP packet that isn't desinated to it and ensure there is no reply"""
+    # Arrange
+    iface1 = HostInterface(EthAddr(self.H2_I1_ETH),
+                           [IPAddr(self.H2_I1_IP1), IPAddr(self.H2_I1_IP2)])
+    iface2 = HostInterface(EthAddr(self.H2_I2_ETH), [IPAddr(self.H2_I2_IP)])
+    interfaces = [iface1, iface2]
+    h = Host(interfaces)
+    arp_req = arp()
+    arp_req.hwsrc = EthAddr(self.H1_I1_ETH)
+    arp_req.hwdst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
+    arp_req.opcode = arp.REQUEST
+    arp_req.protosrc = IPAddr(self.H1_I1_IP)
+    arp_req.protodst = IPAddr(self.H3_I3_IP)
+    ether = ethernet()
+    ether.type = ethernet.ARP_TYPE
+    ether.dst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
+    ether.src = EthAddr(self.H1_I1_ETH)
+    ether.payload = arp_req
+    # Act
+    # Get the action and reply packet
+    reply_packet = h.receive(interfaces[0], ether)
+    # Assert
+    self.assertIsNone(reply_packet)
+
+  def test_arp_reply(self):
+    """Receive a valid ARP packet and ensure the correct reply"""
+    # Arrange
+    iface1 = HostInterface(EthAddr(self.H2_I1_ETH),
+                           [IPAddr(self.H2_I1_IP1), IPAddr(self.H2_I1_IP2)])
+    iface2 = HostInterface(EthAddr(self.H2_I2_ETH), [IPAddr(self.H2_I2_IP)])
+    interfaces = [iface1, iface2]
+    h = Host(interfaces)
+    arp_req = arp()
+    arp_req.hwsrc = EthAddr(self.H1_I1_ETH)
+    arp_req.hwdst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
+    arp_req.opcode = arp.REQUEST
+    arp_req.protosrc = IPAddr(self.H1_I1_IP)
+    arp_req.protodst = IPAddr(self.H2_I1_IP1)
+    ether = ethernet()
+    ether.type = ethernet.ARP_TYPE
+    ether.dst = EthAddr(b"\xff\xff\xff\xff\xff\xff")
+    ether.src = EthAddr(self.H1_I1_ETH)
+    ether.payload = arp_req
+    # Act
+    # Get the action and arp reply packet
+    arp_reply = h.receive(interfaces[0], ether)
+    # Assert
+    self.assertIsNotNone(arp_reply)
+    self.assertEquals(arp_reply.src, EthAddr(self.H2_I1_ETH))
+    self.assertEquals(arp_reply.dst, EthAddr(self.H1_I1_ETH))
+    self.assertEquals(arp_reply.type, ethernet.ARP_TYPE)
+    reply_payload = arp_reply.payload
+    self.assertEquals(reply_payload.opcode, arp.REPLY)
+    self.assertEquals(reply_payload.hwsrc, EthAddr(self.H2_I1_ETH))
+    self.assertEquals(reply_payload.hwdst, EthAddr(self.H1_I1_ETH))
+    self.assertEquals(reply_payload.protosrc, self.H2_I1_IP1)
+    self.assertEquals(reply_payload.protodst, self.H1_I1_IP)
 
 
 class NamespaceHostTest(unittest.TestCase):
