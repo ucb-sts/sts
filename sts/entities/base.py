@@ -254,7 +254,7 @@ class SSHEntity(object):
     """
     Execute command remotely and return the stdout results
     """
-    #  procutils was meant to be a leave dependency
+    #  procutils was meant to be a leaf dependency
     from sts.util.procutils import _prefix_thread
     from sts.util.procutils import color_normal
     from sts.util.procutils import color_error
