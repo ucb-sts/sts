@@ -247,7 +247,6 @@ class Host(HostAbstractClass, EventMixin):
       name: human readable name of the host
       hid: unique ID for the host
     """
-    #HostAbstractClass.__init__(self, interfaces, name, hid)
     super(Host, self).__init__(interfaces, name, hid)
     self.log = logging.getLogger(name)
     self.send_capabilities = False
