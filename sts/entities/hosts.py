@@ -35,6 +35,9 @@ from pox.lib.addresses import EthAddr
 from pox.lib.addresses import IPAddr
 
 import sts.util.network_namespace as ns
+from sts.util.convenience import object_fullname
+from sts.util.convenience import class_fullname
+from sts.util.convenience import load_class
 
 
 class HostInterfaceAbstractClass(object):
@@ -93,6 +96,25 @@ class HostInterfaceAbstractClass(object):
   def __repr__(self):
     return self.__str__()
 
+  def to_json(self):
+    """Serialize to JSON dict"""
+    return {
+            '__type__': object_fullname(self),
+            'name': self.name,
+            'ips': [ip.toStr() for ip in self.ips],
+            'hw_addr': self.hw_addr.toStr()}
+
+  @classmethod
+  def from_json(cls, json_hash):
+    """Create HostInterface Instance from JSON Dict"""
+    assert class_fullname(cls) == json_hash['__type__']
+    name = json_hash['name']
+    ips = []
+    for ip in json_hash['ips']:
+      ips.append(IPAddr(str(ip)))
+    hw_addr = EthAddr(json_hash['hw_addr'])
+    return cls(hw_addr, ip_or_ips=ips, name=name)
+
 
 class HostInterface(HostInterfaceAbstractClass):
   """ Represents a host's interface (e.g. eth0) """
@@ -142,20 +164,6 @@ class HostInterface(HostInterfaceAbstractClass):
 
   def __repr__(self, *args, **kwargs):
     return self.__str__()
-
-  def to_json(self):
-    return {'name': self.name,
-            'ips': [ip.toStr() for ip in self.ips],
-            'hw_addr': self.hw_addr.toStr()}
-
-  @staticmethod
-  def from_json(json_hash):
-    name = json_hash['name']
-    ips = []
-    for ip in json_hash['ips']:
-      ips.append(IPAddr(str(ip)))
-    hw_addr = EthAddr(json_hash['hw_addr'])
-    return HostInterface(hw_addr, ip_or_ips=ips, name=name)
 
 
 class HostAbstractClass(object):
@@ -218,6 +226,25 @@ class HostAbstractClass(object):
   def __repr__(self):
     return "Host(%d)" % self.hid
 
+  def to_json(self):
+    """Serialize to JSON dict"""
+    return {'__type__': object_fullname(self),
+            'name': self.name,
+            'hid': self.hid,
+            'interfaces': [iface.to_json() for iface in self.interfaces]}
+
+  @classmethod
+  def from_json(cls, json_hash, interface_cls=None):
+    name = json_hash['name']
+    hid = json_hash['hid']
+    interfaces = []
+    for iface in json_hash['interfaces']:
+      if interface_cls is None:
+        interface_cls = load_class(iface['__type__'])
+      else:
+        iface['__type__'] = class_fullname(interface_cls)
+      interfaces.append(interface_cls.from_json(iface))
+    return cls(interfaces, name, hid)
 
 #                Host
 #          /      |       \
@@ -361,6 +388,7 @@ class NamespaceHost(Host):
     assert len(self.interfaces) == 1, ("Currently only one interface per "
                                        "host is supported")
     interface = self.interfaces[0]
+    self.cmd = cmd
 
     (self.guest, guest_eth_addr, host_device) = ns.launch_namespace(
       cmd, interface.ips[0].toStr(), self.hid, guest_hw_addr=interface.hw_addr)
@@ -371,7 +399,7 @@ class NamespaceHost(Host):
     self.io_worker = create_io_worker(self.socket)
     self.io_worker.set_receive_handler(self._io_worker_receive_handler)
 
-    assert interface == HostInterface(guest_eth_addr, interface.ips[0])
+    assert interface.hw_addr == EthAddr(guest_eth_addr)
     if name in ["", None]:
       self._name = "host:" + interface.ips[0].toStr()
     self.log = logging.getLogger(self.name)
@@ -402,3 +430,23 @@ class NamespaceHost(Host):
     self.log.info("received packet on interface %s: %s. Passing to netns" %
                   (interface.name, str(packet)))
     self.io_worker.send(packet.pack())
+
+  def to_json(self):
+    """Serialize to JSON dict"""
+    return {'__type__': object_fullname(self),
+            'name': self.name,
+            'hid': self.hid,
+            'cmd': self.cmd,
+            'interfaces': [iface.to_json() for iface in self.interfaces]}
+
+  @classmethod
+  def from_json(cls, json_hash, create_io_worker):
+    name = json_hash['name']
+    hid = json_hash['hid']
+    cmd = json_hash['cmd']
+    interfaces = []
+    for iface in json_hash['interfaces']:
+      iface_cls = load_class(iface['__type__'])
+      interfaces.append(iface_cls.from_json(iface))
+    return cls(interfaces, create_io_worker=create_io_worker, name=name,
+               hid=hid, cmd=cmd)

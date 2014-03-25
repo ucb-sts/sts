@@ -123,7 +123,8 @@ class HostInterfaceTest(unittest.TestCase):
     ip_str = "127.0.0.1"
     ip = IPAddr(ip_str)
     name = "eth0"
-    expected = {'name': name,
+    expected = {'__type__': 'sts.entities.hosts.HostInterface',
+                'name': name,
                 'ips': [ip],
                 'hw_addr': hw_addr_str}
     # Act
@@ -139,7 +140,8 @@ class HostInterfaceTest(unittest.TestCase):
     ip_str = "127.0.0.1"
     ip = IPAddr(ip_str)
     name = "eth0"
-    input_json = {'name': name,
+    input_json = {'__type__': 'sts.entities.hosts.HostInterface',
+                  'name': name,
                   'ips': [ip],
                   'hw_addr': hw_addr_str}
     # Act
@@ -273,6 +275,53 @@ class HostTest(unittest.TestCase):
     self.assertEquals(reply_payload.protosrc, self.H2_I1_IP1)
     self.assertEquals(reply_payload.protodst, self.H1_I1_IP)
 
+  def test_to_json(self):
+    # Arrange
+    hw_addr_str = "11:22:33:44:55:66"
+    hw_addr = EthAddr(hw_addr_str)
+    ip_str = "127.0.0.1"
+    ip = IPAddr(ip_str)
+    ifname = "eth0"
+    interface = HostInterface(hw_addr, ip, name=ifname)
+    hname = "h1"
+    hid = 1
+    host = Host(interface, name=hname, hid=hid)
+    # Act
+    json_dict = host.to_json()
+    # Assert
+    self.assertEquals(json_dict['name'], hname)
+    self.assertEquals(json_dict['hid'], hid)
+    self.assertEquals(len(json_dict['interfaces']), 1)
+    self.assertEquals(json_dict['interfaces'][0], interface.to_json())
+
+  def test_from_json(self):
+    # Arrange
+    json_dict = {'hid': 1,
+                 '__type__': 'sts.entities.hosts.Host',
+                 'name': 'h1',
+                 'interfaces': [
+                   {'__type__': 'sts.entities.hosts.HostInterface',
+                    'name': 'eth0',
+                    'hw_addr': '11:22:33:44:55:66',
+                    'ips': ['127.0.0.1'],
+                    }],
+                 }
+    hw_addr_str = "11:22:33:44:55:66"
+    hw_addr = EthAddr(hw_addr_str)
+    ip_str = "127.0.0.1"
+    ip = IPAddr(ip_str)
+    ifname = "eth0"
+    interface = HostInterface(hw_addr, ip, name=ifname)
+    hname = "h1"
+    hid = 1
+    # Act
+    host = Host.from_json(json_dict)
+    # Assert
+    self.assertEquals(host.name, hname)
+    self.assertEquals(host.hid, hid)
+    self.assertEquals(len(host.interfaces), 1)
+    self.assertEquals(host.interfaces[0], interface)
+
 
 class NamespaceHostTest(unittest.TestCase):
   # TODO (AH): test send and receive
@@ -294,3 +343,66 @@ class NamespaceHostTest(unittest.TestCase):
 
     # Assert
     self.assertEquals(host.interfaces, interfaces)
+
+  def test_to_json(self):
+
+    # Arrange
+    io_master = mock.Mock()
+    hw_addr_str = "0e:32:a4:91:e7:30"
+    ip_str = "192.168.56.2"
+    hw_addr = EthAddr(hw_addr_str)
+    ip = IPAddr(ip_str)
+    ifname = "test-host"
+    interface = HostInterface(hw_addr, ip, name=ifname)
+    hname = "h1"
+    hid = 1
+    cmd = '/bin/bash sleep'
+    # Mocking external dependencies
+    import sts.util.network_namespace as ns
+    ns.launch_namespace = mock.Mock(return_value=(None, hw_addr_str, None))
+    ns.bind_raw_socket = mock.Mock(return_value=None)
+    host = NamespaceHost(interface, io_master.create_worker_for_socket,
+                         name=hname, hid=hid, cmd=cmd)
+    # Act
+    json_dict = host.to_json()
+    # Assert
+    self.assertEquals(json_dict['name'], hname)
+    self.assertEquals(json_dict['hid'], hid)
+    self.assertEquals(json_dict['cmd'], cmd)
+    self.assertEquals(len(json_dict['interfaces']), 1)
+    self.assertEquals(json_dict['interfaces'][0], interface.to_json())
+
+  def test_from_json(self):
+    # Arrange
+    json_dict = {'__type__': 'sts.entities.hosts.NamespaceHost',
+                 'cmd': '/bin/bash sleep',
+                 'name': 'h1',
+                 'hid': 1,
+                 'interfaces': [
+                   {'__type__': 'sts.entities.hosts.HostInterface',
+                    'hw_addr': '0e:32:a4:91:e7:30',
+                    'ips': ['192.168.56.2'],
+                    'name': 'test-host'}]}
+
+    io_master = mock.Mock()
+    hw_addr_str = "0e:32:a4:91:e7:30"
+    ip_str = "192.168.56.2"
+    hw_addr = EthAddr(hw_addr_str)
+    ip = IPAddr(ip_str)
+    ifname = "test-host"
+    interface = HostInterface(hw_addr, ip, name=ifname)
+    hname = "h1"
+    hid = 1
+    cmd = '/bin/bash sleep'
+    # Mocking external dependencies
+    import sts.util.network_namespace as ns
+    ns.launch_namespace = mock.Mock(return_value=(None, hw_addr_str, None))
+    ns.bind_raw_socket = mock.Mock(return_value=None)
+    # Act
+    host = NamespaceHost.from_json(json_dict, io_master.create_worker_for_socket)
+    # Assert
+    self.assertEquals(host.name, hname)
+    self.assertEquals(host.hid, hid)
+    self.assertEquals(host.cmd, cmd)
+    self.assertEquals(len(host.interfaces), 1)
+    self.assertEquals(host.interfaces[0].to_json(), interface.to_json())

@@ -22,7 +22,42 @@ import abc
 import logging
 from functools import partial
 
+from pox.openflow.libopenflow_01 import ofp_phy_port
+
 from sts.util.procutils import popen_filtered
+from sts.util.convenience import object_fullname
+from sts.util.convenience import class_fullname
+from sts.util.convenience import load_class
+
+
+def serialize_ofp_phy_port(port):
+  """
+  Serializes OpenFlow physical port to JSON Dict
+  """
+  attrs = ['port_no', 'hw_addr', 'name', 'config', 'state', 'curr',
+           'advertised', 'supported', 'peer']
+  json_dict = {'__type__': object_fullname(port)}
+  print class_fullname(ofp_phy_port)
+  for attr in attrs:
+    value = getattr(port, attr, None)
+    if hasattr(value, 'toStr'):
+      value = value.toStr()
+    json_dict[attr] = value
+  return json_dict
+
+
+def deserialize_ofp_phy_port(cls, json_dict):
+  """
+  De-Serializes JSON Dict to OpenFlow physical port
+  """
+  assert json_dict['__type__'] == class_fullname(cls)
+  json_dict.pop('__type__')
+  port = cls(**json_dict)
+  return port
+
+# Monkey patching
+ofp_phy_port.to_json = lambda self: serialize_ofp_phy_port(self)
+ofp_phy_port.from_json = classmethod(deserialize_ofp_phy_port)
 
 
 class DirectedLinkAbstractClass(object):
@@ -84,6 +119,41 @@ class DirectedLinkAbstractClass(object):
     return DirectedLinkAbstractClass(self.end_node, self.end_port,
                                      self.start_node, self.start_port)
 
+  def to_json(self):
+    """Serialize to JSON dict"""
+    sn_to_json = getattr(self.start_node, "to_json", None)
+    sp_to_json = getattr(self.start_port, "to_json", None)
+    en_to_json = getattr(self.end_node, "to_json", None)
+    ep_to_json = getattr(self.end_port, "to_json", None)
+
+    sn_json = sn_to_json() if sn_to_json else self.start_node
+    sp_json = sp_to_json() if sp_to_json else self.start_port
+    en_json = en_to_json() if en_to_json else self.end_node
+    ep_json = ep_to_json() if ep_to_json else self.end_port
+
+    return {'__type__': object_fullname(self),
+            'start_node': sn_json,
+            'start_port': sp_json,
+            'end_node': en_json,
+            'end_port': ep_json}
+
+  @classmethod
+  def from_json(cls, json_dict):
+    assert class_fullname(cls) == json_dict['__type__']
+    start_node = json_dict['start_node']
+    start_port = json_dict['start_port']
+    end_node = json_dict['end_node']
+    end_port = json_dict['end_port']
+    if isinstance(start_node, dict) and start_node.get('__type__', None):
+      start_node = load_class(start_node['__type__']).from_json(start_node)
+    if isinstance(start_port, dict) and start_port.get('__type__', None):
+      start_port = load_class(start_port['__type__']).from_json(start_port)
+    if isinstance(end_node, dict) and end_node.get('__type__', None):
+      end_node = load_class(end_node['__type__']).from_json(end_node)
+    if isinstance(end_port, dict) and end_port.get('__type__', None):
+      end_port = load_class(end_port['__type__']).from_json(end_port)
+    return cls(start_node, start_port, end_node, end_port)
+
 
 class BiDirectionalLinkAbstractClass(object):
   """
@@ -133,6 +203,41 @@ class BiDirectionalLinkAbstractClass(object):
   def __repr__(self):
     return "(%s:%s) <-> (%s:%s)" % (self.node1, self.port1,
                                     self.node2, self.port2)
+
+  def to_json(self):
+    """Serialize to JSON dict"""
+    n1_to_json = getattr(self.node1, "to_json", None)
+    p1_to_json = getattr(self.port1, "to_json", None)
+    n2_to_json = getattr(self.node2, "to_json", None)
+    p2_to_json = getattr(self.port2, "to_json", None)
+
+    n1_json = n1_to_json() if n1_to_json else self.node1
+    p1_json = p1_to_json() if p1_to_json else self.port1
+    n2_json = n2_to_json() if n2_to_json else self.node2
+    p2_json = p2_to_json() if p2_to_json else self.port2
+
+    return {'__type__': object_fullname(self),
+            'node1': n1_json,
+            'port1': p1_json,
+            'node2': n2_json,
+            'port2': p2_json}
+
+  @classmethod
+  def from_json(cls, json_dict):
+    assert class_fullname(cls) == json_dict['__type__']
+    node1 = json_dict['node1']
+    port1 = json_dict['port1']
+    node2 = json_dict['node2']
+    port2 = json_dict['port2']
+    if isinstance(node1, dict) and node1.get('__type__', None):
+      node1 = load_class(node1['__type__']).from_json(node1)
+    if isinstance(port1, dict) and port1.get('__type__', None):
+      port1 = load_class(port1['__type__']).from_json(port1)
+    if isinstance(node2, dict) and node2.get('__type__', None):
+      node2 = load_class(node2['__type__']).from_json(node2)
+    if isinstance(port2, dict) and port2.get('__type__', None):
+      port2 = load_class(port2['__type__']).from_json(port2)
+    return cls(node1, port1, node2, port2)
 
 
 class SSHEntity(object):
