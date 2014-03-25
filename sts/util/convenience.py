@@ -29,6 +29,7 @@ import base64
 import subprocess
 import warnings
 import functools
+import importlib
 from sts.util.console import msg
 
 # don't use the standard instance - we don't want to be seeded
@@ -208,3 +209,23 @@ def deprecated(func):
       )
       return func(*args, **kwargs)
   return new_func
+
+
+def object_fullname(obj):
+  """Return the fullname of an object"""
+  return obj.__module__ + "." + obj.__class__.__name__
+
+
+def class_fullname(cls):
+  """Return the fullname of a class"""
+  return cls.__module__ + "." + cls.__name__
+
+
+def load_class(str_full_type):
+  """
+  Load a python class given full qualified name.
+  """
+  type_s = str_full_type.split('.')
+  mod = importlib.import_module('.'.join(type_s[:-1]))
+  cls = getattr(mod, type_s[-1])
+  return cls
