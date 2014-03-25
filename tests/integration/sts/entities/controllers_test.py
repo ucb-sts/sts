@@ -137,6 +137,7 @@ class ONOSControllerTest(unittest.TestCase):
     cmd_exec.execute_command("cassandra stop")
     cmd_exec.execute_command("zk status stop")
 
+  @unittest.skip
   def test_start_kill(self):
     # Arrange
     config = self.get_config()

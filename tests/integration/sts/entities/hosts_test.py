@@ -26,11 +26,8 @@ class NamespaceHostTest(unittest.TestCase):
     io_master = IOMaster()
     return io_master
 
+  @unittest.skipIf(os.geteuid() != 0, "Not running tests as root")
   def test_init(self):
-    # TODO (AH): find a better to deal with tests that needs privileged mode
-    if os.geteuid() != 0:
-      print "You need to be root run this test"
-      return
     # Arrange
     name = "test-host"
     hid = 123
