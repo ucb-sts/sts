@@ -111,7 +111,7 @@ class DirectedLinkAbstractClass(object):
     return not self.__eq__(other)
 
   def __repr__(self):
-    return "(%d:%d) -> (%d:%d)" % (self.start_node, self.start_port,
+    return "(%s:%s) -> (%s:%s)" % (self.start_node, self.start_port,
                                    self.end_node, self.end_port)
 
   def create_reversed_link(self):
@@ -201,7 +201,7 @@ class BiDirectionalLinkAbstractClass(object):
     return not self.__eq__(other)
 
   def __repr__(self):
-    return "(%d:%d) <-> (%d:%d)" % (self.node1, self.port1,
+    return "(%s:%s) <-> (%s:%s)" % (self.node1, self.port1,
                                     self.node2, self.port2)
 
   def to_json(self):
