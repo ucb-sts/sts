@@ -111,8 +111,8 @@ class FullyMeshedLinkTest(unittest.TestCase):
   def setUp(self):
     self.dpid2switch = { switch_id: create_switch(switch_id, 2) for switch_id in xrange(1, 4) }
     self.switches = self.dpid2switch.values()
-    self.links = MeshTopology.FullyMeshedLinks(self.dpid2switch)
-    self.get_connected_port = self.links
+    self.links = MeshTopology.FullyMeshedLinks(self.switches)
+    self.get_connected_port = self.links.get_other_side
 
   def test_connected_ports(self):
     # this is the sum of i from i=1 to i=n-1, *2 because links are unidirectional
@@ -201,7 +201,7 @@ class BufferedPanelTest(unittest.TestCase):
     self.dpid2switch = { dpid: create_mock_switch(num_ports, dpid)
                          for dpid in xrange(1,3) }
     self.switches = self.dpid2switch.values()
-    self.m = BufferedPatchPanel(self.switches, [], MeshTopology.FullyMeshedLinks(self.dpid2switch))
+    self.m = BufferedPatchPanel(self.switches, [], MeshTopology.FullyMeshedLinks(self.switches).get_other_side)
     self.traffic_generator = TrafficGenerator()
     self.switch1 = self.switches[0]
     self.switch2 = self.switches[1]

@@ -101,9 +101,9 @@ class TrafficGenerator (object):
       if len(hosts) == 0:
         raise RuntimeError("No host to choose from!")
       host = self.random.choice(hosts)
-    if host in self.topology.hid2host.keys():
-      host = self.topology.hid2host[host]
-    if host not in self.topology.hosts:
+    if self.topology.has_host(host):
+      host = self.topology.get_host(host)
+    if not self.topology.has_host(host):
       raise RuntimeError("Unknown host: %s" % (str(host)))
     if len(host.interfaces) == 0:
       raise RuntimeError("No interfaces to choose from on host %s!" % (str(host)))

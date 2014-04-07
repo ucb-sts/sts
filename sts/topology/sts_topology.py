@@ -3,6 +3,7 @@
 # Copyright 2011-2013 Andreas Wundsam
 # Copyright 2012-2013 Sam Whitlock
 # Copyright 2012-2012 Kyriakos Zarifis
+# Copyright 2014      Ahmed El-Hassany
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,6 +45,9 @@ from sts.util.console import msg
 import itertools
 import logging
 from collections import defaultdict
+
+from sts.topology.base import Topology as BaseTopology
+from sts.topology.base import PatchPanel as BasePatchPanel
 
 log = logging.getLogger("sts.topology")
 
@@ -130,6 +134,66 @@ def create_netns_host(create_io_worker, ingress_switch,
   interface = host.interfaces[0]
   access_link = AccessLink(host, interface, ingress_switch, get_switch_port(ingress_switch))
   return (host, [access_link]) # single item list to be consistent with create_host
+
+
+class STSPatchPanel(BasePatchPanel):
+  def __init__(self):
+    super(STSPatchPanel, self).__init__(link_cls=Link,
+                                        access_link_cls=AccessLink,
+                                        port_cls=ofp_phy_port,
+                                        host_interface_cls=HostInterface,
+                                        sts_console=msg)
+  def sever_link(self, link):
+    """
+    Disconnect link
+    """
+    self.msg.event("Cutting link %s" % str(link))
+    if link not in self.network_links:
+      raise ValueError("unknown link %s" % str(link))
+    if link in self.cut_links:
+      raise RuntimeError("link %s already cut!" % str(link))
+    self.cut_links.add(link)
+    link.start_software_switch.take_port_down(link.start_port)
+    # TODO(cs): the switch on the other end of the link should eventually
+    # notice that the link has gone down!
+
+  def repair_link(self, link):
+    """Bring a link back online"""
+    self.msg.event("Restoring link %s" % str(link))
+    if link not in self.network_links:
+      raise ValueError("Unknown link %s" % str(link))
+    link.start_software_switch.bring_port_up(link.start_port)
+    self.cut_links.remove(link)
+    # TODO(cs): the switch on the other end of the link should eventually
+    # notice that the link has come back up!
+
+  def sever_access_link(self, link):
+    """
+    Disconnect host-switch link
+    """
+    self.msg.event("Cutting access link %s" % str(link))
+    if link not in self.access_links:
+      raise ValueError("unknown access link %s" % str(link))
+    if link in self.cut_access_links:
+      raise RuntimeError("Access link %s already cut!" % str(link))
+    self.cut_access_links.add(link)
+    link.switch.take_port_down(link.switch_port)
+    # TODO(cs): the host on the other end of the link should eventually
+    # notice that the link has gone down!
+
+
+  def repair_access_link(self, link):
+    """Bring a link back online"""
+
+    self.msg.event("Restoring access link %s" % str(link))
+    if link not in self.access_links:
+      raise ValueError("Unknown access link %s" % str(link))
+    link.switch.bring_port_up(link.switch_port)
+    self.cut_access_links.remove(link)
+    # TODO(cs): the host on the other end of the link should eventually
+    # notice that the link has come back up!
+
+
 
 class PatchPanel(object):
   '''
@@ -247,372 +311,65 @@ class BufferedPatchPanel(PatchPanel, EventMixin):
       return self.fingerprint2dp_outs[fingerprint][0]
     return None
 
-class LinkTracker(object):
-  def __init__(self, dpid2switch, port2access_link, interface2access_link,
-               port2internal_link):
-    self.dpid2switch = dpid2switch
-    self.port2access_link = port2access_link
-    self.interface2access_link = interface2access_link
-    self.port2internal_link = port2internal_link
-    # { (start dpid, end dpid) -> link }
-    self.dpidpair2link = {
-      (link.start_software_switch.dpid, link.end_software_switch.dpid) : link
-      for link in self.network_links
-    }
-    # Metatdata for simulated failures
-    # sts.entities.Link objects
-    self.cut_links = set()
 
-  @property
-  def network_links(self):
-    return self.port2internal_link.values()
-
-  @property
-  def access_links(self):
-    return self.interface2access_link.values()
-
-  @property
-  def live_links(self):
-    return set(self.network_links) - self.cut_links
-
-  def sever_link(self, link):
-    msg.event("Cutting link %s" % str(link))
-    if link not in self.network_links:
-      raise ValueError("unknown link %s" % str(link))
-    if link in self.cut_links:
-      raise RuntimeError("link %s already cut!" % str(link))
-    self.cut_links.add(link)
-    link.start_software_switch.take_port_down(link.start_port)
-    # TODO(cs): the switch on the other end of the link should eventually
-    # notice that the link has gone down!
-
-  def repair_link(self, link):
-    msg.event("Restoring link %s" % str(link))
-    if link not in self.network_links:
-      raise ValueError("Unknown link %s" % str(link))
-    link.start_software_switch.bring_port_up(link.start_port)
-    self.cut_links.remove(link)
-    # TODO(cs): the switch on the other end of the link should eventually
-    # notice that the link has come back up!
-
-  def create_access_link(self, host, interface, switch, port):
-    '''
-    Create an access link between a host and a switch
-    If no interface is provided, an unused interface is used
-    If no port is provided, an unused port is used
-    '''
-    if interface is None:
-      interface = self.find_unused_interface(host)
-    if port is None:
-      port = self.find_unused_port(switch)
-    link = AccessLink(host, interface, switch, port)
-    self.port2access_link[port] = link
-    self.interface2access_link[interface] = link
-    return link
-
-  def remove_access_link(self, host, switch):
-    ''' Remove an access link between a host and a switch '''
-    for port in switch.ports.values():
-      if port in self.port2access_link.keys():
-        link = self.port2access_link[port]
-        if link.host is host and link.switch is switch:
-          del self.port2access_link[port]
-    for interface in host.interfaces:
-      if interface in self.interface2access_link.keys():
-        link = self.interface2access_link[interface]
-        if link.host is host and link.switch is switch:
-          del self.interface2access_link[interface]
-
-  def create_network_link(self, from_switch, from_port, to_switch, to_port):
-    '''
-    Create a unidirectional network (internal) link between two switches
-    If a port is not provided, an unused port in the corresponding switch is used
-    '''
-    if from_port is None:
-      from_port = self.find_unused_port(from_switch)
-    if to_port is None:
-      to_port = self.find_unused_port(to_switch)
-    link = Link(from_switch, from_port, to_switch, to_port)
-    self.port2internal_link[from_port] = link
-    self.dpidpair2link[(from_switch.dpid, to_switch.dpid)] = link
-    return link
-
-  def remove_network_link(self, from_switch, to_switch):
-    ''' Remove a unidirectional network (internal) link between two switches '''
-    for port in from_switch.ports.values():
-      if port in self.port2internal_link.keys():
-        link = self.port2internal_link[port]
-        if link.start_software_switch is from_switch and\
-           link.end_software_switch is to_switch:
-          del self.port2internal_link[port]
-          del self.dpid2pair2link[(link.start_software_switch.dpid,
-                                   link.end_software_switch.dpid)]
-
-  def find_unused_port(self, switch):
-    ''' Find a switch's unused port; if no such port exists, create a new one '''
-    for _, port in switch.ports.items():
-      if port not in self.port2internal_link.keys() and \
-        port not in self.port2access_link.keys():
-        return port
-    new_port_number = max([port_number for port_number in switch.ports.keys()])+1
-    new_port = ofp_phy_port(port_no=new_port_number)
-    switch.ports[new_port_number] = new_port
-    return new_port
-
-  def find_unused_interface(self, host):
-    ''' Find a host's unused interface; if no such interface exists, create a new one '''
-    for interface in host.interfaces:
-      if interface not in self.interface2access_link.keys():
-        return interface
-    new_interface_addr = max([interface.hw_addr.toInt() for interface in host.interfaces])+1
-    new_interface_addr = hex(new_interface_addr)[2:].zfill(12)
-    new_interface_addr = new_interface_addr[0:2]+":"+new_interface_addr[2:4]+":"+\
-                            new_interface_addr[4:6]+":"+new_interface_addr[6:8]+":"+\
-                            new_interface_addr[8:10]+":"+new_interface_addr[10:12]
-    new_interface_addr = EthAddr(new_interface_addr)
-    new_interface = HostInterface(new_interface_addr)
-    host.interfaces.append(new_interface)
-    return new_interface
-
-  def port_connected(self, port):
-    ''' Return whether the port is currently connected to anything '''
-    return (port in self.port2access_link or
-            port in self.interface2access_link or
-            port in self.port2internal_link)
-
-  def __call__(self, node, port):
-    '''
-    Given a node and a port, return a tuple (node, port) that is directly
-    connected to the port.
-
-    This can be used in 2 ways
-    - node is a Host type and port is a HostInterface type
-    - node is a Switch type and port is a ofp_phy_port type.
-    '''
-    if port in self.port2access_link:
-      access_link = self.port2access_link[port]
-      return (access_link.host, access_link.interface)
-    if port in self.interface2access_link:
-      access_link = self.interface2access_link[port]
-      return (access_link.switch, access_link.switch_port)
-    elif port in self.port2internal_link:
-      network_link = self.port2internal_link[port]
-      return (network_link.end_software_switch, network_link.end_port)
-    else:
-      raise ValueError("Unknown port %s on node %s" % (str(port),str(node)))
-
-  def _get_switch_by_dpid(self, dpid):
-    if dpid not in self.dpid2switch:
-      raise ValueError("Unknown switch dpid: %s" % str(dpid))
-
-    return self.dpid2switch[dpid]
-
-  def migrate_host(self, old_ingress_dpid, old_ingress_portno,
-                   new_ingress_dpid, new_ingress_portno):
-    '''
-    Migrate the host from the old (ingress switch, port) to the new
-    (ingress switch, port). Note that the new port must not already be
-    present, otherwise an exception will be thrown (we treat all switches as
-    configurable software switches for convenience, rather than hardware switches
-    with a fixed number of ports)
-    '''
-    old_ingress_switch = self._get_switch_by_dpid(old_ingress_dpid)
-
-    if old_ingress_portno not in old_ingress_switch.ports:
-      raise ValueError("unknown old_ingress_portno %d" % old_ingress_portno)
-
-    old_port = old_ingress_switch.ports[old_ingress_portno]
-
-    (host, interface) = self(old_ingress_switch, old_port) # using __call__
-
-    if not (isinstance(host, Host) and isinstance(interface, HostInterface)):
-      raise ValueError("(%s,%s) does not connect to a host!" %
-                       (str(old_ingress_switch), str(old_port)))
-
-    new_ingress_switch = self._get_switch_by_dpid(new_ingress_dpid)
-
-    if new_ingress_portno in new_ingress_switch.ports:
-      raise RuntimeError("new ingress port %d already exists!" % new_ingress_portno)
-
-    # now that we've verified everything, actually make the change!
-    # first, drop the old mappings
-    del self.port2access_link[old_port]
-    del self.interface2access_link[interface]
-    old_ingress_switch.take_port_down(old_port)
-
-    # now add new mappings
-    # For now, make the new port have the same ip address as the old port.
-    # TODO(cs): this would break PORTLAND routing! Need to specify the
-    #           new mac and IP addresses
-    new_ingress_port = ofp_phy_port(port_no=new_ingress_portno,
-                                    hw_addr=old_port.hw_addr,
-                                    name="eth%d" % new_ingress_portno,
-                                    config=old_port.config,
-                                    state=old_port.state,
-                                    curr=old_port.curr,
-                                    advertised=old_port.advertised,
-                                    supported=old_port.supported,
-                                    peer=old_port.peer)
-    new_ingress_switch.bring_port_up(new_ingress_port)
-    new_access_link = AccessLink(host, interface, new_ingress_switch, new_ingress_port)
-    self.port2access_link[new_ingress_port] = new_access_link
-    self.interface2access_link[interface] = new_access_link
-
-class Topology(object):
-  '''
+class Topology(BaseTopology):
+  """
   Abstract base class of all topology types. Wraps the edges and vertices of
   the network.
-  '''
-  def __init__(self, create_io_worker=None, gui=False):
+  """
+  def __init__(self, create_io_worker=None, gui=False, host_cls=Host):
+    super(Topology, self).__init__(host_cls=Host, switch_cls=FuzzSoftwareSwitch,
+                                   link_cls=host_cls,
+                                   access_link_cls=AccessLink,
+                                   interface_cls=HostInterface,
+                                   patch_panel=STSPatchPanel())
     self.create_io_worker = create_io_worker
-    self.dpid2switch = {}
-    self.hid2host = {}
-
-    # SoftwareSwitch objects
-    self.failed_switches = set()
-    self.link_tracker = None
-
     self.gui = None
     if gui:
       from sts.gui.launcher import TopologyGui
       self.gui = TopologyGui(self)
 
+
   def _populate_dpid2switch(self, switches):
+    """BBB This entire method need to be removed
     self.dpid2switch = {
       switch.dpid : switch
       for switch in switches
     }
-
-  @property
-  def access_links(self):
-    return self.link_tracker.access_links
-
-  @property
-  def network_links(self):
-    return self.link_tracker.network_links
-
-  @property
-  def cut_links(self):
-    return self.link_tracker.cut_links
-
-  @property
-  def switches(self):
-    switches = self.dpid2switch.values()
-    switches.sort(key=lambda sw: sw.dpid)
-    return switches
-
-  @property
-  def hosts(self):
-    hosts = self.hid2host.values()
-    hosts.sort(key=lambda h: h.hid)
-    return hosts
-
-  def get_link(self, dpid1, dpid2):
-    if (dpid1, dpid2) not in self.link_tracker.dpidpair2link:
-      raise ValueError("Unknown link (%d -> %d)" % (dpid1, dpid2))
-    return self.link_tracker.dpidpair2link[(dpid1, dpid2)]
+    """
+    for switch in switches:
+      if not self.has_switch(switch):
+        self.add_switch(switch)
 
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
     ''' Create a switch and register it in the topology '''
     switch = create_switch(switch_id, num_ports, can_connect_to_endhosts)
-    self.dpid2switch[switch_id] = switch
-    self.link_tracker.dpid2switch[switch_id] = switch
+    self.add_switch(switch)
     return switch
-
-  def remove_switch(self, switch):
-    '''
-    Remove a switch, along with all associated links and any dangling
-    hosts previously attached
-    '''
-    if switch not in self.dpid2switch.values():
-      return
-    # Remove associated network links
-    for network_link in self.network_links:
-      if network_link.start_software_switch is switch or\
-         network_link.end_software_switch is switch:
-        port = network_link.start_port
-        if port in self.link_tracker.port2internal_link.keys():
-          del self.link_tracker.port2internal_link[port]
-    # Remove associated access links
-    for access_link in self.access_links:
-      if access_link.switch is switch:
-        port = access_link.switch_port
-        interface = access_link.interface
-        host = access_link.host
-        if port in self.link_tracker.port2access_link.keys():
-          del self.link_tracker.port2access_link[port]
-        if interface in self.link_tracker.interface2access_link.keys():
-          del self.link_tracker.interface2access_link[interface]
-        # Remove dangling hosts, if any
-        for i in host.interfaces:
-          if i in self.link_tracker.interface2access_link.keys():
-            break
-        else:
-          del self.hid2host[host.hid]
-    del self.dpid2switch[switch.dpid]
 
   def create_host(self, ingress_switch_or_switches, mac_or_macs=None, ip_or_ips=None,
                 get_switch_port=get_switchs_host_port):
-    ''' Create a host, register it in the topology, and wire it to the given switch(es) '''
+    """
+    Create a host, register it in the topology, and wire it to the given switch(es)
+    """
     (host, access_links) = create_host(ingress_switch_or_switches, mac_or_macs,
                                       ip_or_ips, get_switch_port)
-    self.hid2host[host.hid] = host
     for access_link in access_links:
-      interface = access_link.interface
-      port = access_link.switch_port
-      self.link_tracker.port2access_link[port] = access_link
-      self.link_tracker.interface2access_link[interface] = access_link
+      self.add_link(access_link)
+    self.add_host(host)
     return host
 
-  def remove_host(self, host):
-    ''' Remove a host and all associated access links '''
-    if host not in self.hid2host.values():
-      return
-    # Remove associated access links
-    for access_link in self.access_links:
-      if access_link.host is host:
-        port = access_link.switch_port
-        interface = access_link.interface
-        if port in self.link_tracker.port2access_link.keys():
-          del self.link_tracker.port2access_link[port]
-        if interface in self.link_tracker.interface2access_link.keys():
-          del self.link_tracker.interface2access_link[interface]
-    del self.hid2host[host.hid]
-
-  def get_switch(self, dpid):
-    if dpid not in self.dpid2switch:
-      raise RuntimeError("unknown dpid %d" % dpid)
-    return self.dpid2switch[dpid]
-
-  def get_host(self, hid):
-    if hid not in self.hid2host:
-      raise RuntimeError("unknown hid %d" % hid)
-    return self.hid2host[hid]
-
-  @property
-  def live_switches(self):
-    ''' Return the software_switchs which are currently up '''
-    return set(self.switches) - self.failed_switches
-
-  @property
-  def live_edge_switches(self):
-    '''
-    Return the software_switchs which are currently up and can connect to
-    hosts
-    '''
-    edge_switches = set(filter(lambda sw: sw.can_connect_to_endhosts, self.switches))
-    return edge_switches - self.failed_switches
-
   def ok_to_send(self, dp_event):
-    ''' Return True if it is ok to send the dp_event arg '''
-    if not self.link_tracker.port_connected(dp_event.port):
+    """Return True if it is ok to send the dp_event arg"""
+    if not self.patch_panel.is_port_connected(dp_event.port):
       return False
 
     try:
       (next_hop, next_port) = self.get_connected_port(dp_event.switch,
                                                       dp_event.port)
     except ValueError:
-      log.warn("no such port %s on node %s" % (str(dp_event.port), str(dp_event.switch)))
+      self.log.warn("no such port %s on node %s" % (str(dp_event.port),
+                                               str(dp_event.switch)))
       return False
 
     if isinstance(dp_event.node, Host) or isinstance(next_hop, Host):
@@ -624,45 +381,10 @@ class Topology(object):
         return True
       return False
 
-  def crash_switch(self, software_switch):
-    msg.event("Crashing software_switch %s" % str(software_switch))
-    software_switch.fail()
-    self.failed_switches.add(software_switch)
-
-  def recover_switch(self, software_switch, down_controller_ids=None):
-    msg.event("Rebooting software_switch %s" % str(software_switch))
-    if down_controller_ids is None:
-      down_controller_ids = set()
-    if software_switch not in self.failed_switches:
-      log.warn("Switch %s not currently down. (Currently down: %s)" %
-                (str(software_switch), str(self.failed_switches)))
-    connected_to_at_least_one = software_switch\
-                                 .recover(down_controller_ids=down_controller_ids)
-    if connected_to_at_least_one:
-      self.failed_switches.remove(software_switch)
-    return connected_to_at_least_one
-
-  @property
-  def live_links(self):
-    return self.link_tracker.live_links
-
-  def sever_link(self, link):
-    self.link_tracker.sever_link(link)
-
-  def repair_link(self, link):
-    self.link_tracker.repair_link(link)
-
-  def create_access_link(self, host, interface, switch, port):
-    return self.link_tracker.create_access_link(host, interface, switch, port)
 
   def remove_access_link(self, host, switch):
-    return self.link_tracker.remove_access_link(host, switch)
-
-  def create_network_link(self, from_switch, from_port, to_switch, to_port):
-    return self.link_tracker.create_network_link(from_switch, from_port, to_switch, to_port)
-
-  def remove_network_link(self, from_switch, to_switch):
-    return self.link_tracker.remove_network_link(from_switch, to_switch)
+    return super(Topology, self).remove_access_link(host, None, switch, None,
+                                                    remove_all=True)
 
   @property
   def blocked_controller_connections(self):
@@ -687,7 +409,7 @@ class Topology(object):
     return connection.io_worker.unblock()
 
   def connect_to_controllers(self, controller_info_list, create_connection):
-    '''
+    """
     Bind sockets from the software_switchs to the controllers. For now, assign each
     switch to the next controller in the list in a round robin fashion.
 
@@ -697,7 +419,7 @@ class Topology(object):
         - create_connection is a factory method for creating Connection objects
           which are connected to controllers. Takes a ControllerConfig object
           as a parameter
-    '''
+    """
     controller_info_cycler = itertools.cycle(controller_info_list)
     connections_per_switch = len(controller_info_list)
 
@@ -720,15 +442,17 @@ class Topology(object):
 
   def migrate_host(self, old_ingress_dpid, old_ingress_portno,
                    new_ingress_dpid, new_ingress_portno):
-    self.link_tracker.migrate_host(old_ingress_dpid, old_ingress_portno,
-                                   new_ingress_dpid, new_ingress_portno)
+    # TODO (AH): Implement migrate host
+    #self.link_tracker.migrate_host(old_ingress_dpid, old_ingress_portno,
+    #                               new_ingress_dpid, new_ingress_portno)
+    pass
 
   @staticmethod
   def populate_from_topology(graph):
-    '''
+    """
     Take a pox.lib.graph.graph.Graph and generate arguments needed for the
     simulator
-    '''
+    """
     topology = Topology()
     topology.hosts = graph.find(is_a=Host)
     # TODO(cs): broken: can't set attribute
@@ -751,10 +475,11 @@ class Topology(object):
       self.link_tracker.interface2access_link = {}
       self.link_tracker.port2internal_link = {}
 
+
 class MeshTopology(Topology):
   def __init__(self, num_switches=3, create_io_worker=None, netns_hosts=False,
                gui=False, ip_format_str="123.123.%d.%d"):
-    '''
+    """
     Populate the topology as a mesh of switches, connect the switches
     to the controllers
 
@@ -767,83 +492,89 @@ class MeshTopology(Topology):
         number. For example, "10.%d.%d.255" will assign hosts the IP address
         10.DPID.PORT_NUMBER.255, where DPID is the dpid of their ingress
         switch, and PORT_NUMBER is the number of the switch's access link.
-    '''
-    Topology.__init__(self, create_io_worker=create_io_worker, gui=gui)
+    """
+    host_cls = NamespaceHost if netns_hosts == True else Host
+    super(MeshTopology, self).__init__(create_io_worker=create_io_worker,
+                                       gui=gui, host_cls=host_cls)
 
     # Every switch has a link to every other switch + 1 host,
     # for N*(N-1)+N = N^2 total ports
     ports_per_switch = (num_switches - 1) + 1
 
     # Initialize switches
-    switches = [ create_switch(switch_id, ports_per_switch)
-                  for switch_id in range(1, num_switches+1) ]
-    self._populate_dpid2switch(switches)
+    switches = [create_switch(switch_id, ports_per_switch)
+                for switch_id in range(1, num_switches + 1)]
+    for switch in switches:
+      self.add_switch(switch)
+
     if netns_hosts:
-      host_access_link_pairs = [ create_netns_host(create_io_worker, switch)
-                                 for switch in self.switches ]
+      host_access_link_pairs = [create_netns_host(create_io_worker, switch)
+                                 for switch in self.switches]
     else:
-      host_access_link_pairs = [ create_host(switch, ip_format_str=ip_format_str) for switch in self.switches ]
+      host_access_link_pairs = [create_host(switch, ip_format_str=ip_format_str)
+                                for switch in self.switches]
     access_link_list_list = []
     for host, access_link_list in host_access_link_pairs:
-      self.hid2host[host.hid] = host
       access_link_list_list.append(access_link_list)
+      self.add_host(host)
 
     # this is python's .flatten:
     access_links = list(itertools.chain.from_iterable(access_link_list_list))
+    for access_link in access_links:
+      self.add_link(access_link)
 
     # grab a fully meshed patch panel to wire up these guys
-    self.link_tracker = MeshTopology.FullyMeshedLinks(self.dpid2switch, access_links)
-    self.get_connected_port = self.link_tracker
-
+    self.patch_panel = MeshTopology.FullyMeshedLinks(self.switches, access_links)
+    self.get_connected_port = self.patch_panel.get_other_side
     if self.gui is not None:
       self.gui.launch()
 
-  class FullyMeshedLinks(LinkTracker):
-    '''
+  class FullyMeshedLinks(STSPatchPanel):
+    """
     A factory method (inner class) for creating a fully meshed network.
     Connects every pair of switches. Ports are in ascending order of
     the dpid of connected switch, while skipping the self-connections.
     I.e., for (dpid, portno):
         (0, 0) <-> (1,0)
         (2, 1) <-> (1,1)
-    '''
-    def __init__(self, dpid2switch, access_links=[]):
-      port2access_link = { access_link.switch_port: access_link
-                           for access_link in access_links }
-      interface2access_link = { access_link.interface: access_link
-                                for access_link in access_links }
+    """
+    def __init__(self, switches, access_links=[]):
+      STSPatchPanel.__init__(self)
+      for link in access_links:
+        self.add_access_link(link)
 
-      switches = dpid2switch.values()
-      # Access links to hosts are already claimed, all other internal links
-      # are not yet claimed
-      switch2unclaimed_ports = { switch : filter(lambda p: p not in port2access_link,
-                                                 switch.ports.values())
-                                 for switch in switches }
-      port2internal_link = {}
+      switch2unclaimed_ports = {switch: filter(lambda p: p not in
+                                                         self.port2access_link,
+                                               switch.ports.values())
+                                for switch in switches}
+
       for i, switch_i in enumerate(switches):
         for switch_j in switches[i+1:]:
           switch_i_port = switch2unclaimed_ports[switch_i].pop()
           switch_j_port = switch2unclaimed_ports[switch_j].pop()
           link_i2j = Link(switch_i, switch_i_port, switch_j, switch_j_port)
           link_j2i = link_i2j.reversed_link()
-          port2internal_link[switch_i_port] = link_i2j
-          port2internal_link[switch_j_port] = link_j2i
-      self.port2internal_link = port2internal_link
+          self.add_link(link_i2j)
+          self.add_link(link_j2i)
 
-      LinkTracker.__init__(self, dpid2switch, port2access_link,
-                           interface2access_link, port2internal_link)
 
 class FatTree (Topology):
-  ''' Construct a FatTree topology with a given number of pods '''
+  """Construct a FatTree topology with a given number of pods"""
   def __init__(self, num_pods=4, create_io_worker=None, gui=False,
-               use_portland_addressing=True, ip_format_str="123.123..%d.%d"):
-    ''' If not use_portland_addressing, use a format string for assigning
-        IP addresses to hosts. Takes two digits to be interpolated, the switch
-        dpid and the port number.
-        For example, "10.%d.%d.255" will assign hosts the IP address
-        10.DPID.PORT_NUMBER.255, where DPID is the dpid of their ingress
-        switch, and PORT_NUMBER is the number of the switch's access link.
-    '''
+               use_portland_addressing=True, ip_format_str="123.123..%d.%d",
+               netns_hosts=True):
+    """
+    If not use_portland_addressing, use a format string for assigning
+    IP addresses to hosts. Takes two digits to be interpolated, the switch
+    dpid and the port number.
+
+    For example, "10.%d.%d.255" will assign hosts the IP address
+    10.DPID.PORT_NUMBER.255, where DPID is the dpid of their ingress
+    switch, and PORT_NUMBER is the number of the switch's access link.
+    """
+    host_cls = NamespaceHost if netns_hosts == True else Host
+    super(FatTree, self).__init__(create_io_worker=create_io_worker,
+                                  gui=gui, host_cls=host_cls)
     if num_pods < 2:
       raise ValueError("Can't handle Fat Trees with less than 2 pods")
     Topology.__init__(self, create_io_worker=create_io_worker, gui=gui)
@@ -853,16 +584,13 @@ class FatTree (Topology):
     self.use_portland_addressing = use_portland_addressing
     self.ip_format_str = ip_format_str
 
-    self.dpid2switch = {}
-    self.hid2host = {}
-    self.link_tracker = None
     self.construct_tree(num_pods)
 
     if self.gui is not None:
       self.gui.launch()
 
   def construct_tree(self, num_pods):
-    '''
+    """
     According to  "A Scalable, Commodity Data Center Network Architecture",
     k = number of ports per switch = number of pods
     number core switches =  (k/2)^2
@@ -871,8 +599,8 @@ class FatTree (Topology):
     number of hosts attached to each edge switch = k / 2
     number of hosts per pod = (k/2)^2
     total number of hosts  = k^3 / 4
-    '''
-    log.debug("Constructing fat tree with %d pods" % num_pods)
+    """
+    self.log.debug("Constructing fat tree with %d pods" % num_pods)
 
     # self == store these numbers for later
     k = self.k = self.ports_per_switch = self.num_pods = num_pods
@@ -921,7 +649,7 @@ class FatTree (Topology):
         (host, host_access_links) = create_host(edge, mac_or_macs=portland_mac, ip_format_str=self.ip_format_str,
                                                 get_switch_port=lambda switch: switch.ports[edge_port_no])
       host.pod_id = current_pod_id
-      self.hid2host[host.hid] = host
+      self.add_host(host)
       access_links = access_links.union(set(host_access_links))
 
     # Now edge <-> agg
@@ -974,26 +702,24 @@ class FatTree (Topology):
                                     agg.ports[agg_port_no]))
 
     switches = self.cores + self.aggs + self.edges
-    self._populate_dpid2switch(switches)
+    #self._populate_dpid2switch(switches)
+    for switch in switches:
+      if not self.has_switch(switch):
+        self.add_switch(switch)
     self.wire_tree(access_links, network_links)
     self._sanity_check_tree(access_links, network_links)
-    log.debug('''Fat tree construction: done (%d cores, %d aggs,'''
-              '''%d edges, %d hosts)''' %
-              (len(self.cores), len(self.aggs), len(self.edges), len(self.hosts)))
+    self.log.debug("Fat tree construction: done (%d cores, %d aggs,"
+                   "%d edges, %d hosts)" %
+                   (len(self.cores), len(self.aggs), len(self.edges),
+                    len(self.hosts)))
 
   def wire_tree(self, access_links, network_links):
     # Auxiliary data to make get_connected_port efficient
-    port2internal_link = { link.start_port: link
-                           for link in network_links }
-    port2access_link = { access_link.switch_port: access_link
-                         for access_link in access_links }
-    interface2access_link = { access_link.interface: access_link
-                              for access_link in access_links }
-
-    link_tracker = self.FatTreeLinks(port2access_link, interface2access_link,
-                                     port2internal_link, self.dpid2switch)
-    self.get_connected_port = link_tracker
-    self.link_tracker = link_tracker
+    for access_link in access_links:
+      self.patch_panel.add_access_link(access_link)
+    for link in network_links:
+      self.patch_panel.add_link(link)
+    self.get_connected_port = self.patch_panel.get_other_side
 
   def _sanity_check_tree(self, access_links, network_links):
     # TODO(cs): this should be in a unit test, not here
@@ -1077,11 +803,3 @@ class FatTree (Topology):
       # Forward to the right-most uplink
       flow_mod = ofp_flow_mod(match=match, actions=[ofp_action_output(port=k)])
       edge._receive_flow_mod(flow_mod)
-
-  class FatTreeLinks(LinkTracker):
-    # TODO(cs): perhaps we should not use inheritance here, since it is
-    # essentially entirely trivial. Alternatively, we could just have an
-    # overloaded constructor in the LinkTracker class?
-    def __init__(self, port2access_link, interface2access_link, port2internal_link, dpid2switch):
-      LinkTracker.__init__(self, dpid2switch, port2access_link,
-                           interface2access_link, port2internal_link)
