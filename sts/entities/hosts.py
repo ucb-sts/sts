@@ -234,13 +234,16 @@ class HostAbstractClass(object):
             'interfaces': [iface.to_json() for iface in self.interfaces]}
 
   @classmethod
-  def from_json(cls, json_hash):
+  def from_json(cls, json_hash, interface_cls=None):
     name = json_hash['name']
     hid = json_hash['hid']
     interfaces = []
     for iface in json_hash['interfaces']:
-      iface_cls = load_class(iface['__type__'])
-      interfaces.append(iface_cls.from_json(iface))
+      if interface_cls is None:
+        interface_cls = load_class(iface['__type__'])
+      else:
+        iface['__type__'] = class_fullname(interface_cls)
+      interfaces.append(interface_cls.from_json(iface))
     return cls(interfaces, name, hid)
 
 #                Host
