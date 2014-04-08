@@ -29,12 +29,14 @@ from sts.util.console import msg
 
 
 class MininetPatchPanel(PatchPanel):
-  def __init__(self):
+  def __init__(self, teston_mn):
     super(MininetPatchPanel, self).__init__(link_cls=MininetLink,
                                             access_link_cls=MininetAccessLink,
                                             port_cls=MininetPort,
                                             host_interface_cls=MininetHostInterface,
                                             sts_console=msg)
+    self.teston_mn = teston_mn
+
   def sever_link(self, link):
     """
     Disconnect link
@@ -45,19 +47,16 @@ class MininetPatchPanel(PatchPanel):
     if link in self.cut_links:
       raise RuntimeError("link %s already cut!" % str(link))
     self.cut_links.add(link)
-    link.start_software_switch.take_port_down(link.start_port)
-    # TODO(cs): the switch on the other end of the link should eventually
-    # notice that the link has gone down!
+    self.teston_mn.link(END1=link.node1, END2=link.node2, OPTION='down')
 
   def repair_link(self, link):
     """Bring a link back online"""
     self.msg.event("Restoring link %s" % str(link))
     if link not in self.network_links:
       raise ValueError("Unknown link %s" % str(link))
-    link.start_software_switch.bring_port_up(link.start_port)
+    self.teston_mn.link(END1=link.node1, END2=link.node2, OPTION='up')
     self.cut_links.remove(link)
-    # TODO(cs): the switch on the other end of the link should eventually
-    # notice that the link has come back up!
+
 
   def sever_access_link(self, link):
     """
@@ -69,9 +68,8 @@ class MininetPatchPanel(PatchPanel):
     if link in self.cut_access_links:
       raise RuntimeError("Access link %s already cut!" % str(link))
     self.cut_access_links.add(link)
-    link.switch.take_port_down(link.switch_port)
-    # TODO(cs): the host on the other end of the link should eventually
-    # notice that the link has gone down!
+    self.teston_mn.link(END1=link.node1, END2=link.node2, OPTION='down')
+
 
   def repair_access_link(self, link):
     """Bring a link back online"""
@@ -81,22 +79,37 @@ class MininetPatchPanel(PatchPanel):
       raise ValueError("Unknown access link %s" % str(link))
     link.switch.bring_port_up(link.switch_port)
     self.cut_access_links.remove(link)
-    # TODO(cs): the host on the other end of the link should eventually
-    # notice that the link has come back up!
+    self.teston_mn.link(END1=link.node1, END2=link.node2, OPTION='up')
 
 
 class MininetTopology(Topology):
   def __init__(self, teston_mn):
-    super(MininetTopology, self).__init__(patch_panel=MininetPatchPanel(),
+    super(MininetTopology, self).__init__(patch_panel=MininetPatchPanel(teston_mn),
                                           host_cls=MininetHost,
                                           interface_cls=MininetHostInterface,
                                           switch_cls=MininetOVSSwitch,
                                           access_link_cls=MininetAccessLink,
-                                          link_cls=MininetLink
+                                          link_cls=MininetLink,
+                                          port_cls=MininetPort
                                           )
     self.teston_mn = teston_mn
     self.read_nodes()
     self.read_links()
+
+  def read_interfaces(self, node_name, interface_cls):
+    response = self.teston_mn.getInterfaces(node_name)
+    interfaces = []
+    for line in response.split("\n"):
+      if not line.startswith("name="):
+        continue
+      vars = {}
+      for var in line.split(","):
+        key, value = var.split("=")
+        vars[key] = value
+      isUp = vars.pop('isUp', True)
+      tmp = interface_cls(hw_addr=vars['mac'], ips=vars['ip'], name=vars['name'])
+      interfaces.append((tmp))
+    return interfaces
 
   def read_nodes(self):
     """
@@ -114,29 +127,14 @@ class MininetTopology(Topology):
       if line.startswith("<Host"):
         result = re.search(host_re, line)
         host_name = result.group('name')
-        if_name = result.group('ifname')
-        ip = self.teston_mn.getIPAddress(host_name)
-        mac = self.teston_mn.getMacAddress(host_name)
-        interface = MininetHostInterface(mac, ip, if_name)
-        # TODO: read Host ID
-        host = self.host_cls(interface, name=host_name)
+        interfaces = self.read_interfaces(host_name, self.interface_cls)
+        host = self.host_cls(interfaces, name=host_name)
         self.add_host(host)
       if line.startswith("<OVSSwitch"):
         result = re.search(sw_re, line, re.I)
         name = result.group('name')
         dpid = self.teston_mn.getSwitchDPID(name)
-        str_ports = result.group('ports').split(',')
-        ports = []
-        for str_port in str_ports:
-          port_name, port_ip = str_port.split(":")
-          if port_ip == "None":
-            port_ip = None
-          else:
-            continue
-          port = MininetPort(
-            hw_addr=self.teston_mn.getMacInterfaceAddress(name, port_name),
-            name=port_name)
-          ports.append(port)
+        ports = self.read_interfaces(name, self.port_cls)
         sw = self.switch_cls(dpid, name, ports)
         self.add_switch(sw)
 
