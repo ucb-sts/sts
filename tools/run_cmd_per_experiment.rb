@@ -17,7 +17,7 @@ end
 
 # Tracks (and modifies) the current branch/commit of a repository
 class Repository
-  attr_reader :name, :current_branch
+  attr_reader :name, :original_commit
   def initialize(name, abs_path)
     @name = name
     @abs_path = abs_path
@@ -108,6 +108,10 @@ def walk_directories(experiments, options)
           hassel_repo.rollback(metadata["modules"]["hassel"]["commit"])
           # Recompile binaries
           system "./tools/clean.sh"
+        else
+          # Legacy experiments didn't include hassel hashtags. Ensure that
+          # by default, hassel is in the most up-to-date state.
+          hassel_repo.rollback(hassel_repo.original_commit)
         end
       end
 
