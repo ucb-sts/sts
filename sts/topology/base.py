@@ -846,13 +846,15 @@ class Topology(object):
   def __init__(self, patch_panel, topo_graph=None, hosts=None, switches=None, controllers=None,
                links=None, host_cls=Host, switch_cls=FuzzSoftwareSwitch,
                link_cls=Link, access_link_cls=AccessLink,
-               interface_cls=HostInterface, sts_console=msg):
+               interface_cls=HostInterface, port_cls=ofp_phy_port,
+               sts_console=msg):
     super(Topology, self).__init__()
     self.host_cls = host_cls
     self.switch_cls = switch_cls
     self.link_cls = link_cls
     self.access_link_cls = access_link_cls
     self.interface_cls = interface_cls
+    self.port_cls = port_cls
     self.patch_panel = patch_panel
     self._g = Graph()
     self._topo_graph = topo_graph or TopologyGraph()
@@ -1173,7 +1175,7 @@ class Topology(object):
     # For now, make the new port have the same ip address as the old port.
     # TODO(cs): this would break PORTLAND routing! Need to specify the
     #           new mac and IP addresses
-    new_ingress_port = ofp_phy_port(port_no=new_ingress_portno,
+    new_ingress_port = self.port_cls(port_no=new_ingress_portno,
                                     hw_addr=old_port.hw_addr,
                                     name="eth%d" % new_ingress_portno,
                                     config=old_port.config,

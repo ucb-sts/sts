@@ -322,6 +322,7 @@ class Topology(BaseTopology):
                                    link_cls=host_cls,
                                    access_link_cls=AccessLink,
                                    interface_cls=HostInterface,
+                                   port_cls=ofp_phy_port,
                                    patch_panel=STSPatchPanel())
     self.create_io_worker = create_io_worker
     self.gui = None
