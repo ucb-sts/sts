@@ -106,6 +106,8 @@ def walk_directories(experiments, options)
         pox_repo.rollback(metadata["modules"]["pox"]["commit"])
         if metadata["modules"].include? "hassel"
           hassel_repo.rollback(metadata["modules"]["hassel"]["commit"])
+          # Recompile binaries
+          system "./tools/clean.sh"
         end
       end
 
