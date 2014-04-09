@@ -229,3 +229,13 @@ def load_class(str_full_type):
   mod = importlib.import_module('.'.join(type_s[:-1]))
   cls = getattr(mod, type_s[-1])
   return cls
+
+
+def get_json_attr(obj):
+  """
+  Returns the serialized version of the object if it has to_json() defined
+  """
+  if hasattr(obj, "to_json"):
+    return getattr(obj, "to_json")()
+  else:
+    return obj

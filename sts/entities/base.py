@@ -28,6 +28,7 @@ from sts.util.procutils import popen_filtered
 from sts.util.convenience import object_fullname
 from sts.util.convenience import class_fullname
 from sts.util.convenience import load_class
+from sts.util.convenience import get_json_attr
 
 
 def serialize_ofp_phy_port(port):
@@ -121,21 +122,11 @@ class DirectedLinkAbstractClass(object):
 
   def to_json(self):
     """Serialize to JSON dict"""
-    sn_to_json = getattr(self.start_node, "to_json", None)
-    sp_to_json = getattr(self.start_port, "to_json", None)
-    en_to_json = getattr(self.end_node, "to_json", None)
-    ep_to_json = getattr(self.end_port, "to_json", None)
-
-    sn_json = sn_to_json() if sn_to_json else self.start_node
-    sp_json = sp_to_json() if sp_to_json else self.start_port
-    en_json = en_to_json() if en_to_json else self.end_node
-    ep_json = ep_to_json() if ep_to_json else self.end_port
-
     return {'__type__': object_fullname(self),
-            'start_node': sn_json,
-            'start_port': sp_json,
-            'end_node': en_json,
-            'end_port': ep_json}
+            'start_node': get_json_attr(self.start_node),
+            'start_port': get_json_attr(self.start_port),
+            'end_node': get_json_attr(self.end_node),
+            'end_port': get_json_attr(self.end_port)}
 
   @classmethod
   def from_json(cls, json_dict):
@@ -206,21 +197,11 @@ class BiDirectionalLinkAbstractClass(object):
 
   def to_json(self):
     """Serialize to JSON dict"""
-    n1_to_json = getattr(self.node1, "to_json", None)
-    p1_to_json = getattr(self.port1, "to_json", None)
-    n2_to_json = getattr(self.node2, "to_json", None)
-    p2_to_json = getattr(self.port2, "to_json", None)
-
-    n1_json = n1_to_json() if n1_to_json else self.node1
-    p1_json = p1_to_json() if p1_to_json else self.port1
-    n2_json = n2_to_json() if n2_to_json else self.node2
-    p2_json = p2_to_json() if p2_to_json else self.port2
-
     return {'__type__': object_fullname(self),
-            'node1': n1_json,
-            'port1': p1_json,
-            'node2': n2_json,
-            'port2': p2_json}
+            'node1': get_json_attr(self.node1),
+            'port1': get_json_attr(self.port1),
+            'node2': get_json_attr(self.node2),
+            'port2': get_json_attr(self.port2)}
 
   @classmethod
   def from_json(cls, json_dict):
