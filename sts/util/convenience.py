@@ -27,6 +27,9 @@ import struct
 import shutil
 import base64
 import subprocess
+import warnings
+import functools
+import importlib
 from sts.util.console import msg
 
 # don't use the standard instance - we don't want to be seeded
@@ -187,3 +190,52 @@ def show_flow_tables(simulation):
     msg.interactive("Switch %s" % switch.dpid)
     switch.show_flow_table()
 
+
+def deprecated(func):
+  """
+  This is a decorator which can be used to mark functions
+  as deprecated. It will result in a warning being emitted
+  when the function is used.
+
+  Copied from https://wiki.python.org/moin/PythonDecoratorLibrary
+  """
+  @functools.wraps(func)
+  def new_func(*args, **kwargs):
+      warnings.warn_explicit(
+          "Call to deprecated function {}.".format(func.__name__),
+          category=DeprecationWarning,
+          filename=func.func_code.co_filename,
+          lineno=func.func_code.co_firstlineno + 1
+      )
+      return func(*args, **kwargs)
+  return new_func
+
+
+def object_fullname(obj):
+  """Return the fullname of an object"""
+  return obj.__module__ + "." + obj.__class__.__name__
+
+
+def class_fullname(cls):
+  """Return the fullname of a class"""
+  return cls.__module__ + "." + cls.__name__
+
+
+def load_class(str_full_type):
+  """
+  Load a python class given full qualified name.
+  """
+  type_s = str_full_type.split('.')
+  mod = importlib.import_module('.'.join(type_s[:-1]))
+  cls = getattr(mod, type_s[-1])
+  return cls
+
+
+def get_json_attr(obj):
+  """
+  Returns the serialized version of the object if it has to_json() defined
+  """
+  if hasattr(obj, "to_json"):
+    return getattr(obj, "to_json")()
+  else:
+    return obj

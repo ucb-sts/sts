@@ -33,7 +33,8 @@ log = logging.getLogger("netns")
 ETH_P_ALL = 3                     # from linux/if_ether.h
 
 def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
-                     host_ip_addr_str="",  cwd=None, env=None):
+                     host_ip_addr_str="", guest_hw_addr=None, cwd=None,
+                     env=None):
   '''
   Set up and launch cmd in a new network namespace.
 
@@ -50,6 +51,7 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
     - ip_addr_str: the ip address to assign to the namespace's interace.
                    Must be a string! not a IPAddr object
     - iface_number: unique integer for the namespace and host virtual interfaces.
+    - guest_hw_addr: mac address for the guest (auto generated if None)
   '''
   if system() != 'Linux':
     raise EnvironmentError('network namespace functionality requires a Linux environment')
@@ -71,7 +73,13 @@ def launch_namespace(cmd, guest_ip_addr_str, iface_number, prefix_length=24,
           subprocess.check_call(['ip', 'link', 'del', dev])
 
     # create a veth pair and set the host end to be promiscuous
-    subprocess.check_call(['ip','link','add','name',host_device,'type','veth','peer','name',guest_device])
+    add_cmd = ['ip','link','add','name',host_device,'type','veth','peer',
+               'name',guest_device]
+    if guest_hw_addr:
+      guest_hw_addr = EthAddr(guest_hw_addr)
+      add_cmd.append('address')
+      add_cmd.append(guest_hw_addr.toStr())
+    subprocess.check_call(add_cmd)
     guest_eth_addr = get_eth_address_for_interface(guest_device)
     log.debug("Guest ETH %s" % guest_eth_addr)
     host_eth_addr = get_eth_address_for_interface(host_device)

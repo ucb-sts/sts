@@ -125,7 +125,8 @@ def create_netns_host(create_io_worker, ingress_switch,
   '''
   if ip_addr_str == "":
     ip_addr_str = ip_format_str % (ingress_switch.dpid, get_switch_port(ingress_switch).port_no)
-  host = NamespaceHost(ip_addr_str, create_io_worker, cmd=cmd)
+  host = NamespaceHost(HostInterface(None, ip_addr_str),
+                       create_io_worker, cmd=cmd)
   interface = host.interfaces[0]
   access_link = AccessLink(host, interface, ingress_switch, get_switch_port(ingress_switch))
   return (host, [access_link]) # single item list to be consistent with create_host

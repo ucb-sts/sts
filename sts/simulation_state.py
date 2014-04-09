@@ -50,7 +50,9 @@ def default_boot_controllers(controller_configs, snapshot_service,
   # Boot the controllers
   controllers = []
   for c in controller_configs:
-    controller = c.controller_class(c, sync_connection_manager, snapshot_service)
+    controller = c.controller_class(
+      c, sync_connection_manager=sync_connection_manager,
+      snapshot_service=snapshot_service)
     controller.start(multiplex_sockets=multiplex_sockets)
     log.info("Launched controller %s: %s [PID %d]" %
              (str(c.cid), " ".join(c.expanded_start_cmd), controller.pid))
