@@ -345,7 +345,6 @@ class NamespaceHostTest(unittest.TestCase):
     self.assertEquals(host.interfaces, interfaces)
 
   def test_to_json(self):
-
     # Arrange
     io_master = mock.Mock()
     hw_addr_str = "0e:32:a4:91:e7:30"
