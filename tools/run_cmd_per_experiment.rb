@@ -73,6 +73,7 @@ real_bugs = [
 synthetic_bugs = [
   Experiment.new("pox_null_pointer_mcs", "Null pointer on rarely used codepath"),
   Experiment.new("trigger_priority_mismatch_small_mcs", "Overlapping flow entries"),
+  # Replay does not reproduce violation, as noted in paper:
   #Experiment.new("snapshot_demo_synthetic_link_failure", "Delicate timer interleaving"),
   Experiment.new("pox_broken_floyd_mcs", "Algorithm misimplementation"),
   Experiment.new("trigger_multithreading_bug_mcs", "Multithreaded race condition"),
@@ -81,12 +82,12 @@ synthetic_bugs = [
 ]
 
 def read_experiment_metadata
-   # Read metadata (json file). Current working directory must contain it.
-   metadata = {}
-   File.open("metadata") do |f|
-     metadata = JSON.load(f)
-   end
-   metadata
+  # Read metadata (json file). Current working directory must contain it.
+  metadata = {}
+  File.open("metadata") do |f|
+    metadata = JSON.load(f)
+  end
+  metadata
 end
 
 def walk_directories(experiments, options)
