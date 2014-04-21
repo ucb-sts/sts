@@ -116,10 +116,10 @@ class EventSchedulerStats(object):
     for e, count in self.sorted_match_counts():
       s.append("  %s %d\n" % (e, count,))
       if e == "ControlMessageReceive":
-        for pkt_class, c in self.msgrecv2matches.iteritems():
+        for pkt_class, c in self.msgrecv2matched.iteritems():
           s.append("\t\t  %s : %d\n" % (pkt_class, c))
       if e == "ControlMessageSend":
-        for pkt_class, c in self.msgsend2matches.iteritems():
+        for pkt_class, c in self.msgsend2matched.iteritems():
           s.append("\t\t  %s : %d\n" % (pkt_class, c))
 
     s.append("Timeouts per event type:\n")
