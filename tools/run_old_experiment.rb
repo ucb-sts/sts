@@ -16,6 +16,8 @@ system "./tools/clean.sh"
 repo_orchestrator = RepositoryOrchestrator.new
 Dir.chdir(experiment_dir) do
   repo_orchestrator.rollback
-  system "../../simulator.py -c #{ARGV[0]}"
+  Dir.chdir "../../" do
+    system "./simulator.py -c #{ARGV[0]}"
+  end
   repo_orchestrator.restore_original_state
 end
