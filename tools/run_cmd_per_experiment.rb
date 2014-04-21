@@ -31,9 +31,9 @@ class Repository
     if branch != @current_branch
       chdir do
         ret = system "git reset HEAD --hard 1>&2"
-        raise "Failed to change branch" if ret != 0
+        raise "Failed to change branch" if not ret
         ret = system "git checkout #{branch} 1>&2"
-        raise "Failed to change branch" if ret != 0
+        raise "Failed to change branch" if not ret
         @current_branch = branch
       end
     end
@@ -43,7 +43,7 @@ class Repository
     if commit != @current_commit
       chdir do
         ret = system "git checkout #{commit}"
-        raise "Failed to rollback" if ret != 0
+        raise "Failed to rollback" if not ret
         @current_commit = commit
       end
     end
