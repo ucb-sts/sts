@@ -10,10 +10,11 @@ end
 
 experiment_dir = File.dirname(ARGV[0])
 
+# Pesky .pyc files in old directories cause import path confusion
+system "./tools/clean.sh"
+
 repo_orchestrator = RepositoryOrchestrator.new
 Dir.chdir(experiment_dir) do
-  # Pesky .pyc files in old directories cause import path confusion
-  system "./tools/clean.sh"
   repo_orchestrator.rollback
   system "../../simulator.py -c #{ARGV[0]}"
   repo_orchestrator.restore_original_state
