@@ -48,7 +48,7 @@ class Repository
 
   def restore_original_state
     change_branch(@original_branch)
-    rollback(@original_commit)
+    #rollback(@original_commit)
   end
 
   private
@@ -57,6 +57,36 @@ class Repository
     Dir.chdir(@abs_path) do
       return block.call
     end
+  end
+end
+
+class RepositoryOrchestrator
+  # Manages all the repos
+  def initialize
+    # Must be invoked from the top-level STS directory
+    @sts_repo = Repository.new("sts", Dir.pwd)
+    @hassel_repo = Repository.new("hassel", Dir.pwd + "/sts/hassel")
+    @pox_repo = Repository.new("pox", Dir.pwd + "/pox")
+  end
+
+  def rollback
+    # Must be invoked from within the experiment directory of interest
+    metadata = read_experiment_metadata
+    @sts_repo.rollback(metadata["modules"]["sts"]["commit"])
+    @pox_repo.rollback(metadata["modules"]["pox"]["commit"])
+    if metadata["modules"].include? "hassel"
+      @hassel_repo.rollback(metadata["modules"]["hassel"]["commit"])
+      # Recompile binaries
+      system "./tools/clean.sh"
+    else
+      # Legacy experiments didn't include hassel hashtags. Ensure that
+      # by default, hassel is in the most up-to-date state.
+      @hassel_repo.rollback(@hassel_repo.original_commit)
+    end
+  end
+
+  def restore_original_state
+    [@sts_repo, @hassel_repo, @pox_repo].each { |repo| repo.restore_original_state }
   end
 end
 
@@ -93,29 +123,13 @@ end
 def walk_directories(experiments, options)
   experiments_repo = Repository.new("experiments", Dir.pwd + "/experiments")
   if options[:rollback_sts]
-    sts_repo = Repository.new("sts", Dir.pwd)
-    hassel_repo = Repository.new("hassel", Dir.pwd + "/sts/hassel")
-    pox_repo = Repository.new("pox", Dir.pwd + "/pox")
+    repo_orchestrator = RepositoryOrchestrator.new
   end
 
   experiments.each do |experiment|
     experiments_repo.change_branch(experiment.branch)
     Dir.chdir("experiments/" + experiment.dir) do
-      if options[:rollback_sts]
-        metadata = read_experiment_metadata
-        sts_repo.rollback(metadata["modules"]["sts"]["commit"])
-        pox_repo.rollback(metadata["modules"]["pox"]["commit"])
-        if metadata["modules"].include? "hassel"
-          hassel_repo.rollback(metadata["modules"]["hassel"]["commit"])
-          # Recompile binaries
-          system "./tools/clean.sh"
-        else
-          # Legacy experiments didn't include hassel hashtags. Ensure that
-          # by default, hassel is in the most up-to-date state.
-          hassel_repo.rollback(hassel_repo.original_commit)
-        end
-      end
-
+      repo_orchestrator.rollback if options[:rollback_sts]
       puts "====================  #{experiment.name}  ======================"
       puts `#{options[:command_path]}`
     end
@@ -123,7 +137,7 @@ def walk_directories(experiments, options)
 
   experiments_repo.restore_original_state
   if options[:rollback_sts]
-    [sts_repo, hassel_repo, pox_repo].each { |repo| repo.restore_original_state }
+    repo_orchestrator.restore_original_state
   end
 end
 
