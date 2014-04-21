@@ -95,7 +95,7 @@ class EventSchedulerStats(object):
     return d
 
   def get_timeouts_dict(self):
-    d = dict(self.event2timouts)
+    d = dict(self.event2timeouts)
     if 'ControlMessageReceive' in d:
       total = d['ControlMessageReceive']
       d['ControlMessageReceive'] = dict(self.msgrecv2timeouts)
