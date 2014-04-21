@@ -30,8 +30,10 @@ class Repository
   def change_branch(branch)
     if branch != @current_branch
       chdir do
-        system "git reset HEAD --hard 1>&2"
-        system "git checkout #{branch} 1>&2"
+        ret = system "git reset HEAD --hard 1>&2"
+        raise "Failed to change branch" if ret != 0
+        ret = system "git checkout #{branch} 1>&2"
+        raise "Failed to change branch" if ret != 0
         @current_branch = branch
       end
     end
@@ -40,7 +42,8 @@ class Repository
   def rollback(commit)
     if commit != @current_commit
       chdir do
-        system "git checkout #{commit}"
+        ret = system "git checkout #{commit}"
+        raise "Failed to rollback" if ret != 0
         @current_commit = commit
       end
     end
