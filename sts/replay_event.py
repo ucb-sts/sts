@@ -1066,6 +1066,11 @@ class ControlMessageBase(InternalEvent):
       self._packet = base64_decode_openflow(self.b64_packet)
     return self._packet
 
+  def to_json(self):
+    if hasattr(self, "_packet"):
+      delattr(self, "_packet")
+    return super(ControlMessageBase, self).to_json()
+
   @property
   def fingerprint(self):
     ''' Fingerprint tuple format:

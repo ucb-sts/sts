@@ -95,7 +95,7 @@ class EventSchedulerStats(object):
     return d
 
   def get_timeouts_dict(self):
-    d = dict(event2timouts)
+    d = dict(self.event2timeouts)
     if 'ControlMessageReceive' in d:
       total = d['ControlMessageReceive']
       d['ControlMessageReceive'] = dict(self.msgrecv2timeouts)
@@ -116,10 +116,10 @@ class EventSchedulerStats(object):
     for e, count in self.sorted_match_counts():
       s.append("  %s %d\n" % (e, count,))
       if e == "ControlMessageReceive":
-        for pkt_class, c in self.msgrecv2matches.iteritems():
+        for pkt_class, c in self.msgrecv2matched.iteritems():
           s.append("\t\t  %s : %d\n" % (pkt_class, c))
       if e == "ControlMessageSend":
-        for pkt_class, c in self.msgsend2matches.iteritems():
+        for pkt_class, c in self.msgsend2matched.iteritems():
           s.append("\t\t  %s : %d\n" % (pkt_class, c))
 
     s.append("Timeouts per event type:\n")
