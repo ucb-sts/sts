@@ -410,4 +410,6 @@ class LocalEntity(object):
       output += recv
       if recv == '' and process.poll() is not None:
         break
+    if self.redirect_output:
+      return ''
     return output
