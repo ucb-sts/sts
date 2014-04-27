@@ -4,7 +4,7 @@ Ever had to manually dig through logs to find the one or two inputs that lead yo
 
 STS simulates the devices of your network, allowing you to easily generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.
 
-![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/Debugger_Architecture.jpg)
+![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/debugger_architecture.jpg)
 
 ### Installation
 
