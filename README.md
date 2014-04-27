@@ -84,6 +84,11 @@ Finally, interactive mode depends on the readline module:
 $ sudo pip install readline
 ```
 
+Unit tests depends on the mock module:
+```
+$ sudo pip install mock 
+```
+
 ### Will I need to modify my controller to use sts?
 
 If your controller supports OpenFlow 1.0, STS works out of the box. You'll only need to change one line in the config file to instruct STS how to launch your controller process(es).
