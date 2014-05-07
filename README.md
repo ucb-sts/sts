@@ -112,7 +112,8 @@ For more information about the research behind STS, see our
 [long](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf) paper draft or our talk
 [slides](http://www.eecs.berkeley.edu/~rcs/research/selectiverecall.pptx).
 
-You should also check out our collection of replayable
+You should also check out our
+[collection](http://ucb-sts.github.io/experiments/) of replayable
 experiments that have been used to find and troubleshoot real bugs in SDN
 controllers:
 ```
