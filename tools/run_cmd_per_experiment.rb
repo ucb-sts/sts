@@ -162,7 +162,7 @@ if __FILE__ == $0
     end
 
     options[:rollback_sts] = false
-    opts.on("-r", "--rollback-sts", "Whether to rollback STS + dependencies to the versions specified in metadata.json") do
+    opts.on("-r", "--rollback-sts", "Whether to rollback STS + dependencies to the versions specified in metadata") do
       options[:rollback_sts] = true
     end
   end.parse!
