@@ -99,7 +99,7 @@ real_bugs = [
   Experiment.new("updated_debug_branch_loop_v3_mcs", "POX in-flight blackhole"),
   Experiment.new("fuzz_pox_4mesh_blackhole_mcs", "POX migration blackhole", branch: "pox_blackhole"),
   Experiment.new("nox_mesh_4_loop_repro_verbose", "NOX discovery loop"),
-  Experiment.new("zeta_final", "Floodlight loop", branch: "floodlight")
+  Experiment.new("zeta_final", "Floodlight loop", branch: "floodlight"),
   Experiment.new("onos_db_lock_mcs", "ONOS DB locking")
 ]
 
@@ -111,9 +111,9 @@ synthetic_bugs = [
   Experiment.new("pox_broken_floyd_mcs", "Algorithm misimplementation"),
   Experiment.new("trigger_multithreading_bug_mcs", "Multithreaded race condition"),
   Experiment.new("trigger_memory_leak3_mcs", "Memory leak"),
-  Experiment.new("syn_mem_corruption_3switch_fuzzer_mcs", "Memory corruption")
+  Experiment.new("syn_mem_corruption_3switch_fuzzer_mcs", "Memory corruption"),
   # Known bugs:
-  Experiment.new("onos_controller_id_bug_mcs", "ONOS master election")
+  Experiment.new("onos_controller_id_bug_mcs", "ONOS master election"),
   Experiment.new("load_balancer_fuzzer_mcs", "POX Load Balancer Error Checking")
   # N.B. Floodlight failover bug predates the experiments repository..
 ]
