@@ -1,8 +1,8 @@
 See http://ucb-sts.github.com/sts/ for an HTML version of this file.
 
-Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? STS seeks to eliminate this need, freeing you to debug the problematic code itself. 
+Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? STS seeks to eliminate this need, freeing you to debug the problematic code itself.
 
-STS simulates the devices of your network, allowing you to easily generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.
+STS simulates the devices of your network, allowing you to programmatically generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.
 
 ![sts architecture](http://www.eecs.berkeley.edu/~rcs/research/debugger_architecture.jpg)
 
