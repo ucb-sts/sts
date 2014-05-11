@@ -453,7 +453,7 @@ class MCSFinder(ControlFlow):
       log.warn("unacked internal events is corrupt? %r" % e)
       return
     buffered_message_receipts = []
-    for p in simulation.openflow_buffer.pending_receives():
+    for p in simulation.openflow_buffer.pending_receives:
       if p not in prev_buffered_receives:
         buffered_message_receipts.append(repr(p))
       else:
