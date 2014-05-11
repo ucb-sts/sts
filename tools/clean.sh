@@ -16,6 +16,7 @@ if [ -f .project ]; then
 fi
 
 if [ "$no_compile" == "" ]; then
+  export ARCHFLAGS=-Wno-error=unused-command-line-argument-hard-error-in-future
   (cd sts/hassel/hsa-python && source setup.sh)
   (cd sts/hassel/hassel-c && make)
 fi
