@@ -36,7 +36,7 @@ try:
 except ImportError:
   print >> sys.stderr, str('''ERROR: Headerspace module not built. '''
                            '''Build it with:\n '''
-                           '''$ ./tools/install_hassel_python.sh'''
+                           '''$ ./tools/install_hassel_python.sh\n''')
   raise
 
 def process_data(msg):
