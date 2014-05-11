@@ -8,12 +8,13 @@ STS simulates the devices of your network, allowing you to easily generate trick
 
 ### Installation
 
-STS depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install STS, you'll just need to clone both repositories:
+STS depends on [pox](http://www.noxrepo.org/pox/about-pox/). To install STS, you'll just need to clone both repositories and load the hassel submodule:
 
 ```
 $ git clone git://github.com/ucb-sts/sts.git
 $ cd sts
 $ git clone -b debugger git://github.com/ucb-sts/pox.git
+$ ./tools/install_hassel_python.sh
 ```
 
 ### Running STS
@@ -66,9 +67,7 @@ STS requires python 2.7+
 
 To check network invariants with headerspace analysis, you will need to load [hassel](https://bitbucket.org/peymank/hassel-public) as a submodule and build it: 
 ```
-$ git submodule init 
-$ git submodule update
-$ (cd sts/hassel/hsa-python && source setup.sh)
+$ ./tools/install_hassel_python.sh
 $ (cd sts/hassel/hassel-c && make -j)
 ```
 
@@ -79,14 +78,19 @@ To use the advanced replay features of STS, you may need to install pytrie:
 $ sudo pip install pytrie
 ```
 
-Finally, interactive mode depends on the readline module:
+For remote controllers, we use the paramiko ssh client:
+```
+$ sudo pip install paramiko
+```
+
+Interactive mode depends on the readline module:
 ```
 $ sudo pip install readline
 ```
 
 Unit tests depends on the mock module:
 ```
-$ sudo pip install mock 
+$ sudo pip install mock
 ```
 
 ### Will I need to modify my controller to use sts?

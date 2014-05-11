@@ -34,12 +34,9 @@ try:
   # Import the actual module to see if it's built.
   import config_parser.openflow_parser as hsa
 except ImportError:
-  build_instructions = "$ (cd sts/hassel/hsa-python && source setup.sh)"
   print >> sys.stderr, str('''ERROR: Headerspace module not built. '''
-                           '''Build it with:\n%s\n'''
-                           '''If running on Mac OSX, you may need to first:\n'''
-                           '''export ARCHFLAGS=-Wno-error=unused-command-line-argument-hard-error-in-future'''
-                           % build_instructions)
+                           '''Build it with:\n '''
+                           '''$ ./tools/install_hassel_python.sh'''
   raise
 
 def process_data(msg):
