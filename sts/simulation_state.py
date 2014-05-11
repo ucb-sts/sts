@@ -177,6 +177,7 @@ class SimulationConfig(object):
     patch_panel = self._patch_panel_class(topology.switches, topology.hosts,
                                           topology.get_connected_port)
     god_scheduler = GodScheduler()
+    god_scheduler.set_pass_through()
     dataplane_trace = None
     if self._dataplane_trace_path is not None:
       dataplane_trace = Trace(self._dataplane_trace_path, topology)
