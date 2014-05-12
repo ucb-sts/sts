@@ -112,9 +112,8 @@ Check out this [page](http://ucb-sts.github.io/sts/contribute.html).
 ### Research
 
 For more information about the research behind STS, see our 
-[short](http://www.eecs.berkeley.edu/~rcs/research/sts_short.pdf) or 
-[long](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf) paper draft or our talk
-[slides](http://www.eecs.berkeley.edu/~rcs/research/selectiverecall.pptx).
+[paper](http://www.eecs.berkeley.edu/~rcs/research/sts.pdf) or our talk
+[slides](http://www.eecs.berkeley.edu/~rcs/research/troubleshooting_with_mcses.pptx).
 
 You should also check out our
 [collection](http://ucb-sts.github.io/experiments/) of replayable
@@ -127,3 +126,4 @@ $ git clone git://github.com/ucb-sts/experiments.git
 ### Questions?
 
 Send questions or feedback to: sts-dev@googlegroups.com
+
