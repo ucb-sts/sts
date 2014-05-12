@@ -28,20 +28,21 @@
 
     <div class="container">
       <section id="main_content">
-        <p>Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? STS seeks to eliminate this need, freeing you to debug the problematic code itself. </p>
+        <p>Ever had to manually dig through logs to find the one or two inputs that lead your controller software to break? STS seeks to eliminate this need, freeing you to debug the problematic code itself.</p>
 
-<p>STS simulates the devices of your network, allowing you to easily generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.</p>
+<p>STS simulates the devices of your network, allowing you to programmatically generate tricky test cases, interactively examine the state of the network, and automatically find the exact inputs that are responsible for triggering a given bug.</p>
 
-<p><img src="http://www.eecs.berkeley.edu/%7Ercs/research/Debugger_Architecture.jpg" alt="sts architecture"></p>
+<p><img src="http://www.eecs.berkeley.edu/%7Ercs/research/debugger_architecture.jpg" alt="sts architecture"></p>
 
 <h3>
 <a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h3>
 
-<p>STS depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install STS, you'll just need to clone both repositories:</p>
+<p>STS depends on <a href="http://www.noxrepo.org/pox/about-pox/">pox</a>. To install STS, you'll just need to clone both repositories and load the hassel submodule:</p>
 
 <pre><code>$ git clone git://github.com/ucb-sts/sts.git
 $ cd sts
 $ git clone -b debugger git://github.com/ucb-sts/pox.git
+$ ./tools/install_hassel_python.sh
 </code></pre>
 
 <h3>
@@ -92,9 +93,7 @@ $ git clone -b debugger git://github.com/ucb-sts/pox.git
 
 <p>To check network invariants with headerspace analysis, you will need to load <a href="https://bitbucket.org/peymank/hassel-public">hassel</a> as a submodule and build it: </p>
 
-<pre><code>$ git submodule init 
-$ git submodule update
-$ (cd sts/hassel/hsa-python &amp;&amp; source setup.sh)
+<pre><code>$ ./tools/install_hassel_python.sh
 $ (cd sts/hassel/hassel-c &amp;&amp; make -j)
 </code></pre>
 
@@ -105,9 +104,19 @@ $ (cd sts/hassel/hassel-c &amp;&amp; make -j)
 <pre><code>$ sudo pip install pytrie
 </code></pre>
 
-<p>Finally, interactive mode depends on the readline module:</p>
+<p>For remote controllers, we use the paramiko ssh client:</p>
+
+<pre><code>$ sudo pip install paramiko
+</code></pre>
+
+<p>Interactive mode depends on the readline module:</p>
 
 <pre><code>$ sudo pip install readline
+</code></pre>
+
+<p>Unit tests depends on the mock module:</p>
+
+<pre><code>$ sudo pip install mock
 </code></pre>
 
 <h3>
@@ -137,7 +146,8 @@ $ (cd sts/hassel/hassel-c &amp;&amp; make -j)
 <a href="http://www.eecs.berkeley.edu/%7Ercs/research/sts.pdf">long</a> paper draft or our talk
 <a href="http://www.eecs.berkeley.edu/%7Ercs/research/selectiverecall.pptx">slides</a>.</p>
 
-<p>You should also check out our collection of replayable
+<p>You should also check out our
+<a href="http://ucb-sts.github.io/experiments/">collection</a> of replayable
 experiments that have been used to find and troubleshoot real bugs in SDN
 controllers:</p>
 
