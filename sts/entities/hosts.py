@@ -46,25 +46,10 @@ class HostInterfaceAbstractClass(object):
   __metaclass__ = abc.ABCMeta
 
   def __init__(self, hw_addr, ips=None, name=""):
-    self._hw_addr = hw_addr
+    self.hw_addr = hw_addr
     ips = [] if ips is None else ips
-    self._ips = ips if isinstance(ips, list) else [ips]
-    self._name = name
-
-  @property
-  def ips(self):
-    """List of IP addresses assigned to this interface"""
-    return self._ips
-
-  @property
-  def name(self):
-    """Human Readable name for this interface"""
-    return self._name
-
-  @property
-  def hw_addr(self):
-    """Hardware address of this interface"""
-    return self._hw_addr
+    self.ips = ips if isinstance(ips, list) else [ips]
+    self.name = name
 
   @abc.abstractproperty
   def port_no(self):

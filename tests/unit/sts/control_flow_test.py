@@ -194,7 +194,7 @@ class ReplayerTest(unittest.TestCase):
       replayer = Replayer(simulation_cfg, self.tmp_migration_superlog)
       simulation = replayer.simulate()
       latest_switch = simulation.topology.get_switch(7)
-      latest_port = latest_switch.ports[101]
+      latest_port = latest_switch.ports[1]
       (host, interface) = simulation.topology.get_connected_port(latest_switch,
                                                                  latest_port)
       self.assertTrue(type(host) == Host)
