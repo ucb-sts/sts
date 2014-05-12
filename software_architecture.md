@@ -122,7 +122,7 @@ understand the conditions that triggered a bug. This is helpful for:
 Delta debugging does not fully minimize traces (often for good reason,
 e.g. delicate timings). In particular we have observed minimized traces often
 contain many OpenFlow messages that time our or are overwritten, i.e. are not
-directly relevent for triggering an invalid network configuratoon.
+directly relevant for triggering an invalid network configuration.
 
 OpenFlowReplayer replays the OpenFlow messages from an event trace, enabling:
 
@@ -131,8 +131,8 @@ OpenFlowReplayer replays the OpenFlow messages from an event trace, enabling:
 - automatic filtering of flow_mods that are irrelevant to a set of flow
   entries specified by the user
 - interactive bisection of the OpenFlow trace to infer which messages were
-  and were not relevent for triggering the bug (especially useful for tricky
-  cases requiring human involvment). (TBD)
+  and were not relevant for triggering the bug (especially useful for tricky
+  cases requiring human involvement). (TBD)
 
 The tool can then spit back out a new event trace without the irrelevant
 OpenFlow messages, to be replayed again by Replayer or InteractiveReplayer.
@@ -193,7 +193,7 @@ complete.
 STS buffers all messages that are passed throughout the system. There are two
 important buffer objects to note:
 
-- GodScheduler (found in
+- OpenflowBuffer (found in
   [sts/openflow_buffer.py](https://github.com/ucb-sts/sts/blob/master/sts/openflow_buffer.py)): buffers OpenFlow messages between switches and controllers
   (both incoming and outgoing messages)
 - BufferedPatchPanel (found in

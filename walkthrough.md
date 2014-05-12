@@ -313,7 +313,7 @@ several tools to help with this process.
 
 Sometimes Replayer moves too quickly to get a good understanding of an event
 trace. InteractiveReplayer is a combination of Interactive mode and Replayer
-mode, designed to to help with:
+mode, designed to help with:
 * visualizing the network topology
 * tracing the series of link/switch failures/recoveries
 * tracing the series of host migrations
