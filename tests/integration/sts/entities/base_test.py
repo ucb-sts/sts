@@ -60,15 +60,18 @@ class SSHEntityTest(unittest.TestCase):
   def test_execute_command(self):
     # Arrange
     host, port, username, password = self.get_ssh_config()
-    home_dir = "/"
+    home_dir = os.getcwd()
     # Act
     ssh = SSHEntity(host, port, username, password)
-    ret = ssh.execute_command("ls " + home_dir)
+    ret = ssh.execute_command("ls -a " + home_dir)
     # Assert
     self.assertIsInstance(ret, basestring)
     ret_list = ret.split()
     ret_list.sort()
-    current_list = os.listdir(home_dir)
+    # ls -a returns . and .. but os.listdir doesn't
+    ret_list.remove('.')
+    ret_list.remove('..')
+    current_list = os.listdir('.')
     current_list.sort()
     self.assertEquals(ret_list, current_list)
 
@@ -76,7 +79,7 @@ class SSHEntityTest(unittest.TestCase):
   def test_execute_command_with_redirect(self):
     # Arrange
     host, port, username, password = self.get_ssh_config()
-    home_dir = "/"
+    home_dir = os.getcwd()
     # Act
     ssh = SSHEntity(host, port, username, password, redirect_output=True)
     ret = ssh.execute_command("ls " + home_dir)
@@ -88,13 +91,16 @@ class SSHEntityTest(unittest.TestCase):
 class LocalEntityTest(unittest.TestCase):
   def test_execute_command(self):
     # Arrange
-    entity = LocalEntity('/')
-    home_dir = "/"
+    entity = LocalEntity()
+    home_dir = os.getcwd()
     # Act
-    ret = entity.execute_command("ls " + home_dir)
+    ret = entity.execute_command("ls -a " + home_dir)
     # Assert
     self.assertIsInstance(ret, basestring)
     ret_list = ret.split()
+    # ls -a returns . and .. but os.listdir doesn't
+    ret_list.remove(".")
+    ret_list.remove("..")
     ret_list.sort()
     current_list = os.listdir(home_dir)
     current_list.sort()
