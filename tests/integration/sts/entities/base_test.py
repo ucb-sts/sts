@@ -19,6 +19,12 @@ import unittest
 from sts.entities.base import SSHEntity
 from sts.entities.base import LocalEntity
 
+paramiko_installed = False
+try:
+  import paramiko
+  paramiko_installed = True
+except ImportError:
+  paramiko_installed = False
 
 class SSHEntityTest(unittest.TestCase):
   def get_ssh_config(self):
@@ -28,6 +34,7 @@ class SSHEntityTest(unittest.TestCase):
     password = None
     return host, port, username, password
 
+  @unittest.skipIf(not paramiko_installed, "paramiko not installed")
   def test_connect(self):
     # Arrange
     host, port, username, password = self.get_ssh_config()
@@ -39,6 +46,7 @@ class SSHEntityTest(unittest.TestCase):
     # clean up
     ssh_client.close()
 
+  @unittest.skipIf(not paramiko_installed, "paramiko not installed")
   def test_session(self):
     # Arrange
     host, port, username, password = self.get_ssh_config()
@@ -48,6 +56,7 @@ class SSHEntityTest(unittest.TestCase):
     # Assert
     self.assertIsNotNone(session)
 
+  @unittest.skipIf(not paramiko_installed, "paramiko not installed")
   def test_execute_command(self):
     # Arrange
     host, port, username, password = self.get_ssh_config()
@@ -63,6 +72,7 @@ class SSHEntityTest(unittest.TestCase):
     current_list.sort()
     self.assertEquals(ret_list, current_list)
 
+  @unittest.skipIf(not paramiko_installed, "paramiko not installed")
   def test_execute_command_with_redirect(self):
     # Arrange
     host, port, username, password = self.get_ssh_config()
