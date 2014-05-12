@@ -9,9 +9,9 @@ These are the core STS contributors:
 
 * Colin Scott: [@colin-scott](http://github.com/colin-scott)
 * Andreas Wundsam: [@andiwundsam](http://github.com/andiwundsam)
-* Sam Whitlock: [@samwhitlock](http://github.com/samwhitlock)
+* Ahmed El-Hassany: [@ahassany](https://github.com/ahassany)
 * Andrew Or: [@andrewor14](http://github.com/andrewor14)
-* Chih Hu: [@chih-hu](https://github.com/chih-hu)
+* Sam Whitlock: [@samwhitlock](http://github.com/samwhitlock)
 
 ## Learn & listen
 
