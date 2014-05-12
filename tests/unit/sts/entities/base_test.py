@@ -19,10 +19,17 @@ from cStringIO import StringIO
 
 from sts.entities.base import SSHEntity
 
+paramiko_installed = False
+try:
+  import paramiko
+  paramiko_installed = True
+except ImportError:
+  paramiko_installed = False
 
 class SSHEntityTest(unittest.TestCase):
 
   @mock.patch("paramiko.client.SSHClient")
+  @unittest.skipIf(not paramiko_installed, "paramiko not installed")
   def test_init(self, ssh_client_cls):
     # Arrange
     host = "localhost"
@@ -48,6 +55,7 @@ class SSHEntityTest(unittest.TestCase):
                                            key_filename=key_filename)
 
   @mock.patch("paramiko.client.SSHClient")
+  @unittest.skipIf(not paramiko_installed, "paramiko not installed")
   def test_get_new_session(self, ssh_client_cls):
     # Arrange
     host = "localhost"
@@ -59,6 +67,7 @@ class SSHEntityTest(unittest.TestCase):
     self.assertEquals(ssh._ssh_client.get_transport.call_count, 1)
 
   @mock.patch("paramiko.client.SSHClient")
+  @unittest.skipIf(not paramiko_installed, "paramiko not installed")
   def test_execute_command(self, ssh_client_cls):
     # Arrange
     host = "localhost"
@@ -85,6 +94,7 @@ class SSHEntityTest(unittest.TestCase):
     self.assertTrue(session_mock.recv.call_count >= 1)
 
   @mock.patch("paramiko.client.SSHClient")
+  @unittest.skipIf(not paramiko_installed, "paramiko not installed")
   def test_execute_command_with_redirect(self, ssh_client_cls):
     # Arrange
     host = "localhost"
