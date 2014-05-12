@@ -30,7 +30,8 @@ for the details of how packets are generated.
 It is also possible to craft dataplane traces programmatically.
 [sts/dataplane_trace/trace_generator.py](https://github.com/ucb-sts/sts/blob/master/sts/dataplane_traces/trace_generator.py)
 contains several algorithms for generating synthetic ARP/ICMP exchanges
-between hosts.
+between hosts. To invoke trace_generator from the command line, see
+[tools/generate_dataplane_trace.py](https://github.com/ucb-sts/sts/blob/master/tools/generate_dataplane_trace.py).
 
 After a trace is generated with `trace_generator.py`, you can cause STS to use
 that trace by specify the path to
