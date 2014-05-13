@@ -57,6 +57,7 @@ class SnapshotTest(unittest.TestCase):
 
       snapshotter = Snapshotter(simulation, c1)
       snapshotter.snapshot_controller()
+      # TODO(cs): time.sleep() is a broken way to synchronize
       time.sleep(1)
       kill_procs([c1.process])
       snapshotter.snapshot_proceed()
@@ -71,6 +72,7 @@ class SnapshotTest(unittest.TestCase):
       # snapshotting should work multiple times
       snapshotter = Snapshotter(simulation, c2)
       snapshotter.snapshot_controller()
+      # TODO(cs): time.sleep() is a broken way to synchronize
       time.sleep(1)
       kill_procs([c2.process])
       snapshotter.snapshot_proceed()
@@ -79,8 +81,11 @@ class SnapshotTest(unittest.TestCase):
       c3 = simulation.controller_manager.controllers[0]
       self.assertTrue(c2_pid != c3.pid)
     finally:
-      if simulation is not None:
-        simulation.clean_up()
+      try:
+        if simulation is not None:
+          simulation.clean_up()
+      except Exception as e:
+        print "SnapshotTest.test_basic: exception encountered in finally clause: %s" % e
 
 if __name__ == '__main__':
   unittest.main()

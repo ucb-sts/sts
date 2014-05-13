@@ -138,6 +138,9 @@ def launch(snapshot_address=None):
 
       pid = os.fork()
       if pid == 0: # Child
+        # Make sure to remove ourselves from parent's process group, so we don't
+        # get killed by STS along with our parent.
+        os.setpgrp()
         snapshot_sock.setblocking(1)
         pid = os.getpid()
         log.debug("Sending READY %d" % pid)
