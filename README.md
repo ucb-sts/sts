@@ -78,6 +78,9 @@ To use the advanced replay features of STS, you may need to install pytrie:
 $ sudo pip install pytrie
 ```
 
+The topology GUI depends on
+[PyQt4](http://movingthelamppost.com/blog/html/2013/07/12/installing_pyqt____because_it_s_too_good_for_pip_or_easy_install_.html).
+
 For remote controllers, we use the paramiko ssh client:
 ```
 $ sudo pip install paramiko
