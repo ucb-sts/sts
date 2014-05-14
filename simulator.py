@@ -44,7 +44,7 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
                                  description=description)
 
 parser.add_argument('-c', '--config',
-                    default='config.fuzz_pox_fattree',
+                    default='config.fuzz_pox_mesh',
                     help='''experiment config module in the config/ '''
                          '''subdirectory, e.g. config.fuzz_pox_mesh''')
 

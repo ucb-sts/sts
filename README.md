@@ -27,7 +27,7 @@ For the impatient, take STS for a test drive with:
 $ ./simulator.py
 ```
 
-This will boot up pox, generate a 20-switch FatTree network, and begin feeding in random inputs.
+This will boot up pox, generate a simple 2-switch mesh topology, and begin feeding in random inputs.
 
 You can also run STS interactively:
 
