@@ -64,12 +64,14 @@ $ ./tools/install_hassel_python.sh
 
 <p>STS can be used to replay previous executions:</p>
 
-<pre><code>$ ./simulator.py -c config/pox_example_replay.py
+<pre><code># Assumes that ./simulator.py has been invoked.
+$ ./simulator.py -c experiments/fuzz_pox_mesh/replay_config.py
 </code></pre>
 
 <p>Finally, STS is able to identify the minimal set of inputs that trigger a given bug:</p>
 
-<pre><code>$ ./simulator.py -c config/pox_example_mcs.py
+<pre><code># Assumes that ./simulator.py has been invoked, and terminated by finding an invariant violation.
+$ ./simulator.py -c experiments/fuzz_pox_mesh/mcs_config.py
 </code></pre>
 
 <p>You can turn up the verbosity of the simulator's console output by passing the '-v' flag to simulator.py. </p>
