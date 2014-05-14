@@ -40,19 +40,25 @@ class MultiplexerTest(unittest.TestCase):
     return (mux_select, listener)
 
   def setup_client(self, num_socks, address):
-    from pox.lib.util import connect_socket_with_backoff
-    io_master = MultiplexedSelect()
-    socket = connect_socket_with_backoff(address=address)
-    io_worker = io_master.create_worker_for_socket(socket)
-    # TODO(cs): unused variable demux
-    demux = STSSocketDemultiplexer(io_worker, address)
-    mock_socks = []
-    for i in xrange(num_socks):
-      mock_socket = STSMockSocket(None, None)
-      mock_socket.connect(address)
-      mock_socket.send(self.client_messages[i])
-      mock_socks.append(mock_socket)
-    io_master.select(mock_socks, mock_socks, [])
+    try:
+      from pox.lib.util import connect_socket_with_backoff
+      io_master = MultiplexedSelect()
+      socket = connect_socket_with_backoff(address=address)
+      io_worker = io_master.create_worker_for_socket(socket)
+      # TODO(cs): unused variable demux
+      demux = STSSocketDemultiplexer(io_worker, address)
+      mock_socks = []
+      for i in xrange(num_socks):
+        mock_socket = STSMockSocket(None, None)
+        mock_socket.connect(address)
+        mock_socket.send(self.client_messages[i])
+        mock_socks.append(mock_socket)
+      # Now flush messages
+      while [ m for m in mock_socks if m.json_worker.io_worker._ready_to_send ] != []:
+        io_master.select(mock_socks, mock_socks, [])
+    except Exception as e:
+      log.critical("Client died: %s" % e)
+      raise e
 
   def wait_for_next_accept(self, listener, mux_select):
     log.info("waiting for next accept")
@@ -66,8 +72,10 @@ class MultiplexerTest(unittest.TestCase):
       t = Thread(target=self.setup_client, args=(1,address,), name="MainThread")
       t.start()
       (mux_select, listener) = self.setup_server(address)
+      # wait for client to connect
       self.wait_for_next_accept(listener, mux_select)
       mock_sock = listener.accept()[0]
+      # now read client message
       (rl, _, _) = mux_select.select([mock_sock], [], [])
       start = last = time.time()
       while mock_sock not in rl:
@@ -77,7 +85,7 @@ class MultiplexerTest(unittest.TestCase):
         elif time.time() - last > 1:
           log.debug("waiting for socket %s in rl %s..." % ( str(mock_sock), repr(rl)))
           last = time.time()
-        (rl, _, _) = mux_select.select(rl, [], [])
+        (rl, _, _) = mux_select.select([mock_sock], [], [])
       d = mock_sock.recv(2048)
       self.assertEqual(self.client_messages[0], d)
     finally:
@@ -106,7 +114,7 @@ class MultiplexerTest(unittest.TestCase):
           elif time.time() - last > 1:
             log.debug("waiting for socket %s in rl %s..." % ( str(mock_sock), repr(rl)))
             last = time.time()
-          (rl, _, _) = mux_select.select(rl, [], [])
+          (rl, _, _) = mux_select.select([mock_sock], [], [])
           time.sleep(0.05)
         d = mock_sock.recv(2048)
         # order should be deterministic
