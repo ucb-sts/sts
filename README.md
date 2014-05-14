@@ -38,13 +38,15 @@ $ ./simulator.py -c config/interactive.py
 STS can be used to replay previous executions:
 
 ```
-$ ./simulator.py -c config/pox_example_replay.py
+# Assumes that ./simulator.py has been invoked.
+$ ./simulator.py -c experiments/fuzz_pox_mesh/replay_config.py
 ```
 
 Finally, STS is able to identify the minimal set of inputs that trigger a given bug:
 
 ```
-$ ./simulator.py -c config/pox_example_mcs.py
+# Assumes that ./simulator.py has been invoked, and terminated by finding an invariant violation.
+$ ./simulator.py -c experiments/fuzz_pox_mesh/mcs_config.py
 ```
 
 You can turn up the verbosity of the simulator's console output by passing the '-v' flag to simulator.py. 
