@@ -1,5 +1,6 @@
 from sts.invariant_checker import InvariantChecker
 import sys
+import pox.openflow.libopenflow_01 as of_01
 
 class ComposeChecks(object):
   def __init__(self, check1, check2):
@@ -58,6 +59,24 @@ def check_for_flow_entry(simulation):
       if entry.priority == 123:
         return ["123Found"]
   return []
+
+def check_for_two_loop(simulation):
+  ''' The OF spec states that packets should not be forwarded out their
+      in_port unless OFPP_IN_PORT is explicitly used (to avoid 2-loops).
+      Yet, sometimes controllers install 2-loops. This effectively creates a
+      blackhole, but it's sometimes better for us to directly detect 2-loops
+      rather than wait to see if the blackhole is transient. '''
+  violations = []
+  for sw in simulation.topology.switches:
+    for entry in sw.table.entries:
+      for action in [a for a in entry.actions if a.type == of_01.OFPAT_OUTPUT]:
+        out_port = action.port
+        # if not a special port, e.g. FLOOD:
+        if out_port not in of_01.ofp_port_rev_map:
+          input_match = of_01.ofp_match(in_port=out_port)
+          if entry.is_matched_by(input_match):
+            violations.append(("two_loop", str(sw), str(entry)))
+  return violations
 
 class TimeOutOnConnectivity(object):
   ''' If connectivity hasn't been established in X invocations of this
