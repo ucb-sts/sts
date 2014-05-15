@@ -73,7 +73,7 @@ class Trace(object):
   def peek(self):
     if len(self.dataplane_trace) == 0:
       log.warn("No more trace inputs to inject!")
-      return None
+      return (None, None)
     dp_event = self.dataplane_trace[0]
     host = self.interface2host[dp_event.interface]
     return (dp_event, host)
