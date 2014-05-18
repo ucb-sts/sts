@@ -15,6 +15,7 @@
 
 import logging
 import pox.lib.revent
+import abc
 from pox.lib.revent import EventMixin
 from sts.replay_event import ControllerStateChange, PendingStateChange, DeterministicValue
 from sts.syncproto.base import SyncTime
@@ -28,11 +29,14 @@ log = logging.getLogger("control_flow")
 
 class ControlFlow(object):
   ''' Superclass of ControlFlow types '''
+  __metaclass__ = abc.ABCMeta
+
   def __init__(self, simulation_cfg):
     self.simulation_cfg = simulation_cfg
     self.sync_callback = None
     self.invariant_check_name = None
 
+  @abc.abstractmethod
   def simulate(self):
     ''' Move the simulation forward!'''
     pass
