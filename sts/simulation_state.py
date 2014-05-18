@@ -84,7 +84,8 @@ class SimulationConfig(object):
                multiplex_sockets=False,
                violation_persistence_threshold=None,
                kill_controllers_on_exit=True,
-               interpose_on_controllers=False):
+               interpose_on_controllers=False,
+               ignore_interposition=False):
     '''
     Constructor parameters:
       topology_class    => a sts.topology.Topology class (not object!)
@@ -98,12 +99,13 @@ class SimulationConfig(object):
       violation_persistence_threshold => number of logical time units to observe a
                                          violation before we declare that it is
                                          persistent
-      switch_init_sleep_seconds => number of seconds to wait for switches to
-                                   connect to controllers before starting the
-                                   simulation. Defaults to False (no wait).
-      monkey_patch_select => whether to use STS's custom deterministic
-                             select. Requires that the controller is
-                             monkey-patched too
+      interpose_on_controllers => if there are multiple controllers, whether to
+                                  interpose on messages between them
+      ignore_interposition => whether to configure all interposition points to immediately pass
+                              through all events. (implies interpose_on_controllers=False)
+                              Replayer and MCSFinder read this configuration
+                              parameter, and remove all internal events from their
+                              event dags if set to True.
     '''
     if controller_configs is None:
       controller_configs = []
@@ -124,8 +126,13 @@ class SimulationConfig(object):
     self.snapshot_service = snapshot_service
     self.current_simulation = None
     self.multiplex_sockets = multiplex_sockets
-    self.interpose_on_controllers = interpose_on_controllers
     self.controller_patch_panel_class = controller_patch_panel_class
+    self.interpose_on_controllers = interpose_on_controllers
+    self.ignore_interposition = ignore_interposition
+    if self.ignore_interposition:
+      # TODO(cs): also remove "sts.util.socket_mux.pox_monkeypatcher" from start_cmd and
+      #           set SimulationConfig.multiplex_sockets = False?
+      self.interpose_on_controllers = False
 
   def bootstrap(self, sync_callback=None, boot_controllers=default_boot_controllers):
     '''Return a simulation object encapsulating the state of
@@ -223,6 +230,8 @@ class SimulationConfig(object):
                             openflow_buffer, io_master, controller_patch_panel,
                             patch_panel, sync_callback, mux_select, demuxers,
                             violation_tracker, self._kill_controllers_on_exit)
+    if self.ignore_interposition:
+      simulation.set_pass_through()
     self.current_simulation = simulation
     return simulation
 
@@ -236,10 +245,12 @@ class SimulationConfig(object):
             '''                 topology_params="%s",\n'''
             '''                 patch_panel_class=%s,\n'''
             '''                 multiplex_sockets=%s,\n'''
+            '''                 ignore_interposition=%s,\n'''
             '''                 kill_controllers_on_exit=%s)''' %
             (str(self.controller_configs),self._topology_class.__name__,
              self._topology_params, self._patch_panel_class.__name__,
-             str(self.multiplex_sockets), str(self._kill_controllers_on_exit)))
+             str(self.multiplex_sockets), str(self.ignore_interposition),
+             str(self._kill_controllers_on_exit)))
 
 class Simulation(object):
   '''

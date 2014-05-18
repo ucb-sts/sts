@@ -101,21 +101,15 @@ class Replayer(ControlFlow):
       raise ValueError("No events to replay!")
 
     self.default_dp_permit = default_dp_permit
-    # Set DataplanePermit and DataplaneDrop to passive if permit is set
-    # to default
-    for event in [ e for e in self.dag.events if type(e) in dp_events ]:
-      event.passive = default_dp_permit
-
-    self.dp_checker = None
-    no_dp_drops = [ e for e in self.dag.events if type(e) == DataplaneDrop ] == []
-    if not default_dp_permit and no_dp_drops:
-      print >> sys.stderr, ('''No DataplaneDrops to replay. We suggest you '''
-                            '''set Replayer's default_dp_permit=True ''')
-    if default_dp_permit:
-      if no_dp_drops:
-        self.dp_checker = AlwaysAllowDataplane(self.dag)
-      else:
-        self.dp_checker = DataplaneChecker(self.dag)
+    self.dp_checker = self._setup_dp_checker(default_dp_permit)
+    if self.default_dp_permit:
+      # Set DataplanePermit and DataplaneDrop to passive if permit is set
+      # to default
+      # TODO(cs): rather than setting these to passive (which still causes them to
+      # be scheduled as regular events) should these just be removed from the
+      # event dag altogether?
+      for event in [ e for e in self.dag.events if type(e) in dp_events ]:
+        event.passive = default_dp_permit
 
     self.print_buffers_flag = print_buffers
 
@@ -170,9 +164,35 @@ class Replayer(ControlFlow):
     if unknown_kwargs != []:
       raise ValueError("Unknown kwargs %s" % str(unknown_kwargs))
 
+    if self.simulation_cfg.ignore_interposition:
+      self._ignore_interposition()
+
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
       self._input_logger.log_input_event(event, **kws)
+
+  def _setup_dp_checker(self, default_dp_permit):
+    no_dp_drops = [ e for e in self.dag.events if type(e) == DataplaneDrop ] == []
+    if not default_dp_permit and no_dp_drops:
+      print >> sys.stderr, ('''No DataplaneDrops to replay. We suggest you '''
+                            '''set Replayer's default_dp_permit=True ''')
+    if default_dp_permit:
+      if no_dp_drops:
+        return AlwaysAllowDataplane(self.dag)
+      else:
+        return DataplaneChecker(self.dag)
+    return None
+
+  def _ignore_interposition(self):
+    '''
+    Configure all interposition points to immediately pass through all
+    internal events
+    (possibly useful for replays affected by non-determinism)
+    '''
+    filtered_events = [e for e in self.dag.events if type(e) not in all_internal_events]
+    self.dag = EventDag(filtered_events)
+    self.default_dp_permit = True
+    self.dp_checker = AlwaysAllowDataplane(self.dag)
 
   def get_interpolated_time(self):
     '''

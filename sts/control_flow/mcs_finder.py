@@ -81,6 +81,10 @@ class MCSFinder(ControlFlow):
     else:
       self.dag = superlog_path_or_dag
 
+    if self.simulation_cfg.ignore_interposition:
+      filtered_events = [e for e in self.dag.events if type(e) not in all_internal_events]
+      self.dag = EventDag(filtered_events)
+
     last_invariant_violation = self.dag.get_last_invariant_violation()
     if last_invariant_violation is None:
       raise ValueError("No invariant violation found in dag...")
