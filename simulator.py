@@ -64,7 +64,7 @@ parser.add_argument('-t', '--timestamp-results', dest="timestamp_results",
                     help='''whether to append a timestamp to the result directory name''')
 
 parser.add_argument('-p', '--publish', action="store_true", default=False,
-                    help='''publish experiment results to git''')
+                    help='''automatically publish experiment results to git''')
 
 args = parser.parse_args()
 
