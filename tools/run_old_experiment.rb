@@ -7,12 +7,12 @@ require_relative 'run_cmd_per_experiment'
 options = {}
 parser = OptionParser.new do |opts|
   options[:config_path] = ""
-  opts.on("-c", "--config CONFIG", "(Required) path to experiment config file") do |name|
+  opts.on("-c", "--config CONFIG", "path to experiment config file") do |name|
     options[:config_path] = name
   end
 
   options[:new_experiment_name] = ""
-  opts.on("-n", "--new-experiment-name", "experiment name to assign to this execution") do |name|
+  opts.on("-n", "--new-experiment-name NAME", "experiment name to assign to this execution") do |name|
     options[:new_experiment_name] = name
   end
 end
