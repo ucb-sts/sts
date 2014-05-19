@@ -4,20 +4,37 @@
 
 require_relative 'run_cmd_per_experiment'
 
-if ARGV.length == 0
-  raise RuntimeError.new("Usage: #{$0} /path/to/<config file>.py")
-end
+options = {}
+parser = OptionParser.new do |opts|
+  options[:config_path] = ""
+  opts.on("-c", "--config CONFIG", "(Required) path to experiment config file") do |name|
+    options[:config_path] = name
+  end
 
-experiment_dir = File.dirname(ARGV[0])
+  options[:new_experiment_name] = ""
+  opts.on("-n", "--new-experiment-name", "experiment name to assign to this execution") do |name|
+    options[:new_experiment_name] = name
+  end
+end
+parser.parse!
+
+if options[:config_path].empty?
+  puts parser
+  exit 1
+end
 
 # Pesky .pyc files in old directories cause import path confusion
 system "./tools/clean.sh"
+
+experiment_dir = File.dirname(options[:config_path])
 
 repo_orchestrator = RepositoryOrchestrator.new
 Dir.chdir(experiment_dir) do
   repo_orchestrator.rollback
   Dir.chdir "../../" do
-    system "./simulator.py -c #{ARGV[0]}"
+    cmd = "./simulator.py -c #{options[:config_path]}"
+    cmd += " -n #{options[:new_experiment_name]}" unless options[:new_experiment_name].empty?
+    system cmd
   end
   repo_orchestrator.restore_original_state
 end
