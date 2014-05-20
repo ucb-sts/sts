@@ -17,6 +17,7 @@
 
 import time
 import unittest
+import sys
 
 from sts.entities.base import LocalEntity
 from sts.entities.base import SSHEntity
@@ -24,6 +25,43 @@ from sts.entities.controllers import ControllerConfig
 from sts.entities.controllers import ControllerState
 from sts.entities.controllers import POXController
 from sts.entities.controllers import ONOSController
+
+paramiko_installed = False
+try:
+  import paramiko
+  paramiko_installed = True
+except ImportError:
+  paramiko_installed = False
+
+
+def get_ssh_config():
+  """
+  Loads the login information for SSH server
+  """
+  host = '192.168.56.11'
+  port = 22
+  username = "mininet"
+  password = "mininet"
+  return host, port, username, password
+
+
+def can_connect(host, port, username, password):
+  """
+  Returns True if the the login information can be used to connect to a remote
+  ssh server.
+  """
+  if not paramiko_installed:
+    return False
+  try:
+    client = paramiko.SSHClient()
+    client.load_system_host_keys()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(host, port, username, password)
+    client.close()
+    return True
+  except Exception as exp:
+    print >> sys.stderr, exp
+    return False
 
 
 class POXControllerTest(unittest.TestCase):
@@ -137,7 +175,7 @@ class ONOSControllerTest(unittest.TestCase):
     cmd_exec.execute_command("cassandra stop")
     cmd_exec.execute_command("zk status stop")
 
-  @unittest.skip
+  @unittest.skipIf(not can_connect(*get_ssh_config()), "Couldn't connect to ONOS server")
   def test_start_kill(self):
     # Arrange
     config = self.get_config()

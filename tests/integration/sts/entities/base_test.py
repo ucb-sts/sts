@@ -15,6 +15,7 @@
 
 import os
 import unittest
+import sys
 
 from sts.entities.base import SSHEntity
 from sts.entities.base import LocalEntity
@@ -26,18 +27,44 @@ try:
 except ImportError:
   paramiko_installed = False
 
-class SSHEntityTest(unittest.TestCase):
-  def get_ssh_config(self):
-    host = "localhost"
-    port = 22
-    username = None
-    password = None
-    return host, port, username, password
 
+def get_ssh_config():
+  """
+  Loads the login information for SSH server
+  """
+  host = "localhost"
+  port = 22
+  username = None
+  password = None
+  return host, port, username, password
+
+
+def can_connect(host, port, username, password):
+  """
+  Returns True if the the login information can be used to connect to a remote
+  ssh server.
+  """
+  if not paramiko_installed:
+    return False
+  try:
+    client = paramiko.SSHClient()
+    client.load_system_host_keys()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(host, port, username, password)
+    client.close()
+    return True
+  except Exception as exp:
+    print >> sys.stderr, exp
+    return False
+
+
+class SSHEntityTest(unittest.TestCase):
   @unittest.skipIf(not paramiko_installed, "paramiko not installed")
+  @unittest.skipIf(not can_connect(*get_ssh_config()),
+                   "Couldn't connect to SSH server")
   def test_connect(self):
     # Arrange
-    host, port, username, password = self.get_ssh_config()
+    host, port, username, password = get_ssh_config()
     # Act
     ssh = SSHEntity(host, port, username, password)
     ssh_client = ssh.ssh_client
@@ -47,9 +74,11 @@ class SSHEntityTest(unittest.TestCase):
     ssh_client.close()
 
   @unittest.skipIf(not paramiko_installed, "paramiko not installed")
+  @unittest.skipIf(not can_connect(*get_ssh_config()),
+                   "Couldn't connect to SSH server")
   def test_session(self):
     # Arrange
-    host, port, username, password = self.get_ssh_config()
+    host, port, username, password = get_ssh_config()
     # Act
     ssh = SSHEntity(host, port, username, password)
     session = ssh.get_new_session()
@@ -57,9 +86,11 @@ class SSHEntityTest(unittest.TestCase):
     self.assertIsNotNone(session)
 
   @unittest.skipIf(not paramiko_installed, "paramiko not installed")
+  @unittest.skipIf(not can_connect(*get_ssh_config()),
+                   "Couldn't connect to SSH server")
   def test_execute_command(self):
     # Arrange
-    host, port, username, password = self.get_ssh_config()
+    host, port, username, password = get_ssh_config()
     home_dir = os.getcwd()
     # Act
     ssh = SSHEntity(host, port, username, password)
@@ -76,9 +107,11 @@ class SSHEntityTest(unittest.TestCase):
     self.assertEquals(ret_list, current_list)
 
   @unittest.skipIf(not paramiko_installed, "paramiko not installed")
+  @unittest.skipIf(not can_connect(*get_ssh_config()),
+                   "Couldn't connect to SSH server")
   def test_execute_command_with_redirect(self):
     # Arrange
-    host, port, username, password = self.get_ssh_config()
+    host, port, username, password = get_ssh_config()
     home_dir = os.getcwd()
     # Act
     ssh = SSHEntity(host, port, username, password, redirect_output=True)
