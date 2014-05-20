@@ -47,7 +47,7 @@ import logging
 from collections import defaultdict
 
 from sts.topology.base import Topology as BaseTopology
-from sts.topology.base import PatchPanel as BasePatchPanel
+from sts.topology.patch_panel import PatchPanel as BasePatchPanel
 
 log = logging.getLogger("sts.topology")
 
