@@ -205,6 +205,10 @@ class VertexType(object):
 class TopologyGraph(object):
   """
   A high level graph of the network topology.
+
+  When extending this class, make sure to revisit and change the policies (if
+  necessary) for example changing can_add_host, can_add_switch, can_add_link,
+  can_change_link_status, can_crash_switch.
   """
 
   _host_hids = count(1) # host id counter
@@ -240,7 +244,7 @@ class TopologyGraph(object):
 
   def hosts_iter(self, include_attrs=False):
     """
-    Iterate over hosts in the topology
+    Iterates over hosts in the topology.
 
     Args:
       include_attr: If true not only host is returned but the attributes as well
@@ -250,7 +254,7 @@ class TopologyGraph(object):
 
   def interfaces_iter(self, include_attrs=False):
     """
-    Iterate over host interfaces in the topology
+    Iterates over host interfaces in the topology.
 
     Args:
       include_attr: If true not only interfaces are returned but the attributes
@@ -261,7 +265,7 @@ class TopologyGraph(object):
 
   def ports_iter(self, include_attrs=False):
     """
-    Iterate over switch ports in the topology
+    Iterates over switch ports in the topology.
 
     Args:
       include_attr: If true not only ports are returned but the attributes
@@ -272,7 +276,7 @@ class TopologyGraph(object):
 
   def switches_iter(self, include_attrs=False):
     """
-    Iterate over switches in the topology
+    Iterates over switches in the topology.
 
     Args:
       include_attr: If true not only switches are returned but the attributes
@@ -283,7 +287,7 @@ class TopologyGraph(object):
 
   def links_iter(self, include_attrs=False):
     """
-    Iterate over links in the topology
+    Iterates over links in the topology.
 
     Args:
       include_attr: If true not only links are returned but the attributes
@@ -301,8 +305,8 @@ class TopologyGraph(object):
 
   def edges_iter(self, include_attrs=False):
     """
-    Iterate over all edges in the topology (including the artificial
-    host->interface and switch-port)
+    Iterates over all edges in the topology (including the artificial
+    host->interface and switch-port).
 
     Args:
       include_attr: If true not only edges are returned but the attributes
@@ -313,7 +317,7 @@ class TopologyGraph(object):
   def add_host(self, interfaces=None, name=None, hid=None,
                num_used_interfaces=None, **kwargs):
     """
-    Add Host to the topology
+    Adds Host to the topology.
 
     kwargs:
       interfaces: list of interfaces connected to the host (default [])
@@ -531,9 +535,13 @@ class PatchPanel(object):
   any two ports (aka create a link) or disconnect them (bring the link down),
   or migrate hosts (change the switch side of the link).
 
-  Since this is a simple model, this class is merely  a data structure to track
+  Since this is a simple model, this class is merely a data structure to track
   link status and migrate virtual links, but it can be extended to support
   a real patch panel (OVS or hardware)
+
+  For the simulation purposes, the PatchPanel distinguishes between links
+  connecting switches to hosts (AccessLinks) and links connecting switches
+  (just Link).
   """
 
   __metaclass__ = abc.ABCMeta
@@ -841,7 +849,11 @@ class PatchPanel(object):
 
 class Topology(object):
   """
-  Keeps track of the network elements
+  Keeps track of the network elements.
+
+  When extending this class, make sure to revisit and change the policies (if
+  necessary) for example changing can_add_host, can_add_switch, can_add_link,
+  can_change_link_status, can_crash_switch.
   """
   def __init__(self, patch_panel, topo_graph=None, hosts=None, switches=None, controllers=None,
                links=None, host_cls=Host, switch_cls=FuzzSoftwareSwitch,
@@ -902,7 +914,7 @@ class Topology(object):
   @property
   def can_crash_switch(self):
     """
-    True if the switches in the topology can shutdown and reboot switches
+    True if the switches in the topology can shutdown and reboot switches.
     """
     return True
 
