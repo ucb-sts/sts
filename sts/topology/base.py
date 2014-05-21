@@ -244,8 +244,6 @@ class Topology(object):
   def add_link(self, link):
     """Add link to the topology"""
     assert self.can_add_link
-    print "LINK TYPE", type(link)
-    print "EX", self.link_cls, self.access_link_cls
     assert isinstance(link, (self.link_cls, self.access_link_cls))
     assert not self.has_link(link)
     if hasattr(link, 'start_node'):
@@ -408,7 +406,6 @@ class Topology(object):
   @property
   def cut_links(self):
     return self.patch_panel.cut_links
-
 
   @property
   def live_links(self):

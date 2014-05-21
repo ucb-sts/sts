@@ -319,7 +319,6 @@ class PatchPanel(object):
     """
     raise NotImplementedError()
 
-
   @abc.abstractmethod
   def repair_access_link(self, link):
     """Bring a link back online"""
