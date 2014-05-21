@@ -21,7 +21,7 @@
 Basic representation of network topology.
 """
 
-
+import inspect
 import logging
 
 from pox.openflow.libopenflow_01 import ofp_phy_port
@@ -38,6 +38,99 @@ from sts.topology.graph import TopologyGraph
 from sts.util.console import msg
 
 
+class TopologyPolicy(object):
+  """Basic topology settings for network topologies"""
+  def __init__(self, can_add_host=True, can_remove_host=True,
+               can_add_switch=True, can_remove_switch=True, can_add_link=True,
+               can_remove_link=True, can_add_access_link=True,
+               can_remove_access_link=True, can_change_link_status=True,
+               can_change_access_link_status=True, can_crash_switch=True):
+    super(TopologyPolicy, self).__init__()
+    self._can_add_host = can_add_host
+    self._can_remove_host = can_remove_host
+    self._can_add_switch = can_add_switch
+    self._can_remove_switch = can_remove_switch
+    self._can_add_link = can_add_link
+    self._can_remove_link = can_remove_link
+    self._can_add_access_link = can_add_access_link
+    self._can_remove_access_link = can_remove_access_link
+    self._can_change_link_status = can_change_link_status
+    self._can_change_access_link_status = can_change_access_link_status
+    self._can_crash_switch = can_crash_switch
+    # more for OF and per packet
+
+  def set_add_policy(self, policy):
+    """Helper method to change policy for everything that can be added."""
+    for name, value in inspect.getmembers(self,
+                                          lambda a: not inspect.isroutine(a)):
+      if name.startswith("_can_add"):
+        setattr(self, name, policy)
+
+  def set_remove_policy(self, policy):
+    """Helper method to change policy for everything that can be removed."""
+    for name, value in inspect.getmembers(self,
+                                          lambda a: not inspect.isroutine(a)):
+      if name.startswith("_can_remove"):
+        setattr(self, name, policy)
+
+  @property
+  def can_add_host(self):
+    """Returns True if hosts can be added to the topology."""
+    return self._can_add_host
+
+  @property
+  def can_remove_host(self):
+    """Returns True if hosts can be removed from the topology."""
+    return self._can_remove_host
+
+  @property
+  def can_add_switch(self):
+    """Returns True if switches can be added to the topology."""
+    return self._can_add_switch
+
+  @property
+  def can_remove_switch(self):
+    """Returns True if switches can be removed from the topology."""
+    return self._can_remove_switch
+
+  @property
+  def can_add_link(self):
+    """Returns True if links can be added to the topology."""
+    return self._can_add_link
+
+  @property
+  def can_remove_link(self):
+    """Returns True if links can be removed from the topology."""
+    return self._can_remove_link
+
+  @property
+  def can_add_access_link(self):
+    """Returns True if Access links can be added to the topology."""
+    return self._can_add_access_link
+
+  @property
+  def can_remove_access_link(self):
+    """Returns True if links can be removed from the topology."""
+    return self._can_remove_access_link
+
+  @property
+  def can_change_link_status(self):
+    """Returns True if links can change status (up or down)."""
+    return self._can_change_link_status
+
+  @property
+  def can_change_access_link_status(self):
+    """Returns True if links can change status (up or down)."""
+    return self._can_change_access_link_status
+
+  @property
+  def can_crash_switch(self):
+    """
+    Returns True if the switches in the topology can be shutdown and rebooted.
+    """
+    return self._can_crash_switch
+
+
 class Topology(object):
   """
   Keeps track of the network elements.
@@ -51,7 +144,7 @@ class Topology(object):
                links=None, host_cls=Host, switch_cls=FuzzSoftwareSwitch,
                link_cls=Link, access_link_cls=AccessLink,
                interface_cls=HostInterface, port_cls=ofp_phy_port,
-               sts_console=msg):
+               sts_console=msg, policy=TopologyPolicy()):
     super(Topology, self).__init__()
     self.host_cls = host_cls
     self.switch_cls = switch_cls
@@ -66,50 +159,11 @@ class Topology(object):
     self.failed_switches = set()
     self.msg = sts_console
     self.log = logging.getLogger("sts.topology.base.Topology")
+    self.policy = policy
 
   def _host_check(self, vertex, attrs):
     """Some basic check for host type"""
     return isinstance(attrs.get('obj', None), self.host_cls)
-
-  @property
-  def can_add_host(self):
-    """Return True if hosts can be added to the topology.
-
-    Some topologies are mutable while others are not.
-    """
-    return True
-
-  @property
-  def can_add_switch(self):
-    """Return True if switches can be added to the topology.
-
-    Some topologies are mutable while others are not.
-    """
-    return True
-
-  @property
-  def can_add_link(self):
-    """Return True if links can be added to the topology.
-
-    Some topologies are mutable while others are not.
-    """
-    return True
-
-  @property
-  def can_change_link_status(self):
-    """
-    True if links can change status (up or down).
-
-    Some topologies are mutable while others are not.
-    """
-    return True
-
-  @property
-  def can_crash_switch(self):
-    """
-    True if the switches in the topology can shutdown and reboot switches.
-    """
-    return True
 
   @property
   def config_graph(self):
@@ -169,7 +223,7 @@ class Topology(object):
     Args:
       host: Must be an instance of sts.entities.hosts.HostAbstractClass
     """
-    assert self.can_add_host
+    assert self.policy.can_add_host
     assert isinstance(host, HostAbstractClass)
     vertex_id = self._host_vertex_id(host)
     assert not self.has_host(vertex_id), "Host '%s' already added" % host
@@ -181,6 +235,7 @@ class Topology(object):
 
     Also remove all associated links
     """
+    assert self.policy.can_remove_host
     assert self.has_host(host)
     vertex_id = self._host_vertex_id(host)
     # Remove associated links
@@ -220,7 +275,7 @@ class Topology(object):
 
   def add_switch(self, switch):
     """Add switch to the topology"""
-    assert self.can_add_switch
+    assert self.policy.can_add_switch
     assert hasattr(switch, 'dpid')
     assert not self.has_switch(switch), ("Switch '%s' "
                                          "already added" % switch.dpid)
@@ -231,6 +286,7 @@ class Topology(object):
     return switch
 
   def remove_switch(self, switch):
+    assert self.policy.can_remove_switch
     assert self.has_switch(switch)
     vertex_id = self._switch_vertex_id(switch)
     del self._dpid2vertex[switch.dpid]
@@ -243,7 +299,7 @@ class Topology(object):
 
   def add_link(self, link):
     """Add link to the topology"""
-    assert self.can_add_link
+    assert self.policy.can_add_link
     assert isinstance(link, (self.link_cls, self.access_link_cls))
     assert not self.has_link(link)
     if hasattr(link, 'start_node'):
@@ -273,6 +329,7 @@ class Topology(object):
       return self._g.has_edge(link.port1, link.port2)
 
   def remove_link(self, link):
+    assert self.policy.can_remove_link
     assert self.has_link(link)
     if hasattr(link, 'start_node'):
       self._g.remove_edge(link.start_port, link.end_port)
@@ -299,7 +356,8 @@ class Topology(object):
 
   def crash_switch(self, switch):
     """Make the switch crash (or just turn it off)"""
-    assert self.can_crash_switch, "Topology doesn't support crashing switches"
+    assert self.policy.can_crash_switch,\
+      "Topology doesn't support crashing switches"
     assert self.has_switch(switch)
     s = self.get_switch(switch)
     self.msg.event("Crashing switch %s" % str(s))
