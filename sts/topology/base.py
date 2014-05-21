@@ -132,13 +132,7 @@ class TopologyPolicy(object):
 
 
 class Topology(object):
-  """
-  Keeps track of the network elements.
-
-  When extending this class, make sure to revisit and change the policies (if
-  necessary) for example changing can_add_host, can_add_switch, can_add_link,
-  can_change_link_status, can_crash_switch.
-  """
+  """Keeps track of the network elements."""
   def __init__(self, patch_panel, topo_graph=None,
                hosts=None, switches=None, controllers=None,
                links=None, host_cls=Host, switch_cls=FuzzSoftwareSwitch,
