@@ -813,7 +813,8 @@ class ConnectToControllers(InternalEvent):
 
 
 all_internal_events = [ControlMessageReceive, ConnectToControllers,
-                       ControllerStateChange, DeterministicValue]
+                       ControllerStateChange, DeterministicValue,
+                       DataplanePermit, DataplaneDrop]
 
 
 # Special event:

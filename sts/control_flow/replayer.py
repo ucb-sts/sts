@@ -51,11 +51,14 @@ class Replayer(ControlFlow):
     else:
       self.dag = superlog_path_or_dag
 
-    self.print_buffers = print_buffers
+    if len(self.dag.events) == 0:
+      raise ValueError("No events to replay!")
+
+    self.print_buffers_flag = print_buffers
 
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
-    self.auto_permit_dp_events = auto_permit_dp_events
+    self.auto_permit_dp_events = True
     self.unexpected_state_changes = []
     self.early_state_changes = []
     self.event_scheduler_stats = None
@@ -67,6 +70,38 @@ class Replayer(ControlFlow):
         lambda simulation: EventScheduler(simulation,
             **{ k: v for k,v in kwargs.items()
                 if k in EventScheduler.kwargs })
+
+    unknown_kwargs = [ k for k in kwargs.keys() if k not in EventScheduler.kwargs ]
+    if unknown_kwargs != []:
+      raise ValueError("Unknown kwargs %s" % str(unknown_kwargs))
+
+    if self.simulation_cfg.ignore_interposition:
+      self._ignore_interposition()
+
+  def _log_input_event(self, event, **kws):
+    if self._input_logger is not None:
+      self._input_logger.log_input_event(event, **kws)
+
+  def _setup_dp_checker(self, default_dp_permit):
+    no_dp_drops = [ e for e in self.dag.events if type(e) == DataplaneDrop ] == []
+    if not default_dp_permit and no_dp_drops:
+      print >> sys.stderr, ('''No DataplaneDrops to replay. We suggest you '''
+                            '''set Replayer's default_dp_permit=True ''')
+    if default_dp_permit:
+      if no_dp_drops:
+        return AlwaysAllowDataplane(self.dag)
+      else:
+        return DataplaneChecker(self.dag)
+    return None
+
+  def _ignore_interposition(self):
+    '''
+    Configure all interposition points to immediately pass through all
+    internal events
+    (possibly useful for replays affected by non-determinism)
+    '''
+    filtered_events = [e for e in self.dag.events if type(e) not in all_internal_events]
+    self.dag = EventDag(filtered_events)
 
   def get_interpolated_time(self):
     '''
@@ -103,8 +138,6 @@ class Replayer(ControlFlow):
     self.simulation = self.simulation_cfg.bootstrap(self.sync_callback)
     self.logical_time = 0
     self.run_simulation_forward(self.dag, post_bootstrap_hook)
-    if self.print_buffers:
-      self._print_buffers()
     return self.simulation
 
   def _print_buffers(self):
