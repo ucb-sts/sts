@@ -93,6 +93,11 @@ Interactive mode depends on the readline module:
 $ sudo pip install readline
 ```
 
+To enable checkpointing of controller state, you will need to install psutil:
+```
+$ sudo pip install psutil
+```
+
 Unit tests depends on the mock module:
 ```
 $ sudo pip install mock
