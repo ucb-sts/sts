@@ -28,6 +28,9 @@ end
 # remove them ourselves.
 Dir.glob('**/*pyc').each { |f| File.delete(f) }
 
+# Also make sure that hassel has been compiled.
+system "./tools/clean.sh"
+
 experiment_dir = File.dirname(options[:config_path])
 
 repo_orchestrator = RepositoryOrchestrator.new
