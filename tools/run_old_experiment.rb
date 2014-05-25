@@ -24,7 +24,9 @@ if options[:config_path].empty?
 end
 
 # Pesky .pyc files in old directories cause import path confusion
-system "./tools/clean.sh"
+# Unfortunately, git clean -fX doesn't remove non-tracked .pyc files, so
+# remove them ourselves.
+Dir.glob('**/*pyc').each { |f| File.delete(f) }
 
 experiment_dir = File.dirname(options[:config_path])
 
