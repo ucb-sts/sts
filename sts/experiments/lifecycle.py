@@ -47,7 +47,9 @@ def dump_metadata(metadata_file, additional_metadata=None):
                },
                'modules' : {
                  module : { 'commit' : backtick("git rev-parse HEAD", cwd=path),
-                            'branch' : backtick("git rev-parse --abbrev-ref HEAD", cwd=path)
+                            'branch' : backtick("git rev-parse --abbrev-ref HEAD", cwd=path),
+                            'status' : backtick("git status", cwd=path),
+                            'diff'   : backtick("git diff", cwd=path)
                           } for module, path in sts_modules
                },
                'additional_metadata': additional_metadata,
