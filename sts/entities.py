@@ -853,7 +853,8 @@ class Controller(object):
     kill_procs([self.process])
     if self.config.kill_cmd != "":
       self.log.info("Killing controller %s: %s" % (self.label, " ".join(self.config.expanded_kill_cmd)))
-      popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd, self.config.cwd)
+      popen_filtered("[%s]" % self.label, self.config.expanded_kill_cmd,
+              self.config.cwd, shell=True)
     self._unregister_proc(self.process)
     self.process = None
     self.state = ControllerState.DEAD
