@@ -26,7 +26,13 @@ end
 # Pesky .pyc files in old directories cause import path confusion
 # Unfortunately, git clean -fX doesn't remove non-tracked .pyc files, so
 # remove them ourselves.
-Dir.glob('**/*pyc').each { |f| File.delete(f) }
+Dir.glob('**/*pyc').each do |f|
+  begin
+    File.delete(f)
+  rescue => detail
+    STDERR.print detail.backtrace.join("\n")
+  end
+end
 
 # Also make sure that hassel has been compiled.
 system "./tools/clean.sh"
