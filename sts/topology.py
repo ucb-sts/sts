@@ -698,7 +698,7 @@ class Topology(object):
           as a parameter
     '''
     controller_info_cycler = itertools.cycle(controller_info_list)
-    connections_per_switch = len(controller_info_list)
+    connections_per_switch = 1 # len(controller_info_list)
 
     log.debug('''Connecting %d switches to %d controllers (setting up %d'''
               ''' conns per switch)...''' %
@@ -713,6 +713,7 @@ class Topology(object):
         controller_info = controller_info_cycler.next()
         software_switch.add_controller_info(controller_info)
 
+      print "Connecting switch %s to controller %s - %s" % (idx, controller_info, create_connection)
       software_switch.connect(create_connection)
 
     log.debug("Controller connections done")

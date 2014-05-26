@@ -705,7 +705,7 @@ class NamespaceHost(Host):
       The default is "xterm", which opens up a new terminal window.
     '''
     self.hid = self._hids.next()
-    (self.guest, guest_eth_addr, host_device) = launch_namespace(cmd, ip_addr_str, self.hid)
+    (self.guest, self.guest_eth_addr, host_device) = launch_namespace(cmd, ip_addr_str, self.hid)
     self.socket = bind_raw_socket(host_device)
     # Set up an io worker for our end of the socket
     self.io_worker = create_io_worker(self.socket)
@@ -1119,9 +1119,15 @@ class VMController(Controller):
     process = popen_filtered("[%s]" % self.label, cmd, self.config.cwd, shell=True)
     output = ""
     while True:
+      """
       output += process.stdout.read(100) # arbitrary
       if output == '' and process.poll() is not None:
         break
+      """
+      t = process.stdout.read(1) # arbitrary
+      output += t
+      if t == '' or process.poll() is not None:
+         break
     return output
 
   # Run a command remotely using paramiko
@@ -1139,8 +1145,9 @@ class VMController(Controller):
             break
         session.close()
         return reply
-      except:
-        self.log.warn("Exception in executing remote command \"%s\": %s" % (cmd, self.label))
+      except Exception as exp:
+        import traceback
+        self.log.warn("Exception in executing remote command \"%s\": %s: %s" % (cmd, self.label, traceback.format_exc(exp)))
         self._ssh_client = None
         max_iterations -= 1
     return ""
@@ -1196,6 +1203,7 @@ class VMController(Controller):
       logging.getLogger("paramiko").setLevel(logging.WARN)
       self._ssh_client = paramiko.Transport((self.config.address, 22))
       self._ssh_client.connect(username=self.username, password=self.password)
+
     return self._ssh_client
 
 class BigSwitchController(VMController):

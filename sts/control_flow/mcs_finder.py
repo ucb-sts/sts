@@ -169,6 +169,7 @@ class MCSFinder(ControlFlow):
     # (e.g. CheckInvariants)
     self.dag.mark_invalid_input_sequences()
     # TODO(cs): invoke dag.filter_unsupported_input_types()
+    self.dag = self.dag.filter_unsupported_input_types()
 
     if len(self.dag) == 0:
       raise RuntimeError("No supported input types?")
