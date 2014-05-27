@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby2.0
+#!/usr/bin/env ruby
 # Requires ruby2.0+
 # Must be invoked from top-level sts directory
 
