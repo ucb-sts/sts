@@ -569,6 +569,7 @@ class Fuzzer(ControlFlow):
           crashed_this_round.add(controller)
           self._log_input_event(ControllerFailure(controller.cid))
           controller.kill()
+          break # Only crash one controller at a time
       return crashed_this_round
 
     def reboot_controllers(crashed_this_round):
