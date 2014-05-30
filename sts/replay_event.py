@@ -873,11 +873,6 @@ class LinkDiscovery(InputEvent):
     link_attrs = json_hash['link_attrs']
     return LinkDiscovery(controller_id, link_attrs, round=round, label=label, time=time)
 
-all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
-                    ControllerFailure, ControllerRecovery, HostMigration,
-                    PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
-                    ControlChannelBlock, ControlChannelUnblock,
-                    DataplaneDrop, LinkDiscovery, ConnectToControllers]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
@@ -1234,6 +1229,12 @@ class DataplanePermit(InternalEvent):
                              self.fingerprint[2], self.fingerprint[3])
     del fields['_fingerprint']
     return json.dumps(fields)
+
+all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
+                    ControllerFailure, ControllerRecovery, HostMigration,
+                    PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
+                    ControlChannelBlock, ControlChannelUnblock,
+                    DataplaneDrop, LinkDiscovery, ConnectToControllers]
 
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
                        ControllerStateChange,
