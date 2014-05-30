@@ -78,6 +78,11 @@ class MCSFinder(ControlFlow):
     self.bug_signature = self.dag.get_last_invariant_violation()
     if self.bug_signature is None:
       raise ValueError("No invariant violation found in dag...")
+
+    if self.simulation_cfg.ignore_interposition:
+      filtered_events = [e for e in self.dag.events if type(e) not in all_internal_events]
+      self.dag = EventDag(filtered_events)
+
     self.transform_dag = transform_dag
     # A second log with just our MCS progress log messages
     self._extra_log = extra_log

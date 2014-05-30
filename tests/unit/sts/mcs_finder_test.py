@@ -25,10 +25,14 @@ import logging
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
+class MockSimulationConfig(object):
+  def __init__(self, ignore_interposition=False):
+    self.ignore_interposition = ignore_interposition
+
 class MockMCSFinderBase(MCSFinder):
   ''' Overrides self.invariant_check and run_simulation_forward() '''
   def __init__(self, event_dag, mcs):
-    super(MockMCSFinderBase, self).__init__(None, event_dag,
+    super(MockMCSFinderBase, self).__init__(MockSimulationConfig(), event_dag,
                                             invariant_check_name="InvariantChecker.check_liveness")
     # Hack! Give a fake name in config.invariant_checks.name_to_invariant_checks, but
     # but remove it from our dict directly after. This is to prevent
