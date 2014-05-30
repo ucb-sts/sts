@@ -689,7 +689,7 @@ class VMController(Controller):
                                     key_filename=key_filename,
                                     cwd=getattr(self.config, "cwd", None),
                                     redirect_output=True,
-                                    block=True)
+                                    block=True, label=self.label)
     assert hasattr(self.cmd_executor, "execute_command")
     self.commands = {}
     self.populate_commands()
@@ -744,7 +744,9 @@ class VMController(Controller):
       return
     restart_cmd = self.commands["restart"]
     self.log.info("Relaunching controller %s: %s" % (self.label, restart_cmd))
-    self.cmd_executor.execute_command(restart_cmd)
+    #self.cmd_executor.execute_command(restart_cmd)
+    self.cmd_executor.execute_command(self.commands['start'])
+    self.cmd_executor.execute_command("sleep 30")
     self.state = ControllerState.ALIVE
 
   # SSH into the VM to check on controller process
@@ -772,6 +774,7 @@ class VMController(Controller):
       self.state = ControllerState.ALIVE
     if (self.state == ControllerState.ALIVE and
             actual_state == ControllerState.DEAD):
+      self.state = ControllerState.DEAD
       return (False, "Alive, but no controller process found!")
     return (True, "OK")
 
