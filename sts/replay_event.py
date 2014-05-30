@@ -877,7 +877,7 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
                     ControlChannelBlock, ControlChannelUnblock,
-                    DataplaneDrop, LinkDiscovery]
+                    DataplaneDrop, LinkDiscovery, ConnectToControllers]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
@@ -1236,7 +1236,7 @@ class DataplanePermit(InternalEvent):
     return json.dumps(fields)
 
 all_internal_events = [ControlMessageReceive, ControlMessageSend,
-                       ConnectToControllers, ControllerStateChange,
+                       ControllerStateChange,
                        DeterministicValue, DataplanePermit]
 
 # Special events:
