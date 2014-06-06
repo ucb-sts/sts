@@ -203,7 +203,7 @@ class Replayer(ControlFlow):
   def _sleep_with_dataplane_passthrough(self, seconds):
     ''' Pre: simulate() has been called '''
     start = time.time()
-    while not self.closed:
+    while not self.simulation.io_master.closed:
       elapsed = time.time() - start
       remaining = seconds - elapsed
       if remaining < 0.01:
