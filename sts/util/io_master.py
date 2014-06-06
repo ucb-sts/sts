@@ -158,6 +158,7 @@ class IOMaster(object):
     self.select(0)
 
   def sleep(self, timeout):
+    ''' invokes select.select continuously for exactly timeout seconds, then returns. '''
     start = time.time()
     while not self.closed:
       elapsed = time.time() - start
@@ -180,6 +181,8 @@ class IOMaster(object):
     return (read_sockets, write_sockets, exception_sockets)
 
   def select(self, timeout=0):
+    ''' Waits up to timeout seconds, but may return before then if I/O is
+    ready. '''
     self._in_select += 1
     try:
       read_sockets, write_sockets, exception_sockets = self.grab_workers_rwe()

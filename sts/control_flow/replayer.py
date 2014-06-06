@@ -152,9 +152,18 @@ class Replayer(ControlFlow):
         if hasattr(event, "ignore_whitelisted_packets"):
           event.ignore_whitelisted_packets = True
 
+    if self.simulation_cfg.ignore_interposition:
+      self._ignore_interposition()
+
     if create_event_scheduler:
       self.create_event_scheduler = create_event_scheduler
     else:
+      if self.default_dp_permit:
+        # Tell EventScheduler to use call into us whenever it wants to sleep or
+        # select, so that we can keep forwarding dataplane packets.
+        kwargs['sleep_continuation'] = self._sleep_with_dataplane_passthrough
+        kwargs['select_continuation'] = self._select_with_dataplane_passthrough
+
       self.create_event_scheduler = \
         lambda simulation: EventScheduler(simulation,
             **{ k: v for k,v in kwargs.items()
@@ -163,9 +172,6 @@ class Replayer(ControlFlow):
     unknown_kwargs = [ k for k in kwargs.keys() if k not in EventScheduler.kwargs ]
     if unknown_kwargs != []:
       raise ValueError("Unknown kwargs %s" % str(unknown_kwargs))
-
-    if self.simulation_cfg.ignore_interposition:
-      self._ignore_interposition()
 
   def _log_input_event(self, event, **kws):
     if self._input_logger is not None:
@@ -193,6 +199,22 @@ class Replayer(ControlFlow):
     self.dag = EventDag(filtered_events)
     self.default_dp_permit = True
     self.dp_checker = AlwaysAllowDataplane(self.dag)
+
+  def _sleep_with_dataplane_passthrough(self, seconds):
+    ''' Pre: simulate() has been called '''
+    start = time.time()
+    while not self.closed:
+      elapsed = time.time() - start
+      remaining = seconds - elapsed
+      if remaining < 0.01:
+        break
+      self._select_with_dataplane_passthrough(remaining)
+
+  def _select_with_dataplane_passthrough(self, timeout_seconds):
+    ''' Pre: simulate() has been called '''
+    if self.default_dp_permit:
+      self.dp_checker.check_dataplane(-1, self.simulation)
+    return self.simulation.io_master.select(timeout_seconds)
 
   def get_interpolated_time(self):
     '''
@@ -315,7 +337,10 @@ class Replayer(ControlFlow):
         # TODO(cs): may be redundant with WaitTime events at the end of the
         # trace.
         log.debug("Sleeping %d seconds after run" % self.end_wait_seconds)
-        time.sleep(self.end_wait_seconds)
+        if self.default_dp_permit:
+          self._sleep_with_dataplane_passthrough(self.end_wait_seconds)
+        else:
+          self.sleep(self.end_wait_seconds)
 
         # TODO(cs): this does not verify whether the violation is persistent
         # or transient. Perhaps it should?
@@ -531,7 +556,8 @@ class DataplaneChecker(object):
     ''' Check dataplane events for before playing then next event.
        - current_event_idx allows us to adjust our current slop buffer
     '''
-    self.update_window(current_round)
+    if current_round != -1:
+      self.update_window(current_round)
 
     for dp_event in simulation.patch_panel.queued_dataplane_events:
       if not simulation.topology.ok_to_send(dp_event):

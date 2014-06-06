@@ -194,11 +194,12 @@ class EventScheduler(EventSchedulerBase):
   any post-event delay '''
 
   kwargs = set(['speedup', 'delay_input_events', 'initial_wait',
-                'epsilon_seconds', 'sleep_interval_seconds'])
+                'epsilon_seconds', 'sleep_interval_seconds',
+                'sleep_continuation', 'select_continuation'])
 
   def __init__(self, simulation, speedup=1.0, delay_input_events=True,
                initial_wait=0.5, epsilon_seconds=0.5, sleep_interval_seconds=0.2,
-               assertion_checking=False):
+               sleep_continuation=None, select_continuation=None, assertion_checking=False):
     super(EventScheduler, self).__init__()
     self.simulation = simulation
     self.speedup = speedup
@@ -211,6 +212,12 @@ class EventScheduler(EventSchedulerBase):
     self.started = False
     self.stats = EventSchedulerStats()
     self.assertion_checking = assertion_checking
+    self.sleep_continuation = sleep_continuation
+    if sleep_continuation is None:
+      self.sleep_continuation = self.simulation.io_master.sleep
+    self.select_continuation = select_continuation
+    if select_continuation is None:
+      self.select_continuation = self.simulation.io_master.select
 
   def schedule(self, event):
     if not self.started:
@@ -234,7 +241,7 @@ class EventScheduler(EventSchedulerBase):
         log.debug("Delaying input_event %s for %.0f ms" %
             ( str(event).replace("\n", "") , (wait_time_seconds) * 1000 ))
 
-        self.simulation.io_master.sleep(wait_time_seconds)
+        self.sleep_continuation(wait_time_seconds)
     log.debug("Injecting %r", event)
     # TODO(cs): AFACT, this is essentially a dummy variable? Since event.time
     # is in the past... Andi, can you verify this?
@@ -245,7 +252,7 @@ class EventScheduler(EventSchedulerBase):
     wait_time_seconds = self.wait_time(event)
     log.debug("Event whitelisted %s, just delaying until predicted time %.0f ms)" %
           ( repr(event).replace("\n", ""), wait_time_seconds * 1000) )
-    self.simulation.io_master.sleep(wait_time_seconds)
+    self.sleep_continuation(wait_time_seconds)
     self.stats.event_matched(event)
     self.update_event_time(event)
     event.replay_time = SyncTime.now()
@@ -274,7 +281,7 @@ class EventScheduler(EventSchedulerBase):
         break
       elif now > end_time:
         break
-      self.simulation.io_master.select(self.sleep_interval_seconds)
+      self.select_continuation(self.sleep_interval_seconds)
     if proceed:
       event.timed_out = False
       self.stats.event_matched(event)
