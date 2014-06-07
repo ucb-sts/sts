@@ -238,10 +238,12 @@ class EventScheduler(EventSchedulerBase):
     if self.delay_input_events:
       wait_time_seconds = self.wait_time(event)
       if wait_time_seconds > 0.01:
-        log.debug("Delaying input_event %s for %.0f ms" %
+        log.info("Delaying input_event %s for %.0f ms" %
             ( str(event).replace("\n", "") , (wait_time_seconds) * 1000 ))
 
         self.sleep_continuation(wait_time_seconds)
+        log.info("SLEEP END: Delaying input_event %s for %.0f ms" %
+            ( str(event).replace("\n", "") , (wait_time_seconds) * 1000 ))
     log.debug("Injecting %r", event)
     # TODO(cs): AFACT, this is essentially a dummy variable? Since event.time
     # is in the past... Andi, can you verify this?
