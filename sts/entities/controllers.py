@@ -221,6 +221,7 @@ class ControllerAbstractClass(object):
     self._state = ControllerState.DEAD
     self._sync_connection_manager = sync_connection_manager
     self._snapshot_service = snapshot_service
+    self.killed = False
 
   @property
   def config(self):
@@ -400,6 +401,7 @@ class Controller(ControllerAbstractClass):
     self._unregister_proc(self.process)
     self.process = None
     self.state = ControllerState.DEAD
+    self.killed = True
 
   def _bind_pcap(self, host_device):
     filter_string = "(not tcp port %d)" % self.config.port
@@ -454,6 +456,7 @@ class Controller(ControllerAbstractClass):
     self._register_proc(self.process)
     self._check_snapshot_connect()
     self.state = ControllerState.ALIVE
+    self.killed = False
 
   def restart(self):
     """
@@ -464,6 +467,7 @@ class Controller(ControllerAbstractClass):
         "Restarting controller %s when it is not dead!" % self.label)
       return
     self.start()
+    self.killed = False
 
   def check_status(self, simulation):
     """
@@ -652,6 +656,7 @@ class POXController(Controller):
         self, self.config.sync)
     self._check_snapshot_connect()
     self.state = ControllerState.ALIVE
+    self.killed = False
 
 
 class VMController(Controller):
@@ -695,6 +700,7 @@ class VMController(Controller):
     self.populate_commands()
     self.welcome_msg = " =====> Starting VM Controller <===== "
     self.alive_status_string = ""  # subclass dependent
+    self.killed = False
 
   def populate_commands(self):
     if self.config.start_cmd == "":
@@ -723,6 +729,7 @@ class VMController(Controller):
     self.log.info("Killing controller %s: %s" % (self.label, kill_cmd))
     self.cmd_executor.execute_command(kill_cmd)
     self.state = ControllerState.DEAD
+    self.killed = True
 
   def start(self, multiplex_sockets=False):
     self.log.info(self.welcome_msg)
@@ -736,6 +743,7 @@ class VMController(Controller):
     if ret is not None:
       self.log.info(ret)
     self.state = ControllerState.ALIVE
+    self.killed = False
 
   def restart(self):
     if self.state != ControllerState.DEAD:
@@ -748,6 +756,7 @@ class VMController(Controller):
     self.cmd_executor.execute_command(self.commands['start'])
     self.cmd_executor.execute_command("sleep 30")
     self.state = ControllerState.ALIVE
+    self.killed = False
 
   # SSH into the VM to check on controller process
   def check_status(self, simulation):
@@ -835,6 +844,7 @@ class BigSwitchController(VMController):
     kill_cmd = self.commands["kill"]
     self.log.info("Killing controller %s: %s" % (self.label, kill_cmd))
     self.cmd_executor.execute_command(kill_cmd)
+    self.cmd_executor.execute_command("echo 'sleeping for 10 sec; sleep 10")
     self.state = ControllerState.DEAD
 
   def restart(self):
