@@ -565,6 +565,11 @@ class Fuzzer(ControlFlow):
     def crash_controllers():
       crashed_this_round = set()
       for controller in self.simulation.controller_manager.live_controllers:
+        if controller.cid == "c2":
+          log.info("Skipping c2")
+          continue
+        else:
+          log.info("Considering controller '%s' for crash" % controller.cid)
         if self.random.random() < self.params.controller_crash_rate:
           crashed_this_round.add(controller)
           self._log_input_event(ControllerFailure(controller.cid))
