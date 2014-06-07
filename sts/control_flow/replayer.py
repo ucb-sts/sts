@@ -340,7 +340,7 @@ class Replayer(ControlFlow):
         if self.default_dp_permit:
           self._sleep_with_dataplane_passthrough(self.end_wait_seconds)
         else:
-          self.sleep(self.end_wait_seconds)
+          time.sleep(self.end_wait_seconds)
 
         # TODO(cs): this does not verify whether the violation is persistent
         # or transient. Perhaps it should?
