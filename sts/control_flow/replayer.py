@@ -400,7 +400,7 @@ class Replayer(ControlFlow):
       next_expected = dag.next_state_change(current_index)
       if (next_expected is None or
           state_change != next_expected.pending_state_change):
-        log.info("Unexpected state change. Ack'ing")
+        log.info("Unexpected state change. Ack'ing %s" % str(state_change))
         log_event = ControllerStateChange.from_pending_state_change(state_change)
         # Monkeypatch a "new internal event" marker to be logged to the JSON trace
         # (All fields picked up by event.to_json())
