@@ -458,6 +458,11 @@ class ControllerRecovery(InputEvent):
   def proceed(self, simulation):
     controller = simulation.controller_manager.get_controller(self.controller_id)
     simulation.controller_manager.reboot_controller(controller)
+    for sw in simulation.topology.switches:
+      if controller.config in sw.controller_info:
+        sw.connect(simulation.create_connection,
+                   controller_infos=[controller.config])
+
     return True
 
   @staticmethod
