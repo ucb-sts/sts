@@ -505,6 +505,9 @@ class ControlChannelUnblock(InputEvent):
     controller_id = tuple(json_hash['controller_id'])
     return ControlChannelUnblock(dpid, controller_id, label=label, time=time)
 
+# TODO(cs): DataplaneDrop/Permits have really complicated dependencies
+# with other input events!
+# For now, turn them off completely.
 class DataplaneDrop(InputEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplaneDrop, self).__init__(label=label, time=time)
@@ -517,8 +520,11 @@ class DataplaneDrop(InputEvent):
     self.fingerprint = fingerprint
 
   def proceed(self, simulation):
-    # Handled by control_flow.replayer.DataplaneChecker
-    return True
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1:])
+    if dp_event is not None:
+      simulation.patch_panel.drop_dp_event(dp_event)
+      return True
+    return False
 
   @staticmethod
   def from_json(json_hash):
@@ -526,6 +532,38 @@ class DataplaneDrop(InputEvent):
     assert_fields_exist(json_hash, 'fingerprint')
     fingerprint = json_hash['fingerprint']
     return DataplaneDrop(fingerprint, label=label, time=time)
+
+  def to_json(self):
+    fields = dict(self.__dict__)
+    fields['class'] = self.__class__.__name__
+    fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
+                             self.fingerprint[2], self.fingerprint[3])
+    return json.dumps(fields)
+
+class DataplanePermit(InputEvent):
+  def __init__(self, fingerprint, label=None, time=None):
+    super(DataplanePermit, self).__init__(label=label, time=time)
+    if fingerprint[0] != self.__class__.__name__:
+      fingerprint = list(fingerprint)
+      fingerprint.insert(0, self.__class__.__name__)
+    if type(fingerprint) == list:
+      fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]),
+                     fingerprint[2], fingerprint[3])
+    self.fingerprint = fingerprint
+
+  def proceed(self, simulation):
+    dp_event = simulation.patch_panel.get_buffered_dp_event(self.fingerprint[1:])
+    if dp_event is not None:
+      simulation.patch_panel.permit_dp_event(dp_event)
+      return True
+    return False
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'fingerprint')
+    fingerprint = json_hash['fingerprint']
+    return DataplanePermit(fingerprint, label=label, time=time)
 
   def to_json(self):
     fields = dict(self.__dict__)
@@ -560,7 +598,7 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
                     ControlChannelBlock, ControlChannelUnblock,
-                    DataplaneDrop, LinkDiscovery]
+                    DataplaneDrop, DataplanePermit, LinkDiscovery]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
@@ -756,42 +794,12 @@ class ConnectToControllers(InternalEvent):
     (label, time, timeout_disallowed) = extract_base_fields(json_hash)
     return ConnectToControllers(label=label, time=time, timeout_disallowed=timeout_disallowed)
 
-class DataplanePermit(InternalEvent):
-  ''' We basically just keep this around for bookkeeping purposes. During
-  replay, this let's us know which packets to let through, and which to drop.
-  '''
-  def __init__(self, fingerprint, label=None, time=None):
-    super(DataplanePermit, self).__init__(label=label, time=time, )
-    if fingerprint[0] != self.__class__.__name__:
-      fingerprint = list(fingerprint)
-      fingerprint.insert(0, self.__class__.__name__)
-    if type(fingerprint) == list:
-      fingerprint = (fingerprint[0], DPFingerprint(fingerprint[1]),
-                     fingerprint[2], fingerprint[3])
-    self.fingerprint = fingerprint
-
-  def proceed(self, simulation):
-    return True
-
-  @staticmethod
-  def from_json(json_hash):
-    (label, time) = extract_label_time(json_hash)
-    assert_fields_exist(json_hash, 'fingerprint')
-    fingerprint = json_hash['fingerprint']
-    return DataplanePermit(fingerprint, label=label, time=time)
-
-  def to_json(self):
-    fields = dict(self.__dict__)
-    fields['class'] = self.__class__.__name__
-    fields['fingerprint'] = (self.fingerprint[0], self.fingerprint[1].to_dict(),
-                             self.fingerprint[2], self.fingerprint[3])
-    return json.dumps(fields)
 
 all_internal_events = [ControlMessageReceive, ConnectToControllers,
-                       ControllerStateChange, DeterministicValue,
-                       DataplanePermit]
+                       ControllerStateChange, DeterministicValue]
 
-# Special events:
+
+# Special event:
 
 class InvariantViolation(Event):
   ''' Class for logging violations as json dicts '''
@@ -809,6 +817,4 @@ class InvariantViolation(Event):
     violations = json_hash['violations']
     return InvariantViolation(violations, label=label, time=time)
 
-all_special_events = [InvariantViolation]
-
-all_events = all_input_events + all_internal_events + all_special_events
+all_events = all_input_events + all_internal_events + [InvariantViolation]
