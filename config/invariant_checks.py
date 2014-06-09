@@ -1,5 +1,6 @@
 from sts.invariant_checker import InvariantChecker
 import sys
+import os
 import pox.openflow.libopenflow_01 as of_01
 
 class ComposeChecks(object):
@@ -85,6 +86,13 @@ check_for_two_loop_or_connectivity = ComposeChecks(check_for_two_loop,
                                                    bail_on_connectivity)
 
 
+def check_for_file(simulation):
+  violations = []
+  if os.path.isfile(simulation.bug_file):
+    violations.append("bug_file_detected")
+  return violations
+
+
 class TimeOutOnConnectivity(object):
   ''' If connectivity hasn't been established in X invocations of this
   check, return a violation.
@@ -115,6 +123,7 @@ name_to_invariant_check = {
   "check_for_invalid_ports" : check_for_invalid_ports,
   "check_for_flow_entry" : check_for_flow_entry,
   "check_for_two_loop_or_connectivity" : check_for_two_loop_or_connectivity,
+  "check_for_file": check_for_file,
   "time_out_on_connectivity" : TimeOutOnConnectivity(),
   "InvariantChecker.check_liveness" : InvariantChecker.check_liveness,
   "InvariantChecker.check_loops" : InvariantChecker.check_loops,

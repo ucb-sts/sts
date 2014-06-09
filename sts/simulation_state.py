@@ -85,7 +85,8 @@ class SimulationConfig(object):
                violation_persistence_threshold=None,
                kill_controllers_on_exit=True,
                interpose_on_controllers=False,
-               ignore_interposition=False):
+               ignore_interposition=False,
+               bug_file=None):
     '''
     Constructor parameters:
       topology_class    => a sts.topology.Topology class (not object!)
@@ -133,6 +134,7 @@ class SimulationConfig(object):
       # TODO(cs): also remove "sts.util.socket_mux.pox_monkeypatcher" from start_cmd and
       #           set SimulationConfig.multiplex_sockets = False?
       self.interpose_on_controllers = False
+    self.bug_file = bug_file
 
   def bootstrap(self, sync_callback=None, boot_controllers=default_boot_controllers):
     '''Return a simulation object encapsulating the state of
