@@ -53,7 +53,7 @@ def convert_match_to_human_readable_string(pkt):
   # TODO(cs): remove this dependence on hsa! Really dangerous to have behavior
   # of message matching change depending on whether hsa module is loaded..
   match_str = hsa.hs_format["display"](hsa.ofp_match_to_hsa_match(pkt.match))
-  match_str += ",in_port:%s" % str(pkt.match.in_port)
+  #match_str += ",in_port:%s" % str(pkt.match.in_port)
   return match_str
 
 class OFFingerprint(Fingerprint):

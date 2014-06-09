@@ -72,14 +72,14 @@ args = parser.parse_args()
 if args.config.endswith('.py'):
   args.config = args.config[:-3].replace("/", ".")
 
-try:
-  config = __import__(args.config, globals(), locals(), ["*"])
-except ImportError as e:
-  try:
-    # module path might not have been specified. Try again with path prepended
-    config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
-  except ImportError:
-    raise e
+#try:
+config = __import__(args.config, globals(), locals(), ["*"])
+#except ImportError as e:
+#  try:
+#    # module path might not have been specified. Try again with path prepended
+#    config = __import__("config.%s" % args.config, globals(), locals(), ["*"])
+#  except ImportError:
+#    raise e
 
 # Set up the experiment results directories
 experiment_setup.setup_experiment(args, config)

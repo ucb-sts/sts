@@ -610,8 +610,8 @@ class TrafficInjection(InputEvent):
     fields = {}
     fields = dict(self.__dict__)
     fields['class'] = self.__class__.__name__
-    fields['dp_event'] = self.dp_event.to_json()
-    fields['fingerprint'] = (self.__class__.__name__, self.dp_event.to_json(), self.host_id)
+    #fields['dp_event'] = self.dp_event.to_json()
+    #fields['fingerprint'] = (self.__class__.__name__, self.dp_event.to_json(), self.host_id)
     fields['host_id'] = self.host_id
     return json.dumps(fields)
 
@@ -678,52 +678,52 @@ class CheckInvariants(InputEvent):
     super(CheckInvariants, self).__init__(label=label, round=round, time=time)
     # For backwards compatibility.. (invariants used to be specified as
     # marshalled functions, not invariant check names)
-    self.legacy_invariant_check = not isinstance(invariant_check_name, basestring)
-    if self.legacy_invariant_check:
-      self.invariant_check = invariant_check_name
-    else:
-      # Otherwise, invariant check is specified as a name
-      self.invariant_check_name = invariant_check_name
-      if invariant_check_name not in name_to_invariant_check:
-        raise ValueError('''Unknown invariant check %s.\n'''
-                         '''Invariant check name must be defined in config.invariant_checks''',
-                         invariant_check_name)
-      self.invariant_check = name_to_invariant_check[invariant_check_name]
+    #self.legacy_invariant_check = not isinstance(invariant_check_name, basestring)
+    #if self.legacy_invariant_check:
+    #  self.invariant_check = invariant_check_name
+    #else:
+    #  # Otherwise, invariant check is specified as a name
+    #  self.invariant_check_name = invariant_check_name
+    #  if invariant_check_name not in name_to_invariant_check:
+    #    raise ValueError('''Unknown invariant check %s.\n'''
+    #                     '''Invariant check name must be defined in config.invariant_checks''',
+    #                     invariant_check_name)
+    #  self.invariant_check = name_to_invariant_check[invariant_check_name]
 
   def proceed(self, simulation):
-    try:
-      violations = self.invariant_check(simulation)
-      simulation.violation_tracker.track(violations, self.round)
-      persistent_violations = simulation.violation_tracker.persistent_violations
-    except NameError as e:
-      raise ValueError('''Closures are unsupported for invariant check '''
-                       '''functions.\n Use dynamic imports inside of your '''
-                       '''invariant check code and define all globals '''
-                       '''locally.\n NameError: %s''' % str(e))
-    if violations != []:
-      msg.fail("The following correctness violations have occurred: %s" % str(violations))
-      if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
-        raise KeyboardInterrupt("fail to interactive")
-    else:
-      msg.success("No correctness violations!")
-    if persistent_violations != []:
-      msg.fail("Persistent violations detected!: %s" % str(persistent_violations))
-      if hasattr(simulation, "fail_to_interactive_on_persistent_violations") and\
-        simulation.fail_to_interactive_on_persistent_violations:
-        raise KeyboardInterrupt("fail to interactive on persistent violation")
+    #try:
+    #  violations = self.invariant_check(simulation)
+    #  simulation.violation_tracker.track(violations, self.round)
+    #  persistent_violations = simulation.violation_tracker.persistent_violations
+    #except NameError as e:
+    #  raise ValueError('''Closures are unsupported for invariant check '''
+    #                   '''functions.\n Use dynamic imports inside of your '''
+    #                   '''invariant check code and define all globals '''
+    #                   '''locally.\n NameError: %s''' % str(e))
+    #if violations != []:
+    #  msg.fail("The following correctness violations have occurred: %s" % str(violations))
+    #  if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
+    #    raise KeyboardInterrupt("fail to interactive")
+    #else:
+    #  msg.success("No correctness violations!")
+    #if persistent_violations != []:
+    #  msg.fail("Persistent violations detected!: %s" % str(persistent_violations))
+    #  if hasattr(simulation, "fail_to_interactive_on_persistent_violations") and\
+    #    simulation.fail_to_interactive_on_persistent_violations:
+    #    raise KeyboardInterrupt("fail to interactive on persistent violation")
     return True
 
   def to_json(self):
     fields = dict(self.__dict__)
-    fields['class'] = self.__class__.__name__
-    if self.legacy_invariant_check:
-      fields['invariant_check'] = marshal.dumps(self.invariant_check.func_code)\
-                                         .encode('base64')
-      fields['invariant_name'] = self.invariant_check.__name__
-    else:
-      fields['invariant_name'] = self.invariant_check_name
-      fields['invariant_check'] = None
-    fields['fingerprint'] = "N/A"
+    #fields['class'] = self.__class__.__name__
+    #if self.legacy_invariant_check:
+    #  fields['invariant_check'] = marshal.dumps(self.invariant_check.func_code)\
+    #                                     .encode('base64')
+    #  fields['invariant_name'] = self.invariant_check.__name__
+    #else:
+    #  fields['invariant_name'] = self.invariant_check_name
+    #  fields['invariant_check'] = None
+    #fields['fingerprint'] = "N/A"
     return json.dumps(fields)
 
   @staticmethod
@@ -1236,13 +1236,14 @@ class ControllerStateChange(InternalEvent):
     self.value = value
 
   def proceed(self, simulation):
-    observed_yet = simulation.controller_sync_callback\
-                             .state_change_pending(self.pending_state_change)
-    if observed_yet:
-      simulation.controller_sync_callback\
-                .ack_pending_state_change(self.pending_state_change)
-      return True
-    return False
+    #observed_yet = simulation.controller_sync_callback\
+    #                         .state_change_pending(self.pending_state_change)
+    #if observed_yet:
+    #  simulation.controller_sync_callback\
+    #            .ack_pending_state_change(self.pending_state_change)
+    #  return True
+    #return False
+    return True
 
   @property
   def pending_state_change(self):
@@ -1274,10 +1275,10 @@ class ControllerStateChange(InternalEvent):
   @staticmethod
   def from_json(json_hash):
     (label, time, round, timeout_disallowed) = extract_base_fields(json_hash)
-    assert_fields_exist(json_hash, 'controller_id', 'fingerprint',
+    assert_fields_exist(json_hash, 'controller_id', '_fingerprint',
                         'name', 'value')
     controller_id = json_hash['controller_id']
-    fingerprint = json_hash['fingerprint']
+    fingerprint = json_hash['_fingerprint']
     name = json_hash['name']
     value = json_hash['value']
     return ControllerStateChange(controller_id, fingerprint, name, value,

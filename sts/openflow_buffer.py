@@ -47,6 +47,7 @@ class PendingQueue(object):
     self.pending[conn_id][message_id].append(conn_message)
 
   def has_message_id(self, message_id):
+    #print "MESSAGE ID %s" % str(message_id)
     conn_id = ConnectionId(dpid=message_id.dpid, controller_id=message_id.controller_id)
     return message_id in self.pending[conn_id]
 
@@ -209,6 +210,7 @@ class OpenFlowBuffer(EventMixin):
   def insert_pending_receipt(self, dpid, controller_id, ofp_message, conn):
     ''' Called by DeferredOFConnection to insert messages into our buffer '''
     fingerprint = OFFingerprint.from_pkt(ofp_message)
+    #print "FINGERPRINT %s" % str(fingerprint)
     if self.pass_through_whitelisted_packets and self.in_whitelist(fingerprint):
       conn.allow_message_receipt(ofp_message)
       return
