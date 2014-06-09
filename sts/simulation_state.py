@@ -231,7 +231,8 @@ class SimulationConfig(object):
     simulation = Simulation(topology, controller_manager, dataplane_trace,
                             openflow_buffer, io_master, controller_patch_panel,
                             patch_panel, sync_callback, mux_select, demuxers,
-                            violation_tracker, self._kill_controllers_on_exit)
+                            violation_tracker, self._kill_controllers_on_exit,
+                            self.bug_file)
     if self.ignore_interposition:
       simulation.set_pass_through()
     self.current_simulation = simulation
@@ -267,7 +268,7 @@ class Simulation(object):
   def __init__(self, topology, controller_manager, dataplane_trace,
                openflow_buffer, io_master, controller_patch_panel, patch_panel,
                controller_sync_callback, mux_select, demuxers,
-               violation_tracker, kill_controllers_on_exit):
+               violation_tracker, kill_controllers_on_exit, bug_file):
     self.topology = topology
     self.controller_manager = controller_manager
     self.controller_manager.set_simulation(self)
@@ -283,6 +284,7 @@ class Simulation(object):
     self.mux_select = mux_select
     self.multiplex_sockets = mux_select is not None
     self.demuxers = demuxers
+    self.bug_file = bug_file
 
   def set_exit_code(self, code):
     self.exit_code = code
