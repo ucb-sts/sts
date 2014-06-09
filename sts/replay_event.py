@@ -540,7 +540,7 @@ class DataplaneDrop(InputEvent):
                              self.fingerprint[2], self.fingerprint[3])
     return json.dumps(fields)
 
-class DataplanePermit(InputEvent):
+class DataplanePermit(InternalEvent):
   def __init__(self, fingerprint, label=None, time=None):
     super(DataplanePermit, self).__init__(label=label, time=time)
     if fingerprint[0] != self.__class__.__name__:
@@ -598,7 +598,7 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControllerFailure, ControllerRecovery, HostMigration,
                     PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
                     ControlChannelBlock, ControlChannelUnblock,
-                    DataplaneDrop, DataplanePermit, LinkDiscovery]
+                    DataplaneDrop, LinkDiscovery]
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
@@ -796,7 +796,8 @@ class ConnectToControllers(InternalEvent):
 
 
 all_internal_events = [ControlMessageReceive, ConnectToControllers,
-                       ControllerStateChange, DeterministicValue]
+                       ControllerStateChange, DeterministicValue,
+                       DataplanePermit]
 
 
 # Special event:

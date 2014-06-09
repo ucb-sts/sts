@@ -36,7 +36,7 @@ class Replayer(ControlFlow):
 
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
                print_buffers=True, wait_on_deterministic_values=False,
-               auto_permit_dp_events=False, **kwargs):
+               default_dp_permit=False, **kwargs):
     ControlFlow.__init__(self, simulation_cfg)
     if wait_on_deterministic_values:
       self.sync_callback = ReplaySyncCallback()
@@ -53,9 +53,21 @@ class Replayer(ControlFlow):
 
     self.print_buffers = print_buffers
 
+    self.default_dp_permit = default_dp_permit
+    self.dp_checker = self._setup_dp_checker(default_dp_permit)
+    if self.default_dp_permit:
+      # Set DataplanePermit and DataplaneDrop to passive if permit is set
+      # to default
+      # TODO(cs): rather than setting these to passive (which still causes them to
+      # be scheduled as regular events) should these just be removed from the
+      # event dag altogether?
+      for event in [ e for e in self.dag.events if type(e) in dp_events ]:
+        event.passive = default_dp_permit
+
+    self.print_buffers_flag = print_buffers
+
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
-    self.auto_permit_dp_events = auto_permit_dp_events
     self.unexpected_state_changes = []
     self.early_state_changes = []
     self.event_scheduler_stats = None
@@ -67,6 +79,27 @@ class Replayer(ControlFlow):
         lambda simulation: EventScheduler(simulation,
             **{ k: v for k,v in kwargs.items()
                 if k in EventScheduler.kwargs })
+
+    if self.simulation_cfg.ignore_interposition:
+      self._ignore_interposition()
+
+  def _log_input_event(self, event, **kws):
+    if self._input_logger is not None:
+      self._input_logger.log_input_event(event, **kws)
+
+  def _setup_dp_checker(self, default_dp_permit):
+    return AlwaysAllowDataplane(self.dag)
+
+  def _ignore_interposition(self):
+    '''
+    Configure all interposition points to immediately pass through all
+    internal events
+    (possibly useful for replays affected by non-determinism)
+    '''
+    filtered_events = [e for e in self.dag.events if type(e) not in all_internal_events]
+    self.dag = EventDag(filtered_events)
+    self.default_dp_permit = True
+    self.dp_checker = AlwaysAllowDataplane(self.dag)
 
   def get_interpolated_time(self):
     '''
@@ -137,6 +170,8 @@ class Replayer(ControlFlow):
         try:
           self.logical_time += 1
           self.compute_interpolated_time(event)
+          if self.default_dp_permit:
+            self.dp_checker.check_dataplane(i, self.simulation)
           if isinstance(event, InputEvent):
             self._check_early_state_changes(dag, i, event)
           self._check_new_state_changes(dag, i)
@@ -145,8 +180,6 @@ class Replayer(ControlFlow):
           # deadlock (if controller logging is set to blocking) until the
           # timeout occurs
           event_scheduler.schedule(event)
-          if self.auto_permit_dp_events:
-            self._permit_dp_events()
           self.increment_round()
         except KeyboardInterrupt as e:
           if self.interrupted:
@@ -199,4 +232,17 @@ class Replayer(ControlFlow):
     for e in patch_panel.queued_dataplane_events:
       log.debug("Permitting dataplane event: %s" % str(e))
       patch_panel.permit_dp_event(e)
+
+
+class AlwaysAllowDataplane(object):
+  ''' A dataplane checker that always allows through events. Should not be
+  used if there are any DataplaneDrops in the trace; in that case, use
+  DataplaneChecker
+  '''
+  def __init__(self, event_dag):
+   pass
+
+  def check_dataplane(self, i, simulation):
+    for dp_event in simulation.patch_panel.queued_dataplane_events:
+      simulation.patch_panel.permit_dp_event(dp_event)
 

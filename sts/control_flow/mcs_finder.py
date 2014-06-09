@@ -61,6 +61,10 @@ class MCSFinder(ControlFlow):
       self.dag = superlog_path_or_dag
 
     self.invariant_check = invariant_check
+    if self.simulation_cfg.ignore_interposition:
+      filtered_events = [e for e in self.dag.events if type(e) not in all_internal_events]
+      self.dag = EventDag(filtered_events)
+
     self.transform_dag = transform_dag
     self.mcs_trace_path = mcs_trace_path
     self._extra_log = extra_log

@@ -45,22 +45,28 @@ class SimulationConfig(object):
                patch_panel_class=BufferedPatchPanel,
                dataplane_trace=None,
                snapshot_service=None,
-               multiplex_sockets=False):
-    ''' Constructor parameters:
-         topology_class    => a sts.topology.Topology class (not object!)
-                              defining the switches and links
-         topology_params   => Comma-delimited list of arguments to pass into the FatTree
-                              constructor, specified just as you would type them within
-                              the parens.
-         patch_panel_class => a sts.topology.PatchPanel class (not object!)
-         dataplane_trace   => a path to a dataplane trace file
-                              (e.g. dataplane_traces/ping_pong_same_subnet.trace)
-         switch_init_sleep_seconds => number of seconds to wait for switches to
-                                      connect to controllers before starting the
-                                      simulation. Defaults to False (no wait).
-         monkey_patch_select => whether to use STS's custom deterministic
-                                select. Requires that the controller is
-                                monkey-patched too
+               multiplex_sockets=False,
+               ignore_interposition=False):
+    '''
+    Constructor parameters:
+      topology_class    => a sts.topology.Topology class (not object!)
+                           defining the switches and links
+      topology_params   => Comma-delimited list of arguments to pass into the FatTree
+                           constructor, specified just as you would type them within
+                           the parens.
+      patch_panel_class => a sts.topology.PatchPanel class (not object!)
+      dataplane_trace   => a path to a dataplane trace file
+                           (e.g. dataplane_traces/ping_pong_same_subnet.trace)
+      violation_persistence_threshold => number of logical time units to observe a
+                                         violation before we declare that it is
+                                         persistent
+      interpose_on_controllers => if there are multiple controllers, whether to
+                                  interpose on messages between them
+      ignore_interposition => whether to configure all interposition points to immediately pass
+                              through all events. (implies interpose_on_controllers=False)
+                              Replayer and MCSFinder read this configuration
+                              parameter, and remove all internal events from their
+                              event dags if set to True.
     '''
     if controller_configs is None:
       controller_configs = []
@@ -79,6 +85,11 @@ class SimulationConfig(object):
     self.snapshot_service = snapshot_service
     self.current_simulation = None
     self.multiplex_sockets = multiplex_sockets
+    self.ignore_interposition = ignore_interposition
+    if self.ignore_interposition:
+      # TODO(cs): also remove "sts.util.socket_mux.pox_monkeypatcher" from start_cmd and
+      #           set SimulationConfig.multiplex_sockets = False?
+      self.interpose_on_controllers = False
 
   def bootstrap(self, sync_callback):
     '''Return a simulation object encapsulating the state of
@@ -142,6 +153,8 @@ class SimulationConfig(object):
     simulation = Simulation(topology, controller_manager, dataplane_trace,
                             god_scheduler, io_master, patch_panel,
                             sync_callback, self.multiplex_sockets)
+    if self.ignore_interposition:
+      simulation.set_pass_through()
     self.current_simulation = simulation
     return simulation
 
