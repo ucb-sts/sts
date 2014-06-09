@@ -36,6 +36,7 @@ import signal
 import logging
 import time
 import sys
+import os
 from collections import defaultdict
 
 log = logging.getLogger("Replayer")
@@ -82,6 +83,8 @@ class Replayer(ControlFlow):
     '''
     ControlFlow.__init__(self, simulation_cfg)
     # Label uniquely identifying this replay, set in init_results()
+    if os.path.isfile(simulation_cfg.bug_file):
+      os.remove(simulation_cfg.bug_file)
     self.replay_id = "N/A"
     self.logical_time = 0
     if wait_on_deterministic_values:
