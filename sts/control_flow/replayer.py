@@ -60,7 +60,8 @@ class Replayer(ControlFlow):
                 'pass_through_whitelisted_messages',
                 'delay_flow_mods', 'invariant_check_name',
                 'bug_signature', 'end_wait_seconds',
-                'transform_dag', 'pass_through_sends'])
+                'transform_dag', 'pass_through_sends', 'fail_fast',
+                'check_interval'])
 
   def __init__(self, simulation_cfg, superlog_path_or_dag, create_event_scheduler=None,
                print_buffers=True, wait_on_deterministic_values=False, default_dp_permit=False,
@@ -72,6 +73,7 @@ class Replayer(ControlFlow):
                delay_flow_mods=False, invariant_check_name="",
                bug_signature="", end_wait_seconds=0.5,
                transform_dag=None, pass_through_sends=False,
+               fail_fast=False, check_interval=5,
                **kwargs):
     '''
      - If invariant_check_name is not None, check it at the end for the
@@ -112,6 +114,8 @@ class Replayer(ControlFlow):
         event.passive = default_dp_permit
 
     self.print_buffers_flag = print_buffers
+    self.fail_fast = fail_fast
+    self.check_interval = check_interval
 
     # compute interpolate to time to be just before first event
     self.compute_interpolated_time(self.dag.events[0])
@@ -316,6 +320,8 @@ class Replayer(ControlFlow):
           # TODO(cs): we don't actually allow new internal message events
           # through.. we only let new state changes through. Should experiment
           # with whether we would get better fidelity if we let them through.
+          if self.fail_fast and (i % self.check_interval) == 0 and self._check_violation():
+            return
           event_scheduler.schedule(event)
           if self.logical_time != event.round:
             self.logical_time = event.round
@@ -342,23 +348,7 @@ class Replayer(ControlFlow):
         else:
           time.sleep(self.end_wait_seconds)
 
-        # TODO(cs): this does not verify whether the violation is persistent
-        # or transient. Perhaps it should?
-        violations = self.invariant_check(self.simulation)
-        self.simulation.violation_found = False
-        if violations != []:
-          self._log_input_event(InvariantViolation(violations))
-          msg.fail("Violations at end of trace: %s" % str(violations))
-          if self.bug_signature:
-            if self.bug_signature in violations:
-              self.simulation.violation_found = True
-              msg.success("Violation found %s" % self.bug_signature)
-            else:
-              msg.fail("Violation does not match violation signature!")
-          else:
-            self.simulation.violation_found = True
-        else:
-          msg.success("No correctness violations!")
+        self._check_violation()
     finally:
       if self.old_interrupt:
         signal.signal(signal.SIGINT, self.old_interrupt)
@@ -368,6 +358,29 @@ class Replayer(ControlFlow):
     if self.end_in_interactive:
       interactive = Interactive(self.simulation_cfg, input_logger=self._input_logger)
       interactive.simulate(self.simulation, bound_objects=( ('replayer', self), ))
+
+  def _check_violation(self):
+    # TODO(cs): this does not verify whether the violation is persistent
+    # or transient. Perhaps it should?
+    violations = self.invariant_check(self.simulation)
+    self.simulation.violation_found = False
+    if violations != []:
+      self._log_input_event(InvariantViolation(violations))
+      msg.fail("Violations at end of trace: %s" % str(violations))
+      if self.bug_signature:
+        if self.bug_signature in violations:
+          self.simulation.violation_found = True
+          msg.success("Violation found %s" % self.bug_signature)
+          return True
+        else:
+          msg.fail("Violation does not match violation signature!")
+          return False
+      else:
+        self.simulation.violation_found = True
+        return True
+    else:
+      msg.success("No correctness violations!")
+      return False
 
   def _check_early_state_changes(self, dag, current_index, input):
     ''' Check whether any pending state change that were supposed to come
