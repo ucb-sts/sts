@@ -87,6 +87,25 @@ class Replayer(ControlFlow):
     # Label uniquely identifying this replay, set in init_results()
     if os.path.isfile(simulation_cfg.bug_file):
       os.remove(simulation_cfg.bug_file)
+    """
+    # Make sure the old CID history for ONOS correct
+    with open(cids_file) as cids:
+      prev_cid = "10"
+      for line in cids:
+        if line.startswith("X"):
+          prev_cid = line.split(" ")[1].strip()
+          continue
+        with open("/mnt/ahassany/vagrant_onosdev/ONOS/cid_onosdev1", 'w') as f:
+          f.write(prev_cid + "\n")
+
+    """
+    cids_file = "/mnt/ahassany/vagrant_onosdev/ONOS/onosdev1_cids.txt"
+    with open(cids_file,'r+') as f:
+        content = f.read()
+        f.seek(0,0)
+        f.write("10\n4\n" + content)
+    with open("/mnt/ahassany/vagrant_onosdev/ONOS/cid_onosdev1", 'w') as f:
+      f.write("10" + "\n")
     self.replay_id = "N/A"
     self.logical_time = 0
     if wait_on_deterministic_values:
