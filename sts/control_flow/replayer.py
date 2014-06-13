@@ -30,6 +30,7 @@ from sts.control_flow.base import ControlFlow, ReplaySyncCallback
 from sts.util.convenience import find, find_index, base64_encode
 from sts.topology import BufferedPatchPanel
 from sts.entities import FuzzSoftwareSwitch
+from sts.entities.base import LocalEntity
 from config.invariant_checks import name_to_invariant_check
 
 import signal
@@ -39,7 +40,26 @@ import sys
 import os
 from collections import defaultdict
 
+
 log = logging.getLogger("Replayer")
+
+
+def setup():
+  vagrant_dir = "/mnt/ahassany/vagrant_onosdev"
+  cmd_exec = LocalEntity(redirect_output=True, cwd=vagrant_dir)
+  cmd_exec.execute_command("onos stop")
+  cmd_exec.execute_command("zk stop")
+  cmd_exec.execute_command("cassandra  stop")
+  #cmd_exec.execute_command("echo 'sleeping for 10sec'; sleep 10")
+  cmd_exec.execute_command("./scripts/conf_setup.sh 2;")
+  cmd_exec.execute_command("zk start")
+  cmd_exec.execute_command("cassandra  start")
+  cmd_exec.execute_command("echo 'sleeping for 10sec'; sleep 10")
+  cmd_exec.execute_command("cassandra cleandb;")
+  cmd_exec.execute_command("echo 'sleeping for 10sec'; sleep 10")
+  #cmd_exec.execute_command("onos start")
+  #cmd_exec.execute_command("echo 'sleeping for 40sec'; sleep 40")
+
 
 class Replayer(ControlFlow):
   '''
@@ -84,7 +104,7 @@ class Replayer(ControlFlow):
        execution
     '''
     ControlFlow.__init__(self, simulation_cfg)
-    # Label uniquely identifying this replay, set in init_results()
+    setup()
     if os.path.isfile(simulation_cfg.bug_file):
       os.remove(simulation_cfg.bug_file)
     """
@@ -106,6 +126,7 @@ class Replayer(ControlFlow):
         f.write("10\n4\n" + content)
     with open("/mnt/ahassany/vagrant_onosdev/ONOS/cid_onosdev1", 'w') as f:
       f.write("10" + "\n")
+    # Label uniquely identifying this replay, set in init_results()
     self.replay_id = "N/A"
     self.logical_time = 0
     if wait_on_deterministic_values:
