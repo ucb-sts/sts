@@ -113,7 +113,7 @@ synthetic_bugs = [
   Experiment.new("trigger_memory_leak3_mcs", "Memory leak"),
   Experiment.new("syn_mem_corruption_3switch_fuzzer_mcs", "Memory corruption"),
   # Known bugs:
-  Experiment.new("onos_controller_id_bug_mcs", "ONOS master election"),
+  Experiment.new("onos_id_bug_fixed_ids_file_mcs4", "ONOS master election"),
   Experiment.new("load_balancer_fuzzer_mcs", "POX Load Balancer Error Checking")
   # N.B. Floodlight failover bug predates the experiments repository..
 ]
