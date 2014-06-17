@@ -255,6 +255,7 @@ class TopologyGraphTest(unittest.TestCase):
     self.assertEquals(h1, 'h1')
     self.assertEquals(len(topo._g.vertices), 3)
     self.assertEquals(list(topo.hosts_iter()), [h1])
+    self.assertEquals(topo.hosts, [topo.get_host_info(h1)])
     self.assertEquals(list(topo.interfaces_iter()), ['h1-eth0', 'h1-eth1'])
     self.assertEquals(len(topo.get_host_info(h1)['interfaces']), 2)
     self.assertEquals(topo.get_host_info(h1)['name'], h1)
@@ -298,6 +299,8 @@ class TopologyGraphTest(unittest.TestCase):
     # Assert
     self.assertEquals(len(list(topo.switches_iter())), 2)
     self.assertEquals(list(topo.switches_iter()), [sw1, sw2])
+    self.assertEquals(topo.switches,
+                      [topo.get_switch_info(sw1), topo.get_switch_info(sw2)])
     self.assertEquals(len(list(topo.ports_iter())), 2)
     self.assertEquals(len(topo._g.vertices), 4)
     self.assertItemsEqual(list(topo.ports_iter()), ['s2-1', 's2-2'])
@@ -324,7 +327,6 @@ class TopologyGraphTest(unittest.TestCase):
     self.assertEquals(list(topo.switches_iter()), [sw1])
     self.assertItemsEqual(list(topo.ports_iter()), [p1, p2])
     self.assertEquals(len(topo.get_switch_info(sw1)['ports']), 2)
-
 
   def test_add_link(self):
     # Arrange

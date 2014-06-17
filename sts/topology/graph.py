@@ -247,6 +247,12 @@ class TopologyGraph(object):
     return self._g.vertices_iter_with_check(check=self.is_host,
                                             include_attrs=include_attrs)
 
+  @property
+  def hosts(self):
+    """List of hosts (objects not just IDs) in the topology"""
+    hosts = [host for _, host in self.hosts_iter(True)]
+    return hosts
+
   def interfaces_iter(self, include_attrs=False):
     """
     Iterates over host interfaces in the topology.
@@ -279,6 +285,12 @@ class TopologyGraph(object):
     """
     return self._g.vertices_iter_with_check(check=self.is_switch,
                                             include_attrs=include_attrs)
+
+  @property
+  def switches(self):
+    """List of Switches (objects not just IDs) in the topology"""
+    switches = [switch for _, switch in self.switches_iter(True)]
+    return switches
 
   def links_iter(self, include_attrs=False):
     """
