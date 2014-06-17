@@ -32,7 +32,7 @@ class Graph(object):
     """
     Args:
       vertices: dict of vertex_id->attrs
-      edge: adjacency matrix
+      edges: adjacency matrix
     """
     self._vertices = {}
     self._edges = {}
@@ -188,9 +188,9 @@ class TopologyGraph(object):
   """
   A high level graph of the network topology.
 
-  When extending this class, make sure to revisit and change the policies (if
-  necessary) for example changing can_add_host, can_add_switch, can_add_link,
-  can_change_link_status, can_crash_switch.
+  This graph considers ports and host interfaces as vertices with bidirectional
+  edges to the switch/host. To tell if the edge is a link or a switch-port
+  or host-interface association see `is_link`.
   """
 
   _host_hids = count(1) # host id counter
@@ -200,19 +200,6 @@ class TopologyGraph(object):
   def __init__(self, hosts=None, switches=None, links=None):
     super(TopologyGraph, self).__init__()
     self._g = Graph()
-
-    # Some basic checks to deal the graph
-    self._host_check = lambda vertex, attrs: attrs.get('vtype', None) == VertexType.HOST
-    self._interface_check = lambda vertex, attrs: attrs.get('vtype', None) == VertexType.INTERFACE
-    self._switch_check = lambda vertex, attrs: attrs.get('vtype', None) == VertexType.SWITCH
-    self._port_check = lambda vertex, attrs: attrs.get('vtype', None) == VertexType.PORT
-    def link_check(v1, v2, attrs):
-      # Check if it's an actual link
-      src_node = attrs.get('src_node', None)
-      dst_node = attrs.get('dst_node', None)
-      return src_node is not None and dst_node is not None
-    self._link_check = link_check
-
     # Load initial configurations
     hosts = hosts or []
     switches = switches or []
@@ -224,6 +211,32 @@ class TopologyGraph(object):
     for link in links:
       self.add_link(**link)
 
+  def is_host(self, vertex, attrs):
+    """Returns True if the vertex is a host."""
+    return attrs.get('vtype', None) == VertexType.HOST
+
+  def is_interface(self, vertex, attrs):
+    """Returns True if the vertex is an interface."""
+    return attrs.get('vtype', None) == VertexType.INTERFACE
+
+  def is_switch(self, vertex, attrs):
+    """Returns True if the vertex is a switch."""
+    return attrs.get('vtype', None) == VertexType.SWITCH
+
+  def is_port(self, vertex, attrs):
+    """Returns True if the vertex is a port for a switch."""
+    return attrs.get('vtype', None) == VertexType.PORT
+
+  def is_link(self, vertex1, vertex2, attrs):
+    """Check if it's an actual network (or access) link.
+
+    This check is distinguish the network links from the virtual port-switch
+    or host-interface edges.
+    """
+    src_node = attrs.get('src_node', None)
+    dst_node = attrs.get('dst_node', None)
+    return src_node is not None and dst_node is not None
+
   def hosts_iter(self, include_attrs=False):
     """
     Iterates over hosts in the topology.
@@ -231,7 +244,7 @@ class TopologyGraph(object):
     Args:
       include_attr: If true not only host is returned but the attributes as well
     """
-    return self._g.vertices_iter_with_check(check=self._host_check,
+    return self._g.vertices_iter_with_check(check=self.is_host,
                                             include_attrs=include_attrs)
 
   def interfaces_iter(self, include_attrs=False):
@@ -242,7 +255,7 @@ class TopologyGraph(object):
       include_attr: If true not only interfaces are returned but the attributes
                     as well
     """
-    return self._g.vertices_iter_with_check(check=self._interface_check,
+    return self._g.vertices_iter_with_check(check=self.is_interface,
                                             include_attrs=include_attrs)
 
   def ports_iter(self, include_attrs=False):
@@ -253,7 +266,7 @@ class TopologyGraph(object):
       include_attr: If true not only ports are returned but the attributes
                     as well
     """
-    return self._g.vertices_iter_with_check(check=self._port_check,
+    return self._g.vertices_iter_with_check(check=self.is_port,
                                             include_attrs=include_attrs)
 
   def switches_iter(self, include_attrs=False):
@@ -264,7 +277,7 @@ class TopologyGraph(object):
       include_attr: If true not only switches are returned but the attributes
                     as well
     """
-    return self._g.vertices_iter_with_check(check=self._switch_check,
+    return self._g.vertices_iter_with_check(check=self.is_switch,
                                             include_attrs=include_attrs)
 
   def links_iter(self, include_attrs=False):
@@ -276,7 +289,7 @@ class TopologyGraph(object):
                     as well
     """
     for src_port, dst_port, value in self.edges_iter(include_attrs=True):
-      if not self._link_check(src_port, dst_port, value):
+      if not self.is_link(src_port, dst_port, value):
         continue
       src_node = value.get('src_node', None)
       dst_node = value.get('dst_node', None)
