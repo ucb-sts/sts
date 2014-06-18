@@ -246,133 +246,185 @@ class TopologyGraphTest(unittest.TestCase):
 
   def test_add_host(self):
     # Arrange
-    if1 = dict(hw_addr='00:00:00:00:00:01', ips='192.168.56.21')
-    if2 = dict(hw_addr='00:00:00:00:00:02', ips='192.168.56.22')
-    topo = TopologyGraph()
+    h1_eth1 = mock.Mock()
+    h1_eth1.port_no = 'h1_eth1'
+    h2_eth1 = mock.Mock()
+    h2_eth1.port_no = 'h2_eth1'
+    h1 = mock.Mock()
+    h1.interfaces = [h1_eth1]
+    h1.name = "h1"
+    h1.hid = "h1"
+    h2 = mock.Mock()
+    h2.interfaces = [h2_eth1]
+    h2.name = "h2"
+    h2.hid = "h2"
+    h3 = mock.Mock()
+    h3.name = "h3"
+    h3.hid = "h3"
+    graph = TopologyGraph()
     # Act
-    h1 = topo.add_host(interfaces=[if1, if2], name='h1')
+    graph.add_host(h1)
+    graph.add_host(h2)
     # Assert
-    self.assertEquals(h1, 'h1')
-    self.assertEquals(len(topo._g.vertices), 3)
-    self.assertEquals(list(topo.hosts_iter()), [h1])
-    self.assertEquals(topo.hosts, [topo.get_host_info(h1)])
-    self.assertEquals(list(topo.interfaces_iter()), ['h1-eth0', 'h1-eth1'])
-    self.assertEquals(len(topo.get_host_info(h1)['interfaces']), 2)
-    self.assertEquals(topo.get_host_info(h1)['name'], h1)
+    self.assertItemsEqual([h1.name, h2.name], list(graph.hosts_iter(False)))
+    self.assertTrue(graph.has_host(h1.name))
+    self.assertTrue(graph.has_host(h2.name))
+    self.assertFalse(graph.has_host(h3.name))
 
-  def test_add_interface_to_host(self):
+  def test_remove_host(self):
     # Arrange
-    if1_params = dict(hw_addr='00:00:00:00:00:01', ips='192.168.56.21',
-                      port_no=10)
-    if2_params = dict(hw_addr='00:00:00:00:00:02', ips='192.168.56.22',
-                      port_no=11)
-    topo = TopologyGraph()
-    h1 = topo.add_host(interfaces=None, name='h1', hid='1')
+    h1_eth1 = mock.Mock()
+    h1_eth1.port_no = 'h1_eth1'
+    h2_eth1 = mock.Mock()
+    h2_eth1.port_no = 'h2_eth1'
+    h1 = mock.Mock()
+    h1.interfaces = [h1_eth1]
+    h1.name = "h1"
+    h1.hid = "h1"
+    h2 = mock.Mock()
+    h2.interfaces = [h2_eth1]
+    h2.name = "h2"
+    h2.hid = "h2"
+    h3 = mock.Mock()
+    h3.name = "h3"
+    h3.hid = "h3"
+    graph = TopologyGraph()
+    graph.add_host(h1)
+    graph.add_host(h2)
     # Act
-    if1 = topo.add_interface_to_host(h1, hw_addr=if1_params['hw_addr'],
-                                     ips=if1_params['ips'],
-                                     port_no=if1_params['port_no'])
-    if2 = topo.add_interface_to_host(h1, hw_addr=if2_params['hw_addr'],
-                                     ips=if2_params['ips'])
+    graph.remove_host(h1.name)
+    graph.remove_host(h2.name)
+    remove_h3 = lambda: graph.remove_host(h3.name)
     # Assert
-    self.assertEquals(h1, 'h1')
-    self.assertEquals(if1, 'h1-eth10')
-    self.assertEquals(if2, 'h1-eth11')
-    self.assertEquals(len(topo._g.vertices), 3)
-    self.assertEquals(list(topo.hosts_iter()), [h1])
-    self.assertEquals(list(topo.interfaces_iter()), ['h1-eth10', 'h1-eth11'])
-    self.assertEquals(len(topo.get_host_info(h1)['interfaces']), 2)
-    self.assertEquals(topo.get_host_info(h1)['name'], h1)
+    self.assertRaises(AssertionError, remove_h3)
+    self.assertFalse(graph.hosts)
+    self.assertFalse(graph.has_host(h1.name))
+    self.assertFalse(graph.has_host(h2.name))
+    self.assertFalse(graph.has_host(h3.name))
 
   def test_add_switch(self):
     # Arrange
-    p1 = dict(hw_addr='00:00:00:00:01:01', port_no=1)
-    p2 = dict(hw_addr='00:00:00:00:01:02', port_no=2)
-    dpid1 = 1
-    dpid2 = 2
-    sw1_ports = None
-    sw2_ports = [p1, p2]
-    topo = TopologyGraph()
+    s1 = mock.Mock()
+    s1.name = "s1"
+    s1.dpid = "1"
+    s1.ports = {1: mock.Mock()}
+    s2 = mock.Mock()
+    s2.name = "s2"
+    s2.dpid = "2"
+    s2.ports = {2: mock.Mock()}
+    s3 = mock.Mock()
+    s3.name = "s3"
+    s3.dpid = "3"
+    graph = TopologyGraph()
     # Act
-    sw1 = topo.add_switch(dpid=dpid1, ports=sw1_ports)
-    sw2 = topo.add_switch(dpid=dpid2, ports=sw2_ports)
+    graph.add_switch(s1)
+    graph.add_switch(s2)
     # Assert
-    self.assertEquals(len(list(topo.switches_iter())), 2)
-    self.assertEquals(list(topo.switches_iter()), [sw1, sw2])
-    self.assertEquals(topo.switches,
-                      [topo.get_switch_info(sw1), topo.get_switch_info(sw2)])
-    self.assertEquals(len(list(topo.ports_iter())), 2)
-    self.assertEquals(len(topo._g.vertices), 4)
-    self.assertItemsEqual(list(topo.ports_iter()), ['s2-1', 's2-2'])
-    self.assertEquals(len(topo.get_switch_info(sw1)['ports']), 0)
-    self.assertEquals(len(topo.get_switch_info(sw2)['ports']), 2)
-    self.assertEquals(topo.get_switch_info(sw1)['name'], sw1)
-    self.assertEquals(topo.get_switch_info(sw2)['name'], sw2)
+    self.assertItemsEqual([s1.name, s2.name], list(graph.switches_iter(False)))
+    self.assertTrue(graph.has_switch(s1.name))
+    self.assertTrue(graph.has_switch(s2.name))
+    self.assertFalse(graph.has_switch(s3.name))
 
-  def test_add_port_to_switch(self):
+  def test_remove_switch(self):
     # Arrange
-    p1_params = dict(hw_addr='00:00:00:00:00:01', port_no=10)
-    p2_params = dict(hw_addr='00:00:00:00:00:02')
-    sw1_params = dict(dpid=1, ports=None)
-    topo = TopologyGraph()
-    sw1 = topo.add_switch(**sw1_params)
+    s1 = mock.Mock()
+    s1.name = "s1"
+    s1.dpid = "1"
+    s1.ports = {1: mock.Mock()}
+    s2 = mock.Mock()
+    s2.name = "s2"
+    s2.dpid = "2"
+    s2.ports = {2: mock.Mock()}
+    s3 = mock.Mock()
+    s3.name = "s3"
+    s3.dpid = "3"
+    graph = TopologyGraph()
+    graph.add_switch(s1)
+    graph.add_switch(s2)
     # Act
-    p1 = topo.add_port_to_switch(sw1, **p1_params)
-    p2 = topo.add_port_to_switch(sw1, **p2_params)
+    graph.remove_switch(s1.name)
+    graph.remove_switch(s2)
+    remove_s3 = lambda: graph.remove_switch(s3.dpid)
     # Assert
-    self.assertEquals(sw1, 's1')
-    self.assertEquals(p1, 's1-10')
-    self.assertEquals(p2, 's1-11')
-    self.assertEquals(len(topo._g.vertices), 3)
-    self.assertEquals(list(topo.switches_iter()), [sw1])
-    self.assertItemsEqual(list(topo.ports_iter()), [p1, p2])
-    self.assertEquals(len(topo.get_switch_info(sw1)['ports']), 2)
+    self.assertRaises(AssertionError, remove_s3)
+    self.assertFalse(graph.switches)
+    self.assertFalse(graph.has_host(s1.dpid))
+    self.assertFalse(graph.has_host(s2.dpid))
+    self.assertFalse(graph.has_host(s3.dpid))
 
   def test_add_link(self):
     # Arrange
-    if1_params = dict(hw_addr='00:00:00:00:00:01', ips='192.168.56.21')
-    p1_params = dict(hw_addr='00:00:00:00:00:02')
-    h1_params = dict(interfaces=None, name='h1')
-    sw1_params = dict(dpid=1, ports=None)
-    topo = TopologyGraph()
-    h1 = topo.add_host(**h1_params)
-    sw1 = topo.add_switch(**sw1_params)
-    if1 = topo.add_interface_to_host(h1, **if1_params)
-    p1 = topo.add_port_to_switch(sw1, **p1_params)
-    link_parmas = dict(foo='bar')
-    expected_link_params = link_parmas.copy()
-    expected_link_params['src_node'] = sw1
-    expected_link_params['dst_node'] = h1
-
+    s1 = mock.Mock()
+    s1.name = "s1"
+    s1.dpid = "1"
+    s1.ports = {1: mock.Mock(), 2: mock.Mock()}
+    s1.ports[1].port_no = 1
+    s1.ports[2].port_no = 2
+    s2 = mock.Mock()
+    s2.name = "s2"
+    s2.dpid = "2"
+    s2.ports = {1: mock.Mock(), 2: mock.Mock()}
+    s2.ports[1].port_no = 1
+    s2.ports[2].port_no = 2
+    l1 = mock.Mock()
+    l1.start_node = s1
+    l1.start_port = s1.ports[1]
+    l1.end_node = s2
+    l1.end_port = s2.ports[1]
+    l2 = mock.Mock()
+    l2.start_node = s1
+    l2.start_port = s1.ports[2]
+    l2.end_node = s2
+    l2.end_port = mock.Mock()
+    graph = TopologyGraph()
+    graph.add_switch(s1)
+    graph.add_switch(s2)
     # Act
-    topo.add_link(sw1, p1, h1, if1, **link_parmas)
+    link = graph.add_link(l1)
+    fail_add = lambda: graph.add_link(l2)
     # Assert
-    self.assertTrue(topo.has_link(sw1, p1, h1, if1))
+    self.assertEquals(link, l1)
+    self.assertTrue(graph.has_link(l1))
+    self.assertFalse(graph.has_link(l2))
+    self.assertIsNotNone(graph.get_link('s1-1', 's2-1'))
+    self.assertIsNone(graph.get_link('s1-2', 's2-2'))
+    self.assertRaises(AssertionError, fail_add)
 
-    self.assertEquals(topo.get_link(sw1, p1, h1, if1), expected_link_params)
 
-  def test_serialize(self):
+  def test_remove_link(self):
     # Arrange
-    if1_params = dict(hw_addr='00:00:00:00:00:01', ips='192.168.56.21')
-    p1_params = dict(hw_addr='00:00:00:00:00:02')
-    h1_params = dict(interfaces=None, name='h1')
-    sw1_params = dict(dpid=1, ports=None)
-    topo = TopologyGraph()
-    h1 = topo.add_host(**h1_params)
-    sw1 = topo.add_switch(**sw1_params)
-    if1 = topo.add_interface_to_host(h1, **if1_params)
-    p1 = topo.add_port_to_switch(sw1, **p1_params)
-    link_parmas = dict(foo='bar')
-    expected_link_params = link_parmas.copy()
-    expected_link_params['src_node'] = sw1
-    expected_link_params['dst_node'] = h1
-    topo.add_link(sw1, p1, h1, if1, **link_parmas)
+    s1 = mock.Mock()
+    s1.name = "s1"
+    s1.dpid = "1"
+    s1.ports = {1: mock.Mock(), 2: mock.Mock()}
+    s1.ports[1].port_no = 1
+    s1.ports[2].port_no = 2
+    s2 = mock.Mock()
+    s2.name = "s2"
+    s2.dpid = "2"
+    s2.ports = {1: mock.Mock(), 2: mock.Mock()}
+    s2.ports[1].port_no = 1
+    s2.ports[2].port_no = 2
+    l1 = mock.Mock()
+    l1.start_node = s1
+    l1.start_port = s1.ports[1]
+    l1.end_node = s2
+    l1.end_port = s2.ports[1]
+    l2 = mock.Mock()
+    l2.start_node = s1
+    l2.start_port = s1.ports[2]
+    l2.end_node = s2
+    l2.end_port = s2.ports[2]
+    graph = TopologyGraph()
+    graph.add_switch(s1)
+    graph.add_switch(s2)
+    graph.add_link(l1)
     # Act
-    json_dict = topo.to_json()
-    topo2 = TopologyGraph.from_json(json_dict)
+    graph.remove_link(l1)
+    fail_remove = lambda: graph.remove_link(l2)
     # Assert
-    self.assertEquals(json_dict['__type__'], 'sts.topology.graph.TopologyGraph')
-    self.assertItemsEqual(list(topo.switches_iter()),
-                          list(topo2.switches_iter()))
-    self.assertItemsEqual(list(topo.hosts_iter()), list(topo2.hosts_iter()))
-    self.assertItemsEqual(list(topo.links_iter()), list(topo2.links_iter()))
+    self.assertFalse(graph.has_link(l1))
+    self.assertFalse(graph.has_link(l2))
+    self.assertIsNone(graph.get_link("s1-1", "s2-1"))
+    self.assertIsNone(graph.get_link("s1-2", "s2-2"))
+    self.assertRaises(AssertionError, fail_remove)

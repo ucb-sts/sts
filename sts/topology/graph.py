@@ -17,12 +17,6 @@ A Simple Library for topology graphs.
 """
 
 
-from itertools import count
-
-from sts.util.convenience import class_fullname
-from sts.util.convenience import object_fullname
-
-
 class Graph(object):
   """
   A generic graph representation
@@ -91,6 +85,9 @@ class Graph(object):
     self._vertices[vertex] = attrs
     return vertex
 
+  def get_vertix(self, vertex):
+    return self._vertices[vertex]
+
   def remove_vertex(self, vertex, remove_edges=True):
     assert self.has_vertex(vertex)
     edges = []
@@ -148,7 +145,7 @@ class Graph(object):
     return v1, v2
 
   def remove_edge(self, v1, v2):
-    assert self.has_edge(v1, v2)
+    assert self.has_edge(v1, v2), "No edge between '%s' and '%s'" % (v1, v2)
     del self._edges[v1][v2]
 
   def has_edge(self, v1, v2):
@@ -184,6 +181,12 @@ class VertexType(object):
   INTERFACE = 'INTERFACE'
 
 
+class EdgeType(object):
+  """Edges Type for Network graph"""
+  LINK = 'link'
+  INTERNAL_LINK = 'internal_link' # for switch-port and host-interface links
+
+
 class TopologyGraph(object):
   """
   A high level graph of the network topology.
@@ -191,12 +194,16 @@ class TopologyGraph(object):
   This graph considers ports and host interfaces as vertices with bidirectional
   edges to the switch/host. To tell if the edge is a link or a switch-port
   or host-interface association see `is_link`.
+
+  TODO: give the ability to pass a custom:
+    interfaces iterator: see `_interfaces_iter`
+    ports iterator: see `_ports_iter`
+    host vertex id: see `_host_vertex_id`
+    interface vertex id: see `_interface_vertex_id`
+    switch vertex id: see `_switch_vertex_id`
+    port vertex id: see `_port_vertex_id`
+    link vertices: see `_get_link_vertices`
   """
-
-  _host_hids = count(1) # host id counter
-  _dpids = count(1) # dpid counter
-
-
   def __init__(self, hosts=None, switches=None, links=None):
     super(TopologyGraph, self).__init__()
     self._g = Graph()
@@ -233,9 +240,54 @@ class TopologyGraph(object):
     This check is distinguish the network links from the virtual port-switch
     or host-interface edges.
     """
-    src_node = attrs.get('src_node', None)
-    dst_node = attrs.get('dst_node', None)
-    return src_node is not None and dst_node is not None
+    return attrs.get('etype', None) == EdgeType.LINK
+
+  def _host_vertex_id(self, host):
+    """Utility method to get the vertex ID for a host"""
+    return getattr(host, 'name', getattr(host, 'hid', host))
+
+  def _interface_vertex_id(self, interface):
+    """Utility method to get the vertex ID for an Interface"""
+    return getattr(interface, 'port_no', getattr(interface, 'name', interface))
+
+  def _port_vertex_id(self, switch, port):
+    """Utility method to get the vertex ID for an Interface"""
+    port_no = getattr(port, 'port_no', getattr(port, 'name', port))
+    sid = self._switch_vertex_id(switch)
+    return "%s-%s" % (sid, port_no)
+
+  def _switch_vertex_id(self, switch):
+    """Utility method to get the vertex ID for a switch"""
+    return getattr(switch, 'name', getattr(switch, 'dpid', switch))
+
+  def _get_link_vertices(self, link):
+    if hasattr(link, 'start_node'):
+      node1 = link.start_node
+      node2 = link.end_node
+      vertex1 = link.start_port
+      vertex2 = link.end_port
+    else:
+      node1 = link.node1
+      node2 = link.node2
+      vertex1 = link.port1
+      vertex2 = link.port2
+
+    def guess_vertex_id(node, vertex):
+      # This is ugly why to find out if the edge is an interface or a port.
+      # But necessary in order to keep out any information about vertices type
+      # from this class
+      v_port = self._port_vertex_id(node, vertex)
+      v_iface = self._interface_vertex_id(vertex)
+      if (self._g.has_vertex(v_port) and
+            self.is_port(v_port, self._g.get_vertix(v_port))):
+        v = v_port
+      elif (self._g.has_vertex(v_iface) and
+              self.is_interface(v_iface, self._g.get_vertix(v_iface))):
+        v = v_iface
+      else:
+        v = None
+      return v
+    return guess_vertex_id(node1, vertex1), guess_vertex_id(node2, vertex2)
 
   def hosts_iter(self, include_attrs=False):
     """
@@ -321,212 +373,214 @@ class TopologyGraph(object):
     """
     return self._g.edges_iter(include_attrs=include_attrs)
 
-  def add_host(self, interfaces=None, name=None, hid=None,
-               num_used_interfaces=None, **kwargs):
+  def has_host(self, host):
+    """Returns True if the host exists in the topology"""
+    hid = self._host_vertex_id(host)
+    return (self._g.has_vertex(hid) and
+            self.is_host(hid, self.get_host_attrs(hid)))
+
+  def has_switch(self, switch):
+    """Returns True if the topology has a switch with sid"""
+    sid = self._switch_vertex_id(switch)
+    return (self._g.has_vertex(sid) and
+            self.is_switch(sid, self.get_switch_attrs(sid)))
+
+  def _get_attrs(self, vertex, vtype):
+    """Returns all attributes for the vertex and checks it's type."""
+    info = self._g.vertices[vertex]
+    assert info.get('vtype', None) == vtype, \
+      "There is a vertex with the same ID but it's not a '%s'" % vtype
+    return info
+
+  def get_host_attrs(self, host):
+    """Returns all attributes for the host vertex"""
+    hid = self._host_vertex_id(host)
+    return self._get_attrs(hid, vtype=VertexType.HOST)
+
+  def get_switch_attrs(self, switch):
+    """Returns all attributes for the switch vertex"""
+    sid = self._switch_vertex_id(switch)
+    return self._get_attrs(sid, vtype=VertexType.SWITCH)
+
+  def get_host(self, host):
+    """Returns the host object"""
+    return self.get_host_attrs(host)['obj']
+
+  def get_switch(self, switch):
+    """Returns the switch object"""
+    return self.get_switch_attrs(switch)['obj']
+
+  def _interfaces_iterator(self, host):
     """
-    Adds Host to the topology.
+    Takes a Host object and return list of interfaces such that
+    each item is a tuple of the interface unique ID and the interface object.
 
-    kwargs:
-      interfaces: list of interfaces connected to the host (default [])
-      name: human readable name for the host (default h{hid})
-      hid: unique identifier for host (default autogen integer)
-      num_used_interfaces: interfaces to be assumed used and never use them
-                           when new links are added (the first n-ifaces in the
-                           interfaces list) (default 0)
-      kwargs: additional arguments to passed to the host factory
+    The reason for this method is to decouple reading the list of interfaces
+    connected to a host from the host type. It can be written to do it
+    differently for other host types
     """
-    attrs = kwargs.copy()
-    vtype = attrs.get('vtype', VertexType.HOST)
-    hid = hid if hid else self._host_hids.next()
-    vertex_id = name or "h%s" % hid
-    assert vertex_id not in self._g.vertices, "Host '%s' is already added" % hid
-    interfaces = interfaces if interfaces else []
-    interfaces = interfaces if isinstance(interfaces, list) else [interfaces]
-    assert len(interfaces) >= num_used_interfaces
+    interfaces = []
+    for interface in getattr(host, 'interfaces', []):
+      interfaces.append((self._interface_vertex_id(interface), interface))
+    return interfaces
 
-    # set unique port no for each interface
-    next_port_no = 0
-    for interface in interfaces:
-      port_no = interface.get('port_no', next_port_no)
-      port_no = port_no or next_port_no
-      interface['port_no'] = port_no
-      next_port_no = max(next_port_no, port_no) + 1
-      if not interface.get('name', None):
-        interface['name'] = "%s-eth%s" % (vertex_id, port_no)
-
-      interface['vtype'] = interface.get('vtype', VertexType.INTERFACE)
-      ips = interface.get('ips', [])
-      ips = ips if isinstance(ips, list) else [ips]
-      interface['ips'] = ips
-      self._g.add_vertex(interface['name'], **interface)
-    attrs['interfaces'] = interfaces
-    attrs['name'] = vertex_id
-    attrs['hid'] = hid
-    attrs['num_used_interfaces'] = num_used_interfaces
-    attrs['vtype'] = vtype
-    self._g.add_vertex(vertex_id, **attrs)
-    return vertex_id
-
-  def add_switch(self, dpid, name=None, ports=None, num_used_ports=0, **kwargs):
+  def _ports_iterator(self, switch):
     """
-    Add a switch to the topology
+    Takes a switch ID and Switch object and return list of ports such that
+    each item is a tuple of the port unique ID and the port object.
 
-    kwargs:
-      dpid: switch unique ID (default auto-generated integer)
-      name: switch unqiue human readable name (default s{dpid})
-      ports: list of switch ports
-      num_used_ports: number of reserved ports
-      kwargs: additional arguments passed to the switch factory
+    The reason for this method is to decouple reading the list of ports
+    connected to a switch from the switch type. It can be written to do it
+    differently for other switch types
     """
-    attrs = kwargs.copy()
-    vtype = attrs.get('vtype', VertexType.SWITCH)
-    vertex_id = name or "s%s" % dpid
-    assert vertex_id not in self._g.vertices,\
-      "Switch '%s' is already added" % dpid
-    ports = ports if ports else []
-    ports = ports if isinstance(ports, list) else [ports]
-    assert len(ports) >= num_used_ports
+    sid = self._switch_vertex_id(switch)
+    ports = []
+    for port_no, port in getattr(switch, 'ports', {}).iteritems():
+      ports.append(("%s-%s" % (getattr(switch, 'name', sid), port_no), port))
+    return ports
 
-     # set unique port no for each interface
-    next_port_no = 0
-    for port in ports:
-      port_no = port.get('port_no', next_port_no)
-      port_no = port_no or next_port_no
-      port['port_no'] = port_no
-      next_port_no = max(next_port_no, port_no) + 1
-      if not port.get('name', None):
-        port['name'] = "%s-%s" % (vertex_id, port_no)
-      port['vtype'] = VertexType.PORT
-      self._g.add_vertex(port['name'], **port)
-
-    attrs['dpid'] = dpid
-    attrs['name'] = vertex_id
-    attrs['ports'] = ports
-    attrs['num_used_ports'] = num_used_ports
-    attrs['vtype'] = vtype
-    self._g.add_vertex(vertex_id, **attrs)
-    return vertex_id
-
-  def add_interface_to_host(self, host_id, hw_addr, ips=None, port_no=None,
-                            name=None, **kwargs):
+  def _remove_vertex(self, vertex, vtype):
     """
-    Helper method to add a Host interface to existing host
+    Removes a vertex with all associated edges from the topology.
+
+    Also removes all associated links.
+    """
+    assert self._g.has_vertex(vertex), \
+      "Removing a vertex that doesn't exist: '%s'" % vertex
+    vertex_info = self._g.get_vertix(vertex)
+    assert vertex_info['vtype'] == vtype
+    # Remove edges that the interface is a source of
+    for src, dst in self._g.edges_src(vertex):
+      self._g.remove_edge(src, dst)
+    # Remove edges that the interface is a destination of
+    for src, dst in self._g.edges_dst(vertex):
+      self._g.remove_edge(src, dst)
+    self._g.remove_vertex(vertex)
+
+  def remove_interface(self, port_no):
+    """
+    Removes interface from the topology.
+
+    Also removes all associated links.
+    """
+    self._remove_vertex(port_no, VertexType.INTERFACE)
+
+  def remove_port(self, port_no):
+    """
+    Removes switch port from the topology.
+
+    Also removes all associated links.
+    """
+    self._remove_vertex(port_no, VertexType.PORT)
+
+  def add_host(self, host):
+    """
+    Add Host to the topology graph.
 
     Args:
-      host_id: the vertex id of the host (e.g. h1, h2)
-      hw_addr: Hardware address (MAC Address) of this interface
-      ips: List of IP addresses assigned to this interface
-      port_no: numerical unique number (per host) for the interface
-      name: Human Readable name for this interface (e.g. h1-eth0)
+      hid: Host unique ID
+      host: Host object. Little assumptions are made about the host type.
+            The only thing good to have is `_interfaces_iterator` works over it.
     """
-    assert self._g.has_vertex(host_id)
-    host_attrs = self.get_host_info(host_id)
-    assert host_attrs.get('vtype', None) == VertexType.HOST
-    attrs = kwargs.copy()
+    hid = self._host_vertex_id(host)
+    assert not self._g.has_vertex(hid)
+    self._g.add_vertex(hid, vtype=VertexType.HOST, obj=host)
+    for port_no, interface in self._interfaces_iterator(host):
+      self._g.add_vertex(port_no, vtype=VertexType.INTERFACE, obj=interface)
+      self._g.add_edge(hid, port_no, etype=EdgeType.INTERNAL_LINK)
+      self._g.add_edge(port_no, hid, etype=EdgeType.INTERNAL_LINK)
+    return hid
 
-    ips = ips or []
-    ips = attrs.get('ips', ips)
-    ips = ips if isinstance(ips, list) else [ips]
-    port_no = attrs.get('port_no', port_no)
-    if port_no is None:
-      port_no = 1 + max(
-        0, 0, *[iface.get('port_no', 0) for iface in host_attrs['interfaces']])
-    name = attrs.get('name', name)
-    name = name or "%s-eth%s" % (host_id, port_no)
-    assert not self._g.has_vertex(name)
-    vtype = attrs.get('vtype', VertexType.INTERFACE)
-    attrs['hw_addr'] = hw_addr
-    attrs['ips'] = ips
-    attrs['port_no'] = port_no
-    attrs['name'] = name
-    attrs['vtype'] = vtype
-    host_attrs['interfaces'].append(attrs)
-    self._g.add_vertex(name, **attrs)
-    return name
+  def remove_host(self, host):
+    """
+    Remove host from the topology
 
-  def add_port_to_switch(self, switch_id, hw_addr, port_no=None, name=None,
-                         **kwargs):
-    assert switch_id in self._g.vertices
-    switch_dict = self._g.vertices[switch_id]
-    assert switch_dict.get('vtype', None) == VertexType.SWITCH
-    if port_no is None:
-      port_no = 1 + max(
-        0, 0, *[p.get('port_no', 0) for p in switch_dict['ports']])
-    name = name or "%s-%s" % (switch_id, port_no)
-    assert not self._g.has_vertex(name)
-    port_dict = dict(hw_addr=hw_addr, port_no=port_no, name=name,
-                     vtype=VertexType.PORT, **kwargs)
-    switch_dict['ports'].append(port_dict)
-    self._g.add_vertex(name, **port_dict)
-    return name
+    Also remove all associated links
+    """
+    hid = self._host_vertex_id(host)
+    assert self._g.has_vertex(hid), \
+      "Removing a host that doesn't exist: '%s'" % hid
+    interfaces = self._interfaces_iterator(self._g.get_vertix(hid)['obj'])
+    for port_no, _ in interfaces:
+      self.remove_interface(port_no)
+    self._remove_vertex(hid, VertexType.HOST)
 
-  def add_link(self, src_node, src_port, dst_node, dst_port, **kwargs):
-    assert src_node in self._g.vertices
-    assert src_port in self._g.vertices
-    assert dst_node in self._g.vertices
-    assert dst_port in self._g.vertices
+  def add_switch(self, switch):
+    """
+    Add Switch to the topology graph.
 
-    assert self._g.vertices[src_node].get('vtype', None) in\
-           [VertexType.HOST, VertexType.SWITCH]
-    assert self._g.vertices[src_port].get('vtype', None) in\
-           [VertexType.INTERFACE, VertexType.PORT]
-    assert self._g.vertices[dst_node].get('vtype', None) in\
-           [VertexType.HOST, VertexType.SWITCH]
-    assert self._g.vertices[dst_port].get('vtype', None) in\
-           [VertexType.INTERFACE, VertexType.PORT]
+    Args:
+      sid: Switch unique ID
+      switch: Switch object. Little assumptions are made about the Switch type.
+    """
+    sid = self._switch_vertex_id(switch)
+    assert not self._g.has_vertex(sid)
+    self._g.add_vertex(sid, vtype=VertexType.SWITCH, obj=switch)
+    for port_no, port in self._ports_iterator(switch):
+      self._g.add_vertex(port_no, vtype=VertexType.PORT, obj=port)
+      self._g.add_edge(sid, port_no, etype=EdgeType.INTERNAL_LINK)
+      self._g.add_edge(port_no, sid, etype=EdgeType.INTERNAL_LINK)
+    return sid
 
-    if not self._g.has_edge(src_node, src_port):
-      self._g.add_edge(src_node, src_port)
-    if not self._g.has_edge(dst_node, dst_port):
-      self._g.add_edge(dst_node, dst_port)
-    kwargs['src_node'] = src_node
-    kwargs['dst_node'] = dst_node
-    self._g.add_edge(src_port, dst_port, **kwargs)
+  def remove_switch(self, switch):
+    """
+    Removes a switch from the topology
 
-  def has_link(self, src_node, src_port, dst_node, dst_port):
-    return self.get_link(src_node, src_port, dst_node, dst_port) is not None
+    Also remove all associated links
+    """
+    sid = self._switch_vertex_id(switch)
+    assert self.has_switch(switch), \
+      "Removing a switch that doesn't exist: '%s'" % sid
+    ports = self._ports_iterator(self._g.get_vertix(sid)['obj'])
+    for port_no, _ in ports:
+      self.remove_port(port_no)
+    self._remove_vertex(sid, VertexType.SWITCH)
 
-  def get_link(self, src_node, src_port, dst_node, dst_port):
-    src_node_attrs = self._g.vertices.get(src_node, None)
-    dst_node_attrs = self._g.vertices.get(dst_node, None)
-    # Check if src_node and dst_node exist
-    if src_node_attrs is None or dst_node_attrs is None:
+  def add_link(self, link, bidir=False):
+    """
+    Adds a Link object connecting two vertices in the network graph.
+
+    If bidir is set to True, two edges will be added, one for each direction
+    """
+    src_vertex, dst_vertex = self._get_link_vertices(link)
+    assert src_vertex is not None
+    assert dst_vertex is not None
+    assert self._g.has_vertex(src_vertex)
+    assert self._g.has_vertex(dst_vertex)
+    if bidir:
+      self._g.add_edge(src_vertex, dst_vertex, obj=link, etype=EdgeType.LINK,
+                       bidir=bidir)
+      self._g.add_edge(dst_vertex, src_vertex, obj=link, etype=EdgeType.LINK,
+                        bidir=bidir)
+    else:
+      self._g.add_edge(src_vertex, dst_vertex, obj=link, etype=EdgeType.LINK,
+                        bidir=bidir)
+    return link
+
+  def get_link(self, src_vertex, dst_vertex):
+    """
+    Returns the Link object (if any) that is connecting two vertices in the
+    network.
+    """
+    if not self._g.has_edge(src_vertex, dst_vertex):
       return None
-    # Check if src_port is connected to src_node (and same for dst)
-    if not self._g.has_edge(src_node, src_port) or \
-        not self._g.has_edge(dst_node, dst_port):
-      return None
-    return self._g.get_edge(src_port, dst_port)
+    edge_attrs = self._g.get_edge(src_vertex, dst_vertex)
+    assert self.is_link(src_vertex, dst_vertex, edge_attrs), (
+      "There is an edge between '%s' and '%s' but it's not a Link" %
+      (src_vertex, dst_vertex))
+    return edge_attrs['obj']
 
-  def get_host_info(self, host_id):
-    info = self._g.vertices[host_id]
-    assert info.get('vtype', None) == VertexType.HOST
-    return info
+  def has_link(self, link):
+    """Returns True if there exists a link between src and dst."""
+    src_vertex, dst_vertex = self._get_link_vertices(link)
+    return self.get_link(src_vertex, dst_vertex) is not None
 
-  def get_switch_info(self, switch_id):
-    info = self._g.vertices[switch_id]
-    assert info.get('vtype', None) == VertexType.SWITCH
-    return info
-
-  def to_json(self):
-    json_dict = dict(hosts=[], switches=[], links=[])
-    json_dict['__type__'] = object_fullname(self)
-    json_dict['hosts'] = list(self.hosts_iter(True))
-    json_dict['switches'] = list(self.switches_iter(True))
-    json_dict['links'] = list(self.links_iter(True))
-    return json_dict
-
-  @classmethod
-  def from_json(cls, json_dict):
-    assert json_dict.get('__type__') == class_fullname(cls)
-    topo = cls()
-    for name, value in json_dict['hosts']:
-      topo.add_host(**value)
-    for name, value in json_dict['switches']:
-      topo.add_switch(**value)
-    for src_node, src_port, dst_node, dst_port, value in json_dict['links']:
-      attrs = value.copy()
-      attrs.pop('src_node', None)
-      attrs.pop('dst_node', None)
-      topo.add_link(src_node, src_port, dst_node, dst_port, **attrs)
-    return topo
+  def remove_link(self, link):
+    """Removes the link between src and dst."""
+    src_vertex, dst_vertex = self._get_link_vertices(link)
+    assert self.has_link(link), ("Link is not part of the graph: '%s'" % link)
+    bidir = self._g.get_edge(src_vertex, dst_vertex)
+    self._g.remove_edge(src_vertex, dst_vertex)
+    # Remove the other link in case of bidir links
+    if bidir and self._g.has_edge(dst_vertex, src_vertex):
+      self._g.remove_edge(dst_vertex, src_vertex)
