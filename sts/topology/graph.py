@@ -212,11 +212,11 @@ class TopologyGraph(object):
     switches = switches or []
     links = links or []
     for host in hosts:
-      self.add_host(**host)
+      self.add_host(host)
     for switch in switches:
-      self.add_switch(**switch)
+      self.add_switch(switch)
     for link in links:
-      self.add_link(**link)
+      self.add_link(link)
 
   def is_host(self, vertex, attrs):
     """Returns True if the vertex is a host."""
@@ -302,7 +302,7 @@ class TopologyGraph(object):
   @property
   def hosts(self):
     """List of hosts (objects not just IDs) in the topology"""
-    hosts = [host for _, host in self.hosts_iter(True)]
+    hosts = [self.get_host(hid) for hid in self.hosts_iter(False)]
     return hosts
 
   def interfaces_iter(self, include_attrs=False):
@@ -316,6 +316,13 @@ class TopologyGraph(object):
     return self._g.vertices_iter_with_check(check=self.is_interface,
                                             include_attrs=include_attrs)
 
+  @property
+  def interfaces(self):
+    """List of interfaces (objects not just IDs) in the topology"""
+    interfaces = [self.get_interface(iface) for iface in
+                  self.interfaces_iter(False)]
+    return interfaces
+
   def ports_iter(self, include_attrs=False):
     """
     Iterates over switch ports in the topology.
@@ -326,6 +333,12 @@ class TopologyGraph(object):
     """
     return self._g.vertices_iter_with_check(check=self.is_port,
                                             include_attrs=include_attrs)
+
+  @property
+  def ports(self):
+    """List of ports (objects not just IDs) in the topology"""
+    ports = [self.get_port(port) for port in self.ports_iter(False)]
+    return ports
 
   def switches_iter(self, include_attrs=False):
     """
@@ -341,7 +354,7 @@ class TopologyGraph(object):
   @property
   def switches(self):
     """List of Switches (objects not just IDs) in the topology"""
-    switches = [switch for _, switch in self.switches_iter(True)]
+    switches = [self.get_switch(switch) for switch in self.switches_iter(False)]
     return switches
 
   def links_iter(self, include_attrs=False):
@@ -361,6 +374,12 @@ class TopologyGraph(object):
         yield src_node, src_port, dst_node, dst_port, value
       else:
         yield src_node, src_port, dst_node, dst_port
+
+  @property
+  def links(self):
+    """List of Links (objects not just IDs) in the topology"""
+    Links = [link['obj'] for _, _, _, _, link in self.links_iter(True)]
+    return Links
 
   def edges_iter(self, include_attrs=False):
     """
@@ -402,6 +421,16 @@ class TopologyGraph(object):
     sid = self._switch_vertex_id(switch)
     return self._get_attrs(sid, vtype=VertexType.SWITCH)
 
+  def get_interface_attrs(self, interface):
+    """Returns all attributes for the interface vertex"""
+    interface_id = self._host_vertex_id(interface)
+    return self._get_attrs(interface_id, vtype=VertexType.INTERFACE)
+
+  def get_port_attrs(self, port):
+    """Returns all attributes for the port vertex"""
+    port_id = self._host_vertex_id(port)
+    return self._get_attrs(port_id, vtype=VertexType.PORT)
+
   def get_host(self, host):
     """Returns the host object"""
     return self.get_host_attrs(host)['obj']
@@ -409,6 +438,14 @@ class TopologyGraph(object):
   def get_switch(self, switch):
     """Returns the switch object"""
     return self.get_switch_attrs(switch)['obj']
+
+  def get_interface(self, interface):
+    """Returns the interface object"""
+    return self.get_interface_attrs(interface)['obj']
+
+  def get_port(self, port):
+    """Returns the port object"""
+    return self.get_port_attrs(port)['obj']
 
   def _interfaces_iterator(self, host):
     """
@@ -497,12 +534,12 @@ class TopologyGraph(object):
 
     Also remove all associated links
     """
-    hid = self._host_vertex_id(host)
-    assert self._g.has_vertex(hid), \
-      "Removing a host that doesn't exist: '%s'" % hid
-    interfaces = self._interfaces_iterator(self._g.get_vertix(hid)['obj'])
+    assert self.has_host(host), \
+      "Removing a host that doesn't exist: '%s'" % host
+    interfaces = self._interfaces_iterator(self.get_host(host))
     for port_no, _ in interfaces:
       self.remove_interface(port_no)
+    hid = self._host_vertex_id(host)
     self._remove_vertex(hid, VertexType.HOST)
 
   def add_switch(self, switch):
@@ -579,7 +616,7 @@ class TopologyGraph(object):
     """Removes the link between src and dst."""
     src_vertex, dst_vertex = self._get_link_vertices(link)
     assert self.has_link(link), ("Link is not part of the graph: '%s'" % link)
-    bidir = self._g.get_edge(src_vertex, dst_vertex)
+    bidir = self._g.get_edge(src_vertex, dst_vertex)['bidir']
     self._g.remove_edge(src_vertex, dst_vertex)
     # Remove the other link in case of bidir links
     if bidir and self._g.has_edge(dst_vertex, src_vertex):

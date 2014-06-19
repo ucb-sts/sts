@@ -19,6 +19,7 @@ from pox.openflow.libopenflow_01 import ofp_phy_port
 
 from sts.entities.hosts import Host
 from sts.entities.hosts import HostInterface
+from sts.entities.sts_entities import AccessLink
 from sts.entities.sts_entities import Link
 from sts.entities.sts_entities import FuzzSoftwareSwitch
 
@@ -251,6 +252,33 @@ class GraphTest(unittest.TestCase):
 
 class TopologyGraphTest(unittest.TestCase):
 
+  def test_init(self):
+    # Arrange
+    h1_eth1 = HostInterface(hw_addr='11:22:33:44:55:66', ip_or_ips='10.0.0.1')
+    h2_eth1 = HostInterface(hw_addr='11:22:33:44:55:77', ip_or_ips='10.0.0.2')
+    h1 = Host(h1_eth1, hid=1)
+    h2 = Host(h2_eth1, hid=2)
+    hosts = [h1, h2]
+    interfaces = [h1_eth1, h2_eth1]
+    s1 = FuzzSoftwareSwitch(1, 's1', ports=3)
+    s2 = FuzzSoftwareSwitch(2, 's2', ports=3)
+    s3 = FuzzSoftwareSwitch(3, 's3', ports=3)
+    switches = [s1, s2, s3]
+    ports = s1.ports.values() + s2.ports.values() + s3.ports.values()
+    l1 = Link(s1, s1.ports[1], s2, s2.ports[1])
+    l2 = Link(s1, s1.ports[2], s2, s2.ports[2])
+    l3 = AccessLink(h1, h1_eth1, s1, s1.ports[3])
+    l4 = AccessLink(h2, h2_eth1, s1, s2.ports[3])
+    links = [l1, l2, l3, l4]
+    # Act
+    graph = TopologyGraph(hosts, switches, links)
+    # Assert
+    self.assertItemsEqual(hosts, graph.hosts)
+    self.assertItemsEqual(switches, graph.switches)
+    self.assertItemsEqual(links, graph.links)
+    self.assertItemsEqual(interfaces, graph.interfaces)
+    self.assertItemsEqual(ports, graph.ports)
+
   def test_add_host(self):
     # Arrange
     h1_eth1 = HostInterface(hw_addr='11:22:33:44:55:66', ip_or_ips='10.0.0.1')
@@ -345,23 +373,28 @@ class TopologyGraphTest(unittest.TestCase):
 
   def test_remove_link(self):
     # Arrange
-    s1 = FuzzSoftwareSwitch(1, 's1', ports=3)
-    s2 = FuzzSoftwareSwitch(2, 's2', ports=3)
+    s1 = FuzzSoftwareSwitch(1, 's1', ports=4)
+    s2 = FuzzSoftwareSwitch(2, 's2', ports=4)
     l1 = Link(s1, s1.ports[1], s2, s2.ports[1])
     l2 = Link(s1, s1.ports[2], s2, s2.ports[2])
     l3 = Link(s1, s1.ports[3], s2, s2.ports[3])
+    l4 = Link(s1, s1.ports[4], s2, s2.ports[4])
     graph = TopologyGraph()
     graph.add_switch(s1)
     graph.add_switch(s2)
     graph.add_link(l1)
-    graph.add_link(l2)
+    graph.add_link(l2, bidir=l2)
+    graph.add_link(l3)
     # Act
     graph.remove_link(l1)
-    fail_remove = lambda: graph.remove_link(l3)
+    graph.remove_link(l2)
+    fail_remove = lambda: graph.remove_link(l4)
     # Assert
     self.assertFalse(graph.has_link(l1))
-    self.assertTrue(graph.has_link(l2))
+    self.assertFalse(graph.has_link(l2))
+    self.assertTrue(graph.has_link(l3))
     self.assertIsNone(graph.get_link("s1-1", "s2-1"))
-    self.assertIsNotNone(graph.get_link("s1-2", "s2-2"))
+    self.assertIsNone(graph.get_link("s1-2", "s2-2"))
+    self.assertIsNotNone(graph.get_link("s1-3", "s2-3"))
     self.assertRaises(AssertionError, fail_remove)
 
