@@ -98,6 +98,13 @@ class SwitchManagerAbstractClass(object):
     self._policy = policy
 
   @abc.abstractproperty
+  def switches(self):
+    """
+    Returns set of all switches managed by this manager.
+    """
+    raise NotImplementedError()
+
+  @abc.abstractproperty
   def live_switches(self):
     """Returns set of live switches (or what is suppose to live)"""
     raise NotImplementedError()
