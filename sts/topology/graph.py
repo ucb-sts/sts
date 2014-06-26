@@ -278,6 +278,7 @@ class TopologyGraph(object):
       # from this class
       v_port = self._port_vertex_id(node, vertex)
       v_iface = self._interface_vertex_id(vertex)
+      print "VVVV", v_port, v_iface
       if (self._g.has_vertex(v_port) and
             self.is_port(v_port, self._g.get_vertix(v_port))):
         v = v_port
@@ -476,6 +477,19 @@ class TopologyGraph(object):
       ports.append(("%s-%s" % (getattr(switch, 'name', sid), port_no), port))
     return ports
 
+  def _get_connected_edges(self, vertex):
+    """
+    Get all links that this vertex is connected to.
+    """
+    assert self._g.has_vertex(vertex), "Vertex  doesn't exist: '%s'" % vertex
+    vertex_info = self._g.get_vertix(vertex)
+    edges = []
+    for src, dst in self._g.edges_src(vertex):
+      edges.append(self._g.get_edge(src, dst))
+    for src, dst in self._g.edges_dst(vertex):
+      edges.append(self._g.get_edge(src, dst))
+    return edges
+
   def _remove_vertex(self, vertex, vtype):
     """
     Removes a vertex with all associated edges from the topology.
@@ -621,3 +635,29 @@ class TopologyGraph(object):
     # Remove the other link in case of bidir links
     if bidir and self._g.has_edge(dst_vertex, src_vertex):
       self._g.remove_edge(dst_vertex, src_vertex)
+
+  def get_host_links(self, host):
+    """
+    Return set of all links connected to the host.
+    """
+    interfaces = self._interfaces_iterator(self.get_host(host))
+    links = []
+    for port_no, _ in interfaces:
+      edge_attrs = self._get_connected_edges(port_no)
+      for edge in edge_attrs:
+        if edge['etype'] == EdgeType.LINK:
+          links.append(edge['obj'])
+    return links
+
+  def get_switch_links(self, switch):
+    """
+    Return set of all links connected to the switch.
+    """
+    ports = self._ports_iterator(switch)
+    links = []
+    for port_no, _ in ports:
+      edge_attrs = self._get_connected_edges(port_no)
+      for edge in edge_attrs:
+        if edge['etype'] == EdgeType.LINK:
+          links.append(edge['obj'])
+    return links
