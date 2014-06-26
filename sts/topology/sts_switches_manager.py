@@ -41,6 +41,13 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
     self._live_switches = set()
 
   @property
+  def switches(self):
+    switches = set()
+    switches = switches.union(self.live_switches)
+    switches = switches.union(self.failed_switches)
+    return switches
+
+  @property
   def live_switches(self):
     """Returns set of live switches (or what is suppose to live)"""
     return self._live_switches
@@ -93,11 +100,13 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
   def add_switch(self, switch):
     """Adds switch to be managed by this manager"""
     assert self._policy.can_add_switch
+    assert switch not in self.switches
     self._live_switches.add(switch)
 
   def remove_switch(self, switch):
     """Removes switch from this manager"""
     assert self._policy.can_remove_switch
+    assert switch in self.switches
     if switch in self.live_switches:
       self._live_switches.remove(switch)
     elif switch in self.failed_switches:

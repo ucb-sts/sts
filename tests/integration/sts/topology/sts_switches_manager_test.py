@@ -70,3 +70,17 @@ class STSSwitchesManagerTest(unittest.TestCase):
     self.assertNotIn(sw1, manager.failed_switches)
     self.assertIn(sw1, manager.live_switches)
     self.assertIn(sw2, manager.failed_switches)
+
+  def test_switches(self):
+    # Arrange
+    sw1 = FuzzSoftwareSwitch(1, 's1', ports=1)
+    sw2 = FuzzSoftwareSwitch(2, 's2', ports=1)
+    manager = STSSwitchesManager()
+    manager.add_switch(sw1)
+    manager.add_switch(sw2)
+    manager.crash_switch(sw1)
+    # Act
+    switches = manager.switches
+    # Assert
+    self.assertIn(sw1, switches)
+    self.assertIn(sw2, switches)
