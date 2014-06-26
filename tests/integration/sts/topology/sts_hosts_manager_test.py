@@ -146,3 +146,22 @@ class STSHostsManagerTest(unittest.TestCase):
     # Assert
     self.assertNotIn(host1, manager.down_hosts)
     self.assertNotIn(host2, manager.down_hosts)
+
+  def test_hosts(self):
+    # Arrange
+    host1 = Host(None, "h1", 1)
+    host2 = Host(None, "h2", 2)
+    host3 = Host(None, "h3", 3)
+    host4 = Host(None, "h4", 4)
+    manager = STSHostsManager()
+    manager.add_host(host1)
+    manager.add_host(host2)
+    manager.add_host(host3)
+    manager._failed_hosts.add(host4)
+    # Act
+    hosts = manager.hosts
+    # Assert
+    self.assertIn(host1, hosts)
+    self.assertIn(host2, hosts)
+    self.assertIn(host3, hosts)
+    self.assertIn(host4, hosts)

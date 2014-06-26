@@ -36,6 +36,13 @@ class STSHostsManager(HostsManagerAbstractClass):
     self._failed_hosts = set()
 
   @property
+  def hosts(self):
+    hosts = set()
+    hosts = hosts.union(self.live_hosts)
+    hosts = hosts.union(self.failed_hosts)
+    return hosts
+
+  @property
   def live_hosts(self):
     """Returns set of live hosts (or what is suppose to live)"""
     return self._live_hosts

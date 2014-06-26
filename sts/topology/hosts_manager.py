@@ -145,6 +145,11 @@ class HostsManagerAbstractClass(object):
     self.policy = policy
 
   @abc.abstractproperty
+  def hosts(self):
+    """Returns a set of all hosts managed by this manager."""
+    raise NotImplementedError()
+
+  @abc.abstractproperty
   def live_hosts(self):
     """Returns set of live hosts (or what is suppose to live)"""
     raise NotImplementedError()
