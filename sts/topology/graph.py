@@ -278,7 +278,6 @@ class TopologyGraph(object):
       # from this class
       v_port = self._port_vertex_id(node, vertex)
       v_iface = self._interface_vertex_id(vertex)
-      print "VVVV", v_port, v_iface
       if (self._g.has_vertex(v_port) and
             self.is_port(v_port, self._g.get_vertix(v_port))):
         v = v_port
