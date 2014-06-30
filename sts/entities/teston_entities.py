@@ -70,9 +70,11 @@ class TestONHost(HostAbstractClass):
 
 class TestONOVSSwitch(object):
   def __init__(self, dpid, name, ports):
-    self.ports = ports
+    self.ports = {}
     self.name = name
     self.dpid = dpid
+    for port in ports:
+      self.ports[port.name] = port
 
   def __str__(self):
     return self.name
