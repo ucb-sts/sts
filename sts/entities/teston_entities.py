@@ -18,14 +18,14 @@ from sts.entities.hosts import HostAbstractClass
 from sts.entities.hosts import HostInterface
 
 
-class MininetLink(BiDirectionalLinkAbstractClass):
+class TestONNetworkLink(BiDirectionalLinkAbstractClass):
   def __init__(self, node1, port1, node2, port2):
-    super(MininetLink, self).__init__(node1, port1, node2, port2)
+    super(TestONNetworkLink, self).__init__(node1, port1, node2, port2)
 
 
-class MininetAccessLink(BiDirectionalLinkAbstractClass):
+class TestONAccessLink(BiDirectionalLinkAbstractClass):
   def __init__(self, host, interface, switch, switch_port):
-    super(MininetAccessLink, self).__init__(host, interface, switch, switch_port)
+    super(TestONAccessLink, self).__init__(host, interface, switch, switch_port)
 
   @property
   def host(self):
@@ -44,17 +44,17 @@ class MininetAccessLink(BiDirectionalLinkAbstractClass):
     return self.port2
 
 
-class MininetHostInterface(HostInterface):
+class TestONHostInterface(HostInterface):
   def __init__(self, hw_addr, ips, name):
-    super(MininetHostInterface, self).__init__(hw_addr, ips, name)
+    super(TestONHostInterface, self).__init__(hw_addr, ips, name)
 
   def __repr__(self):
     return "%s:%s" % (self.name, ",".join([ip.toStr() for ip in self.ips]))
 
 
-class MininetHost(HostAbstractClass):
+class TestONHost(HostAbstractClass):
   def __init__(self, interfaces, name="", hid=None):
-    super(MininetHost, self).__init__(interfaces, name, hid)
+    super(TestONHost, self).__init__(interfaces, name, hid)
 
   def send(self, interface, packet):
     # Mininet doesn't really deal with multiple interfaces
@@ -64,10 +64,11 @@ class MininetHost(HostAbstractClass):
     pass
 
   def __repr__(self):
-    return "<Host " + self.name + ": " + ",".join([repr(i) for i in self.interfaces]) + ">"
+    return "<Host %s: %s>" % (self.name,
+                              ",".join([repr(i) for i in self.interfaces]))
 
 
-class MininetOVSSwitch(object):
+class TestONOVSSwitch(object):
   def __init__(self, dpid, name, ports):
     self.ports = ports
     self.name = name
@@ -77,10 +78,11 @@ class MininetOVSSwitch(object):
     return self.name
 
   def __repr__(self):
-    return "<OVSSwitch " + self.name + ": " + ",".join([repr(p) for p in self.ports]) + ">"
+    return "<OVSSwitch %s: %s>" % (self.name,
+                                   ",".join([repr(p) for p in self.ports]))
 
 
-class MininetPort(object):
+class TestONPort(object):
   def __init__(self, hw_addr, name, ips=None):
     self.hw_addr = hw_addr
     self.name = name
@@ -91,4 +93,3 @@ class MininetPort(object):
 
   def __repr__(self):
     return "%s:%s" % (self.name, self.ips)
-

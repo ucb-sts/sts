@@ -18,22 +18,22 @@ import re
 from sts.topology.base import Topology
 from sts.topology.base import PatchPanel
 
-from sts.entities.mn_entities import MininetHost
-from sts.entities.mn_entities import MininetHostInterface
-from sts.entities.mn_entities import MininetAccessLink
-from sts.entities.mn_entities import MininetLink
-from sts.entities.mn_entities import MininetPort
-from sts.entities.mn_entities import MininetOVSSwitch
+from sts.entities.mn_entities import TestONHost
+from sts.entities.mn_entities import TestONHostInterface
+from sts.entities.mn_entities import TestONAccessLink
+from sts.entities.mn_entities import TestONNetworkLink
+from sts.entities.mn_entities import TestONPort
+from sts.entities.mn_entities import TestONOVSSwitch
 
 from sts.util.console import msg
 
 
 class MininetPatchPanel(PatchPanel):
   def __init__(self, teston_mn):
-    super(MininetPatchPanel, self).__init__(link_cls=MininetLink,
-                                            access_link_cls=MininetAccessLink,
-                                            port_cls=MininetPort,
-                                            host_interface_cls=MininetHostInterface,
+    super(MininetPatchPanel, self).__init__(link_cls=TestONNetworkLink,
+                                            access_link_cls=TestONAccessLink,
+                                            port_cls=TestONPort,
+                                            host_interface_cls=TestONHostInterface,
                                             sts_console=msg)
     self.teston_mn = teston_mn
 
@@ -85,12 +85,12 @@ class MininetPatchPanel(PatchPanel):
 class MininetTopology(Topology):
   def __init__(self, teston_mn):
     super(MininetTopology, self).__init__(patch_panel=MininetPatchPanel(teston_mn),
-                                          host_cls=MininetHost,
-                                          interface_cls=MininetHostInterface,
-                                          switch_cls=MininetOVSSwitch,
-                                          access_link_cls=MininetAccessLink,
-                                          link_cls=MininetLink,
-                                          port_cls=MininetPort
+                                          host_cls=TestONHost,
+                                          interface_cls=TestONHostInterface,
+                                          switch_cls=TestONOVSSwitch,
+                                          access_link_cls=TestONAccessLink,
+                                          link_cls=TestONNetworkLink,
+                                          port_cls=TestONPort
                                           )
     self.teston_mn = teston_mn
     self.read_nodes()
