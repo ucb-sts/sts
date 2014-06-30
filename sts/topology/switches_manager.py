@@ -30,7 +30,7 @@ class SwitchManagerPolicy(Policy):
   def __init__(self, can_create_switch=True, can_add_switch=True,
                can_remove_switch=True, can_crash_switch=True,
                can_recover_switch=True, can_get_up_switches=True,
-               can_get_down_switches=True):
+               can_get_down_switches=True, can_connect_to_controllers=True):
     super(SwitchManagerPolicy, self).__init__()
     self._can_create_switch = can_create_switch
     self._can_add_switch = can_add_switch
@@ -39,6 +39,7 @@ class SwitchManagerPolicy(Policy):
     self._can_recover_switch = can_recover_switch
     self._can_get_up_switches = can_get_up_switches
     self._can_get_down_switches = can_get_down_switches
+    self._can_connect_to_controllers = can_connect_to_controllers
 
   @property
   def can_create_switch(self):
@@ -84,6 +85,14 @@ class SwitchManagerPolicy(Policy):
     switches and returns the ones that are actually UP.
     """
     return self._can_get_down_switches
+
+  @property
+  def can_connect_to_controllers(self):
+    """
+    Returns True if the switches manager can connect switches to a given set
+    of one or more controllers.
+    """
+    return self._can_connect_to_controllers
 
 
 class SwitchManagerAbstractClass(object):
@@ -165,6 +174,6 @@ class SwitchManagerAbstractClass(object):
     raise NotImplementedError()
 
   @abc.abstractmethod
-  def connect_to_controllers(self, switch, controllers):
+  def connect_to_controllers(self, switch, controllers, max_backoff_seconds=2):
     """Connects a switch to a list (of one or more) controllers"""
     raise NotImplementedError()
