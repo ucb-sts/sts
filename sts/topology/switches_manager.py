@@ -25,7 +25,7 @@ from sts.util.policy import Policy
 
 class SwitchManagerPolicy(Policy):
   """
-  Defines the policy of what can/cannot do for the SwitchManager.
+  Defines the policy of what can/cannot do for the SwitchesManager.
   """
   def __init__(self, can_create_switch=True, can_add_switch=True,
                can_remove_switch=True, can_crash_switch=True,
