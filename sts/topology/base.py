@@ -17,6 +17,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 """
 Basic representation of network topology.
 """
@@ -24,40 +25,46 @@ Basic representation of network topology.
 import inspect
 import logging
 
-from pox.openflow.libopenflow_01 import ofp_phy_port
-
-from sts.entities.hosts import HostAbstractClass
-from sts.entities.hosts import Host
-from sts.entities.sts_entities import HostInterface
-from sts.entities.sts_entities import FuzzSoftwareSwitch
-from sts.entities.sts_entities import Link
-from sts.entities.sts_entities import AccessLink
-from sts.topology.graph import Graph
-from sts.topology.graph import TopologyGraph
-
 from sts.util.console import msg
+
+from sts.topology.graph import TopologyGraph
 
 
 class TopologyPolicy(object):
   """Basic topology settings for network topologies"""
-  def __init__(self, can_add_host=True, can_remove_host=True,
-               can_add_switch=True, can_remove_switch=True, can_add_link=True,
-               can_remove_link=True, can_add_access_link=True,
-               can_remove_access_link=True, can_change_link_status=True,
-               can_change_access_link_status=True, can_crash_switch=True):
+  def __init__(self, can_create_host=True, can_add_host=True,
+               can_create_interface=True, can_remove_host=True,
+               can_create_switch=True, can_add_switch=True,
+               can_remove_switch=True, can_create_network_link=True,
+               can_add_network_link=True,
+               can_remove_network_link=True, can_create_access_link=True,
+               can_add_access_link=True, can_remove_access_link=True,
+               can_change_link_status=True,
+               can_change_access_link_status=True):
     super(TopologyPolicy, self).__init__()
+    self._can_create_interface = can_create_interface
+    self._can_create_host = can_create_host
     self._can_add_host = can_add_host
     self._can_remove_host = can_remove_host
+    self._can_create_switch = can_create_switch
     self._can_add_switch = can_add_switch
     self._can_remove_switch = can_remove_switch
-    self._can_add_link = can_add_link
-    self._can_remove_link = can_remove_link
+    self._can_create_network_link = can_create_network_link
+    self._can_add_network_link = can_add_network_link
+    self._can_remove_network_link = can_remove_network_link
+    self._can_create_access_link = can_create_access_link
     self._can_add_access_link = can_add_access_link
     self._can_remove_access_link = can_remove_access_link
     self._can_change_link_status = can_change_link_status
     self._can_change_access_link_status = can_change_access_link_status
-    self._can_crash_switch = can_crash_switch
     # more for OF and per packet
+
+  def set_create_policy(self, policy):
+    """Helper method to change policy for everything that can be created."""
+    for name, value in inspect.getmembers(self,
+                                          lambda a: not inspect.isroutine(a)):
+      if name.startswith("_can_create"):
+        setattr(self, name, policy)
 
   def set_add_policy(self, policy):
     """Helper method to change policy for everything that can be added."""
@@ -74,6 +81,16 @@ class TopologyPolicy(object):
         setattr(self, name, policy)
 
   @property
+  def can_create_interface(self):
+    """Returns True if host interfaces can be created."""
+    return self._can_create_interface
+
+  @property
+  def can_create_host(self):
+    """Returns True if hosts can be created."""
+    return self._can_create_host
+
+  @property
   def can_add_host(self):
     """Returns True if hosts can be added to the topology."""
     return self._can_add_host
@@ -82,6 +99,11 @@ class TopologyPolicy(object):
   def can_remove_host(self):
     """Returns True if hosts can be removed from the topology."""
     return self._can_remove_host
+
+  @property
+  def can_create_switch(self):
+    """Returns True if switches can be created."""
+    return self._can_create_switch
 
   @property
   def can_add_switch(self):
@@ -94,14 +116,24 @@ class TopologyPolicy(object):
     return self._can_remove_switch
 
   @property
-  def can_add_link(self):
-    """Returns True if links can be added to the topology."""
-    return self._can_add_link
+  def can_create_network_link(self):
+    """Returns True if network links can be created."""
+    return self._can_create_network_link
 
   @property
-  def can_remove_link(self):
+  def can_add_network_link(self):
+    """Returns True if links can be added to the topology."""
+    return self._can_add_network_link
+
+  @property
+  def can_remove_network_link(self):
     """Returns True if links can be removed from the topology."""
-    return self._can_remove_link
+    return self._can_remove_network_link
+
+  @property
+  def can_create_access_link(self):
+    """Returns True if access links can be created."""
+    return self._can_create_access_link
 
   @property
   def can_add_access_link(self):
@@ -123,92 +155,140 @@ class TopologyPolicy(object):
     """Returns True if links can change status (up or down)."""
     return self._can_change_access_link_status
 
-  @property
-  def can_crash_switch(self):
-    """
-    Returns True if the switches in the topology can be shutdown and rebooted.
-    """
-    return self._can_crash_switch
-
 
 class Topology(object):
-  """Keeps track of the network elements."""
-  def __init__(self, patch_panel, topo_graph=None,
-               hosts=None, switches=None, controllers=None,
-               links=None, host_cls=Host, switch_cls=FuzzSoftwareSwitch,
-               link_cls=Link, access_link_cls=AccessLink,
-               interface_cls=HostInterface, port_cls=ofp_phy_port,
-               sts_console=msg, policy=TopologyPolicy()):
+  """Keeps track of the network elements.
+
+  Topology is just a director of network state. The actual work is done by:
+    - TopologyGraph: A graph of the network elements (currently DataPlane only)
+    - SwitchesManager: Manages switches in the network
+    - HostManager
+    - PatchPanel: Manages dataplane links
+    - ControllerPatchPanel: Manages control plane links
+
+  """
+  def __init__(self, hosts_manager, switches_manager, patch_panel, policy,
+               is_host, is_switch, is_network_link, is_access_link,
+               is_host_interface, is_port, sts_console=msg):
+    """
+    Args:
+      - is_*(x): return True if x is of correct type.
+    """
     super(Topology, self).__init__()
-    self.host_cls = host_cls
-    self.switch_cls = switch_cls
-    self.link_cls = link_cls
-    self.access_link_cls = access_link_cls
-    self.interface_cls = interface_cls
-    self.port_cls = port_cls
-    self.patch_panel = patch_panel
-    self._g = Graph()
-    self._topo_graph = topo_graph or TopologyGraph()
-    self._dpid2vertex = {}
-    self.failed_switches = set()
+    # Make sure the required arguments are passed
+    assert is_host is not None, "Host check is defined"
+    assert is_switch is not None, "Switch check is not defined"
+    assert is_network_link is not None, "Link check is not defined"
+    assert is_access_link is not None, "Access Link check is not defined"
+    assert is_host_interface is not None, "Interface check is not defined"
+    assert is_port is not None, "Port check is not defined"
+    assert policy is not None, "Topology's Policy is not defined"
+    self.is_host = is_host
+    self.is_switch = is_switch
+    self.is_network_link = is_network_link
+    self.is_access_link = is_access_link
+    self.is_host_interface = is_host_interface
+    self.is_port = is_port
+
+    self._patch_panel = patch_panel
+    self._switches_manager = switches_manager
+    self._hosts_manager = hosts_manager
+    self._graph = TopologyGraph()
+
     self.msg = sts_console
     self.log = logging.getLogger("sts.topology.base.Topology")
     self.policy = policy
 
-  def _host_check(self, vertex, attrs):
-    """Some basic check for host type"""
-    return isinstance(attrs.get('obj', None), self.host_cls)
+    # Read existing hosts from the HostsManager
+    for host in self.hosts_manager.hosts:
+      self._graph.add_host(host)
+    # Read existing switches from the SwitchesManager
+    for switch in self.switches_manager.switches:
+      self._graph.add_switch(switch)
+    # Read existing links from PatchPanel
+    for link in self.patch_panel.access_links:
+      self._graph.add_link(link)
+    for link in self.patch_panel.network_links:
+      self._graph.add_link(link)
 
   @property
-  def config_graph(self):
-    """Return the graph of the configuration of each network element."""
-    return self._topo_graph
+  def hosts_manager(self):
+    """
+    Returns read-only reference to the hosts manager.
+
+    See: `sts.topology.hosts_manager.HostsManagerAbstractClass`
+    """
+    # TODO (AH): Return immutable copy
+    return self._hosts_manager
 
   @property
-  def switches(self):
-    """List of switches in the topology"""
-    switches = [switch for _, switch in self.switches_iter(True)]
-    switches.sort(key=lambda sw: sw.dpid)
-    return switches
+  def switches_manager(self):
+    """
+    Returns read-only reference to the switches manager.
+
+    See: `sts.topology.switches_manager.SwitchesManagerAbstractClass`
+    """
+    # TODO (AH): Return immutable copy
+    return self._switches_manager
 
   @property
-  def hosts(self):
-    """List of hosts in the topology"""
-    hosts = [host for _, host in self.hosts_iter(True)]
-    hosts.sort(key=lambda h: h.hid)
-    return hosts
-
-  def hosts_iter(self, include_obj=True):
+  def patch_panel(self):
     """
-    Iterate over hosts in the topology
+    Returns read-only reference to the links patch panel.
 
-    Args:
-      include_obj: If true not only host id is returned but the object as well
+    See: `sts.topology.patch_panel.PatchPanel`
     """
-    for name, attrs in self._g.vertices_iter_with_check(self._host_check, True):
-      if include_obj:
-        yield name, attrs['obj']
-      else:
-        yield name
+    # TODO (AH): Return immutable copy
+    return self._patch_panel
 
-  def switches_iter(self, include_obj=True):
+  @property
+  def graph(self):
+    """Return the graph of the network."""
+    # TODO (AH): Return immutable copy of the graph
+    return self._graph
+
+  def create_host(self, hid, name=None, interfaces=None):
     """
-    Iterate over switches in the topology
+    Creates new host and adds it to the topology.
 
-    Args:
-      include_obj: If true not only switch id is returned but the object as well
+    See: `sts.topology.hosts_manager.HostsManager.create_host`
     """
-    for key, value in self._g.vertices_iter(include_attrs=True):
-      #if isinstance(value.get('obj', None), self.switch_cls):
-      if isinstance(value.get('obj', None), self.switch_cls):
-        if include_obj:
-          yield key, value['obj']
-        else:
-          yield key
+    assert self.policy.can_create_host
+    host = self.hosts_manager.create_host(hid=hid, name=name,
+                                          interfaces=interfaces)
+    self.add_host(host)
+    return host
 
-  def _host_vertex_id(self, host):
-    """Utility method to get the vertex ID for a host"""
-    return getattr(host, 'name', getattr(host, 'hid', host))
+  def create_interface(self, hw_addr, ip_or_ips=None, name=None):
+    """
+    Creates interface for host.
+    The interface is not attached to any host after calling this method.
+
+    See: `sts.topology.hosts_manager.HostsManager.create_interface`
+    """
+    assert self.policy.can_create_interface
+    iface = self.hosts_manager.create_interface(hw_addr=hw_addr,
+                                                ip_or_ips=ip_or_ips,
+                                                name=name)
+    return iface
+
+  def create_host_with_interfaces(self, hid, name, num_interfaces,
+                                  mac_generator, ip_generator,
+                                  interface_name_generator):
+    """
+    Create new hosts with the specified number of interfaces and adds to the
+    topology.
+
+    See: `sts.topology.hosts_manager.HostsManager.create_host_with_interfaces`
+    """
+    assert self.policy.can_create_host
+    assert self.policy.can_create_interface
+    host = self.hosts_manager.create_host_with_interfaces(
+      hid=hid, name=name, num_interfaces=num_interfaces,
+      mac_generator=mac_generator, ip_generator=ip_generator,
+      interface_name_generator=interface_name_generator)
+    self.add_host(host)
+    return host
 
   def add_host(self, host):
     """
@@ -218,170 +298,23 @@ class Topology(object):
       host: Must be an instance of sts.entities.hosts.HostAbstractClass
     """
     assert self.policy.can_add_host
-    assert isinstance(host, HostAbstractClass)
-    vertex_id = self._host_vertex_id(host)
-    assert not self.has_host(vertex_id), "Host '%s' already added" % host
-    self._g.add_vertex(vertex_id, obj=host)
-    return vertex_id
+    assert self.is_host(host)
+    assert not self._graph.has_host(host), "Host '%s' already added" % host
+    self.hosts_manager.add_host(host)
+    hid = self._graph.add_host(host)
+    return hid
 
   def remove_host(self, host):
-    """Remove host from the topology
-
-    Also remove all associated links
+    """
+    Removes host (with all associated links) from the topology
     """
     assert self.policy.can_remove_host
-    assert self.has_host(host)
-    vertex_id = self._host_vertex_id(host)
-    # Remove associated links
-    for interface in host.interfaces:
-      iface_edges = self._g.edges_src(interface) + self._g.edges_dst(interface)
-      for edge in iface_edges:
-        self._g.remove_edge(*edge)
-    self._g.remove_vertex(vertex_id)
-    self.patch_panel.remove_host(host)
-
-  def has_host(self, host):
-    """Return host (or name of the host) exists."""
-    return self._g.has_vertex(self._host_vertex_id(host))
-
-  def get_host(self, hid):
-    """Given the host id return the host object"""
-    vertex_id = self._host_vertex_id(hid)
-    return self._g.vertices[vertex_id]['obj']
-
-  def _switch_vertex_id(self, switch):
-    if switch in self._dpid2vertex:
-      return self._dpid2vertex[switch]
-    return getattr(switch, 'name', getattr(switch, 'dpid', switch))
-
-  def has_switch(self, switch):
-    """Return switch (or name of the switch) exists."""
-    vertex_id = self._switch_vertex_id(switch)
-    return self._g.has_vertex(vertex_id)
-
-  def get_switch(self, dpid):
-    """Given the switch dpid return the switch object"""
-    if dpid in self._dpid2vertex:
-      vertex_id = self._dpid2vertex[dpid]
-    else:
-      vertex_id = self._switch_vertex_id(dpid)
-    return self._g.vertices[vertex_id]['obj']
-
-  def add_switch(self, switch):
-    """Add switch to the topology"""
-    assert self.policy.can_add_switch
-    assert hasattr(switch, 'dpid')
-    assert not self.has_switch(switch), ("Switch '%s' "
-                                         "already added" % switch.dpid)
-    vertex_id = self._switch_vertex_id(switch)
-    switch.name = vertex_id
-    self._dpid2vertex[switch.dpid] = vertex_id
-    self._g.add_vertex(vertex_id, obj=switch)
-    return switch
-
-  def remove_switch(self, switch):
-    assert self.policy.can_remove_switch
-    assert self.has_switch(switch)
-    vertex_id = self._switch_vertex_id(switch)
-    del self._dpid2vertex[switch.dpid]
-    # Remove associated links
-    for port in switch.ports.values():
-      edges = self._g.edges_src(port) + self._g.edges_dst(port)
-      for edge in edges:
-        self._g.remove_edge(*edge)
-    self._g.remove_vertex(vertex_id)
-
-  def add_link(self, link):
-    """Add link to the topology"""
-    assert self.policy.can_add_link
-    assert isinstance(link, (self.link_cls, self.access_link_cls))
-    assert not self.has_link(link)
-    if hasattr(link, 'start_node'):
-      self._g.add_edge(link.start_node, link.start_port)
-      self._g.add_edge(link.start_port, link.start_node)
-      self._g.add_edge(link.start_port, link.end_port, obj=link)
-    else:
-      self._g.add_edge(link.node1, link.port1)
-      self._g.add_edge(link.node2, link.port2)
-      self._g.add_edge(link.port1, link.node1)
-      self._g.add_edge(link.port2, link.node2)
-      self._g.add_edge(link.port1, link.port2, obj=link)
-      self._g.add_edge(link.port2, link.port1, obj=link)
-    # Make sure the patch panel do whatever physically necessary to connect
-    # the link
-    if isinstance(link, self.access_link_cls):
-      self.patch_panel.add_access_link(link)
-    elif isinstance(link, self.link_cls):
-      self.patch_panel.add_link(link)
-    return link
-
-  def has_link(self, link):
-    assert isinstance(link, (self.link_cls, self.access_link_cls))
-    if hasattr(link, 'start_node'):
-      return self._g.has_edge(link.start_port, link.end_port)
-    else:
-      return self._g.has_edge(link.port1, link.port2)
-
-  def remove_link(self, link):
-    assert self.policy.can_remove_link
-    assert self.has_link(link)
-    if hasattr(link, 'start_node'):
-      self._g.remove_edge(link.start_port, link.end_port)
-      self.patch_panel.remove_network_link(link.start_node, link.start_port,
-                                           link.end_node, link.end_port)
-    else:
-      self._g.remove_edge(link.port1, link.port2)
-      self._g.remove_edge(link.port2, link.port1)
-      self.patch_panel.remove_access_link(link.host, link.interface,
-                                          link.switch, link.switch_port)
-
-  def get_link(self, s1, s2):
-    """Return list of Links between two switches"""
-    switch1 = self.get_switch(s1)
-    switch2 = self.get_switch(s2)
-    links = []
-    for src_port in switch1.ports.itervalues():
-      for dst_port in switch2.ports.itervalues():
-        if self._g.has_edge(src_port, dst_port):
-          links.append(self._g.get_edge(src_port, dst_port)['obj'])
-        if self._g.has_edge(dst_port, src_port):
-          links.append(self._g.get_edge(dst_port, src_port)['obj'])
-    return links
-
-  def crash_switch(self, switch):
-    """Make the switch crash (or just turn it off)"""
-    assert self.policy.can_crash_switch,\
-      "Topology doesn't support crashing switches"
-    assert self.has_switch(switch)
-    s = self.get_switch(switch)
-    self.msg.event("Crashing switch %s" % str(s))
-    s.fail()
-    self.failed_switches.add(s)
-
-  @property
-  def live_switches(self):
-    """Return the software_switchs which are currently up"""
-    return set(self.switches) - self.failed_switches
-
-  @property
-  def live_edge_switches(self):
-    """Return the switches which are currently up and can connect to hosts"""
-    edge_switches = set([sw for sw in self.switches if sw.can_connect_to_endhosts])
-    return edge_switches - self.failed_switches
-
-  def recover_switch(self, switch, down_controller_ids=None):
-    """Reboot previously crashed switch"""
-    s = self.get_switch(switch)
-    self.msg.event("Rebooting switch %s" % str(s))
-    if down_controller_ids is None:
-      down_controller_ids = set()
-    if s not in self.failed_switches:
-      self.log.warn("Switch %s not currently down. (Currently down: %s)" %
-                    (str(s), str(self.failed_switches)))
-    connected_to_at_least_one = s.recover(down_controller_ids=down_controller_ids)
-    if connected_to_at_least_one:
-      self.failed_switches.remove(s)
-    return connected_to_at_least_one
+    assert self._graph.has_host(host)
+    self.hosts_manager.remove_host(host)
+    connected_links = self._graph.get_host_links(host)
+    for link in connected_links:
+      self.remove_access_link(link)
+    self._graph.remove_host(host)
 
   def migrate_host(self, old_switch, old_port, new_switch, new_port):
     """
@@ -392,151 +325,107 @@ class Topology(object):
     with a fixed number of ports)
     """
     # TODO (AH): Implement migrate host
-    return None
+    raise NotImplemented()
+
+  def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
     """
-    old_switch = self.get_switch(old_switch)
-    new_switch = self.get_switch(new_switch)
+    Creates new switch and adds it to the topology.
 
-    if old_port in old_switch.ports:
-      old_port = old_switch.ports[old_port]
-
-    if old_port not in old_port.ports.values():
-      raise ValueError("unknown old port %d" % old_port)
-
-    if new_port in old_switch.ports:
-      new_port = old_switch.ports[new_port]
-
-    if new_port not in new_port.ports.values():
-      raise ValueError("unknown new port %d" % new_port)
-
-
-    (host, interface) = self.patch_panel.get_other_side(old_switch, old_port)
-
-    if (not (isinstance(host, self.host_cls) and
-               isinstance(interface, self.interface_cls))):
-      raise ValueError("(%s,%s) does not connect to a host!" %
-                       (str(old_switch), str(old_port)))
-
-
-    if self.patch_panel.is_port_connected(new_port):
-      raise RuntimeError("new ingress port %d already connected!" % new_port)
-
-    # now that we've verified everything, actually make the change!
-    # first, drop the old mappings
-    del self.port2access_link[old_port]
-    del self.interface2access_link[interface]
-    old_ingress_switch.take_port_down(old_port)
-
-    # now add new mappings
-    # For now, make the new port have the same ip address as the old port.
-    # TODO(cs): this would break PORTLAND routing! Need to specify the
-    #           new mac and IP addresses
-    new_ingress_port = self.port_cls(port_no=new_ingress_portno,
-                                    hw_addr=old_port.hw_addr,
-                                    name="eth%d" % new_ingress_portno,
-                                    config=old_port.config,
-                                    state=old_port.state,
-                                    curr=old_port.curr,
-                                    advertised=old_port.advertised,
-                                    supported=old_port.supported,
-                                    peer=old_port.peer)
-    new_ingress_switch.bring_port_up(new_ingress_port)
-    new_access_link = AccessLink(host, interface, new_ingress_switch, new_ingress_port)
-    self.port2access_link[new_ingress_port] = new_access_link
-    self.interface2access_link[interface] = new_access_link
+    See: `sts.topology.switches_manager.SwitchesManager.create_switch`
     """
+    assert self.policy.can_create_switch
+    switch = self.switches_manager.create_switch(
+      switch_id=switch_id, num_ports=num_ports,
+      can_connect_to_endhosts=can_connect_to_endhosts)
+    self.add_switch(switch)
+    return switch
 
-#################################
-  @property
-  def access_links(self):
-    return self.patch_panel.access_links
+  def add_switch(self, switch):
+    """Adds switch to the topology"""
+    assert self.policy.can_add_switch
+    assert self.is_switch(switch)
+    self._switches_manager.add_switch(switch)
+    self._graph.add_switch(switch)
+    return switch
 
-  @property
-  def network_links(self):
-    return self.patch_panel.network_links
+  def remove_switch(self, switch):
+    """Removes switch (and all associated links) from the topology"""
+    assert self.policy.can_remove_switch
+    self._switches_manager.remove_switch(switch)
+    connected_links = self._graph.get_switch_links(switch)
+    for link in connected_links:
+      if self.is_network_link(link):
+        self.remove_network_link(link)
+      else:
+        self.remove_access_link(link)
+    self._graph.remove_switch(switch)
 
-  @property
-  def cut_links(self):
-    return self.patch_panel.cut_links
+  def add_link(self, link):
+    """Add link to the topology"""
+    assert self.is_network_link(link) or self.is_access_link(link)
+    if self.is_network_link(link):
+      assert self.policy.can_add_network_link
+    elif self.is_access_link(link):
+      assert self.policy.can_add_access_link
+    assert not self._graph.has_link(link)
+    if hasattr(link, 'start_node'):
+      bidir = False
+    else:
+      bidir = True
+    self._graph.add_link(link, bidir=bidir)
+    # Make sure the patch panel do whatever physically necessary to connect
+    # the link
+    if self.is_access_link(link):
+      self.patch_panel.add_access_link(link)
+    elif self.is_network_link(link):
+      self.patch_panel.add_network_link(link)
+    return link
 
-  @property
-  def live_links(self):
-    return self.patch_panel.live_links
+  def add_network_link(self, link):
+    """Add Network link to the topology"""
+    return self.add_link(link)
 
-  def sever_link(self, link):
-    self.patch_panel.sever_link(link)
+  def add_access_link(self, link):
+    """Add Access link to the topology"""
+    return self.add_link(link)
 
-  def repair_link(self, link):
-    self.patch_panel.repair_link(link)
+  def sever_network_link(self, link):
+    """Brings link down"""
+    self.patch_panel.sever_network_link(link)
+
+  def repair_network_link(self, link):
+    """Brings link back up"""
+    self.patch_panel.repair_network_link(link)
 
   def create_access_link(self, host, interface, switch, port):
-    assert self.has_host(host)
-    assert self.has_switch(switch)
-    assert interface in host.interfaces
-    assert port in switch.ports or port in switch.ports.values()
-    return self.patch_panel.create_access_link(host, interface, switch, port)
+    assert self.policy.can_create_access_link
+    assert self._graph.has_host(host)
+    assert self._graph.has_switch(switch)
+    link = self.patch_panel.create_access_link(host, interface, switch, port)
+    self.add_access_link(link)
+    return link
 
-  def remove_access_link(self, host, interface, switch, port, remove_all=True):
-    assert self.has_host(host)
-    assert self.has_switch(switch)
-    assert interface is None or interface in host.interfaces
-    assert port is None or port in switch.ports or port in switch.ports.values()
-    if interface is not None:
-      interfaces = [interface]
-    else:
-      interfaces = host.interfaces
-    if port is not None:
-      ports = [port]
-    else:
-      ports = switch.ports.values()
+  def create_network_link(self, src_switch, src_port, dst_switch, dst_port,
+                          bidir=False):
+    assert self.policy.can_create_network_link
+    assert self._graph.has_switch(src_switch)
+    assert self._graph.has_switch(dst_switch)
+    link = self.patch_panel.create_network_link(src_switch, src_port,
+                                                dst_switch, dst_port,
+                                                bidir=bidir)
+    self.add_link(link)
+    return link
 
-    edges = []
-    for iface in interfaces:
-      for p in ports:
-        if self._g.has_edge(iface, p):
-          edges.append((iface, p))
-        if self._g.has_edge(iface, p):
-          edges.append((p, iface))
-    if len(edges) > 2 and remove_all == False:
-      raise ValueError("Multiple links connecting '%s'->'%s'" % (host,
-                                                                 switch))
-    assert len(edges) > 0, "No link connecting '%s'->'%s'" % (host,
-                                                              switch)
-    for edge in edges:
-      self._g.remove_edge(*edge)
-    return self.patch_panel.remove_access_link(host, interface, switch, port,
-                                               remove_all=remove_all)
+  def remove_access_link(self, link):
+    assert self.policy.can_remove_access_link
+    assert link in self.patch_panel.access_links
+    assert self._graph.has_link(link)
+    self._graph.remove_link(link)
+    self.patch_panel.remove_access_link(link)
 
-  def remove_network_link(self, src_switch, src_port, dst_switch, dst_port,
-                          remove_all=True):
-    assert self.has_switch(src_switch)
-    assert self.has_switch(dst_switch)
-    assert src_port is None or src_port in src_switch.ports or\
-           src_port in src_switch.ports.values()
-    assert dst_port is None or dst_port in dst_switch.ports or\
-           dst_port in dst_switch.ports.values()
-    if src_port is not None:
-      src_ports = [src_port]
-    else:
-      src_ports = src_switch.ports.values()
-    if dst_port is not None:
-      dst_ports = [dst_port]
-    else:
-      dst_ports = dst_switch.ports.values()
-
-    edges = []
-    for sp in src_ports:
-      for dp in dst_ports:
-        if self._g.has_edge(sp, dp):
-          edges.append((sp, dp))
-
-    if len(edges) > 1 and remove_all == False:
-      raise ValueError("Multiple links connecting '%s'->'%s'" % (src_switch,
-                                                                 dst_switch))
-    assert len(edges) > 0, "No link connecting '%s'->'%s'" % (src_switch,
-                                                              dst_switch)
-    for edge in edges:
-      self._g.remove_edge(*edge)
-    return self.patch_panel.remove_network_link(src_switch, src_port,
-                                                dst_switch, dst_ports,
-                                                remove_all=remove_all)
+  def remove_network_link(self, link):
+    assert self.policy.can_remove_network_link
+    assert link in self.patch_panel.network_links
+    assert self._graph.has_link(link)
+    self._graph.remove_link(link)
+    self.patch_panel.remove_network_link(link)
