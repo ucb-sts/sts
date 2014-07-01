@@ -16,6 +16,8 @@
 A Simple Library for topology graphs.
 """
 
+import networkx as nx
+
 
 class Graph(object):
   """
@@ -184,7 +186,33 @@ class VertexType(object):
 class EdgeType(object):
   """Edges Type for Network graph"""
   LINK = 'link'
-  INTERNAL_LINK = 'internal_link' # for switch-port and host-interface links
+  INTERNAL_LINK = 'internal_link'  # for switch-port and host-interface links
+
+
+def edges_iter_with_check(g, check, include_attrs=False):
+  """
+  Iterate over edges in the topology and return edges which
+  check(v1, v2, attrs) is True
+  """
+  for v1, v2, attrs in g.edges_iter(data=True):
+    if check(v1, v2, attrs):
+      if include_attrs:
+        yield v1, v2, attrs
+      else:
+        yield v1, v2
+
+
+def vertices_iter_with_check(g, check, include_attrs=False):
+  """
+  Iterate over vertices in the topology and return vertices which
+  check(vertex_id, attrs) is True
+  """
+  for vertex, attrs in g.nodes_iter(data=True):
+    if check(vertex, attrs):
+      if include_attrs:
+        yield vertex, attrs
+      else:
+        yield vertex
 
 
 class TopologyGraph(object):
@@ -206,7 +234,8 @@ class TopologyGraph(object):
   """
   def __init__(self, hosts=None, switches=None, links=None):
     super(TopologyGraph, self).__init__()
-    self._g = Graph()
+    #self._g = Graph()
+    self._g = nx.DiGraph()
     # Load initial configurations
     hosts = hosts or []
     switches = switches or []
@@ -278,11 +307,12 @@ class TopologyGraph(object):
       # from this class
       v_port = self._port_vertex_id(node, vertex)
       v_iface = self._interface_vertex_id(vertex)
-      if (self._g.has_vertex(v_port) and
-            self.is_port(v_port, self._g.get_vertix(v_port))):
+      if (self._g.has_node(v_port) and
+            self.is_port(v_port, self._g.node[v_port])):
         v = v_port
-      elif (self._g.has_vertex(v_iface) and
-              self.is_interface(v_iface, self._g.get_vertix(v_iface))):
+
+      elif (self._g.has_node(v_iface) and
+              self.is_interface(v_iface, self._g.node[v_iface])):
         v = v_iface
       else:
         v = None
@@ -296,7 +326,7 @@ class TopologyGraph(object):
     Args:
       include_attr: If true not only host is returned but the attributes as well
     """
-    return self._g.vertices_iter_with_check(check=self.is_host,
+    return vertices_iter_with_check(self._g, check=self.is_host,
                                             include_attrs=include_attrs)
 
   @property
@@ -313,7 +343,7 @@ class TopologyGraph(object):
       include_attr: If true not only interfaces are returned but the attributes
                     as well
     """
-    return self._g.vertices_iter_with_check(check=self.is_interface,
+    return vertices_iter_with_check(self._g, check=self.is_interface,
                                             include_attrs=include_attrs)
 
   @property
@@ -331,8 +361,8 @@ class TopologyGraph(object):
       include_attr: If true not only ports are returned but the attributes
                     as well
     """
-    return self._g.vertices_iter_with_check(check=self.is_port,
-                                            include_attrs=include_attrs)
+    return vertices_iter_with_check(self._g, check=self.is_port,
+                                    include_attrs=include_attrs)
 
   @property
   def ports(self):
@@ -348,8 +378,8 @@ class TopologyGraph(object):
       include_attr: If true not only switches are returned but the attributes
                     as well
     """
-    return self._g.vertices_iter_with_check(check=self.is_switch,
-                                            include_attrs=include_attrs)
+    return vertices_iter_with_check(self._g, check=self.is_switch,
+                                    include_attrs=include_attrs)
 
   @property
   def switches(self):
@@ -390,23 +420,23 @@ class TopologyGraph(object):
       include_attr: If true not only edges are returned but the attributes
                     as well
     """
-    return self._g.edges_iter(include_attrs=include_attrs)
+    return self._g.edges_iter(data=include_attrs)
 
   def has_host(self, host):
     """Returns True if the host exists in the topology"""
     hid = self._host_vertex_id(host)
-    return (self._g.has_vertex(hid) and
+    return (self._g.has_node(hid) and
             self.is_host(hid, self.get_host_attrs(hid)))
 
   def has_switch(self, switch):
     """Returns True if the topology has a switch with sid"""
     sid = self._switch_vertex_id(switch)
-    return (self._g.has_vertex(sid) and
+    return (self._g.has_node(sid) and
             self.is_switch(sid, self.get_switch_attrs(sid)))
 
   def _get_attrs(self, vertex, vtype):
     """Returns all attributes for the vertex and checks it's type."""
-    info = self._g.vertices[vertex]
+    info = self._g.node[vertex]
     assert info.get('vtype', None) == vtype, \
       "There is a vertex with the same ID but it's not a '%s'" % vtype
     return info
@@ -480,13 +510,12 @@ class TopologyGraph(object):
     """
     Get all links that this vertex is connected to.
     """
-    assert self._g.has_vertex(vertex), "Vertex  doesn't exist: '%s'" % vertex
-    vertex_info = self._g.get_vertix(vertex)
+    assert self._g.has_node(vertex), "Vertex  doesn't exist: '%s'" % vertex
     edges = []
-    for src, dst in self._g.edges_src(vertex):
-      edges.append(self._g.get_edge(src, dst))
-    for src, dst in self._g.edges_dst(vertex):
-      edges.append(self._g.get_edge(src, dst))
+    for src, dst in self._g.out_edges(vertex):
+      edges.append(self._g.get_edge_data(src, dst))
+    for src, dst in self._g.in_edges(vertex):
+      edges.append(self._g.get_edge_data(src, dst))
     return edges
 
   def _remove_vertex(self, vertex, vtype):
@@ -495,17 +524,16 @@ class TopologyGraph(object):
 
     Also removes all associated links.
     """
-    assert self._g.has_vertex(vertex), \
+
+    assert self._g.has_node(vertex), \
       "Removing a vertex that doesn't exist: '%s'" % vertex
-    vertex_info = self._g.get_vertix(vertex)
+    vertex_info = self._g.node[vertex]
     assert vertex_info['vtype'] == vtype
-    # Remove edges that the interface is a source of
-    for src, dst in self._g.edges_src(vertex):
+    for src, dst in self._g.out_edges(vertex):
       self._g.remove_edge(src, dst)
-    # Remove edges that the interface is a destination of
-    for src, dst in self._g.edges_dst(vertex):
+    for src, dst in self._g.in_edges(vertex):
       self._g.remove_edge(src, dst)
-    self._g.remove_vertex(vertex)
+    self._g.remove_node(vertex)
 
   def remove_interface(self, port_no):
     """
@@ -533,10 +561,10 @@ class TopologyGraph(object):
             The only thing good to have is `_interfaces_iterator` works over it.
     """
     hid = self._host_vertex_id(host)
-    assert not self._g.has_vertex(hid)
-    self._g.add_vertex(hid, vtype=VertexType.HOST, obj=host)
+    assert not self._g.has_node(hid)
+    self._g.add_node(hid, vtype=VertexType.HOST, obj=host)
     for port_no, interface in self._interfaces_iterator(host):
-      self._g.add_vertex(port_no, vtype=VertexType.INTERFACE, obj=interface)
+      self._g.add_node(port_no, vtype=VertexType.INTERFACE, obj=interface)
       self._g.add_edge(hid, port_no, etype=EdgeType.INTERNAL_LINK)
       self._g.add_edge(port_no, hid, etype=EdgeType.INTERNAL_LINK)
     return hid
@@ -564,10 +592,10 @@ class TopologyGraph(object):
       switch: Switch object. Little assumptions are made about the Switch type.
     """
     sid = self._switch_vertex_id(switch)
-    assert not self._g.has_vertex(sid)
-    self._g.add_vertex(sid, vtype=VertexType.SWITCH, obj=switch)
+    assert not self._g.has_node(sid)
+    self._g.add_node(sid, vtype=VertexType.SWITCH, obj=switch)
     for port_no, port in self._ports_iterator(switch):
-      self._g.add_vertex(port_no, vtype=VertexType.PORT, obj=port)
+      self._g.add_node(port_no, vtype=VertexType.PORT, obj=port)
       self._g.add_edge(sid, port_no, etype=EdgeType.INTERNAL_LINK)
       self._g.add_edge(port_no, sid, etype=EdgeType.INTERNAL_LINK)
     return sid
@@ -581,7 +609,7 @@ class TopologyGraph(object):
     sid = self._switch_vertex_id(switch)
     assert self.has_switch(switch), \
       "Removing a switch that doesn't exist: '%s'" % sid
-    ports = self._ports_iterator(self._g.get_vertix(sid)['obj'])
+    ports = self._ports_iterator(self._g.node[sid]['obj'])
     for port_no, _ in ports:
       self.remove_port(port_no)
     self._remove_vertex(sid, VertexType.SWITCH)
@@ -595,8 +623,8 @@ class TopologyGraph(object):
     src_vertex, dst_vertex = self._get_link_vertices(link)
     assert src_vertex is not None
     assert dst_vertex is not None
-    assert self._g.has_vertex(src_vertex)
-    assert self._g.has_vertex(dst_vertex)
+    assert self._g.has_node(src_vertex)
+    assert self._g.has_node(dst_vertex)
     if bidir:
       self._g.add_edge(src_vertex, dst_vertex, obj=link, etype=EdgeType.LINK,
                        bidir=bidir)
@@ -614,10 +642,10 @@ class TopologyGraph(object):
     """
     if not self._g.has_edge(src_vertex, dst_vertex):
       return None
-    edge_attrs = self._g.get_edge(src_vertex, dst_vertex)
+    edge_attrs = self._g.get_edge_data(src_vertex, dst_vertex)
     assert self.is_link(src_vertex, dst_vertex, edge_attrs), (
-      "There is an edge between '%s' and '%s' but it's not a Link" %
-      (src_vertex, dst_vertex))
+      "There is an edgebetween '%s' and '%s' but it's"
+      "not a Link" % (src_vertex, dst_vertex))
     return edge_attrs['obj']
 
   def has_link(self, link):
@@ -629,7 +657,7 @@ class TopologyGraph(object):
     """Removes the link between src and dst."""
     src_vertex, dst_vertex = self._get_link_vertices(link)
     assert self.has_link(link), ("Link is not part of the graph: '%s'" % link)
-    bidir = self._g.get_edge(src_vertex, dst_vertex)['bidir']
+    bidir = self._g.get_edge_data(src_vertex, dst_vertex)['bidir']
     self._g.remove_edge(src_vertex, dst_vertex)
     # Remove the other link in case of bidir links
     if bidir and self._g.has_edge(dst_vertex, src_vertex):
