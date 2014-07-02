@@ -13,9 +13,16 @@
 # limitations under the License.
 
 
+import logging
+
+LOG = logging.getLogger("sts.entities.teston_entities")
+
 from sts.entities.base import BiDirectionalLinkAbstractClass
 from sts.entities.hosts import HostAbstractClass
 from sts.entities.hosts import HostInterface
+
+from sts.entities.controllers import ControllerAbstractClass
+from sts.entities.controllers import ControllerState
 
 
 class TestONNetworkLink(BiDirectionalLinkAbstractClass):
@@ -95,3 +102,121 @@ class TestONPort(object):
 
   def __repr__(self):
     return "%s:%s" % (self.name, self.ips)
+
+
+class TestONONOSConfig(object):
+  """
+  TestON ONOS specific configurations
+  """
+  def __init__(self, label, address, port):
+    self.label = label
+    self.address = address
+    self.port = port
+    self.cid = self.label
+
+
+class TestONONOSController(ControllerAbstractClass):
+  """
+  ONOS Controller using TestON Driver for ONOS.
+  """
+  def __init__(self, config, teston_onos, sync_connection_manager=None,
+               snapshot_service=None, log=None):
+    super(TestONONOSController, self).__init__(config,
+                                               sync_connection_manager,
+                                               snapshot_service)
+    self.teston_onos = teston_onos
+    self.log = log or LOG
+    self.state = self.check_status(None)
+    self._blocked_peers = set()
+
+  @property
+  def config(self):
+    """Controller specific configuration object"""
+    return self._config
+
+  @property
+  def label(self):
+    """Human readable label for the controller"""
+    return self.config.label
+
+  @property
+  def cid(self):
+    """Controller unique ID"""
+    return self.config.label
+
+  @property
+  def state(self):
+    """
+    The current controller state.
+
+    See: ControllerState
+    """
+    return self._state
+
+  @state.setter
+  def state(self, value):
+    self._state = value
+
+  @property
+  def snapshot_service(self):
+    return self._snapshot_service
+
+  @property
+  def sync_connection_manager(self):
+    return self._sync_connection_manager
+
+  def is_remote(self):
+    """
+    Returns True if the controller is running on a different host that sts
+    """
+    return True
+
+  def start(self, multiplex_sockets=False):
+    """Starts the controller"""
+    if self.state != ControllerState.DEAD:
+      self.log.warn("Controller is already started!" % self.label)
+      return
+    self.log.info("Launching controller: %s" % self.label)
+    self.teston_onos.start_all()
+    self.state = ControllerState.ALIVE
+
+  def kill(self):
+    self.log.info("Killing controller: %s" % self.label)
+    if self.state != ControllerState.ALIVE:
+      self.log.warn("Controller already killed: %s" % self.label)
+      return
+    self.teston_onos.stop_all()
+    self.state = ControllerState.DEAD
+
+  def restart(self):
+    """
+    Restart the controller
+    """
+    self.log.info("Restarting controller: %s" % self.label)
+    if self.state != ControllerState.DEAD:
+      self.log.warn(
+        "Restarting controller %s when it is not dead!" % self.label)
+      return
+    self.start()
+
+  def check_status(self, simulation):
+    if self.teston_onos.status() == 1:
+      return ControllerState.ALIVE
+    else:
+      return ControllerState.DEAD
+
+  @property
+  def blocked_peers(self):
+    """Return a list of blocked peer controllers (if any)"""
+    return self._blocked_peers
+
+  def block_peer(self, peer_controller):
+    """Ignore traffic to/from the given peer controller
+    """
+    self.teston_onos.block_peer(peer_controller.config.address)
+    self.blocked_peers.add(peer_controller)
+
+  def unblock_peer(self, peer_controller):
+    """Stop ignoring traffic to/from the given peer controller"""
+    self.teston_onos.unblock_peer(peer_controller.config.address)
+    self.blocked_peers.remove(peer_controller)
