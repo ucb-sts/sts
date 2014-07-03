@@ -220,3 +220,9 @@ class TestONONOSController(ControllerAbstractClass):
     """Stop ignoring traffic to/from the given peer controller"""
     self.teston_onos.unblock_peer(peer_controller.config.address)
     self.blocked_peers.remove(peer_controller)
+
+  def __repr__(self):
+    return "%s (%s:%s)" % (self.label, self.config.address, self.config.port)
+
+  def __str__(self):
+    return "%s (%s:%s)" % (self.label, self.config.address, self.config.port)
