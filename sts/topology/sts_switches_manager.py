@@ -26,14 +26,14 @@ from sts.entities.sts_entities import FuzzSoftwareSwitch
 from sts.util.console import msg
 
 from sts.topology.switches_manager import SwitchManagerAbstractClass
-from sts.topology.switches_manager import SwitchManagerPolicy
+from sts.topology.switches_manager import SwitchesManagerPolicy
 
 
 LOG = logging.getLogger("sts.topology.sw_mgm")
 
 
 class STSSwitchesManager(SwitchManagerAbstractClass):
-  def __init__(self, policy=SwitchManagerPolicy()):
+  def __init__(self, policy=SwitchesManagerPolicy()):
     super(STSSwitchesManager, self).__init__(policy)
     self.log = LOG
     self.msg = msg

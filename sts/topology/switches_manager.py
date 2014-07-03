@@ -23,7 +23,7 @@ import abc
 from sts.util.policy import Policy
 
 
-class SwitchManagerPolicy(Policy):
+class SwitchesManagerPolicy(Policy):
   """
   Defines the policy of what can/cannot do for the SwitchesManager.
   """
@@ -31,7 +31,7 @@ class SwitchManagerPolicy(Policy):
                can_remove_switch=True, can_crash_switch=True,
                can_recover_switch=True, can_get_up_switches=True,
                can_get_down_switches=True, can_connect_to_controllers=True):
-    super(SwitchManagerPolicy, self).__init__()
+    super(SwitchesManagerPolicy, self).__init__()
     self._can_create_switch = can_create_switch
     self._can_add_switch = can_add_switch
     self._can_remove_switch = can_remove_switch
@@ -103,7 +103,7 @@ class SwitchManagerAbstractClass(object):
   """
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, policy=SwitchManagerPolicy()):
+  def __init__(self, policy=SwitchesManagerPolicy()):
     self._policy = policy
 
   @abc.abstractproperty

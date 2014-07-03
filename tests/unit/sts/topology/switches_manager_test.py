@@ -15,9 +15,9 @@
 
 from tests.unit.sts.util.policy_test import PolicyGenericTest
 
-from sts.topology.switches_manager import SwitchManagerPolicy
+from sts.topology.switches_manager import SwitchesManagerPolicy
 
 
-class HostsManagerPolicyTest(PolicyGenericTest):
+class SwitchesManagerPolicyTest(PolicyGenericTest):
   def setUp(self):
-    self._policy_cls = SwitchManagerPolicy
+    self._policy_cls = SwitchesManagerPolicy

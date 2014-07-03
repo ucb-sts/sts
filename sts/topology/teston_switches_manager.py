@@ -25,7 +25,7 @@ from sts.entities.teston_entities import TestONOVSSwitch
 from sts.entities.teston_entities import TestONPort
 
 from sts.topology.switches_manager import SwitchManagerAbstractClass
-from sts.topology.switches_manager import SwitchManagerPolicy
+from sts.topology.switches_manager import SwitchesManagerPolicy
 
 
 LOG = logging.getLogger("sts.topology.teston_sw_mgm")
@@ -34,7 +34,7 @@ LOG = logging.getLogger("sts.topology.teston_sw_mgm")
 class TestONSwitchesManager(SwitchManagerAbstractClass):
 
   def __init__(self, teston_mn):
-    policy = SwitchManagerPolicy(
+    policy = SwitchesManagerPolicy(
       can_add_switch=False, can_create_switch=False, can_crash_switch=False,
       can_remove_switch=False, can_recover_switch=False)
     super(TestONSwitchesManager, self).__init__(policy)
