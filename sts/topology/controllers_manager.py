@@ -15,21 +15,21 @@
 
 from collections import Iterable
 
-from sts.util.policy import Policy
+from sts.util.capability import Capabilities
 
 from sts.entities.controllers import ControllerState
 
 
-class ControllersManagerPolicy(Policy):
+class ControllersManagerCapabilities(Capabilities):
   """
-  Defines the policy of what can/cannot do for the ControllersManager.
+  Defines the capabilities of what can/cannot do for the ControllersManager.
   """
   def __init__(self, can_create_controller=True, can_add_controller=True,
                can_remove_controller=True, can_crash_controller=True,
                can_recover_controller=True, can_partition_control_plane=True,
                can_get_up_controllers=True, can_get_down_controllers=True,
                can_block_peers=True, can_unblock_peers=True):
-    super(ControllersManagerPolicy, self).__init__()
+    super(ControllersManagerCapabilities, self).__init__()
     self._can_create_controller = can_create_controller
     self._can_add_controller = can_add_controller
     self._can_remove_controller = can_remove_controller
@@ -117,8 +117,8 @@ class ControllersManager(object):
   """
   Manages set of Controllers.
   """
-  def __init__(self, policy=ControllersManagerPolicy()):
-    self.policy = policy
+  def __init__(self, capabilities=ControllersManagerCapabilities()):
+    self.capabilities = capabilities
     self._live_controllers = set()
     self._failed_controllers = set()
 
@@ -148,7 +148,7 @@ class ControllersManager(object):
     Returns set of UP controllers.
     This method should check the actual status of the controllers.
     """
-    assert self.policy.can_get_up_controllers
+    assert self.capabilities.can_get_up_controllers
     controllers = set()
     for controller in self.controllers:
       if controller.check_status(None) == ControllerState.ALIVE:
@@ -161,7 +161,7 @@ class ControllersManager(object):
     Returns set of dead controllers.
     This method should check the actual status of the controllers.
     """
-    assert self.policy.can_get_down_controllers
+    assert self.capabilities.can_get_down_controllers
     controllers = set()
     for controller in self.controllers:
       if controller.check_status(None) == ControllerState.DEAD:
@@ -173,12 +173,12 @@ class ControllersManager(object):
     Creates new controller. The controller is not added to the manager.
     See: `add_controller`
     """
-    assert self.policy.can_create_controller
+    assert self.capabilities.can_create_controller
     raise NotImplementedError()
 
   def add_controller(self, controller):
     """Adds a controller instance to be managed by this manager"""
-    assert self.policy.can_add_controller
+    assert self.capabilities.can_add_controller
     assert controller not in self.controllers
     if controller.state == ControllerState.ALIVE:
       self._live_controllers.add(controller)
@@ -187,7 +187,7 @@ class ControllersManager(object):
 
   def remove_controller(self, controller):
     """Remove a controller instance from being managed by this manager"""
-    assert self.policy.can_remove_controller
+    assert self.capabilities.can_remove_controller
     assert controller in self.controllers
     if controller in self.live_controllers:
       self._live_controllers.remove(controller)
@@ -196,19 +196,19 @@ class ControllersManager(object):
 
   def crash_controller(self, controller):
     """Kill the controller."""
-    assert self.policy.can_crash_controller
+    assert self.capabilities.can_crash_controller
     assert controller in self.controllers
     controller.kill()
 
   def recover_controller(self, controller):
     """Restart the controller."""
-    assert self.policy.can_recover_controller
+    assert self.capabilities.can_recover_controller
     assert controller in self.controllers
     controller.start()
 
   def block_peers(self, controller, peers):
     """Blocks connectivity between the controller and set of peers"""
-    assert self.policy.can_block_peers
+    assert self.capabilities.can_block_peers
     assert controller in self.controllers
     if not isinstance(peers, Iterable):
       peers = [peers]
@@ -217,7 +217,7 @@ class ControllersManager(object):
 
   def unblock_peers(self, controller, peers):
     """Restores connectivity between the controller and set of peers"""
-    assert self.policy.can_unblock_peers
+    assert self.capabilities.can_unblock_peers
     assert controller in self.controllers
     if not isinstance(peers, Iterable):
       peers = [peers]

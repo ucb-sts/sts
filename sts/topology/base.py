@@ -26,11 +26,12 @@ import inspect
 import logging
 
 from sts.util.console import msg
+from sts.util.capability import Capabilities
 
 from sts.topology.graph import TopologyGraph
 
 
-class TopologyPolicy(object):
+class TopologyCapabilities(object):
   """Basic topology settings for network topologies"""
   def __init__(self, can_create_host=True, can_add_host=True,
                can_create_interface=True, can_remove_host=True,
@@ -41,7 +42,7 @@ class TopologyPolicy(object):
                can_add_access_link=True, can_remove_access_link=True,
                can_change_link_status=True,
                can_change_access_link_status=True):
-    super(TopologyPolicy, self).__init__()
+    super(TopologyCapabilities, self).__init__()
     self._can_create_interface = can_create_interface
     self._can_create_host = can_create_host
     self._can_add_host = can_add_host
@@ -60,21 +61,21 @@ class TopologyPolicy(object):
     # more for OF and per packet
 
   def set_create_policy(self, policy):
-    """Helper method to change policy for everything that can be created."""
+    """Helper method to change capabilities for everything that can be created."""
     for name, value in inspect.getmembers(self,
                                           lambda a: not inspect.isroutine(a)):
       if name.startswith("_can_create"):
         setattr(self, name, policy)
 
   def set_add_policy(self, policy):
-    """Helper method to change policy for everything that can be added."""
+    """Helper method to change capabilities for everything that can be added."""
     for name, value in inspect.getmembers(self,
                                           lambda a: not inspect.isroutine(a)):
       if name.startswith("_can_add"):
         setattr(self, name, policy)
 
   def set_remove_policy(self, policy):
-    """Helper method to change policy for everything that can be removed."""
+    """Helper method to change capabilities for everything that can be removed."""
     for name, value in inspect.getmembers(self,
                                           lambda a: not inspect.isroutine(a)):
       if name.startswith("_can_remove"):
@@ -167,7 +168,7 @@ class Topology(object):
     - ControllerPatchPanel: Manages control plane links
 
   """
-  def __init__(self, hosts_manager, switches_manager, patch_panel, policy,
+  def __init__(self, hosts_manager, switches_manager, patch_panel, capabilities,
                is_host, is_switch, is_network_link, is_access_link,
                is_host_interface, is_port, sts_console=msg):
     """
@@ -182,7 +183,7 @@ class Topology(object):
     assert is_access_link is not None, "Access Link check is not defined"
     assert is_host_interface is not None, "Interface check is not defined"
     assert is_port is not None, "Port check is not defined"
-    assert policy is not None, "Topology's Policy is not defined"
+    assert capabilities is not None, "Topology's Capabilities is not defined"
     self.is_host = is_host
     self.is_switch = is_switch
     self.is_network_link = is_network_link
@@ -197,7 +198,7 @@ class Topology(object):
 
     self.msg = sts_console
     self.log = logging.getLogger("sts.topology.base.Topology")
-    self.policy = policy
+    self.policy = capabilities
 
     # Read existing hosts from the HostsManager
     for host in self.hosts_manager.hosts:

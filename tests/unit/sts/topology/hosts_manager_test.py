@@ -16,9 +16,9 @@
 import re
 import unittest
 
-from tests.unit.sts.util.policy_test import PolicyGenericTest
+from tests.unit.sts.util.capability_test import CapabilitiesGenericTest
 
-from sts.topology.hosts_manager import HostsManagerPolicy
+from sts.topology.hosts_manager import HostsManagerCapabilities
 from sts.topology.hosts_manager import mac_addresses_generator
 from sts.topology.hosts_manager import ip_addresses_generator
 from sts.topology.hosts_manager import interface_names_generator
@@ -63,6 +63,6 @@ class GeneratorsTest(unittest.TestCase):
     self.assertEquals(len(names), max_num)
 
 
-class HostsManagerPolicyTest(PolicyGenericTest):
+class HostsManagerCapabilitiesTest(CapabilitiesGenericTest):
   def setUp(self):
-    self._policy_cls = HostsManagerPolicy
+    self._capabilities_cls = HostsManagerCapabilities

@@ -20,18 +20,18 @@ Manages switches in the network.
 
 import abc
 
-from sts.util.policy import Policy
+from sts.util.capability import Capabilities
 
 
-class SwitchesManagerPolicy(Policy):
+class SwitchesManagerCapabilities(Capabilities):
   """
-  Defines the policy of what can/cannot do for the SwitchesManager.
+  Defines the capabilities of what can/cannot do for the SwitchesManager.
   """
   def __init__(self, can_create_switch=True, can_add_switch=True,
                can_remove_switch=True, can_crash_switch=True,
                can_recover_switch=True, can_get_up_switches=True,
                can_get_down_switches=True, can_connect_to_controllers=True):
-    super(SwitchesManagerPolicy, self).__init__()
+    super(SwitchesManagerCapabilities, self).__init__()
     self._can_create_switch = can_create_switch
     self._can_add_switch = can_add_switch
     self._can_remove_switch = can_remove_switch
@@ -98,13 +98,13 @@ class SwitchesManagerPolicy(Policy):
 class SwitchManagerAbstractClass(object):
   """
   Manages the switches in the network. This is meant to provide the mechanisms
-  to control switches for the higher level policy controllers (e.g. Fuzzer,
+  to control switches for the higher level capabilities controllers (e.g. Fuzzer,
   and Replayer).
   """
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, policy=SwitchesManagerPolicy()):
-    self._policy = policy
+  def __init__(self, capabilities=SwitchesManagerCapabilities()):
+    self._capabilities = capabilities
 
   @abc.abstractproperty
   def switches(self):

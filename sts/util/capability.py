@@ -13,9 +13,9 @@
 # limitations under the License.
 
 """
-Helper class to create specific Policy classes.
+Helper class to create specific Capabilities classes.
 
-A policy class contains a set of properties, the name of each property
+A capabilities class contains a set of properties, the name of each property
 starts with 'can_' and then the capability name. For example: can_add_x,
 can_remove_x, can_create_x, etc...
 """
@@ -23,18 +23,18 @@ can_remove_x, can_create_x, etc...
 import inspect
 
 
-class Policy(object):
+class Capabilities(object):
   """
-  Expresses a simple policy of what can/cannot it be do done by a given object.
+  Expresses a simple capabilities of what can/cannot it be do done by a given object.
 
   This parent class is very simple and only provides basic functionality to
   set a collection of policies in one call.
   """
   def __init__(self):
-    super(Policy, self).__init__()
+    super(Capabilities, self).__init__()
 
   def set_create_policy(self, policy):
-    """Helper method to change policy for everything that can be created."""
+    """Helper method to change capabilities for everything that can be created."""
     for name, _ in inspect.getmembers(self,
                                           lambda a: not inspect.isroutine(a)):
       if name.startswith('can_create') and not hasattr(self, '_' + name):
@@ -43,7 +43,7 @@ class Policy(object):
         setattr(self, name, policy)
 
   def set_add_policy(self, policy):
-    """Helper method to change policy for everything that can be added."""
+    """Helper method to change capabilities for everything that can be added."""
     for name, _ in inspect.getmembers(self,
                                           lambda a: not inspect.isroutine(a)):
       if name.startswith('can_add') and not hasattr(self, '_' + name):
@@ -52,7 +52,7 @@ class Policy(object):
         setattr(self, name, policy)
 
   def set_remove_policy(self, policy):
-    """Helper method to change policy for everything that can be removed."""
+    """Helper method to change capabilities for everything that can be removed."""
     for name, _ in inspect.getmembers(self,
                                           lambda a: not inspect.isroutine(a)):
       if name.startswith('can_remove') and not hasattr(self, '_' + name):

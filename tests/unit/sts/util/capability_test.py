@@ -16,12 +16,12 @@
 import inspect
 import unittest
 
-from sts.util.policy import Policy
+from sts.util.capability import Capabilities
 
 
-class SimpleTestPolicy(Policy):
+class SimpleTestCapabilities(Capabilities):
   """
-  Just a simple policy for testing purposes.
+  Just a simple capabilities for testing purposes.
   """
   can_create_x = True
   can_add_x = True
@@ -29,7 +29,7 @@ class SimpleTestPolicy(Policy):
 
   def __init__(self, can_create_x, can_create_y, can_add_x, can_add_y,
                can_remove_x, can_remove_y):
-    super(SimpleTestPolicy, self).__init__()
+    super(SimpleTestCapabilities, self).__init__()
     self.can_create_x = can_create_x
     self._can_create_y = can_create_y
     self.can_add_x = can_add_x
@@ -50,11 +50,11 @@ class SimpleTestPolicy(Policy):
     return self._can_remove_y
 
 
-class PolicyTest(unittest.TestCase):
+class CapabilitiesTest(unittest.TestCase):
   def test_set_create_policy(self):
     # Arrange
-    policy1 = SimpleTestPolicy(True, True, True, True, True, True)
-    policy2 = SimpleTestPolicy(False, False, False, False, False, False)
+    policy1 = SimpleTestCapabilities(True, True, True, True, True, True)
+    policy2 = SimpleTestCapabilities(False, False, False, False, False, False)
     # Act
     policy1.set_create_policy(False)
     policy2.set_create_policy(False)
@@ -66,8 +66,8 @@ class PolicyTest(unittest.TestCase):
 
   def test_set_add_policy(self):
     # Arrange
-    policy1 = SimpleTestPolicy(True, True, True, True, True, True)
-    policy2 = SimpleTestPolicy(False, False, False, False, False, False)
+    policy1 = SimpleTestCapabilities(True, True, True, True, True, True)
+    policy2 = SimpleTestCapabilities(False, False, False, False, False, False)
     # Act
     policy1.set_add_policy(False)
     policy2.set_add_policy(False)
@@ -79,8 +79,8 @@ class PolicyTest(unittest.TestCase):
 
   def test_set_remove_policy(self):
     # Arrange
-    policy1 = SimpleTestPolicy(True, True, True, True, True, True)
-    policy2 = SimpleTestPolicy(False, False, False, False, False, False)
+    policy1 = SimpleTestCapabilities(True, True, True, True, True, True)
+    policy2 = SimpleTestCapabilities(False, False, False, False, False, False)
     # Act
     policy1.set_remove_policy(False)
     policy2.set_remove_policy(False)
@@ -92,8 +92,8 @@ class PolicyTest(unittest.TestCase):
 
   def test_to_json(self):
     # Arrange
-    policy1 = SimpleTestPolicy(True, True, True, True, True, True)
-    policy2 = SimpleTestPolicy(False, False, False, False, False, False)
+    policy1 = SimpleTestCapabilities(True, True, True, True, True, True)
+    policy2 = SimpleTestCapabilities(False, False, False, False, False, False)
     # Act
     json1 = policy1.to_json()
     json2 = policy2.to_json()
@@ -107,17 +107,17 @@ class PolicyTest(unittest.TestCase):
                                   can_remove_x=False, can_remove_y=False))
 
 
-class PolicyGenericTest(unittest.TestCase):
+class CapabilitiesGenericTest(unittest.TestCase):
   """
-  This is a generic test case that can be extended to test specific Policy
+  This is a generic test case that can be extended to test specific Capabilities
   classes. Just need to override setUp to point to the right class.
   """
   def setUp(self):
-    self._policy_cls = SimpleTestPolicy
+    self._capabilities_cls = SimpleTestCapabilities
 
   def _get_properties(self, policy, default_value=True):
     """
-    Returns a dict of the policy properties in policy and the value is
+    Returns a dict of the capabilities properties in capabilities and the value is
     set to the default_value.
     """
     properties_dict = {}
@@ -131,21 +131,21 @@ class PolicyGenericTest(unittest.TestCase):
 
   def test_set_all_false(self):
     # Arrange
-    properties_dict = self._get_properties(self._policy_cls, False)
+    properties_dict = self._get_properties(self._capabilities_cls, False)
     # Act
-    policy = self._policy_cls(**properties_dict)
+    policy = self._capabilities_cls(**properties_dict)
     # Assert
     for name in properties_dict:
       self.assertFalse(getattr(policy, name))
 
   def test_set_one_false(self):
     # Arrange
-    properties_dict = self._get_properties(self._policy_cls, True)
+    properties_dict = self._get_properties(self._capabilities_cls, True)
     # Act
     for prop in properties_dict:
       new_properties = properties_dict.copy()
       new_properties[prop] = False
-      policy = self._policy_cls(**new_properties)
+      policy = self._capabilities_cls(**new_properties)
       for name in properties_dict:
         if name == prop:
           self.assertFalse(getattr(policy, name), prop)
@@ -154,12 +154,12 @@ class PolicyGenericTest(unittest.TestCase):
 
   def test_set_one_true(self):
      # Arrange
-    properties_dict = self._get_properties(self._policy_cls, False)
+    properties_dict = self._get_properties(self._capabilities_cls, False)
     # Act
     for prop in properties_dict:
       new_properties = properties_dict.copy()
       new_properties[prop] = True
-      policy = self._policy_cls(**new_properties)
+      policy = self._capabilities_cls(**new_properties)
       for name in properties_dict:
         if name == prop:
           self.assertTrue(getattr(policy, name), prop)

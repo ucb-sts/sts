@@ -13,11 +13,11 @@
 # limitations under the License.
 
 
-from tests.unit.sts.util.policy_test import PolicyGenericTest
+from tests.unit.sts.util.capability_test import CapabilitiesGenericTest
 
-from sts.topology.switches_manager import SwitchesManagerPolicy
+from sts.topology.switches_manager import SwitchesManagerCapabilities
 
 
-class SwitchesManagerPolicyTest(PolicyGenericTest):
+class SwitchesManagerCapabilitiesTest(CapabilitiesGenericTest):
   def setUp(self):
-    self._policy_cls = SwitchesManagerPolicy
+    self._capabilities_cls = SwitchesManagerCapabilities

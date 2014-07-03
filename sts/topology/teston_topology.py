@@ -21,7 +21,7 @@ from sts.entities.teston_entities import TestONPort
 from sts.entities.teston_entities import TestONOVSSwitch
 
 from sts.topology.base import Topology
-from sts.topology.base import TopologyPolicy
+from sts.topology.base import TopologyCapabilities
 
 from sts.topology.teston_switches_manager import TestONSwitchesManager
 from sts.topology.teston_hosts_manager import TestONHostsManager
@@ -33,7 +33,7 @@ class TestONTopology(Topology):
     switches_manager = TestONSwitchesManager(teston_mn)
     hosts_manager = TestONHostsManager(teston_mn)
     patch_panel = TestONPatchPanel(teston_mn, hosts_manager, switches_manager)
-    policy = TopologyPolicy()
+    policy = TopologyCapabilities()
 
     is_host = lambda x: isinstance(x, TestONHost)
     is_switch = lambda x: isinstance(x, TestONOVSSwitch)
@@ -43,7 +43,7 @@ class TestONTopology(Topology):
     is_port = lambda x: isinstance(x, TestONPort)
 
     super(TestONTopology, self).__init__(
-      policy=policy, patch_panel=patch_panel, switches_manager=switches_manager,
+      capabilities=policy, patch_panel=patch_panel, switches_manager=switches_manager,
       hosts_manager=hosts_manager, is_host=is_host, is_switch=is_switch,
       is_network_link=is_network_link,
       is_access_link=is_access_link, is_host_interface=is_host_interface,

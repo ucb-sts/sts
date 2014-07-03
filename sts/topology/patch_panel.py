@@ -20,6 +20,8 @@ Patch panel connects the different elements in the network together.
 
 import abc
 
+from sts.util.capability import Capabilities
+
 from sts.entities.base import DirectedLinkAbstractClass
 from sts.entities.base import BiDirectionalLinkAbstractClass
 
@@ -35,7 +37,7 @@ def is_network_link(link):
                            BiDirectionalLinkAbstractClass))
 
 
-class PatchPanelPolicy(object):
+class PatchPanelCapabilities(Capabilities):
   """
   Expresses what a PatchPanel can/cannot do.
   """
@@ -187,8 +189,8 @@ class PatchPanelAbstractClass(object):
 
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, policy):
-    self.policy = policy
+  def __init__(self, capabilities):
+    self.capabilities = capabilities
 
   @abc.abstractproperty
   def network_links(self):
@@ -395,10 +397,10 @@ class PatchPanelBK(PatchPanelAbstractClass):
 
 
   def __init__(self, network_link_factory, access_link_factory,
-               policy=PatchPanelPolicy(), is_network_link=is_network_link,
+               capabilities=PatchPanelCapabilities(), is_network_link=is_network_link,
                is_bidir_network_link=is_bidir_network_link,
                is_access_link=is_network_link):
-    super(PatchPanelBK, self).__init__(policy=policy)
+    super(PatchPanelBK, self).__init__(capabilities=capabilities)
     self.is_network_link = is_network_link
     self.is_bidir_network_link = is_bidir_network_link
     self.network_link_factory = network_link_factory
@@ -432,7 +434,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
     """
     Returns list of UP Links, Checks the actual status of network links.
     """
-    assert self.policy.can_get_up_network_links
+    assert self.capabilities.can_get_up_network_links
     return set(self.network_links) - self.cut_network_links
 
   @property
@@ -440,7 +442,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
     """
     Returns list of DOWN Links, Checks the actual status of network links.
     """
-    assert self.policy.can_get_down_network_links
+    assert self.capabilities.can_get_down_network_links
     return set(self.network_links) - self.cut_network_links
 
   @property
@@ -463,7 +465,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
     """
     Returns list of UP Links, Checks the actual status of network links.
     """
-    assert self.policy.can_get_up_access_links
+    assert self.capabilities.can_get_up_access_links
     return set(self.access_links) - self.cut_access_links
 
   @property
@@ -471,7 +473,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
     """
     Returns list of DOWN Links, Checks the actual status of network links.
     """
-    assert self.policy.can_get_down_access_links
+    assert self.capabilities.can_get_down_access_links
     return set(self.access_links) - self.cut_access_links
 
   def is_port_connected(self, port):
@@ -496,7 +498,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
     The new link wont be added to this manager.
     See `add_network_link`.
     """
-    assert self.policy.can_create_network_link
+    assert self.capabilities.can_create_network_link
     assert src_port is not None
     assert dst_port is not None
     link = self.network_link_factory(src_switch, src_port, dst_switch, dst_port)
@@ -504,7 +506,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
 
   def add_network_link(self, link):
     """Connect whatever necessary to make the link connected."""
-    assert self.policy.can_add_network_link
+    assert self.capabilities.can_add_network_link
     assert self.is_network_link(link), link
     if self.is_bidir_network_link(link):
       self.src_port2internal_link[link.port1] = link
@@ -522,7 +524,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
 
     Basically says to the patch panel don't manage this link any more.
     """
-    assert self.policy.can_remove_network_link
+    assert self.capabilities.can_remove_network_link
     assert self.is_network_link(link)
     assert link in self.network_links
     if self.is_bidir_network_link(link):
@@ -577,7 +579,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
     The new link wont be added to this manager.
     See `add_access_link`.
     """
-    assert self.policy.can_create_access_link
+    assert self.capabilities.can_create_access_link
     assert port is not None
     assert interface is not None
     link = self.access_link_factory(host, interface, switch, port)
@@ -585,7 +587,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
 
   def add_access_link(self, link):
     """Connects whatever necessary to make the link connected."""
-    assert self.policy.can_add_access_link
+    assert self.capabilities.can_add_access_link
     assert self.is_access_link(link)
     self.port2access_link[link.switch_port] = link
     self.interface2access_link[link.interface] = link
@@ -595,7 +597,7 @@ class PatchPanelBK(PatchPanelAbstractClass):
     """
     Removes access link between a host and a switch.
     """
-    assert self.policy.can_remove_access_link
+    assert self.capabilities.can_remove_access_link
     assert link in self.access_links
     del self.interface2access_link[link.interface]
     del self.port2access_link[link.switch_port]

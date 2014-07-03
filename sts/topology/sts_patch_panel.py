@@ -23,7 +23,7 @@ from sts.util.console import msg
 from sts.entities.sts_entities import Link
 from sts.entities.sts_entities import AccessLink
 
-from sts.topology.patch_panel import PatchPanelPolicy
+from sts.topology.patch_panel import PatchPanelCapabilities
 from sts.topology.patch_panel import PatchPanelBK
 
 
@@ -31,10 +31,10 @@ class STSPatchPanel(PatchPanelBK):
   """
   STS specific implementation of PatchPanel.
   """
-  def __init__(self, policy=PatchPanelPolicy(), sts_console=msg):
+  def __init__(self, capabilities=PatchPanelCapabilities(), sts_console=msg):
     super(STSPatchPanel, self).__init__(network_link_factory=Link,
                                         access_link_factory=AccessLink,
-                                        policy=policy)
+                                        capabilities=capabilities)
     self.msg = sts_console
 
   def create_network_link(self, src_switch, src_port, dst_switch, dst_port,

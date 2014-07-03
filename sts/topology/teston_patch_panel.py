@@ -24,7 +24,7 @@ from sts.util.console import msg
 from sts.entities.teston_entities import TestONAccessLink
 from sts.entities.teston_entities import TestONNetworkLink
 
-from sts.topology.patch_panel import PatchPanelPolicy
+from sts.topology.patch_panel import PatchPanelCapabilities
 from sts.topology.patch_panel import PatchPanelBK
 
 
@@ -33,20 +33,20 @@ class TestONPatchPanel(PatchPanelBK):
   STS specific implementation of PatchPanel.
   """
   def __init__(self, teston_mn, hosts_manager, switches_manager):
-    policy = PatchPanelPolicy(
+    policy = PatchPanelCapabilities(
       can_create_access_link=False, can_add_access_link=True,
       can_remove_access_link=False, can_create_network_link=False,
       can_add_network_link=True, can_remove_network_link=False)
     super(TestONPatchPanel, self).__init__(network_link_factory=None,
                                         access_link_factory=None,
-                                        policy=policy)
+                                        capabilities=policy)
     self.teston_mn = teston_mn
     self._switches_manager = switches_manager
     self._hosts_manager = hosts_manager
     self._read_links()
     self.msg = msg
-    self.policy.can_add_access_links = False
-    self.policy.can_add_network_links = False
+    self.capabilities.can_add_access_links = False
+    self.capabilities.can_add_network_links = False
 
   def _read_links(self):
     """
@@ -94,14 +94,14 @@ class TestONPatchPanel(PatchPanelBK):
 
   def create_network_link(self, src_switch, src_port, dst_switch, dst_port,
                           bidir=False):
-    assert self.policy.can_create_network_link
+    assert self.capabilities.can_create_network_link
     raise NotImplementedError()
 
   def sever_network_link(self, link):
     """
     Disconnect link
     """
-    assert self.policy.can_sever_network_link
+    assert self.capabilities.can_sever_network_link
     self.msg.event("Cutting link %s" % str(link))
     if link not in self.network_links:
       raise ValueError("unknown link %s" % str(link))
@@ -112,7 +112,7 @@ class TestONPatchPanel(PatchPanelBK):
 
   def repair_network_link(self, link):
     """Bring a link back online"""
-    assert self.policy.can_repair_network_link
+    assert self.capabilities.can_repair_network_link
     self.msg.event("Restoring link %s" % str(link))
     if link not in self.network_links:
       raise ValueError("Unknown link %s" % str(link))
@@ -125,7 +125,7 @@ class TestONPatchPanel(PatchPanelBK):
     """
     Disconnect host-switch link
     """
-    assert self.policy.can_sever_access_link
+    assert self.capabilities.can_sever_access_link
     self.msg.event("Cutting access link %s" % str(link))
     if link not in self.access_links:
       raise ValueError("unknown access link %s" % str(link))
@@ -136,7 +136,7 @@ class TestONPatchPanel(PatchPanelBK):
 
   def repair_access_link(self, link):
     """Bring a link back online"""
-    assert self.policy.can_repair_access_link
+    assert self.capabilities.can_repair_access_link
     self.msg.event("Restoring access link %s" % str(link))
     if link not in self.access_links:
       raise ValueError("Unknown access link %s" % str(link))

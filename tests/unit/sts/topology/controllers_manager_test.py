@@ -16,16 +16,16 @@
 import mock
 import unittest
 
-from tests.unit.sts.util.policy_test import PolicyGenericTest
+from tests.unit.sts.util.capability_test import CapabilitiesGenericTest
 
 from sts.entities.controllers import ControllerState
 from sts.topology.controllers_manager import ControllersManager
-from sts.topology.controllers_manager import ControllersManagerPolicy
+from sts.topology.controllers_manager import ControllersManagerCapabilities
 
 
-class ControllersManagerPolicyTest(PolicyGenericTest):
+class ControllersManagerCapabilitiesTest(CapabilitiesGenericTest):
   def setUp(self):
-    self._policy_cls = ControllersManagerPolicy
+    self._capabilities_cls = ControllersManagerCapabilities
 
 
 class ControllersManagerTest(unittest.TestCase):

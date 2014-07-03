@@ -26,7 +26,7 @@ from sts.entities.teston_entities import TestONHostInterface
 
 
 from sts.topology.hosts_manager import HostsManagerAbstractClass
-from sts.topology.hosts_manager import HostsManagerPolicy
+from sts.topology.hosts_manager import HostsManagerCapabilities
 
 
 LOG = logging.getLogger("sts.topology.teston_h_mgm")
@@ -37,7 +37,7 @@ class TestONHostsManager(HostsManagerAbstractClass):
   Hosts manager specific TestON Hosts.
   """
   def __init__(self, teston_mn):
-    policy = HostsManagerPolicy(
+    policy = HostsManagerCapabilities(
       can_crash_host=False, can_recover_host=False, can_create_host=False,
       can_remove_host=False, can_create_interface=False)
     super(TestONHostsManager, self).__init__(policy)
@@ -104,7 +104,7 @@ class TestONHostsManager(HostsManagerAbstractClass):
     Returns set of UP hosts.
     This method should check the actual status of the hosts.
     """
-    assert self.policy.can_get_up_hosts
+    assert self.capabilities.can_get_up_hosts
     return self._hosts
 
   @property
@@ -113,7 +113,7 @@ class TestONHostsManager(HostsManagerAbstractClass):
     Returns set of dead hosts.
     This method should check the actual status of the hosts.
     """
-    assert self.policy.can_get_down_hosts
+    assert self.capabilities.can_get_down_hosts
     return set()
 
   def get_host(self, host):
@@ -128,27 +128,27 @@ class TestONHostsManager(HostsManagerAbstractClass):
     return self.get_host(host) is not None
 
   def create_host(self, hid, name=None, interfaces=None):
-    assert self.policy.can_create_host
+    assert self.capabilities.can_create_host
     raise NotImplementedError()
 
   def create_interface(self, hw_addr, ip_or_ips=None, name=None):
-    assert self.policy.can_create_interface
+    assert self.capabilities.can_create_interface
     raise NotImplementedError()
 
   def add_host(self, host):
     """Adds host to be managed by this manager"""
-    assert self.policy.can_add_host
+    assert self.capabilities.can_add_host
     raise NotImplementedError()
 
   def remove_host(self, host):
     """Removes host from this manager"""
-    assert self.policy.can_remove_host
+    assert self.capabilities.can_remove_host
     raise NotImplementedError()
 
   def crash_host(self, host):
-    assert self.policy.can_crash_host
+    assert self.capabilities.can_crash_host
     raise NotImplementedError()
 
   def recover_host(self, host):
-    assert self.policy.can_recover_host
+    assert self.capabilities.can_recover_host
     raise NotImplementedError()

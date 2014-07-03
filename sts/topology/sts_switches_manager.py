@@ -26,15 +26,15 @@ from sts.entities.sts_entities import FuzzSoftwareSwitch
 from sts.util.console import msg
 
 from sts.topology.switches_manager import SwitchManagerAbstractClass
-from sts.topology.switches_manager import SwitchesManagerPolicy
+from sts.topology.switches_manager import SwitchesManagerCapabilities
 
 
 LOG = logging.getLogger("sts.topology.sw_mgm")
 
 
 class STSSwitchesManager(SwitchManagerAbstractClass):
-  def __init__(self, policy=SwitchesManagerPolicy()):
-    super(STSSwitchesManager, self).__init__(policy)
+  def __init__(self, capabilities=SwitchesManagerCapabilities()):
+    super(STSSwitchesManager, self).__init__(capabilities)
     self.log = LOG
     self.msg = msg
     self._failed_switches = set()
@@ -81,7 +81,7 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
     return edge_switches - self.failed_switches
 
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
-    assert self._policy.can_create_switch
+    assert self._capabilities.can_create_switch
     ports = []
     for port_no in range(1, num_ports + 1):
       eth_addr = EthAddr("00:00:00:00:%02x:%02x" % (switch_id, port_no))
@@ -99,13 +99,13 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
 
   def add_switch(self, switch):
     """Adds switch to be managed by this manager"""
-    assert self._policy.can_add_switch
+    assert self._capabilities.can_add_switch
     assert switch not in self.switches
     self._live_switches.add(switch)
 
   def remove_switch(self, switch):
     """Removes switch from this manager"""
-    assert self._policy.can_remove_switch
+    assert self._capabilities.can_remove_switch
     assert switch in self.switches
     if switch in self.live_switches:
       self._live_switches.remove(switch)
@@ -116,22 +116,25 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
                        str(switch))
 
   def crash_switch(self, switch):
-    assert self._policy.can_crash_switch
+    assert self._capabilities.can_crash_switch
     switch.fail()
     if switch in self._live_switches:
       self._live_switches.remove(switch)
     self._failed_switches.add(switch)
 
-  def connect_to_controllers(self, switch, controllers):
+  def connect_to_controllers(self, switch, controllers,
+                             max_backoff_seconds=1024):
     """
     Connect a switch to a list (of one or more) controllers
     """
-    raise NotImplementedError()
+    assert self._capabilities.can_connect_to_controllers
+    assert switch in self.switches
+    switch.connect(controllers, max_backoff_seconds)
 
   def recover_switch(self, switch, controllers=None):
     """Reboot previously crashed switch"""
     # TODO CONNECT
-    assert self._policy.can_recover_switch
+    assert self._capabilities.can_recover_switch
     self.msg.event("Rebooting switch %s" % str(switch))
     if controllers is None:
       controllers = set()

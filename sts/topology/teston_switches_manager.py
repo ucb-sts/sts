@@ -25,7 +25,7 @@ from sts.entities.teston_entities import TestONOVSSwitch
 from sts.entities.teston_entities import TestONPort
 
 from sts.topology.switches_manager import SwitchManagerAbstractClass
-from sts.topology.switches_manager import SwitchesManagerPolicy
+from sts.topology.switches_manager import SwitchesManagerCapabilities
 
 
 LOG = logging.getLogger("sts.topology.teston_sw_mgm")
@@ -34,7 +34,7 @@ LOG = logging.getLogger("sts.topology.teston_sw_mgm")
 class TestONSwitchesManager(SwitchManagerAbstractClass):
 
   def __init__(self, teston_mn):
-    policy = SwitchesManagerPolicy(
+    policy = SwitchesManagerCapabilities(
       can_add_switch=False, can_create_switch=False, can_crash_switch=False,
       can_remove_switch=False, can_recover_switch=False)
     super(TestONSwitchesManager, self).__init__(policy)
@@ -131,21 +131,21 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
     return self.get_switch(switch) is not None
 
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
-    assert self._policy.can_create_switch
+    assert self._capabilities.can_create_switch
     raise NotImplementedError()
 
   def add_switch(self, switch):
     """Adds switch to be managed by this manager"""
-    assert self._policy.can_add_switch
+    assert self._capabilities.can_add_switch
     raise NotImplementedError()
 
   def remove_switch(self, switch):
     """Removes switch from this manager"""
-    assert self._policy.can_remove_switch
+    assert self._capabilities.can_remove_switch
     raise NotImplementedError()
 
   def crash_switch(self, switch):
-    assert self._policy.can_crash_switch
+    assert self._capabilities.can_crash_switch
     raise NotImplementedError()
 
   def connect_to_controllers(self, switch, controllers,
@@ -153,7 +153,7 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
     """
     Connect a switch to a list (of one or more) controllers
     """
-    assert self._policy.can_connect_to_controllers
+    assert self._capabilities.can_connect_to_controllers
     assert switch in self.switches
     if not isinstance(controllers, Iterable):
       controllers = [controllers]
@@ -161,5 +161,5 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
       switch.connect(controller, max_backoff_seconds=max_backoff_seconds)
 
   def recover_switch(self, switch, controllers=None):
-    assert self._policy.can_recover_switch
+    assert self._capabilities.can_recover_switch
     raise NotImplementedError()

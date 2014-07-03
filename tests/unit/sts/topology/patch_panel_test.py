@@ -17,14 +17,14 @@ import mock
 import unittest
 
 from sts.topology.patch_panel import PatchPanelBK
-from sts.topology.patch_panel import PatchPanelPolicy
+from sts.topology.patch_panel import PatchPanelCapabilities
 
-from tests.unit.sts.util.policy_test import PolicyGenericTest
+from tests.unit.sts.util.capability_test import Capabilities
 
 
-class PatchPanelPolicyTest(PolicyGenericTest):
+class PatchPanelCapabilitiesTest(Capabilities):
   def setUp(self):
-    self._policy_cls = PatchPanelPolicy
+    self._capabilities_cls = PatchPanelCapabilities
 
 
 network_link_factory = mock.Mock(name='NetworkLinkFactory',
@@ -38,10 +38,10 @@ class TestPatchPanel(PatchPanelBK):
   Basically treats it as a data structure.
   """
 
-  def __init__(self, policy=PatchPanelPolicy()):
+  def __init__(self, capabilities=PatchPanelCapabilities()):
     super(TestPatchPanel, self).__init__(
       network_link_factory=network_link_factory,
-      access_link_factory=access_link_factory, policy=policy)
+      access_link_factory=access_link_factory, capabilities=capabilities)
 
   def sever_network_link(self, link):
     """
@@ -81,7 +81,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_create_network_link=False))
+      capabilities=PatchPanelCapabilities(can_create_network_link=False))
     patch_panel.network_link_factory = mock.Mock(
       side_effect=lambda x, y, z, w: (x, y, z, w))
     src_switch, src_port = mock.Mock(), mock.Mock()
@@ -99,7 +99,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel1 = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_add_network_link=False))
+      capabilities=PatchPanelCapabilities(can_add_network_link=False))
     src_switch, src_port = mock.Mock(), mock.Mock()
     dst_switch, dst_port = mock.Mock(), mock.Mock()
     link = mock.Mock()
@@ -121,7 +121,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel1 = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_remove_network_link=False))
+      capabilities=PatchPanelCapabilities(can_remove_network_link=False))
     src_switch = mock.Mock(name='s1')
     src_port1, src_port2 = mock.Mock(name='p1'), mock.Mock(name='p2')
     dst_switch = mock.Mock(name='s1')
@@ -280,7 +280,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel1 = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_create_access_link=False))
+      capabilities=PatchPanelCapabilities(can_create_access_link=False))
     switch = mock.Mock(name='s1')
     port1, port2 = mock.Mock(name='p1'), mock.Mock(name='p2')
     host = mock.Mock(name='h1')
@@ -301,7 +301,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel1 = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_add_access_link=False))
+      capabilities=PatchPanelCapabilities(can_add_access_link=False))
     switch = mock.Mock(name='s1')
     port1, port2 = mock.Mock(name='p1'), mock.Mock(name='p2')
     host = mock.Mock(name='h1')
@@ -355,7 +355,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel1 = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_add_access_link=False))
+      capabilities=PatchPanelCapabilities(can_add_access_link=False))
     switch = mock.Mock(name='s1')
     port1, port2 = mock.Mock(name='p1'), mock.Mock(name='p2')
     host = mock.Mock(name='h1')
@@ -510,7 +510,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel1 = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_get_up_network_links=False))
+      capabilities=PatchPanelCapabilities(can_get_up_network_links=False))
 
     src_switch1 = mock.Mock(name='src_s1')
     src_port1, src_port2 = mock.Mock(name='src_p1'), mock.Mock(name='src_p2')
@@ -555,7 +555,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel1 = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_get_down_network_links=False))
+      capabilities=PatchPanelCapabilities(can_get_down_network_links=False))
 
     src_switch1 = mock.Mock(name='src_s1')
     src_port1, src_port2 = mock.Mock(name='src_p1'), mock.Mock(name='src_p2')
@@ -600,7 +600,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel1 = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_get_up_access_links=False))
+      capabilities=PatchPanelCapabilities(can_get_up_access_links=False))
 
     switch1 = mock.Mock(name='s1')
     port1, port2 = mock.Mock(name='p1'), mock.Mock(name='p2')
@@ -641,7 +641,7 @@ class PatchPanelTest(unittest.TestCase):
     # Arrange
     patch_panel1 = TestPatchPanel()
     patch_panel2 = TestPatchPanel(
-      policy=PatchPanelPolicy(can_get_down_access_links=False))
+      capabilities=PatchPanelCapabilities(can_get_down_access_links=False))
 
     switch1 = mock.Mock(name='s1')
     port1, port2 = mock.Mock(name='p1'), mock.Mock(name='p2')

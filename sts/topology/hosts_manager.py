@@ -21,7 +21,7 @@ Hosts manager take care of managing host in the data plane.
 import abc
 import random
 
-from sts.util.policy import Policy
+from sts.util.capability import Capabilities
 
 
 def mac_addresses_generator(max_addresses=None):
@@ -64,15 +64,15 @@ def interface_names_generator(start=0, max_names=None):
     yield name
 
 
-class HostsManagerPolicy(Policy):
+class HostsManagerCapabilities(Capabilities):
   """
-  Defines the policy of what can/cannot do for the HostsManager.
+  Defines the capabilities of what can/cannot do for the HostsManager.
   """
   def __init__(self, can_create_host=True, can_create_interface=True,
                can_add_host=True, can_remove_host=True, can_crash_host=True,
                can_recover_host=True, can_get_up_hosts=True,
                can_get_down_hosts=True):
-    super(HostsManagerPolicy, self).__init__()
+    super(HostsManagerCapabilities, self).__init__()
     self._can_create_host = can_create_host
     self._can_create_interface = can_create_interface
     self._can_add_host = can_add_host
@@ -136,13 +136,13 @@ class HostsManagerPolicy(Policy):
 class HostsManagerAbstractClass(object):
   """
   Manages the hosts in the network. This is meant to provide the mechanisms
-  to control hosts for the higher level policy controllers (e.g. Fuzzer,
+  to control hosts for the higher level capabilities controllers (e.g. Fuzzer,
   and Replayer).
   """
   __metaclass__ = abc.ABCMeta
 
-  def __init__(self, policy):
-    self.policy = policy
+  def __init__(self, capabilities):
+    self.capabilities = capabilities
 
   @abc.abstractproperty
   def hosts(self):
@@ -205,8 +205,8 @@ class HostsManagerAbstractClass(object):
       - ip_generator: generates IP address for each interface
       - interface_name_generator: generates human readable names
     """
-    assert self.policy.can_create_host
-    assert self.policy.can_create_interface
+    assert self.capabilities.can_create_host
+    assert self.capabilities.can_create_interface
     interfaces = []
     for iface_no in range(num_interfaces):
       hw_addr = mac_generator.next()

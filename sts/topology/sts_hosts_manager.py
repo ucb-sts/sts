@@ -22,16 +22,16 @@ from sts.entities.hosts import Host
 from sts.entities.hosts import HostInterface
 
 from sts.topology.hosts_manager import HostsManagerAbstractClass
-from sts.topology.hosts_manager import HostsManagerPolicy
+from sts.topology.hosts_manager import HostsManagerCapabilities
 
 
 class STSHostsManager(HostsManagerAbstractClass):
   """
   Hosts manager specific STS Hosts.
   """
-  def __init__(self, policy=HostsManagerPolicy(can_crash_host=False,
+  def __init__(self, capabilities=HostsManagerCapabilities(can_crash_host=False,
                                                can_recover_host=False)):
-    super(STSHostsManager, self).__init__(policy)
+    super(STSHostsManager, self).__init__(capabilities)
     self._live_hosts = set()
     self._failed_hosts = set()
 
@@ -58,7 +58,7 @@ class STSHostsManager(HostsManagerAbstractClass):
     Returns set of UP hosts.
     This method should check the actual status of the hosts.
     """
-    assert self.policy.can_get_up_hosts
+    assert self.capabilities.can_get_up_hosts
     return self.live_hosts
 
   @property
@@ -67,28 +67,28 @@ class STSHostsManager(HostsManagerAbstractClass):
     Returns set of dead hosts.
     This method should check the actual status of the hosts.
     """
-    assert self.policy.can_get_down_hosts
+    assert self.capabilities.can_get_down_hosts
     return self.failed_hosts
 
   def create_host(self, hid, name=None, interfaces=None):
-    assert self.policy.can_create_host
+    assert self.capabilities.can_create_host
     host = Host(interfaces=interfaces, name=name, hid=hid)
     return host
 
   def create_interface(self, hw_addr, ip_or_ips=None, name=None):
-    assert self.policy.can_create_interface
+    assert self.capabilities.can_create_interface
     interface = HostInterface(hw_addr=hw_addr, ip_or_ips=ip_or_ips, name=name)
     return interface
 
   def add_host(self, host):
     """Adds host to be managed by this manager"""
-    assert self.policy.can_add_host
+    assert self.capabilities.can_add_host
     self._live_hosts.add(host)
     return host
 
   def remove_host(self, host):
     """Removes host from this manager"""
-    assert self.policy.can_remove_host
+    assert self.capabilities.can_remove_host
     if host in self._live_hosts:
       self._live_hosts.remove(host)
     elif host in self._failed_hosts:
@@ -97,9 +97,9 @@ class STSHostsManager(HostsManagerAbstractClass):
       raise ValueError("Host: '%s' is not managed by this manager" % host)
 
   def crash_host(self, host):
-    assert self.policy.can_crash_host
+    assert self.capabilities.can_crash_host
     raise NotImplementedError()
 
   def recover_host(self, host):
-    assert self.policy.can_recover_host
+    assert self.capabilities.can_recover_host
     raise NotImplementedError()
