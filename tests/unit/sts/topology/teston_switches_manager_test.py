@@ -118,3 +118,55 @@ mininet>
         self.assertEquals(len(switch.ports), 4, switch.ports)
       else:
         self.assertEquals(len(switch.ports), 5, switch.ports)
+
+  def test_connect_to_controllers(self):
+    # Arrange
+    mn_driver = self._mock_teston()
+    sw_mgm = TestONSwitchesManager(mn_driver)
+    c1 = mock.Mock(name='c1')
+    c1.config.address = '192.168.5.11'
+    c1.config.port = 6633
+    c2 = mock.Mock(name='c2')
+    c2.config.address = '192.168.5.12'
+    c2.config.port = 6633
+    s1 = sw_mgm.get_switch('s1')
+    # Act
+    sw_mgm.connect_to_controllers(s1, [c1, c2])
+    # Assert
+    mn_driver.assign_sw_controller.assert_called_with(
+      sw='1', COUNT=2, ip1='192.168.5.11', port1=6633,
+      ip2='192.168.5.12', port2=6633)
+
+  def test_disconnect_controllers(self):
+    # Arrange
+    mn_driver = self._mock_teston()
+    sw_mgm = TestONSwitchesManager(mn_driver)
+    s1 = sw_mgm.get_switch('s1')
+    # Act
+    sw_mgm.disconnect_controllers(s1)
+    # Assert
+    mn_driver.delete_sw_controller.assert_called_with('s1')
+
+  def test_get_connected_controllers(self):
+    # Arrange
+    mn_driver = self._mock_teston()
+    mn_driver.get_sw_controller.return_value = """sh ovs-vsctl get-controller s1
+ptcp:6634
+tcp:192.168.5.11:6633
+tcp:192.168.5.12:6633
+tcp:192.168.5.13:6633
+mininet>"""
+    sw_mgm = TestONSwitchesManager(mn_driver)
+    c1 = mock.Mock(name='c1')
+    c1.config.address = '192.168.5.11'
+    c1.config.port = 6633
+    c2 = mock.Mock(name='c2')
+    c2.config.address = '192.168.5.12'
+    c2.config.port = 6633
+    s1 = sw_mgm.get_switch('s1')
+    c_mgm = mock.Mock(name='ControllersManager')
+    c_mgm.controllers = set([c1, c2])
+    # Act
+    controllers = sw_mgm.get_connected_controllers(s1, c_mgm)
+    # Assert
+    self.assertItemsEqual([c1, c2], controllers)

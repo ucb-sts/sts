@@ -157,8 +157,36 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
     assert switch in self.switches
     if not isinstance(controllers, Iterable):
       controllers = [controllers]
+    # The driver automatically adds the 's' in the switch name e.g. 's1'.
+    kwargs = dict(sw=switch.name[1:], COUNT=0)
     for controller in controllers:
-      switch.connect(controller, max_backoff_seconds=max_backoff_seconds)
+      kwargs['COUNT'] += 1
+      kwargs["ip%d" % kwargs['COUNT']] = controller.config.address
+      kwargs["port%d" % kwargs['COUNT']] = controller.config.port
+    self.teston_mn.assign_sw_controller(**kwargs)
+
+  def get_connected_controllers(self, switch, controllers_manager):
+    assert self._capabilities.can_get_connected_controllers
+    assert switch in self.switches
+    response = self.teston_mn.get_sw_controller(switch.name)
+    controllers = []
+    for line in response.split('\n'):
+      controller_re = r"tcp\:(?P<address>[^:]+):(?P<port>[\d]+)"
+      result = re.search(controller_re, line.strip())
+      if result is None:
+        continue
+      address = result.group('address')
+      port = int(result.group('port'))
+      for controller in controllers_manager.controllers:
+        if (controller.config.address == address and
+                controller.config.port == port):
+          controllers.append(controller)
+    return controllers
+
+  def disconnect_controllers(self, switch):
+    assert self._capabilities.can_disconnect_controllers
+    assert switch in self.switches
+    self.teston_mn.delete_sw_controller(switch.name)
 
   def recover_switch(self, switch, controllers=None):
     assert self._capabilities.can_recover_switch
