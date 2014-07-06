@@ -165,6 +165,18 @@ class SwitchManagerAbstractClass(object):
     raise NotImplementedError()
 
   @abc.abstractmethod
+  def get_switch(self, switch):
+    """
+    Returns a switch object by it's name.
+    If the name doesn't exist, returns None.
+    """
+    raise NotImplementedError()
+
+  def has_switch(self, switch):
+    """Returns True if the switch name exists."""
+    return self.get_switch(switch) is not None
+
+  @abc.abstractmethod
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
     """
     Creates new switch.
