@@ -77,7 +77,6 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
         result = re.search(sw_re, line, re.I)
         name = result.group('name')
         dpid = self.teston_mn.getSwitchDPID(name)
-        print name, "DPID", dpid
         self.log.info("Reading switch %s(%s)" % (name, dpid))
         ports = self._read_ports(name)
         switch = TestONOVSSwitch(dpid, name, ports)
