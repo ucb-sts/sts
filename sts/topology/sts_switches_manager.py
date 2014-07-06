@@ -146,3 +146,11 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
       self._failed_switches.remove(switch)
       self._live_switches.add(switch)
     return connected_to_at_least_one
+
+  def get_connected_controllers(self, switch, controllers_manager):
+    """Returns a list of the controllers that switch is connected to."""
+    raise NotImplementedError()
+
+  def disconnect_controllers(self, switch):
+    """Disconnect from all controllers that the switch is connected to."""
+    raise NotImplementedError()

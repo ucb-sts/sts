@@ -30,7 +30,9 @@ class SwitchesManagerCapabilities(Capabilities):
   def __init__(self, can_create_switch=True, can_add_switch=True,
                can_remove_switch=True, can_crash_switch=True,
                can_recover_switch=True, can_get_up_switches=True,
-               can_get_down_switches=True, can_connect_to_controllers=True):
+               can_get_down_switches=True, can_connect_to_controllers=True,
+               can_disconnect_controllers=True,
+               can_get_connected_controllers=True):
     super(SwitchesManagerCapabilities, self).__init__()
     self._can_create_switch = can_create_switch
     self._can_add_switch = can_add_switch
@@ -40,6 +42,8 @@ class SwitchesManagerCapabilities(Capabilities):
     self._can_get_up_switches = can_get_up_switches
     self._can_get_down_switches = can_get_down_switches
     self._can_connect_to_controllers = can_connect_to_controllers
+    self._can_disconnect_controllers = can_disconnect_controllers
+    self._can_get_connected_controllers = can_get_connected_controllers
 
   @property
   def can_create_switch(self):
@@ -93,6 +97,22 @@ class SwitchesManagerCapabilities(Capabilities):
     of one or more controllers.
     """
     return self._can_connect_to_controllers
+
+  @property
+  def can_disconnect_controllers(self):
+    """
+    Returns True if the switches manager can disconnect switch from
+    all connected controllers.
+    """
+    return self._can_disconnect_controllers
+
+  @property
+  def can_get_connected_controllers(self):
+    """
+    Returns True if the switches manager can query the switch for the
+    controllers it's connected to.
+    """
+    return self._can_get_connected_controllers
 
 
 class SwitchManagerAbstractClass(object):
@@ -176,4 +196,14 @@ class SwitchManagerAbstractClass(object):
   @abc.abstractmethod
   def connect_to_controllers(self, switch, controllers, max_backoff_seconds=2):
     """Connects a switch to a list (of one or more) controllers"""
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def get_connected_controllers(self, switch, controllers_manager):
+    """Returns a list of the controllers that switch is connected to."""
+    raise NotImplementedError()
+
+  @abc.abstractmethod
+  def disconnect_controllers(self, switch):
+    """Disconnect from all controllers that the switch is connected to."""
     raise NotImplementedError()
