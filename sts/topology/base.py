@@ -22,7 +22,6 @@
 Basic representation of network topology.
 """
 
-import inspect
 import logging
 
 from sts.util.console import msg
@@ -31,7 +30,7 @@ from sts.util.capability import Capabilities
 from sts.topology.graph import TopologyGraph
 
 
-class TopologyCapabilities(object):
+class TopologyCapabilities(Capabilities):
   """Basic topology settings for network topologies"""
   def __init__(self, can_create_host=True, can_add_host=True,
                can_create_interface=True, can_remove_host=True,
@@ -41,7 +40,9 @@ class TopologyCapabilities(object):
                can_remove_network_link=True, can_create_access_link=True,
                can_add_access_link=True, can_remove_access_link=True,
                can_change_link_status=True,
-               can_change_access_link_status=True):
+               can_change_access_link_status=True,
+               can_add_controller=True, can_remove_controller=True,
+               _can_get_connected_controllers=True):
     super(TopologyCapabilities, self).__init__()
     self._can_create_interface = can_create_interface
     self._can_create_host = can_create_host
@@ -58,28 +59,10 @@ class TopologyCapabilities(object):
     self._can_remove_access_link = can_remove_access_link
     self._can_change_link_status = can_change_link_status
     self._can_change_access_link_status = can_change_access_link_status
+    self._can_add_controller = can_add_controller
+    self._can_remove_controller = can_remove_controller
+    self._can_get_connected_controllers = _can_get_connected_controllers
     # more for OF and per packet
-
-  def set_create_policy(self, policy):
-    """Helper method to change capabilities for everything that can be created."""
-    for name, value in inspect.getmembers(self,
-                                          lambda a: not inspect.isroutine(a)):
-      if name.startswith("_can_create"):
-        setattr(self, name, policy)
-
-  def set_add_policy(self, policy):
-    """Helper method to change capabilities for everything that can be added."""
-    for name, value in inspect.getmembers(self,
-                                          lambda a: not inspect.isroutine(a)):
-      if name.startswith("_can_add"):
-        setattr(self, name, policy)
-
-  def set_remove_policy(self, policy):
-    """Helper method to change capabilities for everything that can be removed."""
-    for name, value in inspect.getmembers(self,
-                                          lambda a: not inspect.isroutine(a)):
-      if name.startswith("_can_remove"):
-        setattr(self, name, policy)
 
   @property
   def can_create_interface(self):
@@ -156,6 +139,24 @@ class TopologyCapabilities(object):
     """Returns True if links can change status (up or down)."""
     return self._can_change_access_link_status
 
+  @property
+  def can_add_controller(self):
+    """Returns True if controllers can be added to the topology."""
+    return self._can_add_controller
+
+  @property
+  def can_remove_controller(self):
+    """Returns True if controllers can be removed from the topology."""
+    return self._can_remove_controller
+
+  @property
+  def can_get_connected_controllers(self):
+    """
+    Returns True if for a given switch can return the list of connected
+    controllers to it.
+    """
+    return self._can_get_connected_controllers
+
 
 class Topology(object):
   """Keeps track of the network elements.
@@ -165,12 +166,12 @@ class Topology(object):
     - SwitchesManager: Manages switches in the network
     - HostManager
     - PatchPanel: Manages dataplane links
-    - ControllerPatchPanel: Manages control plane links
 
   """
-  def __init__(self, hosts_manager, switches_manager, patch_panel, capabilities,
-               is_host, is_switch, is_network_link, is_access_link,
-               is_host_interface, is_port, sts_console=msg):
+  def __init__(self, hosts_manager, switches_manager, patch_panel,
+               controllers_manager, capabilities, is_host, is_switch,
+               is_network_link, is_access_link, is_host_interface, is_port,
+               sts_console=msg):
     """
     Args:
       - is_*(x): return True if x is of correct type.
@@ -194,6 +195,7 @@ class Topology(object):
     self._patch_panel = patch_panel
     self._switches_manager = switches_manager
     self._hosts_manager = hosts_manager
+    self._controllers_manager = controllers_manager
     self._graph = TopologyGraph()
 
     self.msg = sts_console
@@ -241,6 +243,16 @@ class Topology(object):
     """
     # TODO (AH): Return immutable copy
     return self._patch_panel
+
+  @property
+  def controllers_manager(self):
+    """
+    Returns read-only reference to the links patch panel.
+
+    See: `sts.topology.patch_panel.PatchPanel`
+    """
+    # TODO (AH): Return immutable copy
+    self._controllers_manager
 
   @property
   def graph(self):
@@ -430,3 +442,22 @@ class Topology(object):
     assert self._graph.has_link(link)
     self._graph.remove_link(link)
     self.patch_panel.remove_network_link(link)
+
+  def add_controller(self, controller):
+    """Adds controller to the topology"""
+    assert self.policy.can_add_controller
+    self._controllers_manager.add_controller(controller)
+    return controller
+
+  def remove_controller(self, controller):
+    """Removes a controller from the topology."""
+    assert self.policy.can_remove_controller
+    assert controller in self.controllers_manager.controllers
+    self._controllers_manager.remove_controller(controller)
+
+  def get_connected_controllers(self, switch):
+    """Returns a list of the controllers that switch is connected to."""
+    assert self.policy.can_get_connected_controllers
+    assert self._switches_manager.has_switch(switch)
+    return self._switches_manager.get_connected_controllers(
+      switch, self._controllers_manager)
