@@ -19,9 +19,12 @@ from sts.entities.teston_entities import TestONAccessLink
 from sts.entities.teston_entities import TestONNetworkLink
 from sts.entities.teston_entities import TestONPort
 from sts.entities.teston_entities import TestONOVSSwitch
+from sts.entities.teston_entities import TestONONOSConfig
+from sts.entities.teston_entities import TestONONOSController
 
 from sts.topology.base import Topology
 from sts.topology.base import TopologyCapabilities
+from sts.topology.controllers_manager import ControllersManager
 
 from sts.topology.teston_switches_manager import TestONSwitchesManager
 from sts.topology.teston_hosts_manager import TestONHostsManager
@@ -29,10 +32,24 @@ from sts.topology.teston_patch_panel import TestONPatchPanel
 
 
 class TestONTopology(Topology):
-  def __init__(self, teston_mn):
+  """
+  A Topology abstraction for TestON Infrastructure.
+
+  Example use:
+  topo = TestONTopology(main.Mininet1, onos_controllers=
+  [(main.ONOS1, 'ONOS1', main.params['CTRL']['ip1'], main.params['CTRL']['port1']),
+  (main.ONOS2, 'ONOS2', main.params['CTRL']['ip2'], main.params['CTRL']['port2'])])
+  """
+  def __init__(self, teston_mn, onos_controllers):
+    assert onos_controllers is None or isinstance(onos_controllers, list)
     switches_manager = TestONSwitchesManager(teston_mn)
     hosts_manager = TestONHostsManager(teston_mn)
     patch_panel = TestONPatchPanel(teston_mn, hosts_manager, switches_manager)
+    controller_manager = ControllersManager()
+    for info in onos_controllers:
+      config = TestONONOSConfig(info[1], info[2], info[3])
+      controller = TestONONOSController(config, info[0])
+      controller_manager.add_controller(controller)
     policy = TopologyCapabilities()
 
     is_host = lambda x: isinstance(x, TestONHost)
@@ -43,8 +60,9 @@ class TestONTopology(Topology):
     is_port = lambda x: isinstance(x, TestONPort)
 
     super(TestONTopology, self).__init__(
-      capabilities=policy, patch_panel=patch_panel, switches_manager=switches_manager,
-      hosts_manager=hosts_manager, is_host=is_host, is_switch=is_switch,
-      is_network_link=is_network_link,
+      capabilities=policy, patch_panel=patch_panel,
+      switches_manager=switches_manager, hosts_manager=hosts_manager,
+      controllers_manager=controller_manager, is_host=is_host,
+      is_switch=is_switch, is_network_link=is_network_link,
       is_access_link=is_access_link, is_host_interface=is_host_interface,
       is_port=is_port)
