@@ -17,6 +17,7 @@
 STS Specific switches manager.
 """
 
+from collections import Iterable
 import logging
 
 from pox.lib.addresses import EthAddr
@@ -33,10 +34,12 @@ LOG = logging.getLogger("sts.topology.sw_mgm")
 
 
 class STSSwitchesManager(SwitchManagerAbstractClass):
-  def __init__(self, capabilities=SwitchesManagerCapabilities()):
+  def __init__(self, create_connection,
+               capabilities=SwitchesManagerCapabilities()):
     super(STSSwitchesManager, self).__init__(capabilities)
     self.log = LOG
     self.msg = msg
+    self.create_connection = create_connection
     self._failed_switches = set()
     self._live_switches = set()
 
@@ -80,6 +83,12 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
       [sw for sw in self.live_switches if sw.can_connect_to_endhosts])
     return edge_switches - self.failed_switches
 
+  def get_switch(self, switch):
+    for sw in self.switches:
+      if sw.name == switch or sw == switch:
+        return sw
+    return None
+
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
     assert self._capabilities.can_create_switch
     ports = []
@@ -117,6 +126,7 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
 
   def crash_switch(self, switch):
     assert self._capabilities.can_crash_switch
+    assert switch in self.switches
     switch.fail()
     if switch in self._live_switches:
       self._live_switches.remove(switch)
@@ -129,28 +139,40 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
     """
     assert self._capabilities.can_connect_to_controllers
     assert switch in self.switches
-    switch.connect(controllers, max_backoff_seconds)
+    if not isinstance(controllers, Iterable):
+      controllers = [controllers]
+    switch.connect(self.create_connection,
+                   controller_infos=controllers,
+                   max_backoff_seconds=max_backoff_seconds)
 
   def recover_switch(self, switch, controllers=None):
     """Reboot previously crashed switch"""
-    # TODO CONNECT
     assert self._capabilities.can_recover_switch
+    assert switch in self.switches
     self.msg.event("Rebooting switch %s" % str(switch))
-    if controllers is None:
-      controllers = set()
     if switch not in self.failed_switches:
       self.log.warn("Switch %s not currently down. (Currently down: %s)" %
                     (str(switch), str(self.failed_switches)))
-    connected_to_at_least_one = switch.recover(down_controller_ids=controllers)
-    if connected_to_at_least_one:
-      self._failed_switches.remove(switch)
-      self._live_switches.add(switch)
-    return connected_to_at_least_one
+    switch.recover()
+    self._failed_switches.remove(switch)
+    self._live_switches.add(switch)
+    if controllers is not None:
+      self.connect_to_controllers(switch, controllers)
 
   def get_connected_controllers(self, switch, controllers_manager):
     """Returns a list of the controllers that switch is connected to."""
-    raise NotImplementedError()
+    assert self._capabilities.can_get_connected_controllers
+    assert switch in self.switches
+    controllers = []
+    for controller in controllers_manager.controllers:
+      if switch.is_connected_to(controller.cid):
+        controllers.append(controller)
+    return controllers
 
   def disconnect_controllers(self, switch):
     """Disconnect from all controllers that the switch is connected to."""
-    raise NotImplementedError()
+    assert self._capabilities.can_disconnect_controllers
+    assert switch in self.switches
+    for conn in switch.connections:
+      conn.close()
+    switch.connections = []
