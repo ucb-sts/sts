@@ -70,3 +70,45 @@ class ControllersManagerTest(unittest.TestCase):
     self.assertNotIn(c2, manager.failed_controllers)
     self.assertRaises(AssertionError, failed_remove1)
     self.assertRaises(AssertionError, failed_remove2)
+
+  def test_up_controllers(self):
+    # Arrange
+    c1 = mock.Mock(name='c1')
+    c1.state = ControllerState.ALIVE
+    c2 = mock.Mock(name='c2')
+    c2.state = ControllerState.DEAD
+    manager = ControllersManager()
+    manager.add_controller(c1)
+    manager.add_controller(c2)
+    # Act
+    c1.check_status.return_value = ControllerState.ALIVE
+    c2.check_status.return_value = ControllerState.DEAD
+    # Assert
+    self.assertIn(c1, manager.up_controllers)
+    self.assertNotIn(c1, manager.down_controllers)
+    self.assertIn(c2, manager.down_controllers)
+    self.assertNotIn(c2, manager.up_controllers)
+
+  def test_block_peers(self):
+    # Arrange
+    c1 = mock.Mock(name='c1')
+    c2 = mock.Mock(name='c2')
+    manager = ControllersManager()
+    manager.add_controller(c1)
+    manager.add_controller(c2)
+    # Act
+    manager.block_peers(c1, c2)
+    # Assert
+    c1.block_peer.assert_called_once_with(c2)
+
+  def test_unblock_peers(self):
+    # Arrange
+    c1 = mock.Mock(name='c1')
+    c2 = mock.Mock(name='c2')
+    manager = ControllersManager()
+    manager.add_controller(c1)
+    manager.add_controller(c2)
+    # Act
+    manager.unblock_peers(c1, c2)
+    # Assert
+    c1.unblock_peer.assert_called_once_with(c2)
