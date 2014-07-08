@@ -16,8 +16,13 @@
 import functools
 import unittest
 
+from pox.openflow.libopenflow_01 import ofp_phy_port
+from pox.lib.util import connect_socket_with_backoff
+
 from sts.topology.graph import TopologyGraph
 from sts.topology.base import Topology, TopologyCapabilities
+
+from sts.topology.controllers_manager import ControllersManager
 
 from sts.entities.hosts import Host
 from sts.entities.hosts import HostInterface
@@ -26,8 +31,6 @@ from sts.entities.sts_entities import Link
 from sts.entities.base import BiDirectionalLinkAbstractClass
 from sts.entities.sts_entities import FuzzSoftwareSwitch
 
-
-from pox.openflow.libopenflow_01 import ofp_phy_port
 from sts.topology.sts_hosts_manager import STSHostsManager
 from sts.topology.sts_switches_manager import STSSwitchesManager
 from sts.topology.sts_patch_panel import STSPatchPanel
@@ -36,43 +39,70 @@ from sts.topology.hosts_manager import mac_addresses_generator
 from sts.topology.hosts_manager import ip_addresses_generator
 from sts.topology.hosts_manager import interface_names_generator
 
-
-
-def sts_topology_type_factory(is_host=None, is_switch=None,
-                              is_network_link=None, is_access_link=None,
-                              is_host_interface=None, is_port=None):
-  """
-  Fills in the parameters needed for default behavior as STS topology.
-  Returns Topology class init with some of the fields already filled in.
-  """
-  is_host_lambda = lambda x: isinstance(x, Host)
-  is_switch_lambda = lambda x: hasattr(x, 'dpid')
-  is_network_link_lambda =lambda x: isinstance(x, Link)
-  is_access_link_lambda = lambda x: isinstance(x, AccessLink)
-  is_host_interface_lambda = lambda x: isinstance(x, HostInterface)
-  is_port_lambda = lambda x: isinstance(x, ofp_phy_port)
-  is_host = is_host or is_host_lambda
-  is_switch = is_switch or is_switch_lambda
-  is_network_link = is_network_link or is_network_link_lambda
-  is_access_link = is_access_link or is_access_link_lambda
-  is_host_interface = is_host_interface or is_host_interface_lambda
-  is_port = is_port or is_port_lambda
-  return functools.partial(Topology, hosts_manager=STSHostsManager(),
-                           switches_manager=STSSwitchesManager(),
-                           is_host=is_host, is_switch=is_switch,
-                           is_network_link=is_network_link,
-                           is_access_link=is_access_link,
-                           is_host_interface=is_host_interface, is_port=is_port)
-
+from sts.entities.sts_entities import DeferredOFConnection
+from sts.openflow_buffer import OpenFlowBuffer
+from sts.util.io_master import IOMaster
+from sts.util.deferred_io import DeferredIOWorker
 
 
 class TopologyTest(unittest.TestCase):
+  def initialize_io_loop(self):
+    io_master = IOMaster()
+    return io_master
+
+  def create_connection(self, controller_info, switch):
+    """Connect switches to controllers. May raise a TimeoutError"""
+    max_backoff_seconds=1024
+    socket_ctor = socket.socket
+    sock = connect_socket_with_backoff(controller_info.config.address,
+                                       controller_info.config.port,
+                                       max_backoff_seconds=max_backoff_seconds,
+                                       socket_ctor=socket_ctor)
+    # Set non-blocking
+    sock.setblocking(0)
+    io_worker = DeferredIOWorker(self.io_master.create_worker_for_socket(sock))
+    connection = DeferredOFConnection(io_worker, controller_info.cid,
+                                      switch.dpid, self.openflow_buffer)
+    return connection
+
+  def sts_topology_type_factory(self, is_host=None, is_switch=None,
+                                is_network_link=None, is_access_link=None,
+                                is_host_interface=None, is_port=None):
+    """
+    Fills in the parameters needed for default behavior as STS topology.
+    Returns Topology class init with some of the fields already filled in.
+    """
+    is_host_lambda = lambda x: isinstance(x, Host)
+    is_switch_lambda = lambda x: hasattr(x, 'dpid')
+    is_network_link_lambda =lambda x: isinstance(x, Link)
+    is_access_link_lambda = lambda x: isinstance(x, AccessLink)
+    is_host_interface_lambda = lambda x: isinstance(x, HostInterface)
+    is_port_lambda = lambda x: isinstance(x, ofp_phy_port)
+    is_host = is_host or is_host_lambda
+    is_switch = is_switch or is_switch_lambda
+    is_network_link = is_network_link or is_network_link_lambda
+    is_access_link = is_access_link or is_access_link_lambda
+    is_host_interface = is_host_interface or is_host_interface_lambda
+    is_port = is_port or is_port_lambda
+    return functools.partial(Topology, hosts_manager=STSHostsManager(),
+                             switches_manager=STSSwitchesManager(self.create_connection),
+                             controllers_manager=ControllersManager(),
+                             is_host=is_host, is_switch=is_switch,
+                             is_network_link=is_network_link,
+                             is_access_link=is_access_link,
+                             is_host_interface=is_host_interface,
+                             is_port=is_port)
+
+  def setUp(self):
+    self.io_master = self.initialize_io_loop()
+    self.openflow_buffer = OpenFlowBuffer()
+
   @unittest.skip
   def test_build(self):
     # Arrange
     if1 = dict(hw_addr='00:00:00:00:00:01', ips='192.168.56.21')
     if2 = dict(hw_addr='00:00:00:00:00:02', ips='192.168.56.22')
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = TopologyGraph()
     h1 = topo.add_host(interfaces=[if1, if2], name='h1')
     # Act
@@ -89,7 +119,7 @@ class TopologyTest(unittest.TestCase):
 
   def test_create_interface(self):
     # Arrange
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     # Act
@@ -105,7 +135,7 @@ class TopologyTest(unittest.TestCase):
     # Arrange
     h1_eth1 = HostInterface(hw_addr='11:22:33:44:55:66', ip_or_ips='10.0.0.1')
     h2_eth1 = HostInterface(hw_addr='11:22:33:44:55:77', ip_or_ips='10.0.0.2')
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     # Act
@@ -126,7 +156,7 @@ class TopologyTest(unittest.TestCase):
     mac_gen = mac_addresses_generator()
     ip_gen = ip_addresses_generator()
     name_gen = interface_names_generator()
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     # Act
@@ -148,7 +178,7 @@ class TopologyTest(unittest.TestCase):
     h2_eth1 = HostInterface(hw_addr='11:22:33:44:55:77', ip_or_ips='10.0.0.2')
     h1 = Host(h1_eth1, hid=1)
     h2 = Host(h2_eth1, hid=2)
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     # Act
@@ -174,7 +204,7 @@ class TopologyTest(unittest.TestCase):
     h2_eth1 = HostInterface(hw_addr='11:22:33:44:55:77', ip_or_ips='10.0.0.2')
     h1 = Host(h1_eth1, hid=1)
     h2 = Host(h2_eth1, hid=2)
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     topo.add_host(h1)
@@ -187,7 +217,7 @@ class TopologyTest(unittest.TestCase):
 
   def test_create_switch(self):
      # Arrange
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     # Act
@@ -199,7 +229,7 @@ class TopologyTest(unittest.TestCase):
     # Arrange
     s1 = FuzzSoftwareSwitch(1, 's1', ports=1)
     s2 = FuzzSoftwareSwitch(2, 's2', ports=1)
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     # Act
@@ -223,7 +253,7 @@ class TopologyTest(unittest.TestCase):
     # Arrange
     s1 = FuzzSoftwareSwitch(1, 's1', ports=1)
     s2 = FuzzSoftwareSwitch(2, 's2', ports=1)
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     topo.add_switch(s1)
@@ -238,7 +268,7 @@ class TopologyTest(unittest.TestCase):
     # Arrange
     s1 = FuzzSoftwareSwitch(1, 's1', ports=1)
     s2 = FuzzSoftwareSwitch(2, 's2', ports=1)
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     topo.add_switch(s1)
@@ -256,7 +286,7 @@ class TopologyTest(unittest.TestCase):
     s1 = FuzzSoftwareSwitch(1, 's1', ports=1)
     s2 = FuzzSoftwareSwitch(2, 's2', ports=1)
     l1 = Link(s1, s1.ports[1], s2, s2.ports[1])
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     topo.add_switch(s1)
@@ -273,7 +303,7 @@ class TopologyTest(unittest.TestCase):
     s1 = FuzzSoftwareSwitch(1, 's1', ports=1)
     s2 = FuzzSoftwareSwitch(2, 's2', ports=1)
     l1 = BiDirectionalLinkAbstractClass(s1, s1.ports[1], s2, s2.ports[1])
-    topo_cls = sts_topology_type_factory(
+    topo_cls = self.sts_topology_type_factory(
       is_network_link=lambda x: isinstance(x, BiDirectionalLinkAbstractClass))
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
@@ -292,7 +322,7 @@ class TopologyTest(unittest.TestCase):
     s1 = FuzzSoftwareSwitch(1, 's1', ports=3)
     h1_eth1 = HostInterface(hw_addr='11:22:33:44:55:66', ip_or_ips='10.0.0.1')
     h1 = Host([h1_eth1], name='h1', hid=1)
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     topo.add_switch(s1)
@@ -310,7 +340,7 @@ class TopologyTest(unittest.TestCase):
     s1 = FuzzSoftwareSwitch(1, 's1', ports=3)
     h1_eth1 = HostInterface(hw_addr='11:22:33:44:55:66', ip_or_ips='10.0.0.1')
     h1 = Host([h1_eth1], name='h1', hid=1)
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     topo.add_switch(s1)
@@ -328,7 +358,7 @@ class TopologyTest(unittest.TestCase):
     h1_eth1 = HostInterface(hw_addr='11:22:33:44:55:66', ip_or_ips='10.0.0.1')
     h1_eth2 = HostInterface(hw_addr='11:22:33:44:55:77', ip_or_ips='10.0.0.2')
     h1 = Host([h1_eth1, h1_eth2], name='h1', hid=1)
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     topo.add_switch(s1)
@@ -352,7 +382,7 @@ class TopologyTest(unittest.TestCase):
     l1 = Link(s1, s1.ports[1], s2, s2.ports[1])
     l2 = Link(s1, s1.ports[2], s2, s2.ports[2])
     l3 = Link(s1, s1.ports[3], s2, s2.ports[3])
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     topo.add_switch(s1)
@@ -370,7 +400,7 @@ class TopologyTest(unittest.TestCase):
 
   def test_crash_switch(self):
     # Arrange
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     s1 = FuzzSoftwareSwitch(1, 's1', ports=0)
@@ -386,7 +416,7 @@ class TopologyTest(unittest.TestCase):
 
   def test_recover_switch(self):
     # Arrange
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     s1 = FuzzSoftwareSwitch(1, 's1', ports=0)
@@ -395,7 +425,6 @@ class TopologyTest(unittest.TestCase):
     topo.add_switch(s2)
     topo.switches_manager.crash_switch(s1)
     topo.switches_manager.crash_switch(s2)
-    s1.recover = lambda down_controller_ids: True
     # Act
     topo.switches_manager.recover_switch(s1)
     # Assert
@@ -405,7 +434,7 @@ class TopologyTest(unittest.TestCase):
 
   def test_live_edge_switches(self):
     # Arrange
-    topo_cls = sts_topology_type_factory()
+    topo_cls = self.sts_topology_type_factory()
     topo = topo_cls(patch_panel=STSPatchPanel(),
                     capabilities=TopologyCapabilities())
     s1 = FuzzSoftwareSwitch(1, 's1', ports=0)
