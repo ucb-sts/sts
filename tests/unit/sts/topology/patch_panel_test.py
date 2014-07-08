@@ -276,6 +276,37 @@ class PatchPanelTest(unittest.TestCase):
     self.assertFalse(is_connected_src_port2)
     self.assertFalse(is_connected_dst_port2)
 
+  def test_find_unused_port(self):
+    # Arrange
+    patch_panel = TestPatchPanel()
+    src_switch1, src_port1 = mock.Mock(name='src_s1'), mock.Mock(name='src_p1')
+    dst_switch1, dst_port1 = mock.Mock(name='dst_s1'), mock.Mock(name='dst_p1')
+    src_switch1, src_port2 = mock.Mock(name='src_s2'), mock.Mock(name='src_p2')
+    dst_switch1, dst_port2 = mock.Mock(name='dst_s2'), mock.Mock(name='dst_p2')
+
+    src_switch1.ports = {1: src_port1, 2: dst_port1, 3: src_port2, 4: dst_port2}
+
+    link1 = mock.Mock(name='link1')
+    link1.start_node = src_switch1
+    link1.start_port = src_port1
+    link1.end_node = dst_switch1
+    link1.end_port = dst_port1
+
+    link2 = mock.Mock(name='link2')
+    link2.start_node = src_switch1
+    link2.start_port = src_port2
+    link2.end_node = dst_switch1
+    link2.end_port = dst_port2
+    patch_panel.is_network_link = lambda x: True
+    patch_panel.is_bidir_network_link = lambda x: False
+    # Act
+    unused_port1 = patch_panel.find_unused_port(src_switch1)
+    patch_panel.add_network_link(link1)
+    unused_port2 = patch_panel.find_unused_port(src_switch1)
+    # Assert
+    self.assertEquals(src_port1, unused_port1)
+    self.assertEquals(src_port2, unused_port2)
+
   def test_create_access_link(self):
     # Arrange
     patch_panel1 = TestPatchPanel()
@@ -350,6 +381,32 @@ class PatchPanelTest(unittest.TestCase):
     # Assert
     self.assertTrue(is_eth0_connected)
     self.assertFalse(is_eth1_connected)
+
+  def test_find_unused_interface(self):
+    # Arrange
+    patch_panel1 = TestPatchPanel()
+
+    switch = mock.Mock(name='s1')
+    port1, port2 = mock.Mock(name='p1'), mock.Mock(name='p2')
+    host = mock.Mock(name='h1')
+    eth0, eth1 = mock.Mock(name='eth0'), mock.Mock(name='eth1')
+
+    switch.ports = {1: port1, 2: port2}
+    host.interfaces = [eth0, eth1]
+
+    link1 = mock.Mock(name='AccessLinkMock')
+    link1.switch = switch
+    link1.port = port1
+    link1.host = host
+    link1.interface = eth0
+    patch_panel1.is_access_link = lambda x: x in [link1]
+    # Act
+    unused_iface1 = patch_panel1.find_unused_interface(host)
+    patch_panel1.add_access_link(link1)
+    unused_iface2 = patch_panel1.find_unused_interface(host)
+    # Assert
+    self.assertEquals(unused_iface1, eth0)
+    self.assertEquals(unused_iface2, eth1)
 
   def test_remove_access_link(self):
     # Arrange

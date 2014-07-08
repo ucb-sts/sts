@@ -162,6 +162,37 @@ class PatchPanelTest(unittest.TestCase):
     self.assertFalse(is_connected_src_port4)
     self.assertFalse(is_connected_dst_port4)
 
+  def test_find_unused_port(self):
+    # Arrange
+    # Arrange
+    patch_panel = STSPatchPanel()
+
+    src_switch1 = FuzzSoftwareSwitch(2, 'src_s1', ports=2)
+    dst_switch1 = FuzzSoftwareSwitch(2, 'dst_s1', ports=2)
+
+    link1 = patch_panel.create_network_link(src_switch1, src_switch1.ports[1],
+                                            dst_switch1, dst_switch1.ports[1])
+    link2 = patch_panel.create_network_link(src_switch1, src_switch1.ports[2],
+                                            dst_switch1, dst_switch1.ports[2])
+
+
+    # Act
+    unused_port1 = patch_panel.find_unused_port(src_switch1)
+    unused_port2 = patch_panel.find_unused_port(dst_switch1)
+    patch_panel.add_network_link(link1)
+    unused_port3 = patch_panel.find_unused_port(src_switch1)
+    unused_port4 = patch_panel.find_unused_port(dst_switch1)
+    patch_panel.add_network_link(link2)
+    unused_port5 = patch_panel.find_unused_port(src_switch1)
+    unused_port6 = patch_panel.find_unused_port(dst_switch1)
+    # Assert
+    self.assertEquals(unused_port1, src_switch1.ports[1])
+    self.assertEquals(unused_port2, dst_switch1.ports[1])
+    self.assertEquals(unused_port3, src_switch1.ports[2])
+    self.assertEquals(unused_port4, dst_switch1.ports[2])
+    self.assertIsNone(unused_port5)
+    self.assertIsNone(unused_port6)
+
   def test_create_access_link(self):
     # Arrange
     patch_panel = STSPatchPanel()
@@ -218,6 +249,31 @@ class PatchPanelTest(unittest.TestCase):
     # Assert
     self.assertTrue(is_eth0_connected)
     self.assertFalse(is_eth1_connected)
+
+  def test_find_unused_interface(self):
+    # Arrange
+    patch_panel = STSPatchPanel()
+
+    switch = FuzzSoftwareSwitch(2, 's1', 2)
+    eth0 = HostInterface(hw_addr='00:00:00:00:00:01', ip_or_ips='10.0.0.1',
+                         name='eth0')
+    eth1 = HostInterface(hw_addr='00:00:00:00:00:02', ip_or_ips='10.0.0.2',
+                         name='eth1')
+    host = Host(interfaces=[eth0, eth1], name='h1', hid=1)
+    access_link1 = patch_panel.create_access_link(host, eth0, switch,
+                                                  switch.ports[1])
+    access_link2 = patch_panel.create_access_link(host, eth1, switch,
+                                                  switch.ports[2])
+    # Act
+    unused_iface1 = patch_panel.find_unused_interface(host)
+    patch_panel.add_access_link(access_link1)
+    unused_iface2 = patch_panel.find_unused_interface(host)
+    patch_panel.add_access_link(access_link2)
+    unused_iface3 = patch_panel.find_unused_interface(host)
+    # Assert
+    self.assertEquals(unused_iface1, eth0)
+    self.assertEquals(unused_iface2, eth1)
+    self.assertIsNone(unused_iface3)
 
   def test_remove_access_link(self):
     # Arrange

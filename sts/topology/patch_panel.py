@@ -491,6 +491,24 @@ class PatchPanelBK(PatchPanelAbstractClass):
     """
     return interface in self.interface2access_link
 
+  def find_unused_interface(self, host):
+    """
+    Find a host's unused interface; if no such interface exists, return None.
+    """
+    for interface in host.interfaces:
+      if not self.is_interface_connected(interface):
+        return interface
+    return None
+
+  def find_unused_port(self, switch):
+    """
+    Find a switch's unused port; if no such port exists, return None.
+    """
+    for _, port in switch.ports.iteritems():
+      if not self.is_port_connected(port):
+        return port
+    return None
+
   def create_network_link(self, src_switch, src_port, dst_switch, dst_port,
                           bidir=False):
     """
