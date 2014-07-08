@@ -200,7 +200,7 @@ class Topology(object):
 
     self.msg = sts_console
     self.log = logging.getLogger("sts.topology.base.Topology")
-    self.policy = capabilities
+    self.capabilities = capabilities
 
     # Read existing hosts from the HostsManager
     for host in self.hosts_manager.hosts:
@@ -266,7 +266,7 @@ class Topology(object):
 
     See: `sts.topology.hosts_manager.HostsManager.create_host`
     """
-    assert self.policy.can_create_host
+    assert self.capabilities.can_create_host
     host = self.hosts_manager.create_host(hid=hid, name=name,
                                           interfaces=interfaces)
     self.add_host(host)
@@ -279,7 +279,7 @@ class Topology(object):
 
     See: `sts.topology.hosts_manager.HostsManager.create_interface`
     """
-    assert self.policy.can_create_interface
+    assert self.capabilities.can_create_interface
     iface = self.hosts_manager.create_interface(hw_addr=hw_addr,
                                                 ip_or_ips=ip_or_ips,
                                                 name=name)
@@ -294,8 +294,8 @@ class Topology(object):
 
     See: `sts.topology.hosts_manager.HostsManager.create_host_with_interfaces`
     """
-    assert self.policy.can_create_host
-    assert self.policy.can_create_interface
+    assert self.capabilities.can_create_host
+    assert self.capabilities.can_create_interface
     host = self.hosts_manager.create_host_with_interfaces(
       hid=hid, name=name, num_interfaces=num_interfaces,
       mac_generator=mac_generator, ip_generator=ip_generator,
@@ -310,7 +310,7 @@ class Topology(object):
     Args:
       host: Must be an instance of sts.entities.hosts.HostAbstractClass
     """
-    assert self.policy.can_add_host
+    assert self.capabilities.can_add_host
     assert self.is_host(host)
     assert not self._graph.has_host(host), "Host '%s' already added" % host
     self.hosts_manager.add_host(host)
@@ -321,7 +321,7 @@ class Topology(object):
     """
     Removes host (with all associated links) from the topology
     """
-    assert self.policy.can_remove_host
+    assert self.capabilities.can_remove_host
     assert self._graph.has_host(host)
     self.hosts_manager.remove_host(host)
     connected_links = self._graph.get_host_links(host)
@@ -346,7 +346,7 @@ class Topology(object):
 
     See: `sts.topology.switches_manager.SwitchesManager.create_switch`
     """
-    assert self.policy.can_create_switch
+    assert self.capabilities.can_create_switch
     switch = self.switches_manager.create_switch(
       switch_id=switch_id, num_ports=num_ports,
       can_connect_to_endhosts=can_connect_to_endhosts)
@@ -355,7 +355,7 @@ class Topology(object):
 
   def add_switch(self, switch):
     """Adds switch to the topology"""
-    assert self.policy.can_add_switch
+    assert self.capabilities.can_add_switch
     assert self.is_switch(switch)
     self._switches_manager.add_switch(switch)
     self._graph.add_switch(switch)
@@ -363,7 +363,7 @@ class Topology(object):
 
   def remove_switch(self, switch):
     """Removes switch (and all associated links) from the topology"""
-    assert self.policy.can_remove_switch
+    assert self.capabilities.can_remove_switch
     self._switches_manager.remove_switch(switch)
     connected_links = self._graph.get_switch_links(switch)
     for link in connected_links:
@@ -377,9 +377,9 @@ class Topology(object):
     """Add link to the topology"""
     assert self.is_network_link(link) or self.is_access_link(link)
     if self.is_network_link(link):
-      assert self.policy.can_add_network_link
+      assert self.capabilities.can_add_network_link
     elif self.is_access_link(link):
-      assert self.policy.can_add_access_link
+      assert self.capabilities.can_add_access_link
     assert not self._graph.has_link(link)
     if hasattr(link, 'start_node'):
       bidir = False
@@ -411,7 +411,7 @@ class Topology(object):
     self.patch_panel.repair_network_link(link)
 
   def create_access_link(self, host, interface, switch, port):
-    assert self.policy.can_create_access_link
+    assert self.capabilities.can_create_access_link
     assert self._graph.has_host(host)
     assert self._graph.has_switch(switch)
     link = self.patch_panel.create_access_link(host, interface, switch, port)
@@ -420,7 +420,7 @@ class Topology(object):
 
   def create_network_link(self, src_switch, src_port, dst_switch, dst_port,
                           bidir=False):
-    assert self.policy.can_create_network_link
+    assert self.capabilities.can_create_network_link
     assert self._graph.has_switch(src_switch)
     assert self._graph.has_switch(dst_switch)
     link = self.patch_panel.create_network_link(src_switch, src_port,
@@ -430,14 +430,14 @@ class Topology(object):
     return link
 
   def remove_access_link(self, link):
-    assert self.policy.can_remove_access_link
+    assert self.capabilities.can_remove_access_link
     assert link in self.patch_panel.access_links
     assert self._graph.has_link(link)
     self._graph.remove_link(link)
     self.patch_panel.remove_access_link(link)
 
   def remove_network_link(self, link):
-    assert self.policy.can_remove_network_link
+    assert self.capabilities.can_remove_network_link
     assert link in self.patch_panel.network_links
     assert self._graph.has_link(link)
     self._graph.remove_link(link)
@@ -445,19 +445,19 @@ class Topology(object):
 
   def add_controller(self, controller):
     """Adds controller to the topology"""
-    assert self.policy.can_add_controller
+    assert self.capabilities.can_add_controller
     self._controllers_manager.add_controller(controller)
     return controller
 
   def remove_controller(self, controller):
     """Removes a controller from the topology."""
-    assert self.policy.can_remove_controller
+    assert self.capabilities.can_remove_controller
     assert controller in self.controllers_manager.controllers
     self._controllers_manager.remove_controller(controller)
 
   def get_connected_controllers(self, switch):
     """Returns a list of the controllers that switch is connected to."""
-    assert self.policy.can_get_connected_controllers
+    assert self.capabilities.can_get_connected_controllers
     assert self._switches_manager.has_switch(switch)
     return self._switches_manager.get_connected_controllers(
       switch, self._controllers_manager)
