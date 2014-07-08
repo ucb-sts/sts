@@ -37,10 +37,10 @@ class TestONHostsManager(HostsManagerAbstractClass):
   Hosts manager specific TestON Hosts.
   """
   def __init__(self, teston_mn):
-    policy = HostsManagerCapabilities(
+    capabilities = HostsManagerCapabilities(
       can_crash_host=False, can_recover_host=False, can_create_host=False,
       can_remove_host=False, can_create_interface=False)
-    super(TestONHostsManager, self).__init__(policy)
+    super(TestONHostsManager, self).__init__(capabilities)
     self.log = LOG
     self._hosts = set()
     self.teston_mn = teston_mn
