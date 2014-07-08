@@ -33,13 +33,13 @@ class TestONPatchPanel(PatchPanelBK):
   STS specific implementation of PatchPanel.
   """
   def __init__(self, teston_mn, hosts_manager, switches_manager):
-    policy = PatchPanelCapabilities(
+    capabilities = PatchPanelCapabilities(
       can_create_access_link=False, can_add_access_link=True,
       can_remove_access_link=False, can_create_network_link=False,
       can_add_network_link=True, can_remove_network_link=False)
     super(TestONPatchPanel, self).__init__(network_link_factory=None,
                                         access_link_factory=None,
-                                        capabilities=policy)
+                                        capabilities=capabilities)
     self.teston_mn = teston_mn
     self._switches_manager = switches_manager
     self._hosts_manager = hosts_manager
