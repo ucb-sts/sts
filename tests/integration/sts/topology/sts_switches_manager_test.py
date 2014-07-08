@@ -17,7 +17,6 @@ import unittest
 
 from pox.lib.util import connect_socket_with_backoff
 
-
 from sts.entities.controllers import ControllerConfig
 from sts.entities.controllers import POXController
 from sts.entities.sts_entities import FuzzSoftwareSwitch
