@@ -35,9 +35,9 @@ class STSSwitchesManagerTest(unittest.TestCase):
     io_master = IOMaster()
     return io_master
 
-  def create_connection(self, controller_info, switch):
+  def create_connection(self, controller_info, switch,
+                        max_backoff_seconds=1024):
     """Connect switches to controllers. May raise a TimeoutError"""
-    max_backoff_seconds=1024
     socket_ctor = socket.socket
     sock = connect_socket_with_backoff(controller_info.config.address,
                                        controller_info.config.port,
