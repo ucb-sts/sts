@@ -50,7 +50,7 @@ class TestONTopology(Topology):
       config = TestONONOSConfig(info[1], info[2], info[3])
       controller = TestONONOSController(config, info[0])
       controller_manager.add_controller(controller)
-    policy = TopologyCapabilities()
+    capabilities = TopologyCapabilities()
 
     is_host = lambda x: isinstance(x, TestONHost)
     is_switch = lambda x: isinstance(x, TestONOVSSwitch)
@@ -60,7 +60,7 @@ class TestONTopology(Topology):
     is_port = lambda x: isinstance(x, TestONPort)
 
     super(TestONTopology, self).__init__(
-      capabilities=policy, patch_panel=patch_panel,
+      capabilities=capabilities, patch_panel=patch_panel,
       switches_manager=switches_manager, hosts_manager=hosts_manager,
       controllers_manager=controller_manager, is_host=is_host,
       is_switch=is_switch, is_network_link=is_network_link,
