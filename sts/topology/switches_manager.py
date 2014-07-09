@@ -172,6 +172,14 @@ class SwitchManagerAbstractClass(object):
     """
     raise NotImplementedError()
 
+  @abc.abstractmethod
+  def get_switch_dpid(self, switch):
+    """
+    Returns a switch object by it's dpid.
+    If the dpid doesn't exist, returns None.
+    """
+    raise NotImplementedError()
+
   def has_switch(self, switch):
     """Returns True if the switch name exists."""
     return self.get_switch(switch) is not None

@@ -126,6 +126,16 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
         return sw
     return None
 
+  def get_switch_dpid(self, dpid):
+    """
+    Returns a switch object by it's dpid.
+    If the dpid doesn't exist, returns None.
+    """
+    for sw in self.switches:
+      if sw.dpid == dpid:
+        return sw
+    return None
+
   def has_switch(self, switch):
     return self.get_switch(switch) is not None
 

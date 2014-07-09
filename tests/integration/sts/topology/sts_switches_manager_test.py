@@ -207,3 +207,51 @@ class STSSwitchesManagerTest(unittest.TestCase):
     self.assertFalse(s1.is_connected_to(c1.cid))
     self.assertFalse(s1.is_connected_to(c2.cid))
     self.assertEquals(manager.get_connected_controllers(s1, c_mgm), [])
+
+  def test_get_switch(self):
+    # Arrange
+    sw1 = FuzzSoftwareSwitch(1, 's1', ports=1)
+    sw2 = FuzzSoftwareSwitch(2, 's2', ports=1)
+    manager = STSSwitchesManager(self.create_connection)
+    manager.add_switch(sw1)
+    manager.add_switch(sw2)
+    # Act
+    get_s1 = manager.get_switch('s1')
+    get_s2 = manager.get_switch('s2')
+    get_s3 = manager.get_switch('s3')
+    # Assert
+    self.assertEquals(sw1, get_s1)
+    self.assertEquals(sw2, get_s2)
+    self.assertIsNone(get_s3)
+
+  def test_has_switch(self):
+    # Arrange
+    sw1 = FuzzSoftwareSwitch(1, 's1', ports=1)
+    sw2 = FuzzSoftwareSwitch(2, 's2', ports=1)
+    manager = STSSwitchesManager(self.create_connection)
+    manager.add_switch(sw1)
+    manager.add_switch(sw2)
+    # Act
+    has_s1 = manager.has_switch('s1')
+    has_s2 = manager.has_switch('s2')
+    has_s3 = manager.has_switch('s3')
+    # Assert
+    self.assertTrue(has_s1)
+    self.assertTrue(has_s2)
+    self.assertFalse(has_s3)
+
+  def test_get_switch_dpid(self):
+    # Arrange
+    sw1 = FuzzSoftwareSwitch(1, 's1', ports=1)
+    sw2 = FuzzSoftwareSwitch(2, 's2', ports=1)
+    manager = STSSwitchesManager(self.create_connection)
+    manager.add_switch(sw1)
+    manager.add_switch(sw2)
+    # Act
+    get_s1 = manager.get_switch_dpid(1)
+    get_s2 = manager.get_switch_dpid(2)
+    get_s3 = manager.get_switch_dpid(3)
+    # Assert
+    self.assertEquals(sw1, get_s1)
+    self.assertEquals(sw2, get_s2)
+    self.assertIsNone(get_s3)

@@ -91,7 +91,7 @@ mininet>
 
     def getSwitchDPID(name):
       if name == 's1':
-        return 2
+        return 1
       elif name == 's2':
         return 2
       elif name == 's3':
@@ -170,3 +170,45 @@ mininet>"""
     controllers = sw_mgm.get_connected_controllers(s1, c_mgm)
     # Assert
     self.assertItemsEqual([c1, c2], controllers)
+
+  def test_get_switch(self):
+    # Arrange
+    mn_driver = self._mock_teston()
+    # Act
+    sw_mgm = TestONSwitchesManager(mn_driver)
+    # Assert
+    get_s1 = sw_mgm.get_switch('s1')
+    get_s2 = sw_mgm.get_switch('s2')
+    get_s20 = sw_mgm.get_switch('s20')
+    # Assert
+    self.assertEquals(get_s1.name, 's1')
+    self.assertEquals(get_s2.name, 's2')
+    self.assertIsNone(get_s20)
+
+  def test_has_switch(self):
+    # Arrange
+    mn_driver = self._mock_teston()
+    # Act
+    sw_mgm = TestONSwitchesManager(mn_driver)
+    # Assert
+    has_s1 = sw_mgm.has_switch('s1')
+    has_s2 = sw_mgm.has_switch('s2')
+    has_s20 = sw_mgm.has_switch('s20')
+    # Assert
+    self.assertTrue(has_s1)
+    self.assertTrue(has_s2)
+    self.assertFalse(has_s20)
+
+  def test_get_switch_dpid(self):
+    # Arrange
+    mn_driver = self._mock_teston()
+    # Act
+    sw_mgm = TestONSwitchesManager(mn_driver)
+    # Assert
+    get_s1 = sw_mgm.get_switch_dpid(1)
+    get_s2 = sw_mgm.get_switch_dpid(2)
+    get_s20 = sw_mgm.get_switch_dpid(20)
+    # Assert
+    self.assertEquals(get_s1.name, 's1')
+    self.assertEquals(get_s2.name, 's2')
+    self.assertIsNone(get_s20)
