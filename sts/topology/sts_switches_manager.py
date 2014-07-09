@@ -90,7 +90,7 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
     return None
 
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
-    assert self._capabilities.can_create_switch
+    assert self.capabilities.can_create_switch
     ports = []
     for port_no in range(1, num_ports + 1):
       eth_addr = EthAddr("00:00:00:00:%02x:%02x" % (switch_id, port_no))
@@ -108,13 +108,13 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
 
   def add_switch(self, switch):
     """Adds switch to be managed by this manager"""
-    assert self._capabilities.can_add_switch
+    assert self.capabilities.can_add_switch
     assert switch not in self.switches
     self._live_switches.add(switch)
 
   def remove_switch(self, switch):
     """Removes switch from this manager"""
-    assert self._capabilities.can_remove_switch
+    assert self.capabilities.can_remove_switch
     assert switch in self.switches
     if switch in self.live_switches:
       self._live_switches.remove(switch)
@@ -125,7 +125,7 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
                        str(switch))
 
   def crash_switch(self, switch):
-    assert self._capabilities.can_crash_switch
+    assert self.capabilities.can_crash_switch
     assert switch in self.switches
     switch.fail()
     if switch in self._live_switches:
@@ -137,7 +137,7 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
     """
     Connect a switch to a list (of one or more) controllers
     """
-    assert self._capabilities.can_connect_to_controllers
+    assert self.capabilities.can_connect_to_controllers
     assert switch in self.switches
     if not isinstance(controllers, Iterable):
       controllers = [controllers]
@@ -147,7 +147,7 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
 
   def recover_switch(self, switch, controllers=None):
     """Reboot previously crashed switch"""
-    assert self._capabilities.can_recover_switch
+    assert self.capabilities.can_recover_switch
     assert switch in self.switches
     self.msg.event("Rebooting switch %s" % str(switch))
     if switch not in self.failed_switches:
@@ -161,7 +161,7 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
 
   def get_connected_controllers(self, switch, controllers_manager):
     """Returns a list of the controllers that switch is connected to."""
-    assert self._capabilities.can_get_connected_controllers
+    assert self.capabilities.can_get_connected_controllers
     assert switch in self.switches
     controllers = []
     for controller in controllers_manager.controllers:
@@ -171,7 +171,7 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
 
   def disconnect_controllers(self, switch):
     """Disconnect from all controllers that the switch is connected to."""
-    assert self._capabilities.can_disconnect_controllers
+    assert self.capabilities.can_disconnect_controllers
     assert switch in self.switches
     for conn in switch.connections:
       conn.close()

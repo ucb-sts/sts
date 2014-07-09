@@ -124,7 +124,7 @@ class SwitchManagerAbstractClass(object):
   __metaclass__ = abc.ABCMeta
 
   def __init__(self, capabilities=SwitchesManagerCapabilities()):
-    self._capabilities = capabilities
+    self.capabilities = capabilities
 
   @abc.abstractproperty
   def switches(self):

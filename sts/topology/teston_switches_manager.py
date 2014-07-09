@@ -130,21 +130,21 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
     return self.get_switch(switch) is not None
 
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
-    assert self._capabilities.can_create_switch
+    assert self.capabilities.can_create_switch
     raise NotImplementedError()
 
   def add_switch(self, switch):
     """Adds switch to be managed by this manager"""
-    assert self._capabilities.can_add_switch
+    assert self.capabilities.can_add_switch
     raise NotImplementedError()
 
   def remove_switch(self, switch):
     """Removes switch from this manager"""
-    assert self._capabilities.can_remove_switch
+    assert self.capabilities.can_remove_switch
     raise NotImplementedError()
 
   def crash_switch(self, switch):
-    assert self._capabilities.can_crash_switch
+    assert self.capabilities.can_crash_switch
     raise NotImplementedError()
 
   def connect_to_controllers(self, switch, controllers,
@@ -152,7 +152,7 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
     """
     Connect a switch to a list (of one or more) controllers
     """
-    assert self._capabilities.can_connect_to_controllers
+    assert self.capabilities.can_connect_to_controllers
     assert switch in self.switches
     if not isinstance(controllers, Iterable):
       controllers = [controllers]
@@ -165,7 +165,7 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
     self.teston_mn.assign_sw_controller(**kwargs)
 
   def get_connected_controllers(self, switch, controllers_manager):
-    assert self._capabilities.can_get_connected_controllers
+    assert self.capabilities.can_get_connected_controllers
     assert switch in self.switches
     response = self.teston_mn.get_sw_controller(switch.name)
     controllers = []
@@ -183,10 +183,10 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
     return controllers
 
   def disconnect_controllers(self, switch):
-    assert self._capabilities.can_disconnect_controllers
+    assert self.capabilities.can_disconnect_controllers
     assert switch in self.switches
     self.teston_mn.delete_sw_controller(switch.name)
 
   def recover_switch(self, switch, controllers=None):
-    assert self._capabilities.can_recover_switch
+    assert self.capabilities.can_recover_switch
     raise NotImplementedError()
