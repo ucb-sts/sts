@@ -151,7 +151,6 @@ class ControllersManager(object):
     assert self.capabilities.can_get_up_controllers
     controllers = set()
     for controller in self.controllers:
-      print "CHECK STATUS", controller.check_status(None)
       if controller.check_status(None) == ControllerState.ALIVE:
         controllers.add(controller)
     return controllers
