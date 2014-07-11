@@ -57,8 +57,6 @@ class TopologyCapabilities(Capabilities):
     self._can_create_access_link = can_create_access_link
     self._can_add_access_link = can_add_access_link
     self._can_remove_access_link = can_remove_access_link
-    self._can_change_link_status = can_change_link_status
-    self._can_change_access_link_status = can_change_access_link_status
     self._can_add_controller = can_add_controller
     self._can_remove_controller = can_remove_controller
     self._can_get_connected_controllers = _can_get_connected_controllers
@@ -128,16 +126,6 @@ class TopologyCapabilities(Capabilities):
   def can_remove_access_link(self):
     """Returns True if links can be removed from the topology."""
     return self._can_remove_access_link
-
-  @property
-  def can_change_link_status(self):
-    """Returns True if links can change status (up or down)."""
-    return self._can_change_link_status
-
-  @property
-  def can_change_access_link_status(self):
-    """Returns True if links can change status (up or down)."""
-    return self._can_change_access_link_status
 
   @property
   def can_add_controller(self):
@@ -252,7 +240,7 @@ class Topology(object):
     See: `sts.topology.patch_panel.PatchPanel`
     """
     # TODO (AH): Return immutable copy
-    self._controllers_manager
+    return self._controllers_manager
 
   @property
   def graph(self):
