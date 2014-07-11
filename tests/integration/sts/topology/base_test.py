@@ -38,6 +38,7 @@ from sts.topology.sts_patch_panel import STSPatchPanel
 from sts.topology.hosts_manager import mac_addresses_generator
 from sts.topology.hosts_manager import ip_addresses_generator
 from sts.topology.hosts_manager import interface_names_generator
+from sts.topology.dp_buffer import BufferedPatchPanel
 
 from sts.entities.sts_entities import DeferredOFConnection
 from sts.openflow_buffer import OpenFlowBuffer
@@ -87,6 +88,7 @@ class TopologyTest(unittest.TestCase):
     return functools.partial(Topology, hosts_manager=STSHostsManager(),
                              switches_manager=STSSwitchesManager(self.create_connection),
                              controllers_manager=ControllersManager(),
+                             dp_buffer=BufferedPatchPanel(),
                              is_host=is_host, is_switch=is_switch,
                              is_network_link=is_network_link,
                              is_access_link=is_access_link,

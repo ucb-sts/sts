@@ -157,7 +157,7 @@ class Topology(object):
 
   """
   def __init__(self, hosts_manager, switches_manager, patch_panel,
-               controllers_manager, capabilities, is_host, is_switch,
+               controllers_manager, dp_buffer, capabilities, is_host, is_switch,
                is_network_link, is_access_link, is_host_interface, is_port,
                sts_console=msg):
     """
@@ -184,6 +184,8 @@ class Topology(object):
     self._switches_manager = switches_manager
     self._hosts_manager = hosts_manager
     self._controllers_manager = controllers_manager
+    self._dp_buffer = dp_buffer
+    self._dp_buffer.get_connected_port = self._patch_panel.get_other_side
     self._graph = TopologyGraph()
 
     self.msg = sts_console
@@ -241,6 +243,10 @@ class Topology(object):
     """
     # TODO (AH): Return immutable copy
     return self._controllers_manager
+
+  @property
+  def dp_buffer(self):
+    return self._dp_buffer
 
   @property
   def graph(self):
@@ -303,6 +309,7 @@ class Topology(object):
     assert not self._graph.has_host(host), "Host '%s' already added" % host
     self.hosts_manager.add_host(host)
     hid = self._graph.add_host(host)
+    self._dp_buffer.add_host(host)
     return hid
 
   def remove_host(self, host):
@@ -316,6 +323,7 @@ class Topology(object):
     for link in connected_links:
       self.remove_access_link(link)
     self._graph.remove_host(host)
+    self._dp_buffer.remove_host(host)
 
   def migrate_host(self, old_switch, old_port, new_switch, new_port):
     """
@@ -347,6 +355,7 @@ class Topology(object):
     assert self.is_switch(switch)
     self._switches_manager.add_switch(switch)
     self._graph.add_switch(switch)
+    self._dp_buffer.add_switch(switch)
     return switch
 
   def remove_switch(self, switch):
@@ -360,6 +369,7 @@ class Topology(object):
       else:
         self.remove_access_link(link)
     self._graph.remove_switch(switch)
+    self._dp_buffer.remove_switch(switch)
 
   def add_link(self, link):
     """Add link to the topology"""
