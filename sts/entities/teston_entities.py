@@ -97,6 +97,10 @@ class TestONPort(object):
     self.name = name
     self.ips = ips
 
+  @property
+  def port_no(self):
+    return self.name
+
   def __str__(self):
     return self.name
 
