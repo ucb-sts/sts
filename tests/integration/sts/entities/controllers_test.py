@@ -92,8 +92,8 @@ class POXControllerTest(unittest.TestCase):
     #Assert
     self.assertEquals(state1, ControllerState.ALIVE)
     self.assertEquals(state2, ControllerState.DEAD)
-    self.assertEquals(check_status1[0], True)
-    self.assertEquals(check_status2[0], True)
+    self.assertEquals(check_status1, ControllerState.ALIVE)
+    self.assertEquals(check_status2, ControllerState.DEAD)
 
   def test_restart(self):
     # Arrange
@@ -119,9 +119,9 @@ class POXControllerTest(unittest.TestCase):
     self.assertEquals(state1, ControllerState.ALIVE)
     self.assertEquals(state2, ControllerState.ALIVE)
     self.assertEquals(state3, ControllerState.DEAD)
-    self.assertEquals(check_status1[0], True)
-    self.assertEquals(check_status2[0], True)
-    self.assertEquals(check_status3[0], True)
+    self.assertEquals(check_status1, ControllerState.ALIVE)
+    self.assertEquals(check_status2, ControllerState.ALIVE)
+    self.assertEquals(check_status3, ControllerState.DEAD)
 
 
   def test_start(self):
@@ -140,8 +140,8 @@ class POXControllerTest(unittest.TestCase):
     #Assert
     self.assertEquals(state1, ControllerState.ALIVE)
     self.assertEquals(state2, ControllerState.DEAD)
-    self.assertEquals(check_status1[0], True)
-    self.assertEquals(check_status2[0], True)
+    self.assertEquals(check_status1, ControllerState.ALIVE)
+    self.assertEquals(check_status2, ControllerState.DEAD)
 
 
 class ONOSControllerTest(unittest.TestCase):

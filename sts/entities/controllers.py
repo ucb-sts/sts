@@ -467,21 +467,14 @@ class Controller(ControllerAbstractClass):
 
   def check_status(self, simulation):
     """
-    Check whether the actual status of the controller coincides with self.state
-    Returns a message entailing the details of the status
+    Returns the actual status of the controller.
     """
-    if self.state == ControllerState.DEAD:
-      return (True, "OK")
     if not self.process:
-      return (False,
-              "Controller %s: Alive, but no controller process "
-              "found" % self.cid)
+      return ControllerState.DEAD
     rc = self.process.poll()
     if rc is not None:
-      return (False,
-              "Controller %s: Alive, but controller process terminated with "
-              "return code %d" % (self.cid, rc))
-    return (True, "OK")
+      return ControllerState.DEAD
+    return ControllerState.ALIVE
 
   def block_peer(self, peer_controller):
     """Ignore traffic to/from the given peer controller"""
