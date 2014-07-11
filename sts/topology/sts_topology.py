@@ -83,7 +83,7 @@ class STSTopology(Topology):
       is_port=is_port)
 
 
-class MeshTopology(Topology):
+class MeshTopology(STSTopology):
   """
   Mesh Topology composed of STS entities.
   """
