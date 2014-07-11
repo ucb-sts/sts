@@ -169,6 +169,14 @@ class ControllersManager(object):
         controllers.add(controller)
     return controllers
 
+  def get_controller(self, cid):
+    """
+    Get a controller by it's ID.
+    """
+    for controller in self.controllers:
+      if cid == controller.cid:
+        return controller
+
   def create_controller(self, ip_address, port):
     """
     Creates new controller. The controller is not added to the manager.

@@ -29,7 +29,7 @@ class ControllersManagerTest(unittest.TestCase):
     kill_cmd = ""
     cwd = "pox"
     config = ControllerConfig(start_cmd=start_cmd, kill_cmd=kill_cmd, cwd=cwd,
-                              address=address, port=port)
+                              address=address, port=port, cid=port)
     return config
 
   def get_controller(self, address='127.0.0.1', port=6633):
@@ -133,3 +133,17 @@ class ControllersManagerTest(unittest.TestCase):
     failed = lambda: manager.create_controller('127.0.0.1', 6633)
     # Assert
     self.assertRaises(AssertionError, failed)
+
+  def test_get_controller(self):
+    # Arrange
+    c1 = self.get_controller(port=6633)
+    c2 = self.get_controller(port=6644)
+    manager = ControllersManager()
+    manager.add_controller(c1)
+    manager.add_controller(c2)
+    # Act
+    get_c1 = manager.get_controller(6633)
+    get_c2 = manager.get_controller(6644)
+    # Assert
+    self.assertEquals(get_c1, c1)
+    self.assertEquals(get_c2, c2)

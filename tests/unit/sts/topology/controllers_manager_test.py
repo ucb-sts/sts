@@ -156,3 +156,21 @@ class ControllersManagerTest(unittest.TestCase):
     failed = lambda: manager.create_controller('127.0.0.1', 6633)
     # Assert
     self.assertRaises(AssertionError, failed)
+
+  def test_get_controller(self):
+    # Arrange
+    c1 = mock.Mock(name='c1')
+    c1.state = ControllerState.ALIVE
+    c1.cid = 1
+    c2 = mock.Mock(name='c2')
+    c2.state = ControllerState.DEAD
+    c2.cid = 2
+    manager = ControllersManager()
+    manager.add_controller(c1)
+    manager.add_controller(c2)
+    # Act
+    get_c1 = manager.get_controller(1)
+    get_c2 = manager.get_controller(2)
+    # Assert
+    self.assertEquals(get_c1, c1)
+    self.assertEquals(get_c2, c2)
