@@ -151,6 +151,7 @@ class ControllersManager(object):
     assert self.capabilities.can_get_up_controllers
     controllers = set()
     for controller in self.controllers:
+      print "CHECK STATUS", controller.check_status(None)
       if controller.check_status(None) == ControllerState.ALIVE:
         controllers.add(controller)
     return controllers
@@ -199,12 +200,18 @@ class ControllersManager(object):
     assert self.capabilities.can_crash_controller
     assert controller in self.controllers
     controller.kill()
+    if controller in self._live_controllers:
+      self._live_controllers.remove(controller)
+    self._failed_controllers.add(controller)
 
   def recover_controller(self, controller):
     """Restart the controller."""
     assert self.capabilities.can_recover_controller
     assert controller in self.controllers
     controller.start()
+    if controller in self._failed_controllers:
+      self._failed_controllers.remove(controller)
+    self._live_controllers.add(controller)
 
   def block_peers(self, controller, peers):
     """Blocks connectivity between the controller and set of peers"""

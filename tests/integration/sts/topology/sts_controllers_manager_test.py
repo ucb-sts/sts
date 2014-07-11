@@ -13,28 +13,35 @@
 # limitations under the License.
 
 
-import mock
 import unittest
 
-from tests.unit.sts.util.capability_test import CapabilitiesGenericTest
+from sts.entities.controllers import ControllerConfig
+from sts.entities.controllers import POXController
 
-from sts.entities.controllers import ControllerState
 from sts.topology.controllers_manager import ControllersManager
-from sts.topology.controllers_manager import ControllersManagerCapabilities
-
-
-class ControllersManagerCapabilitiesTest(CapabilitiesGenericTest):
-  def setUp(self):
-    self._capabilities_cls = ControllersManagerCapabilities
 
 
 class ControllersManagerTest(unittest.TestCase):
+  def get_config(self, address='127.0.0.1', port=6633):
+    start_cmd = ("./pox.py --verbose --no-cli sts.syncproto.pox_syncer "
+                 "--blocking=False openflow.of_01 --address=__address__ "
+                 "--port=__port__")
+    kill_cmd = ""
+    cwd = "pox"
+    config = ControllerConfig(start_cmd=start_cmd, kill_cmd=kill_cmd, cwd=cwd,
+                              address=address, port=port)
+    return config
+
+  def get_controller(self, address='127.0.0.1', port=6633):
+    config = self.get_config(address, port)
+    ctrl = POXController(controller_config=config)
+    return ctrl
+
   def test_add_controller(self):
     # Arrange
-    c1 = mock.Mock(name='c1')
-    c1.state = ControllerState.ALIVE
-    c2 = mock.Mock(name='c2')
-    c2.state = ControllerState.DEAD
+    c1 = self.get_controller(port=6633)
+    c1.start()
+    c2 = self.get_controller(port=6644)
     manager = ControllersManager()
     # Act
     manager.add_controller(c1)
@@ -51,10 +58,9 @@ class ControllersManagerTest(unittest.TestCase):
 
   def test_remove_controller(self):
     # Arrange
-    c1 = mock.Mock(name='c1')
-    c1.state = ControllerState.ALIVE
-    c2 = mock.Mock(name='c2')
-    c2.state = ControllerState.DEAD
+    c1 = self.get_controller(port=6633)
+    c1.start()
+    c2 = self.get_controller(port=6644)
     manager = ControllersManager()
     manager.add_controller(c1)
     manager.add_controller(c2)
@@ -73,77 +79,48 @@ class ControllersManagerTest(unittest.TestCase):
 
   def test_up_controllers(self):
     # Arrange
-    c1 = mock.Mock(name='c1')
-    c1.state = ControllerState.ALIVE
-    c2 = mock.Mock(name='c2')
-    c2.state = ControllerState.DEAD
+    c1 = self.get_controller(port=6633)
+    c1.start()
+    c2 = self.get_controller(port=6644)
     manager = ControllersManager()
     manager.add_controller(c1)
     manager.add_controller(c2)
     # Act
-    c1.check_status.return_value = ControllerState.ALIVE
-    c2.check_status.return_value = ControllerState.DEAD
     # Assert
     self.assertIn(c1, manager.up_controllers)
     self.assertNotIn(c1, manager.down_controllers)
     self.assertIn(c2, manager.down_controllers)
     self.assertNotIn(c2, manager.up_controllers)
 
-  def test_block_peers(self):
-    # Arrange
-    c1 = mock.Mock(name='c1')
-    c2 = mock.Mock(name='c2')
-    manager = ControllersManager()
-    manager.add_controller(c1)
-    manager.add_controller(c2)
-    # Act
-    manager.block_peers(c1, c2)
-    # Assert
-    c1.block_peer.assert_called_once_with(c2)
-
-  def test_unblock_peers(self):
-    # Arrange
-    c1 = mock.Mock(name='c1')
-    c2 = mock.Mock(name='c2')
-    manager = ControllersManager()
-    manager.add_controller(c1)
-    manager.add_controller(c2)
-    # Act
-    manager.unblock_peers(c1, c2)
-    # Assert
-    c1.unblock_peer.assert_called_once_with(c2)
 
   def test_crash_controller(self):
     # Arrange
-    c1 = mock.Mock(name='c1')
-    c1.state = ControllerState.ALIVE
-    c2 = mock.Mock(name='c2')
-    c2.state = ControllerState.ALIVE
+    c1 = self.get_controller(port=6633)
+    c1.start()
+    c2 = self.get_controller(port=6644)
+    c2.start()
     manager = ControllersManager()
     manager.add_controller(c1)
     manager.add_controller(c2)
     # Act
     manager.crash_controller(c1)
     # Assert
-    c1.kill.assert_called_once_with()
     self.assertIn(c1, manager.controllers)
     self.assertIn(c2, manager.controllers)
     self.assertIn(c1, manager.failed_controllers)
     self.assertIn(c2, manager.live_controllers)
 
+
   def test_recover_controller(self):
     # Arrange
-    c1 = mock.Mock(name='c1')
-    c1.state = ControllerState.DEAD
-    c2 = mock.Mock(name='c2')
-    c2.state = ControllerState.DEAD
+    c1 = self.get_controller(port=6633)
+    c2 = self.get_controller(port=6644)
     manager = ControllersManager()
     manager.add_controller(c1)
     manager.add_controller(c2)
     # Act
     manager.recover_controller(c1)
     # Assert
-    c1.start.assert_called_once_with()
     self.assertIn(c1, manager.controllers)
     self.assertIn(c2, manager.controllers)
     self.assertIn(c1, manager.live_controllers)
