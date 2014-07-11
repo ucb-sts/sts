@@ -89,6 +89,16 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
         return sw
     return None
 
+  def get_switch_dpid(self, dpid):
+    """
+    Returns a switch object by it's dpid.
+    If the dpid doesn't exist, returns None.
+    """
+    for sw in self.switches:
+      if sw.dpid == dpid:
+        return sw
+    return None
+
   def create_switch(self, switch_id, num_ports, can_connect_to_endhosts=True):
     assert self.capabilities.can_create_switch
     ports = []
