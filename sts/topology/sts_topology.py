@@ -45,6 +45,7 @@ from sts.topology.sts_patch_panel import STSPatchPanel
 from sts.topology.sts_switches_manager import STSSwitchesManager
 from sts.topology.sts_hosts_manager import STSHostsManager
 from sts.topology.controllers_manager import ControllersManager
+from sts.topology.dp_buffer import BufferedPatchPanel
 
 from sts.topology.base import Topology
 from sts.topology.base import TopologyCapabilities
@@ -59,7 +60,7 @@ class STSTopology(Topology):
   """
   def __init__(self, create_connection, capabilities=TopologyCapabilities(),
                patch_panel=None, switches_manager=None, hosts_manager=None,
-               controllers_manager=None):
+               controllers_manager=None, dp_buffer=None):
     if not patch_panel:
       patch_panel = STSPatchPanel()
     if not switches_manager:
@@ -68,6 +69,8 @@ class STSTopology(Topology):
       hosts_manager = STSHostsManager()
     if not controllers_manager:
       controllers_manager = ControllersManager()
+    if not dp_buffer:
+      dp_buffer = BufferedPatchPanel([], [], patch_panel.get_other_side)
     is_host = lambda x: isinstance(x, Host)
     is_switch = lambda x: hasattr(x, 'dpid')
     is_network_link =lambda x: isinstance(x, Link)
@@ -77,8 +80,8 @@ class STSTopology(Topology):
     super(STSTopology, self).__init__(
       capabilities=capabilities, patch_panel=patch_panel,
       switches_manager=switches_manager, hosts_manager=hosts_manager,
-      controllers_manager=controllers_manager, is_host=is_host,
-      is_switch=is_switch, is_network_link=is_network_link,
+      controllers_manager=controllers_manager, dp_buffer=dp_buffer,
+      is_host=is_host, is_switch=is_switch, is_network_link=is_network_link,
       is_access_link=is_access_link, is_host_interface=is_host_interface,
       is_port=is_port)
 
