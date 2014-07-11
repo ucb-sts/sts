@@ -25,6 +25,7 @@ from sts.entities.teston_entities import TestONONOSController
 from sts.topology.base import Topology
 from sts.topology.base import TopologyCapabilities
 from sts.topology.controllers_manager import ControllersManager
+from sts.topology.dp_buffer import DataPathBuffer
 
 from sts.topology.teston_switches_manager import TestONSwitchesManager
 from sts.topology.teston_hosts_manager import TestONHostsManager
@@ -62,7 +63,7 @@ class TestONTopology(Topology):
     super(TestONTopology, self).__init__(
       capabilities=capabilities, patch_panel=patch_panel,
       switches_manager=switches_manager, hosts_manager=hosts_manager,
-      controllers_manager=controller_manager, is_host=is_host,
-      is_switch=is_switch, is_network_link=is_network_link,
+      controllers_manager=controller_manager, dp_buffer=DataPathBuffer(),
+      is_host=is_host, is_switch=is_switch, is_network_link=is_network_link,
       is_access_link=is_access_link, is_host_interface=is_host_interface,
       is_port=is_port)
