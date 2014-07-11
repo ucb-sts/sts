@@ -117,7 +117,7 @@ class ControllersManager(object):
   """
   Manages set of Controllers.
   """
-  def __init__(self, capabilities=ControllersManagerCapabilities()):
+  def __init__(self, capabilities=ControllersManagerCapabilities(can_create_controller=False)):
     self.capabilities = capabilities
     self._live_controllers = set()
     self._failed_controllers = set()
