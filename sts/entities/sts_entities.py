@@ -29,6 +29,7 @@ import pox.lib.packet.ethernet as ethernet
 import pox.lib.packet.ipv4 as ipv4
 import pox.lib.packet.tcp as tcp
 from pox.lib.util import assert_type
+from pox.lib.util import TimeoutError
 import pox.openflow.libopenflow_01 as of
 from sts.openflow_buffer import OpenFlowBuffer
 
@@ -224,13 +225,16 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     for info in controller_infos:
       # Don't connect to down controllers
       if info.cid not in down_controller_ids:
-        conn = create_connection(info, self,
-                                 max_backoff_seconds=max_backoff_seconds)
-        self.set_connection(conn)
-        # cause errors to be raised
-        conn.error_handler = self.error_handler
-        self.cid2connection[info.cid] = conn
-        connected_to_at_least_one = True
+        try:
+          conn = create_connection(info, self,
+                                   max_backoff_seconds=max_backoff_seconds)
+          self.set_connection(conn)
+          # cause errors to be raised
+          conn.error_handler = self.error_handler
+          self.cid2connection[info.cid] = conn
+          connected_to_at_least_one = True
+        except TimeoutError:
+          pass
 
     return connected_to_at_least_one
 
