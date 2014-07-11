@@ -646,6 +646,10 @@ class POXController(Controller):
     self._check_snapshot_connect()
     self.state = ControllerState.ALIVE
 
+  def __str__(self):
+    return "POXController: %s (%s, %s)" % (
+      self.label, self.config.address, self.config.port)
+
 
 class VMController(Controller):
   """Controllers that are run in virtual machines rather than processes"""
