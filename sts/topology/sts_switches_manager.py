@@ -151,6 +151,7 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
     assert switch in self.switches
     if not isinstance(controllers, Iterable):
       controllers = [controllers]
+    switch.controller_info = controllers
     switch.connect(self.create_connection,
                    controller_infos=controllers,
                    max_backoff_seconds=max_backoff_seconds)
