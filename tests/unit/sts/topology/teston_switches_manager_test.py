@@ -22,6 +22,22 @@ from sts.topology.teston_switches_manager import TestONSwitchesManager
 
 class TestONSwitchesManagerTest(unittest.TestCase):
   def _mock_teston(self):
+    mininet_net = """mininet> net
+h1 h1-eth0:s2-eth1
+h2 h2-eth0:s2-eth2
+h3 h3-eth0:s2-eth3
+h4 h4-eth0:s3-eth1
+h5 h5-eth0:s3-eth2
+h6 h6-eth0:s3-eth3
+h7 h7-eth0:s4-eth1
+h8 h8-eth0:s4-eth2
+h9 h9-eth0:s4-eth3
+s1 lo:  s1-eth1:s2-eth4 s1-eth2:s3-eth4 s1-eth3:s4-eth4
+s2 lo:  s2-eth1:h1-eth0 s2-eth2:h2-eth0 s2-eth3:h3-eth0 s2-eth4:s1-eth1
+s3 lo:  s3-eth1:h4-eth0 s3-eth2:h5-eth0 s3-eth3:h6-eth0 s3-eth4:s1-eth2
+s4 lo:  s4-eth1:h7-eth0 s4-eth2:h8-eth0 s4-eth3:h9-eth0 s4-eth4:s1-eth3
+"""
+
     mininet_dump = """<Host h1: h1-eth0:10.0.0.1 pid=26370>
 <Host h2: h2-eth0:10.0.0.2 pid=26371>
 <Host h3: h3-eth0:10.0.0.3 pid=26372>
@@ -102,6 +118,7 @@ mininet>
         raise ValueError("No DPID mocked for switch: %s" % name)
     mn_driver = mock.Mock(name='TestONMininetDriver')
     mn_driver.dump.return_value = mininet_dump
+    mn_driver.net.return_value = mininet_net
     mn_driver.getInterfaces.side_effect = getInterfaces
     mn_driver.getSwitchDPID.side_effect = getSwitchDPID
     return mn_driver
@@ -212,3 +229,19 @@ mininet>"""
     self.assertEquals(get_s1.name, 's1')
     self.assertEquals(get_s2.name, 's2')
     self.assertIsNone(get_s20)
+
+  def test_edge_switches(self):
+    # Arrange
+    mn_driver = self._mock_teston()
+    # Act
+    sw_mgm = TestONSwitchesManager(mn_driver)
+    s2 = sw_mgm.get_switch('s2')
+    s3 = sw_mgm.get_switch('s3')
+    s4 = sw_mgm.get_switch('s4')
+    # Assert
+    edge_switches = sw_mgm.edge_switches
+    live_edge_switches = sw_mgm.live_edge_switches
+    # Assert
+    self.assertEquals(edge_switches, live_edge_switches)
+    self.assertEquals(len(edge_switches), 3)
+    self.assertItemsEqual([s2, s3, s4], edge_switches)

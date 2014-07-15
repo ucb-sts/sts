@@ -40,8 +40,10 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
     super(TestONSwitchesManager, self).__init__(policy)
     self.log = LOG
     self._switches = set()
+    self._edge_switches = set()
     self.teston_mn = teston_mn
     self._read_switches()
+    self._read_edge_switches()
 
   def _read_ports(self, node_name):
     response = self.teston_mn.getInterfaces(node_name)
@@ -83,6 +85,26 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
         # Todo read connected controllers
         self._switches.add(switch)
 
+  def _read_edge_switches(self):
+    """
+    Find switches which are connected to end hosts.
+    """
+    net = self.teston_mn.net().split("\n")
+    dst_re = r"(?P<src>[^\:\s]+)\s(?P<src_port>[^\:]+)\:(?P<dst>[^\:\s\-]+)"
+    for line in net:
+      line = line.strip()
+      # if It's not host skip it
+      if not line.startswith('h'):
+        continue
+      search = re.search(dst_re, line)
+      # Just a double check for hosts
+      if not search.group('src_port').startswith('h'):
+        continue
+      switch = self.get_switch(search.group('dst'))
+      if switch is None:
+        continue
+      switch.can_connect_to_endhosts = True
+
   @property
   def switches(self):
     return self._switches
@@ -114,9 +136,16 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
     return set()
 
   @property
+  def edge_switches(self):
+    """Return the switches which can connect to hosts"""
+    edge_switches = [sw for sw in self.switches if sw.can_connect_to_endhosts]
+    return set(edge_switches)
+
+  @property
   def live_edge_switches(self):
     """Return the switches which are currently up and can connect to hosts"""
-    return set()
+    switches = [sw for sw in self.edge_switches if sw in self.live_switches]
+    return set(switches)
 
   def get_switch(self, switch):
     if switch in self.switches:
