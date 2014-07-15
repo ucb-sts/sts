@@ -255,3 +255,20 @@ class STSSwitchesManagerTest(unittest.TestCase):
     self.assertEquals(sw1, get_s1)
     self.assertEquals(sw2, get_s2)
     self.assertIsNone(get_s3)
+
+  def test_edge_switches(self):
+    # Arrange
+    manager = STSSwitchesManager(self.create_connection)
+    sw1 = manager.create_switch(1, 2, can_connect_to_endhosts=True)
+    sw2 = manager.create_switch(1, 2, can_connect_to_endhosts=True)
+    sw3 = manager.create_switch(1, 2, can_connect_to_endhosts=False)
+    manager.add_switch(sw1)
+    manager.add_switch(sw2)
+    manager.add_switch(sw3)
+    manager.crash_switch(sw2)
+    # Act
+    edge_switches = manager.edge_switches
+    live_edge_switches = manager.live_edge_switches
+    # Assert
+    self.assertItemsEqual([sw1, sw2], edge_switches)
+    self.assertItemsEqual([sw1], live_edge_switches)

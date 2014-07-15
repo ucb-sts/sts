@@ -77,11 +77,16 @@ class STSSwitchesManager(SwitchManagerAbstractClass):
     return self.failed_switches
 
   @property
+  def edge_switches(self):
+    """Return the switches which can connect to hosts"""
+    edge_switches = [sw for sw in self.switches if sw.can_connect_to_endhosts]
+    return set(edge_switches)
+
+  @property
   def live_edge_switches(self):
     """Return the switches which are currently up and can connect to hosts"""
-    edge_switches = set(
-      [sw for sw in self.live_switches if sw.can_connect_to_endhosts])
-    return edge_switches - self.failed_switches
+    switches = [sw for sw in self.edge_switches if sw in self.live_switches]
+    return set(switches)
 
   def get_switch(self, switch):
     for sw in self.switches:
