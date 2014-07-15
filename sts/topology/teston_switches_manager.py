@@ -59,7 +59,7 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
                                                     port_vars['mac']))
       tmp = TestONPort(hw_addr=port_vars['mac'], ips=port_vars['ip'],
                        name=port_vars['name'])
-      ports.append((tmp))
+      ports.append(tmp)
     return ports
 
   def _read_switches(self):
