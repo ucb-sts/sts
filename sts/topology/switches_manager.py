@@ -160,6 +160,11 @@ class SwitchManagerAbstractClass(object):
     raise NotImplementedError()
 
   @abc.abstractproperty
+  def edge_switches(self):
+    """Return the switches which can connect to hosts"""
+    raise NotImplementedError()
+
+  @abc.abstractproperty
   def live_edge_switches(self):
     """Return the switches which are currently up and can connect to hosts"""
     raise NotImplementedError()
