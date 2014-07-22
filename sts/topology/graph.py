@@ -16,7 +16,10 @@
 A Simple Library for topology graphs.
 """
 
+import logging
 import networkx as nx
+
+LOG = logging.getLogger("sts.topology.graph")
 
 
 class Graph(object):
@@ -236,6 +239,7 @@ class TopologyGraph(object):
     super(TopologyGraph, self).__init__()
     #self._g = Graph()
     self._g = nx.DiGraph()
+    self.log = LOG
     # Load initial configurations
     hosts = hosts or []
     switches = switches or []
@@ -273,21 +277,34 @@ class TopologyGraph(object):
 
   def _host_vertex_id(self, host):
     """Utility method to get the vertex ID for a host"""
-    return getattr(host, 'name', getattr(host, 'hid', host))
+    vertex = getattr(host, 'name', getattr(host, 'hid', host))
+    self.log.debug("_host_vertex_id (%s): %s", host, vertex)
+    return vertex
 
   def _interface_vertex_id(self, interface):
     """Utility method to get the vertex ID for an Interface"""
-    return getattr(interface, 'port_no', getattr(interface, 'name', interface))
+    #iface = getattr(interface, 'port_no', getattr(interface, 'name', interface))
+    vertex = getattr(interface, 'name', None)
+    if vertex == '' or vertex is None:
+      vertex = getattr(interface, 'port_no', None)
+    self.log.debug("_interface_vertex_id (%s): %s", interface, vertex)
+    return vertex
 
   def _port_vertex_id(self, switch, port):
     """Utility method to get the vertex ID for an Interface"""
-    port_no = getattr(port, 'port_no', getattr(port, 'name', port))
-    sid = self._switch_vertex_id(switch)
-    return "%s-%s" % (sid, port_no)
+    vertex = getattr(port, 'name', None)
+    if vertex == '' or vertex is None:
+      vertex = getattr(port, 'port_no', None)
+      sid = self._switch_vertex_id(switch)
+      vertex = "%s-%s" % (sid, vertex)
+    self.log.debug("_port_vertex_id (%s, %s): %s", switch, port, vertex)
+    return vertex
 
   def _switch_vertex_id(self, switch):
     """Utility method to get the vertex ID for a switch"""
-    return getattr(switch, 'name', getattr(switch, 'dpid', switch))
+    vertex = getattr(switch, 'name', getattr(switch, 'dpid', switch))
+    self.log.debug("_switch_vertex_id (%s): %s", switch, vertex)
+    return vertex
 
   def _get_link_vertices(self, link):
     if hasattr(link, 'start_node'):
@@ -310,14 +327,16 @@ class TopologyGraph(object):
       if (self._g.has_node(v_port) and
             self.is_port(v_port, self._g.node[v_port])):
         v = v_port
-
       elif (self._g.has_node(v_iface) and
               self.is_interface(v_iface, self._g.node[v_iface])):
         v = v_iface
       else:
         v = None
       return v
-    return guess_vertex_id(node1, vertex1), guess_vertex_id(node2, vertex2)
+
+    v1, v2 = guess_vertex_id(node1, vertex1), guess_vertex_id(node2, vertex2)
+    self.log.debug("_get_link_vertices (%s): %s<->%s", link, v1, v2)
+    return v1, v2
 
   def hosts_iter(self, include_attrs=False):
     """
@@ -500,10 +519,13 @@ class TopologyGraph(object):
     connected to a switch from the switch type. It can be written to do it
     differently for other switch types
     """
-    sid = self._switch_vertex_id(switch)
     ports = []
     for port_no, port in getattr(switch, 'ports', {}).iteritems():
-      ports.append(("%s-%s" % (getattr(switch, 'name', sid), port_no), port))
+      vertex = port.name
+      if vertex == '' or vertex is None:
+        sid = self._switch_vertex_id(switch)
+        vertex = "%s-%s" % (sid, port_no)
+      ports.append((vertex, port))
     return ports
 
   def _get_connected_edges(self, vertex):
@@ -561,10 +583,12 @@ class TopologyGraph(object):
             The only thing good to have is `_interfaces_iterator` works over it.
     """
     hid = self._host_vertex_id(host)
+    self.log.debug("Adding host: %s with vertex id: %s", host, hid)
     assert not self._g.has_node(hid)
     self._g.add_node(hid, vtype=VertexType.HOST, obj=host)
     for port_no, interface in self._interfaces_iterator(host):
       self._g.add_node(port_no, vtype=VertexType.INTERFACE, obj=interface)
+      self.log.debug("Adding interface: %s with vertex id: %s", interface, port_no)
       self._g.add_edge(hid, port_no, etype=EdgeType.INTERNAL_LINK)
       self._g.add_edge(port_no, hid, etype=EdgeType.INTERNAL_LINK)
     return hid
