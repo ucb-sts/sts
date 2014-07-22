@@ -297,7 +297,7 @@ class TopologyGraph(object):
     if vertex == '' or vertex is None or str(sid) not in vertex:
       vertex = getattr(port, 'port_no', None)
       vertex = "%s-%s" % (sid, vertex)
-    self.log.debug("_port_vertex_id (%s, %s): %s", switch, port, vertex)
+    self.log.debug("_port_vertex_id (%s, %s): %s", switch, port.name, vertex)
     return vertex
 
   def _switch_vertex_id(self, switch):
