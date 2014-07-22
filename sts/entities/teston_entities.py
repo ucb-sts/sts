@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import re
 import logging
 
 LOG = logging.getLogger("sts.entities.teston_entities")
@@ -55,6 +56,15 @@ class TestONHostInterface(HostInterface):
   def __init__(self, hw_addr, ips, name):
     super(TestONHostInterface, self).__init__(hw_addr, ips, name)
 
+  @property
+  def port_no(self):
+    """Port number"""
+    local_port_re = r'[^\-]\d\-eth(?P<port>\d+)'
+    return int(re.search(local_port_re, self.name).group('port'))
+
+  def __str__(self, *args, **kwargs):
+    return self.name
+
   def __repr__(self):
     return "%s:%s" % (self.name, ",".join([ip.toStr() for ip in self.ips]))
 
@@ -69,6 +79,9 @@ class TestONHost(HostAbstractClass):
 
   def receive(self, interface, packet):
     pass
+
+  def __str__(self):
+    return self.name
 
   def __repr__(self):
     return "<Host %s: %s>" % (self.name,
@@ -99,7 +112,10 @@ class TestONPort(object):
 
   @property
   def port_no(self):
-    return self.name
+    local_port_re = r'[^\-]\d\-eth(?P<port>\d+)'
+    if self.name == 'lo':
+      return 0
+    return int(re.search(local_port_re, self.name).group('port'))
 
   def __str__(self):
     return self.name
