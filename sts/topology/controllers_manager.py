@@ -28,7 +28,8 @@ class ControllersManagerCapabilities(Capabilities):
                can_remove_controller=True, can_crash_controller=True,
                can_recover_controller=True, can_partition_control_plane=True,
                can_get_up_controllers=True, can_get_down_controllers=True,
-               can_block_peers=True, can_unblock_peers=True):
+               can_block_peers=True, can_unblock_peers=True,
+               can_add_intent=False, can_remove_intent=False):
     super(ControllersManagerCapabilities, self).__init__()
     self._can_create_controller = can_create_controller
     self._can_add_controller = can_add_controller
@@ -40,6 +41,8 @@ class ControllersManagerCapabilities(Capabilities):
     self._can_get_down_controllers = can_get_down_controllers
     self._can_block_peers = can_block_peers
     self._can_unblock_peers = can_unblock_peers
+    self._can_add_intent = can_add_intent
+    self._can_remove_intent = can_remove_intent
 
   @property
   def can_create_controller(self):
@@ -112,6 +115,19 @@ class ControllersManagerCapabilities(Capabilities):
     """
     return self._can_unblock_peers
 
+  @property
+  def can_add_intent(self):
+    """
+    Return True if the controller manager can add intent.
+    """
+    return self._can_add_intent
+
+  @property
+  def can_remove_intent(self):
+    """
+    Return True if the controller manager can add intent.
+    """
+    return self._can_remove_intent
 
 class ControllersManager(object):
   """
@@ -237,3 +253,11 @@ class ControllersManager(object):
       peers = [peers]
     for peer in peers:
       controller.unblock_peer(peer)
+
+  def add_intent(self, controller, intent):
+    assert self.capabilities.can_add_intent
+    controller.add_intent(intent)
+
+  def remove_intent(self, controller, intent_id):
+    assert self.capabilities.can_add_intent
+    controller.remove_intent(intent_id)
