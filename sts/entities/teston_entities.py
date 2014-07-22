@@ -115,7 +115,7 @@ class TestONPort(object):
   def port_no(self):
     local_port_re = r'[^\-]\d\-eth(?P<port>\d+)'
     if self.name == 'lo':
-      return 0
+      return 0xfffe
     return int(re.search(local_port_re, self.name).group('port'))
 
   def __str__(self):
