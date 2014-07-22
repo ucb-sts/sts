@@ -47,9 +47,20 @@ class TestONTopology(Topology):
     hosts_manager = TestONHostsManager(teston_mn)
     patch_panel = TestONPatchPanel(teston_mn, hosts_manager, switches_manager)
     controller_manager = ControllersManager()
+    if onos_controllers is None:
+      onos_controllers = []
     for info in onos_controllers:
-      config = TestONONOSConfig(info[1], info[2], info[3])
+      config = TestONONOSConfig(label=info[1], address=info[2], port=info[3])
+      if len(info) > 4:
+        config.intent_ip = info[4]
+        config.intent_port = info[5]
+        config.intent_url = info[6]
+
       controller = TestONONOSController(config, info[0])
+      if len(info) > 4:
+        controller_manager.capabilities._can_add_intent = True
+        controller_manager.capabilities._can_remove_intent = True
+
       controller_manager.add_controller(controller)
     capabilities = TopologyCapabilities()
 
