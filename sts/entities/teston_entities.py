@@ -129,11 +129,15 @@ class TestONONOSConfig(object):
   """
   TestON ONOS specific configurations
   """
-  def __init__(self, label, address, port):
+  def __init__(self, label, address, port,
+               intent_ip=None, intent_port=None, intent_url=None):
     self.label = label
     self.address = address
     self.port = port
     self.cid = self.label
+    self.intent_ip = intent_ip
+    self.intent_port = intent_port
+    self.intent_url = intent_url
 
 
 class TestONONOSController(ControllerAbstractClass):
@@ -241,6 +245,31 @@ class TestONONOSController(ControllerAbstractClass):
     """Stop ignoring traffic to/from the given peer controller"""
     self.teston_onos.unblock_peer(peer_controller.config.address)
     self.blocked_peers.remove(peer_controller)
+
+  def add_intent(self, intent):
+    """
+    Intent is dict with:
+      intent_id
+      src_dpid
+      dst_dpid
+      src_mac
+      dst_mac
+    """
+    if 'intentIP' not in intent:
+      intent['intentIP'] = self.config.intent_ip
+    if 'intentPort' not in intent:
+      intent['intentPort'] = self.config.intent_port
+    if 'intentURL' not in intent:
+      intent['intentURL'] = self.config.intent_url
+    self.teston_onos.add_intent(**intent)
+
+  def remove_intent(self, intent_id, intent_ip=None, intent_port=None,
+                    intent_url=None):
+    intent = dict(intent_id=intent_id)
+    intent['intentIP'] = intent_ip or self.config.intent_ip
+    intent['intentPort'] = intent_port or self.config.intent_port
+    intent['intentURL'] = intent_url or self.config.intent_url
+    self.teston_onos.delete_intent(**intent)
 
   def __repr__(self):
     return "%s (%s:%s)" % (self.label, self.config.address, self.config.port)
