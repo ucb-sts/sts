@@ -247,9 +247,11 @@ class TopologyGraphTest(unittest.TestCase):
   def test_add_host(self):
     # Arrange
     h1_eth1 = mock.Mock()
-    h1_eth1.port_no = 'h1_eth1'
+    h1_eth1.port_no = 1
+    h1_eth1.name = 'h1_eth1'
     h2_eth1 = mock.Mock()
-    h2_eth1.port_no = 'h2_eth1'
+    h2_eth1.port_no = 1
+    h2_eth1.name = 'h2_eth1'
     h1 = mock.Mock()
     h1.interfaces = [h1_eth1]
     h1.name = "h1"
@@ -274,9 +276,11 @@ class TopologyGraphTest(unittest.TestCase):
   def test_remove_host(self):
     # Arrange
     h1_eth1 = mock.Mock()
-    h1_eth1.port_no = 'h1_eth1'
+    h1_eth1.port_no = 1
+    h1_eth1.name = 'h1_eth1'
     h2_eth1 = mock.Mock()
-    h2_eth1.port_no = 'h2_eth1'
+    h2_eth1.port_no = 1
+    h2_eth1.name = 'h2_eth1'
     h1 = mock.Mock()
     h1.interfaces = [h1_eth1]
     h1.name = "h1"
@@ -307,11 +311,15 @@ class TopologyGraphTest(unittest.TestCase):
     s1 = mock.Mock()
     s1.name = "s1"
     s1.dpid = "1"
-    s1.ports = {1: mock.Mock()}
+    s1.ports = {1: mock.Mock(name='s1-1')}
+    s1.ports[1].name = '1'
+    s1.ports[1].port_no = 1
     s2 = mock.Mock()
     s2.name = "s2"
     s2.dpid = "2"
-    s2.ports = {2: mock.Mock()}
+    s2.ports = {1: mock.Mock(name='s2-1')}
+    s2.ports[1].name = '1'
+    s2.ports[1].port_no = 1
     s3 = mock.Mock()
     s3.name = "s3"
     s3.dpid = "3"
@@ -330,11 +338,15 @@ class TopologyGraphTest(unittest.TestCase):
     s1 = mock.Mock()
     s1.name = "s1"
     s1.dpid = "1"
-    s1.ports = {1: mock.Mock()}
+    s1.ports = {1: mock.Mock(name='s1-1')}
+    s1.ports[1].name = '1'
+    s1.ports[1].port_no = 1
     s2 = mock.Mock()
     s2.name = "s2"
     s2.dpid = "2"
-    s2.ports = {2: mock.Mock()}
+    s2.ports = {1: mock.Mock(name='s2-1')}
+    s2.ports[1].name = '1'
+    s2.ports[1].port_no = 1
     s3 = mock.Mock()
     s3.name = "s3"
     s3.dpid = "3"
@@ -354,28 +366,35 @@ class TopologyGraphTest(unittest.TestCase):
 
   def test_add_link(self):
     # Arrange
-    s1 = mock.Mock()
+    s1 = mock.Mock(name='s1')
     s1.name = "s1"
     s1.dpid = "1"
-    s1.ports = {1: mock.Mock(), 2: mock.Mock()}
+    s1.ports = {1: mock.Mock(name='s1-1'), 2: mock.Mock(name='s1-2')}
     s1.ports[1].port_no = 1
+    s1.ports[1].name = 's1-1'
     s1.ports[2].port_no = 2
-    s2 = mock.Mock()
+    s1.ports[2].name = 's1-2'
+    s2 = mock.Mock(name='s2')
     s2.name = "s2"
     s2.dpid = "2"
-    s2.ports = {1: mock.Mock(), 2: mock.Mock()}
+    s2.ports = {1: mock.Mock(name='s2-1'), 2: mock.Mock(name='s2-2')}
     s2.ports[1].port_no = 1
+    s2.ports[1].name = 's2-1'
     s2.ports[2].port_no = 2
-    l1 = mock.Mock()
+    s2.ports[2].name = 's2-2'
+    mocked_port = mock.Mock(name='s20-')
+    mocked_port.port_no = 3
+    mocked_port.name = 's2-3'
+    l1 = mock.Mock(name='l1')
     l1.start_node = s1
     l1.start_port = s1.ports[1]
     l1.end_node = s2
     l1.end_port = s2.ports[1]
-    l2 = mock.Mock()
+    l2 = mock.Mock(name='l2')
     l2.start_node = s1
     l2.start_port = s1.ports[2]
     l2.end_node = s2
-    l2.end_port = mock.Mock()
+    l2.end_port = mocked_port
     graph = TopologyGraph()
     graph.add_switch(s1)
     graph.add_switch(s2)
@@ -390,7 +409,6 @@ class TopologyGraphTest(unittest.TestCase):
     self.assertIsNone(graph.get_link('s1-2', 's2-2'))
     self.assertRaises(AssertionError, fail_add)
 
-
   def test_remove_link(self):
     # Arrange
     s1 = mock.Mock()
@@ -398,13 +416,17 @@ class TopologyGraphTest(unittest.TestCase):
     s1.dpid = "1"
     s1.ports = {1: mock.Mock(), 2: mock.Mock()}
     s1.ports[1].port_no = 1
+    s1.ports[1].name = 's1-1'
     s1.ports[2].port_no = 2
+    s1.ports[2].name = 's1-2'
     s2 = mock.Mock()
     s2.name = "s2"
     s2.dpid = "2"
     s2.ports = {1: mock.Mock(), 2: mock.Mock()}
     s2.ports[1].port_no = 1
+    s2.ports[1].name = 's2-1'
     s2.ports[2].port_no = 2
+    s2.ports[2].name = 's2-2'
     l1 = mock.Mock()
     l1.start_node = s1
     l1.start_port = s1.ports[1]

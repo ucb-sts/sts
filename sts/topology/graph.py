@@ -293,9 +293,9 @@ class TopologyGraph(object):
   def _port_vertex_id(self, switch, port):
     """Utility method to get the vertex ID for an Interface"""
     vertex = getattr(port, 'name', None)
-    if vertex == '' or vertex is None:
+    sid = self._switch_vertex_id(switch)
+    if vertex == '' or vertex is None or str(sid) not in vertex:
       vertex = getattr(port, 'port_no', None)
-      sid = self._switch_vertex_id(switch)
       vertex = "%s-%s" % (sid, vertex)
     self.log.debug("_port_vertex_id (%s, %s): %s", switch, port, vertex)
     return vertex
@@ -522,8 +522,8 @@ class TopologyGraph(object):
     ports = []
     for port_no, port in getattr(switch, 'ports', {}).iteritems():
       vertex = port.name
-      if vertex == '' or vertex is None:
-        sid = self._switch_vertex_id(switch)
+      sid = self._switch_vertex_id(switch)
+      if vertex == '' or vertex is None or str(sid) not in vertex:
         vertex = "%s-%s" % (sid, port_no)
       ports.append((vertex, port))
     return ports
