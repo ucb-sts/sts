@@ -15,9 +15,10 @@
 import mock
 import unittest
 
+from pox.lib.addresses import EthAddr
+from pox.lib.addresses import IPAddr
 
 from sts.topology.teston_switches_manager import TestONSwitchesManager
-
 
 
 class TestONSwitchesManagerTest(unittest.TestCase):
@@ -141,6 +142,21 @@ mininet>
     self.assertIn(2, s4.ports)
     self.assertIn(3, s4.ports)
     self.assertIn(4, s4.ports)
+    self.assertEquals(s4.ports[0xfffe].name, 'lo')
+    self.assertEquals(s4.ports[0xfffe].hw_addr, None)
+    self.assertEquals(s4.ports[0xfffe].ips, [IPAddr('127.0.0.1')])
+    self.assertEquals(s4.ports[1].name, 's4-eth1')
+    self.assertEquals(s4.ports[1].hw_addr, EthAddr('4a:82:af:b3:dd:bf'))
+    self.assertEquals(s4.ports[1].ips, [])
+    self.assertEquals(s4.ports[2].name, 's4-eth2')
+    self.assertEquals(s4.ports[2].hw_addr, EthAddr('fa:30:f4:61:c7:c2'))
+    self.assertEquals(s4.ports[2].ips, [])
+    self.assertEquals(s4.ports[3].name, 's4-eth3')
+    self.assertEquals(s4.ports[3].hw_addr, EthAddr('c2:8f:63:d1:27:f9'))
+    self.assertEquals(s4.ports[3].ips, [])
+    self.assertEquals(s4.ports[4].name, 's4-eth4')
+    self.assertEquals(s4.ports[4].hw_addr, EthAddr('5e:c8:ae:c9:2c:fc'))
+    self.assertEquals(s4.ports[4].ips, [])
 
   def test_connect_to_controllers(self):
     # Arrange

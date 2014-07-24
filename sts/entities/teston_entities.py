@@ -16,7 +16,8 @@
 import re
 import logging
 
-LOG = logging.getLogger("sts.entities.teston_entities")
+from pox.lib.addresses import EthAddr
+from pox.lib.addresses import IPAddr
 
 from sts.entities.base import BiDirectionalLinkAbstractClass
 from sts.entities.hosts import HostAbstractClass
@@ -24,6 +25,9 @@ from sts.entities.hosts import HostInterface
 
 from sts.entities.controllers import ControllerAbstractClass
 from sts.entities.controllers import ControllerState
+
+
+LOG = logging.getLogger("sts.entities.teston_entities")
 
 
 class TestONNetworkLink(BiDirectionalLinkAbstractClass):
@@ -107,9 +111,18 @@ class TestONOVSSwitch(object):
 
 class TestONPort(object):
   def __init__(self, hw_addr, name, ips=None):
+    if hw_addr:
+      print "HW ADDR", hw_addr, type(hw_addr)
+      hw_addr = EthAddr(hw_addr)
     self.hw_addr = hw_addr
     self.name = name
-    self.ips = ips
+    if ips is None:
+      ips = []
+    if not isinstance(ips, list):
+      ips = [ips]
+    self.ips = []
+    for ip in ips:
+      self.ips.append(IPAddr(ip))
 
   @property
   def port_no(self):
