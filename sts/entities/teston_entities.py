@@ -95,7 +95,7 @@ class TestONOVSSwitch(object):
     self.dpid = dpid
     self.can_connect_to_endhosts = can_connect_to_endhosts
     for port in ports:
-      self.ports[port.name] = port
+      self.ports[port.port_no] = port
 
   def __str__(self):
     return self.name

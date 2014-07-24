@@ -135,6 +135,12 @@ mininet>
         self.assertEquals(len(switch.ports), 4, switch.ports)
       else:
         self.assertEquals(len(switch.ports), 5, switch.ports)
+    s4 = sw_mgm.get_switch('s4')
+    self.assertIn(0xfffe, s4.ports)  # Local interface
+    self.assertIn(1, s4.ports)
+    self.assertIn(2, s4.ports)
+    self.assertIn(3, s4.ports)
+    self.assertIn(4, s4.ports)
 
   def test_connect_to_controllers(self):
     # Arrange
