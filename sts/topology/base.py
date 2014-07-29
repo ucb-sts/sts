@@ -378,7 +378,7 @@ class Topology(object):
       assert self.capabilities.can_add_network_link
     elif self.is_access_link(link):
       assert self.capabilities.can_add_access_link
-    assert not self._graph.has_link(link)
+    assert not self._graph.has_link(link), "Link already exists: %s" % link
     if hasattr(link, 'start_node'):
       bidir = False
     else:
