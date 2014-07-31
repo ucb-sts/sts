@@ -23,6 +23,10 @@ can_remove_x, can_create_x, etc...
 import inspect
 
 
+def check_capability(obj, capability):
+  return getattr(getattr(obj, 'capabilities', None), capability, None) is True
+
+
 class Capabilities(object):
   """
   Expresses a simple capabilities of what can/cannot it be do done by a given object.
