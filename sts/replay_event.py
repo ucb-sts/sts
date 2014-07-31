@@ -1171,6 +1171,46 @@ class RemoveIntent(PolicyChange):
             self.intent_port, self.intent_url)
 
 
+class PingEvent(InputEvent):
+  def __init__(self, src_host_id, dst_host_id,
+               label=None, round=-1, time=None, prunable=False):
+    super(PingEvent, self).__init__(label=label, round=round, time=time,
+                                    prunable=prunable)
+    self.src_host_id = src_host_id
+    self.dst_host_id = dst_host_id
+
+  def proceed(self, simulation):
+    src_host = simulation.topology.hosts_manager.get_host(self.src_host_id)
+    dst_host = simulation.topology.hosts_manager.get_host(self.dst_host_id)
+    return src_host.ping(dst_host)
+
+  @property
+  def fingerprint(self):
+    """
+    Fingerprint tuple format: (class name, src_host_id, dst_hosts_id)
+    """
+    return (self.__class__.__name__, self.src_host_id, self.dst_host_id)
+
+  def to_json(self):
+    fields = {}
+    fields = dict(self.__dict__)
+    fields['class'] = self.__class__.__name__
+    fields['src_host_id'] = self.src_host_id
+    fields['dst_host_id'] = self.dst_host_id
+    fields['fingerprint'] = self.fingerprint
+    return json.dumps(fields)
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round) = extract_label_time(json_hash)
+    prunable = True
+    if 'prunable' in json_hash:
+      prunable = json_hash['prunable']
+    src_host_id = json_hash['src_host_id']
+    dst_host_id = json_hash['dst_host_id']
+    return PingEvent(src_host_id=src_host_id, dst_host_id=dst_host_id,
+                     label=label, time=time, round=round, prunable=prunable)
+
 # N.B. When adding inputs to this list, make sure to update input susequence
 # validity checking in event_dag.py.
 all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
@@ -1179,7 +1219,7 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControlChannelBlock, ControlChannelUnblock,
                     DataplaneDrop, BlockControllerPair, UnblockControllerPair,
                     LinkDiscovery, ConnectToControllers, NOPInput, AddIntent,
-                    RemoveIntent]
+                    RemoveIntent, PingEvent]
 
 
 
