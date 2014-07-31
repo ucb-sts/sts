@@ -64,7 +64,7 @@ class TestONHostsManager(HostsManagerAbstractClass):
       self.log.info("Reading host port %s(%s)" % (vars['name'], vars['mac']))
       tmp = TestONHostInterface(hw_addr=vars['mac'], ips=vars['ip'],
                                 name=vars['name'])
-      interfaces.append((tmp))
+      interfaces.append(tmp)
     return interfaces
 
   def _read_nodes(self):
@@ -81,7 +81,8 @@ class TestONHostsManager(HostsManagerAbstractClass):
         result = re.search(host_re, line)
         host_name = result.group('name')
         interfaces = self._read_interfaces(host_name)
-        host = TestONHost(interfaces, name=host_name)
+        host = TestONHost(interfaces=interfaces, name=host_name,
+                          teston_mn=self.teston_mn)
         self._hosts.add(host)
 
   @property

@@ -74,8 +74,9 @@ class TestONHostInterface(HostInterface):
 
 
 class TestONHost(HostAbstractClass):
-  def __init__(self, interfaces, name="", hid=None):
+  def __init__(self, interfaces, name="", hid=None, teston_mn=None):
     super(TestONHost, self).__init__(interfaces, name, hid)
+    self.teston_mn = teston_mn
 
   def send(self, interface, packet):
     # Mininet doesn't really deal with multiple interfaces
@@ -83,6 +84,13 @@ class TestONHost(HostAbstractClass):
 
   def receive(self, interface, packet):
     pass
+
+  def ping(self, host):
+    ret = self.teston_mn.pingHost(SRC=self.name, TARGET=host.name)
+    if ret == 1:
+      return True
+    else:
+      return False
 
   def __str__(self):
     return self.name
