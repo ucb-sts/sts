@@ -200,10 +200,12 @@ def extract_label_time(json_hash):
   round = json_hash['round']
   return (label, time, round)
 
+
 class ConnectToControllers(InputEvent):
-  ''' Logged at the beginning of the execution. Causes all switches to open
+  """
+  Logged at the beginning of the execution. Causes all switches to open
   TCP connections their their parent controller(s).
-  '''
+  """
   def __init__(self, label=None, round=-1, time=None,
                timeout_disallowed=True):
     super(ConnectToControllers, self).__init__(label=label, round=round, time=time)
@@ -223,25 +225,27 @@ class ConnectToControllers(InputEvent):
 
 
 class SwitchFailure(InputEvent):
-  ''' Crashes a switch, by disconnecting its TCP connection with the
-  controller(s).'''
+  """
+  Crashes a switch, by disconnecting its TCP connection with the controller(s).
+  """
   def __init__(self, dpid, label=None, round=-1, time=None):
-    '''
+    """
     Parameters:
      - dpid: unique integer identifier of the switch.
      - label: a unique label for this event. Internal event labels begin with 'i'
        and input event labels begin with 'e'.
      - time: the timestamp of when this event occured. Stored as a tuple:
        [seconds since unix epoch, microseconds].
-     - round: optional integer. Indicates what simulation round this event occured
-       in.
-    '''
+     - round: optional integer. Indicates what simulation round this event
+             occurred in.
+    """
     super(SwitchFailure, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
 
   def proceed(self, simulation):
-    software_switch = simulation.topology.get_switch(self.dpid)
-    simulation.topology.crash_switch(software_switch)
+    switch = simulation.topology.switches_manager.get_switch_dpid(self.dpid)
+    log.info("SwitchFailure: %s" % switch)
+    simulation.topology.switches_manager.crash_switch(switch)
     return True
 
   @staticmethod
@@ -253,14 +257,17 @@ class SwitchFailure(InputEvent):
 
   @property
   def fingerprint(self):
-    ''' Fingerprint tuple format: (class name, dpid) '''
+    """Fingerprint tuple format: (class name, dpid)"""
     return (self.__class__.__name__,self.dpid,)
 
+
 class SwitchRecovery(InputEvent):
-  ''' Recovers a crashed switch, by reconnecting its TCP connection with the
-  controller(s).'''
+  """
+  Recovers a crashed switch, by reconnecting its TCP connection with the
+  controller(s).
+  """
   def __init__(self, dpid, label=None, round=-1, time=None):
-    '''
+    """
     Parameters:
      - dpid: unique integer identifier of the switch.
      - label: a unique label for this event. Internal event labels begin with 'i'
@@ -269,18 +276,20 @@ class SwitchRecovery(InputEvent):
        [seconds since unix epoch, microseconds].
      - round: optional integer. Indicates what simulation round this event occured
        in.
-    '''
+    """
     super(SwitchRecovery, self).__init__(label=label, round=round, time=time)
     self.dpid = dpid
 
   def proceed(self, simulation):
-    software_switch = simulation.topology.get_switch(self.dpid)
+    switch = simulation.topology.switches_manager.get_switch_dpid(self.dpid)
+    log.info("SwitchRecovery: %s" % switch)
     try:
-      down_controller_ids = map(lambda c: c.cid,
-                                simulation.controller_manager.down_controllers)
+      #down_controller_ids = map(lambda c: c.cid,
+      #                          simulation.controller_manager.down_controllers)
 
-      simulation.topology.recover_switch(software_switch,
-                                         down_controller_ids=down_controller_ids)
+      #simulation.topology.recover_switch(software_switch,
+      #                                   down_controller_ids=down_controller_ids)
+      simulation.topology.switches_manager.recover_switch(switch)
     except TimeoutError:
       # Controller is down... Hopefully control flow will notice soon enough
       log.warn("Timed out on %s" % str(self.fingerprint))
@@ -295,35 +304,45 @@ class SwitchRecovery(InputEvent):
 
   @property
   def fingerprint(self):
-    ''' Fingerprint tuple format: (class name, dpid) '''
+    """Fingerprint tuple format: (class name, dpid)"""
     return (self.__class__.__name__,self.dpid,)
 
+
 def get_link(link_event, simulation):
-  start_software_switch = simulation.topology.get_switch(link_event.start_dpid)
-  end_software_switch = simulation.topology.get_switch(link_event.end_dpid)
-  link = Link(start_software_switch, link_event.start_port_no,
-              end_software_switch, link_event.end_port_no)
-  return link
+  start_software_switch = simulation.topology.switches_manager.get_switch_dpid(
+    link_event.start_dpid)
+  end_software_switch = simulation.topology.switches_manager.get_switch_dpid(
+    link_event.end_dpid)
+  start_port = start_software_switch.ports[link_event.start_port_no]
+  end_port = end_software_switch.ports[link_event.end_port_no]
+  links = simulation.topology.patch_panel.query_network_links(
+    start_software_switch, start_port, end_software_switch, end_port)
+  return links.pop()
+
 
 class LinkFailure(InputEvent):
-  ''' Cuts a link between switches. This causes the switch to send an
+  """
+  Cuts a link between switches. This causes the switch to send an
   ofp_port_status message to its parent(s). All packets forwarded over
-  this link will be dropped until a LinkRecovery occurs.'''
+  this link will be dropped until a LinkRecovery occurs.
+  """
   def __init__(self, start_dpid, start_port_no, end_dpid, end_port_no,
                label=None, round=-1, time=None):
-    '''
+    """
     Parameters:
-     - start_dpid: unique integer identifier of the first switch connected to the link.
+     - start_dpid: unique integer identifier of the first switch connected to
+                   the link.
      - start_port_no: integer port number of the start switch's port.
-     - end_dpid: unique integer identifier of the second switch connected to the link.
+     - end_dpid: unique integer identifier of the second switch connected to
+                 the link.
      - end_port_no: integer port number of the end switch's port to be created.
-     - label: a unique label for this event. Internal event labels begin with 'i'
-       and input event labels begin with 'e'.
+     - label: a unique label for this event. Internal event labels begin
+              with 'i' and input event labels begin with 'e'.
      - time: the timestamp of when this event occured. Stored as a tuple:
        [seconds since unix epoch, microseconds].
-     - round: optional integer. Indicates what simulation round this event occured
-       in.
-    '''
+     - round: optional integer. Indicates what simulation round this event
+            occurred in.
+    """
     super(LinkFailure, self).__init__(label=label, round=round, time=time)
     self.start_dpid = start_dpid
     self.start_port_no = start_port_no
@@ -332,7 +351,8 @@ class LinkFailure(InputEvent):
 
   def proceed(self, simulation):
     link = get_link(self, simulation)
-    simulation.topology.sever_link(link)
+    log.info("LinkFailure: %s" % link)
+    simulation.topology.patch_panel.sever_network_link(link)
     return True
 
   @staticmethod
@@ -349,30 +369,37 @@ class LinkFailure(InputEvent):
 
   @property
   def fingerprint(self):
-    ''' Fingerprint tuple format:
-    (class name, start dpid, start port_no, end dpid, end port_no) '''
+    """
+    Fingerprint tuple format:
+      (class name, start dpid, start port_no, end dpid, end port_no)
+    """
     return (self.__class__.__name__,
             self.start_dpid, self.start_port_no,
             self.end_dpid, self.end_port_no)
 
+
 class LinkRecovery(InputEvent):
-  ''' Recovers a failed link between switches. This causes the switch to send an
-  ofp_port_status message to its parent(s). '''
+  """
+  Recovers a failed link between switches. This causes the switch to send an
+  ofp_port_status message to its parent(s).
+  """
   def __init__(self, start_dpid, start_port_no, end_dpid, end_port_no,
                label=None, round=-1, time=None):
-    '''
+    """
     Parameters:
-     - start_dpid: unique integer identifier of the first switch connected to the link.
+     - start_dpid: unique integer identifier of the first switch connected to
+                   the link.
      - start_port_no: integer port number of the start switch's port.
-     - end_dpid: unique integer identifier of the second switch connected to the link.
+     - end_dpid: unique integer identifier of the second switch connected to the
+                 link.
      - end_port_no: integer port number of the end switch's port to be created.
-     - label: a unique label for this event. Internal event labels begin with 'i'
-       and input event labels begin with 'e'.
+     - label: a unique label for this event. Internal event labels begin
+              with 'i' and input event labels begin with 'e'.
      - time: the timestamp of when this event occured. Stored as a tuple:
        [seconds since unix epoch, microseconds].
-     - round: optional integer. Indicates what simulation round this event occured
-       in.
-    '''
+     - round: optional integer. Indicates what simulation round this event
+              occurred in.
+    """
     super(LinkRecovery, self).__init__(label=label, round=round, time=time)
     self.start_dpid = start_dpid
     self.start_port_no = start_port_no
@@ -381,7 +408,8 @@ class LinkRecovery(InputEvent):
 
   def proceed(self, simulation):
     link = get_link(self, simulation)
-    simulation.topology.repair_link(link)
+    log.info("LinkRecovery: %s" % link)
+    simulation.topology.patch_panel.repair_network_link(link)
     return True
 
   @staticmethod
@@ -398,32 +426,36 @@ class LinkRecovery(InputEvent):
 
   @property
   def fingerprint(self):
-    ''' Fingerprint tuple format:
-    (class name, start dpid, start port, end dpid, end port)
-    '''
+    """
+    Fingerprint tuple format:
+      (class name, start dpid, start port, end dpid, end port)
+    """
     return (self.__class__.__name__,
             self.start_dpid, self.start_port_no,
             self.end_dpid, self.end_port_no)
 
+
 class ControllerFailure(InputEvent):
-  ''' Kills a controller process with `kill -9`'''
+  """Kills a controller process with `kill -9`"""
   def __init__(self, controller_id, label=None, round=-1, time=None):
-    '''
+    """
     Parameters:
      - controller_id: unique string label for the controller to be killed.
-     - label: a unique label for this event. Internal event labels begin with 'i'
-       and input event labels begin with 'e'.
+     - label: a unique label for this event. Internal event labels begin
+              with 'i' and input event labels begin with 'e'.
      - time: the timestamp of when this event occured. Stored as a tuple:
        [seconds since unix epoch, microseconds].
-     - round: optional integer. Indicates what simulation round this event occured
-       in.
-    '''
+     - round: optional integer. Indicates what simulation round this event
+              occurred in.
+    """
     super(ControllerFailure, self).__init__(label=label, round=round, time=time)
     self.controller_id = controller_id
 
   def proceed(self, simulation):
-    controller = simulation.controller_manager.get_controller(self.controller_id)
-    simulation.controller_manager.kill_controller(controller)
+    controller = simulation.topology.controllers_manager.get_controller(
+      self.controller_id)
+    log.info("ControllerFailure: %s" % controller)
+    simulation.topology.controllers_manager.crash_controller(controller)
     return True
 
   @staticmethod
@@ -435,29 +467,33 @@ class ControllerFailure(InputEvent):
 
   @property
   def fingerprint(self):
-    ''' Fingerprint tuple format: (class name, controller id) '''
+    """Fingerprint tuple format: (class name, controller id)"""
     return (self.__class__.__name__,self.controller_id)
 
+
 class ControllerRecovery(InputEvent):
-  ''' Reboots a crashed controller by reinvoking its original command line
-  parameters'''
+  """
+  Reboots a crashed controller by re-invoking its original command line
+  parameters.
+  """
   def __init__(self, controller_id, label=None, round=-1, time=None):
-    '''
+    """
     Parameters:
      - controller_id: unique string label for the controller.
-     - label: a unique label for this event. Internal event labels begin with 'i'
-       and input event labels begin with 'e'.
-     - time: the timestamp of when this event occured. Stored as a tuple:
+     - label: a unique label for this event. Internal event labels begin
+              with 'i' and input event labels begin with 'e'.
+     - time: the timestamp of when this event occurred. Stored as a tuple:
        [seconds since unix epoch, microseconds].
-     - round: optional integer. Indicates what simulation round this event occured
-       in.
-    '''
+     - round: optional integer. Indicates what simulation round this event
+              occurred in.
+    """
     super(ControllerRecovery, self).__init__(label=label, round=round, time=time)
     self.controller_id = controller_id
 
   def proceed(self, simulation):
-    controller = simulation.controller_manager.get_controller(self.controller_id)
-    simulation.controller_manager.reboot_controller(controller)
+    controller = simulation.topology.controllers_manager.get_controller(self.controller_id)
+    log.info("ControllerRecovery: %s" % controller)
+    simulation.topology.controllers_manager.recover_controller(controller)
     return True
 
   @staticmethod
@@ -469,8 +505,9 @@ class ControllerRecovery(InputEvent):
 
   @property
   def fingerprint(self):
-    ''' Fingerprint tuple format: (class name, controller id) '''
+    """Fingerprint tuple format: (class name, controller id)."""
     return (self.__class__.__name__,self.controller_id)
+
 
 class HostMigration(InputEvent):
   ''' Migrates a host from one location in network to another. Creates a new
@@ -562,10 +599,13 @@ class PolicyChange(InputEvent):
     request_type = json_hash['request_type']
     return PolicyChange(request_type, round=round, label=label, time=time)
 
+
 class TrafficInjection(InputEvent):
-  ''' Injects a dataplane packet into the network at the given host's access link '''
+  """
+  Injects a dataplane packet into the network at the given host's access link
+  """
   def __init__(self, label=None, dp_event=None, host_id=None, round=-1, time=None, prunable=True):
-    '''
+    """
     Parameters:
      - dp_event: DataplaneEvent object encapsulating the packet contents and the
        access link.
@@ -579,7 +619,7 @@ class TrafficInjection(InputEvent):
        in.
      - prunable: whether this input event can be pruned during delta
        debugging.
-    '''
+    """
     super(TrafficInjection, self).__init__(label=label, round=round, time=time,
                                            prunable=prunable)
     self.dp_event = dp_event
@@ -592,18 +632,20 @@ class TrafficInjection(InputEvent):
         raise RuntimeError("No dataplane trace specified!")
       simulation.dataplane_trace.inject_trace_event()
     else:
-      host = simulation.topology.link_tracker\
-                       .interface2access_link[self.dp_event.interface].host
+      host = simulation.topology.patch_panel.interface2access_link[self.dp_event.interface].host
+      #host = simulation.topology.link_tracker\
+      #                 .interface2access_link[self.dp_event.interface].host
       host.send(self.dp_event.interface, self.dp_event.packet)
     return True
 
   @property
   def fingerprint(self):
-    ''' Fingerprint tuple format: (class name, dp event, host_id)
+    """
+    Fingerprint tuple format: (class name, dp event, host_id)
     The format of dp event is:
     {"interface": HostInterface.to_json(), "packet": base 64 encoded packet contents}
     See entities.py for the HostInterface json format.
-    '''
+    """
     return (self.__class__.__name__, self.dp_event, self.host_id)
 
   def to_json(self):
@@ -693,6 +735,7 @@ class CheckInvariants(InputEvent):
   def proceed(self, simulation):
     try:
       violations = self.invariant_check(simulation)
+      print "Violations", violations
       simulation.violation_tracker.track(violations, self.round)
       persistent_violations = simulation.violation_tracker.persistent_violations
     except NameError as e:
@@ -1011,6 +1054,7 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     ControlChannelBlock, ControlChannelUnblock,
                     DataplaneDrop, BlockControllerPair, UnblockControllerPair,
                     LinkDiscovery, ConnectToControllers, NOPInput]
+
 
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
