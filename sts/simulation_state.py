@@ -28,7 +28,7 @@ from entities import DeferredOFConnection
 from sts.controller_manager import ControllerManager, UserSpaceControllerPatchPanel
 from sts.util.deferred_io import DeferredIOWorker
 from sts.openflow_buffer import OpenFlowBuffer
-from sts.topology import *
+from sts.topology.sts_topology import *
 from sts.invariant_checker import ViolationTracker
 from sts.syncproto.sts_syncer import STSSyncConnectionManager
 import sts.snapshot as snapshot
@@ -37,6 +37,7 @@ from sts.util.socket_mux.sts_socket_multiplexer import STSSocketDemultiplexer, S
 from sts.util.convenience import find
 from pox.lib.util import connect_socket_with_backoff
 from sts.control_flow.base import ReplaySyncCallback
+from sts.util.console import msg
 
 import select
 import socket
