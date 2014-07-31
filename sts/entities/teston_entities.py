@@ -120,7 +120,6 @@ class TestONOVSSwitch(object):
 class TestONPort(object):
   def __init__(self, hw_addr, name, ips=None):
     if hw_addr:
-      print "HW ADDR", hw_addr, type(hw_addr)
       hw_addr = EthAddr(hw_addr)
     self.hw_addr = hw_addr
     self.name = name
