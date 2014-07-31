@@ -1046,15 +1046,6 @@ class NOPInput(InputEvent):
     (label, time, round) = extract_label_time(json_hash)
     return NOPInput(round=round, label=label, time=time)
 
-# N.B. When adding inputs to this list, make sure to update input susequence
-# validity checking in event_dag.py.
-all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
-                    ControllerFailure, ControllerRecovery, HostMigration,
-                    PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
-                    ControlChannelBlock, ControlChannelUnblock,
-                    DataplaneDrop, BlockControllerPair, UnblockControllerPair,
-                    LinkDiscovery, ConnectToControllers, NOPInput]
-
 
 class AddIntent(PolicyChange):
   """Add Intent, currently ONOS specific"""
@@ -1178,6 +1169,18 @@ class RemoveIntent(PolicyChange):
     """
     return (self.__class__.__name__, self.cid, self.intent_id, self.intent_ip,
             self.intent_port, self.intent_url)
+
+
+# N.B. When adding inputs to this list, make sure to update input susequence
+# validity checking in event_dag.py.
+all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
+                    ControllerFailure, ControllerRecovery, HostMigration,
+                    PolicyChange, TrafficInjection, WaitTime, CheckInvariants,
+                    ControlChannelBlock, ControlChannelUnblock,
+                    DataplaneDrop, BlockControllerPair, UnblockControllerPair,
+                    LinkDiscovery, ConnectToControllers, NOPInput, AddIntent,
+                    RemoveIntent]
+
 
 
 # ----------------------------------- #
