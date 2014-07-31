@@ -1056,6 +1056,130 @@ all_input_events = [SwitchFailure, SwitchRecovery, LinkFailure, LinkRecovery,
                     LinkDiscovery, ConnectToControllers, NOPInput]
 
 
+class AddIntent(PolicyChange):
+  """Add Intent, currently ONOS specific"""
+  def __init__(self, cid, intent_id, src_dpid, dst_dpid, src_port, dst_port,
+               src_mac, dst_mac, static_path, intent_type, intent_ip,
+               intent_port, intent_url, label=None, round=-1, time=None):
+    super(AddIntent, self).__init__(request_type='AddIntent', label=label,
+                                    round=round, time=time)
+    self.cid = cid
+    self.intent_id = intent_id
+    self.src_dpid = src_dpid
+    self.dst_dpid = dst_dpid
+    self.src_port = src_port
+    self.dst_port = dst_port
+    self.src_mac = src_mac
+    self.dst_mac = dst_mac
+    self.static_path = static_path
+    self.intent_type = intent_type
+    self.intent_ip = intent_ip
+    self.intent_port = intent_port
+    self.intent_url = intent_url
+
+  def proceed(self, simulation):
+    controller = simulation.topology.controllers_manager.get_controller(self.cid)
+    intent = dict()
+    intent['intent_id'] = self.intent_id
+    intent['src_dpid'] = self.src_dpid
+    intent['dst_dpid'] = self.dst_dpid
+    intent['src_port'] = self.src_port
+    intent['dst_port'] = self.dst_port
+    intent['src_mac'] = self.src_mac
+    intent['dst_mac'] = self.dst_mac
+    intent['static_path'] = self.static_path
+    intent['intent_type'] = self.intent_type
+    intent['intentIP'] = self.intent_ip
+    intent['intentPort'] = self.intent_port
+    intent['intentURL'] = self.intent_url
+    log.info("Adding intent: %s", intent)
+    print "Adding intent: %s" % intent
+
+    controller.add_intent(intent)
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'request_type', 'cid', 'intent_id',
+                        'src_dpid', 'dst_dpid', 'src_port', 'dst_port',
+                        'src_mac', 'dst_mac', 'static_path', 'intent_type',
+                        'intent_ip', 'intent_port', 'intent_url')
+    request_type = json_hash['request_type']
+    cid = json_hash['cid']
+    intent_id = json_hash['intent_id']
+    src_dpid = json_hash['src_dpid']
+    dst_dpid = json_hash['dst_dpid']
+    src_port = json_hash['src_port']
+    dst_port = json_hash['dst_port']
+    src_mac = json_hash['src_mac']
+    dst_mac = json_hash['dst_mac']
+    static_path = json_hash['static_path']
+    intent_type = json_hash['intent_type']
+    intent_ip = json_hash['intent_ip']
+    intent_port = json_hash['intent_port']
+    intent_url = json_hash['intent_url']
+    return AddIntent(cid=cid, intent_id=intent_id, src_dpid=src_dpid,
+                     dst_dpid=dst_dpid, src_port=src_port, dst_port=dst_port,
+                     src_mac=src_mac, dst_mac=dst_mac, static_path=static_path,
+                     intent_type=intent_type, intent_ip=intent_ip,
+                     intent_port=intent_port, intent_url=intent_url,
+                     round=round, label=label, time=time)
+
+  @property
+  def fingerprint(self):
+    """
+    Fingerprint tuple format: (class name, cid, intent_id, src_dpid,
+            dst_dpid, src_port, dst_port, src_mac, dst_mac, static_path,
+            intent_type, intent_ip, intent_port, intent_url)
+    """
+    return (self.__class__.__name__, self.cid, self.intent_id, self.src_dpid,
+            self.dst_dpid, self.src_port, self.dst_port, self.src_mac,
+            self.dst_mac, self.static_path, self.intent_type, self.intent_ip,
+            self.intent_port, self.intent_url)
+
+
+class RemoveIntent(PolicyChange):
+  """Remove Intent, currently ONOS specific"""
+  def __init__(self, cid, intent_id, intent_ip, intent_port, intent_url,
+               label=None, round=-1, time=None):
+    super(RemoveIntent, self).__init__(request_type='RemoveIntent', label=label,
+                                       round=round, time=time)
+    self.cid = cid
+    self.intent_id = intent_id
+    self.intent_ip = intent_ip
+    self.intent_port = intent_port
+    self.intent_url = intent_url
+
+  def proceed(self, simulation):
+    controller = simulation.topology.controllers_manager.get_controller(self.cid)
+    controller.remove_intent(intent_id=self.intent_id, intent_ip=self.intent_ip,
+                             intent_port=self.intent_port,
+                             intent_url=self.intent_url)
+
+  @staticmethod
+  def from_json(json_hash):
+    (label, time, round) = extract_label_time(json_hash)
+    assert_fields_exist(json_hash, 'request_type', 'cid', 'intent_id',
+                        'intent_ip', 'intent_port', 'intent_url')
+    cid = json_hash['cid']
+    intent_id = json_hash['intent_id']
+    intent_ip = json_hash['intent_ip']
+    intent_port = json_hash['intent_port']
+    intent_url = json_hash['intent_url']
+    return RemoveIntent(cid=cid, intent_id=intent_id, intent_ip=intent_ip,
+                        intent_port=intent_port, intent_url=intent_url,
+                        round=round, label=label, time=time)
+
+  @property
+  def fingerprint(self):
+    """
+    Fingerprint tuple format: (class name, cid, intent_id, intent_ip,
+                              intent_port, intent_url)
+    """
+    return (self.__class__.__name__, self.cid, self.intent_id, self.intent_ip,
+            self.intent_port, self.intent_url)
+
+
 # ----------------------------------- #
 #  Concrete classes of InternalEvents #
 # ----------------------------------- #
