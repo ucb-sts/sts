@@ -43,25 +43,30 @@ class InvariantChecker(object):
 
   @staticmethod
   def all_controllers_dead(simulation):
-    simulation.controller_manager.check_controller_status()
-    if simulation.controller_manager.all_controllers_down():
-      return simulation.controller_manager.cids
+    #simulation.controller_manager.check_controller_status()
+    #if simulation.controller_manager.all_controllers_down():
+    #  return simulation.controller_manager.cids
+    down_controllers = simulation.topology.controllers_manager.down_controllers
+    up_controllers = simulation.topology.controllers_manager.up_controllers
+    if len(up_controllers) == 0:
+      return [c.cid for c in down_controllers]
     return []
 
   @staticmethod
   def check_liveness(simulation):
-    ''' Very simple: have the controllers crashed? '''
+    """ Very simple: have the controllers crashed and it's not suppose to? """
     log.debug("Checking controller liveness...")
-    simulation.controller_manager.check_controller_status()
-    dead_controllers = simulation.controller_manager.down_controllers
-    if dead_controllers:
-      log.info("Problems found while checking controller liveness.")
-    if simulation.controller_manager.all_controllers_down():
+    dead_controllers = []
+    live_controllers = []
+    for controller in simulation.topology.controllers_manager.down_controllers:
+      if controller not in simulation.topology.controllers_manager.failed_controllers:
+        dead_controllers.append("Dead controllers (supposed to be up): %s" % str(controller))
+    for controller in simulation.topology.controllers_manager.up_controllers:
+      if controller not in simulation.topology.controllers_manager.live_controllers:
+        live_controllers.append("Live Controller (supposed to be down): %s" % str(controller))
+    if len(simulation.topology.controllers_manager.up_controllers) == 0:
       log.info("No live controllers left")
-      return simulation.controller_manager.cids
-    dead_controllers = [ c.label for c in dead_controllers ]
-    dead_controllers = list(set(dead_controllers))
-    return dead_controllers
+    return dead_controllers + live_controllers
 
   @staticmethod
   def python_check_loops(simulation):
