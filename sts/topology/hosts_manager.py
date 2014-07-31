@@ -175,6 +175,22 @@ class HostsManagerAbstractClass(object):
     """
     raise NotImplementedError()
 
+  def get_host(self, name):
+    """
+    Finds host (if exists) by its name.
+    """
+    for host in self.hosts:
+      if host.name == name:
+        return host
+
+  def get_host_by_hid(self, hid):
+    """
+    Finds host (if exists) by its ID.
+    """
+    for host in self.hosts:
+      if host.hid == hid:
+        return host
+
   @abc.abstractmethod
   def create_host(self, hid, name=None, interfaces=None):
     """
