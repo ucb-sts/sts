@@ -59,8 +59,16 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
       isUp = port_vars.pop('isUp', True)
       self.log.info("Reading switch port %s(%s)" % (port_vars['name'],
                                                     port_vars['mac']))
-      tmp = TestONPort(hw_addr=port_vars['mac'], ips=port_vars['ip'],
-                       name=port_vars['name'])
+      hw_addr = port_vars['mac']
+      if hw_addr == 'None':
+        hw_addr = None
+      ips = port_vars['ip']
+      if ips == 'None':
+        ips = None
+      name = port_vars['name']
+      if name == 'None':
+        name = None
+      tmp = TestONPort(hw_addr=hw_addr, ips=ips, name=name)
       ports.append(tmp)
     return ports
 
@@ -81,7 +89,7 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
         dpid = self.teston_mn.getSwitchDPID(name)
         self.log.info("Reading switch %s(%s)" % (name, dpid))
         ports = self._read_ports(name)
-        switch = TestONOVSSwitch(dpid, name, ports)
+        switch = TestONOVSSwitch(dpid=dpid, name=name, ports=ports)
         # Todo read connected controllers
         self._switches.add(switch)
 
