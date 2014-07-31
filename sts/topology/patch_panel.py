@@ -564,7 +564,12 @@ class PatchPanelBK(PatchPanelAbstractClass):
       if port not in self.src_port2internal_link.keys():
         # Port is not connected, skip it
         continue
-      link = self.src_port2internal_link[port]
+      link = self.src_port2internal_link.get(port)
+      for p, v in self.src_port2internal_link.iteritems():
+        if p == port:
+          link = v
+      if link is None:
+        link = self.src_port2internal_link[port]
       if link in links:
         continue
       is_bidr = self.is_bidir_network_link(link)
