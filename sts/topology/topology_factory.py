@@ -61,6 +61,7 @@ def create_mesh_topology(topology, num_switches=3,
       src_port = topology.patch_panel.find_unused_port(switch_i)
       dst_port = topology.patch_panel.find_unused_port(switch_j)
       topology.create_network_link(switch_i, src_port, switch_j, dst_port, False)
+      topology.create_network_link(switch_j, dst_port, switch_i, src_port, False)
 
 
 
