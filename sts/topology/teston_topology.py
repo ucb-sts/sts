@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+from collections import defaultdict
+
 from sts.entities.teston_entities import TestONHost
 from sts.entities.teston_entities import TestONHostInterface
 from sts.entities.teston_entities import TestONAccessLink
@@ -71,6 +73,7 @@ class TestONTopology(Topology):
     is_host_interface = lambda x: isinstance(x, TestONHostInterface)
     is_port = lambda x: isinstance(x, TestONPort)
 
+    self.connected_pairs = defaultdict(dict)
     super(TestONTopology, self).__init__(
       capabilities=capabilities, patch_panel=patch_panel,
       switches_manager=switches_manager, hosts_manager=hosts_manager,
@@ -78,3 +81,11 @@ class TestONTopology(Topology):
       is_host=is_host, is_switch=is_switch, is_network_link=is_network_link,
       is_access_link=is_access_link, is_host_interface=is_host_interface,
       is_port=is_port)
+
+    def add_connected_hosts(src_host, src_interface, dst_host, dst_interface):
+      src_link = self.patch_panel.interface2access_link[src_interface]
+      dst_link = self.patch_panel.interface2access_link[dst_interface]
+      self.connected_pairs[src_host][dst_host] = (src_link.switch, src_link.switch_port, dst_link.switch, dst_link.switch_port)
+
+    def remove_connected_hosts(src_host, src_interface, dst_host, dst_interface):
+      del self.connected_pairs[src_host][dst_host]
