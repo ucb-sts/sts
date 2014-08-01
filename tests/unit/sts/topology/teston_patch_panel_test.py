@@ -162,11 +162,23 @@ s2 lo:  s2-eth1:h1-eth0 s2-eth2:h2-eth0 s2-eth3:h3-eth0 s2-eth4:s1-eth1
 s3 lo:  s3-eth1:h4-eth0 s3-eth2:h5-eth0 s3-eth3:h6-eth0 s3-eth4:s1-eth2
 s4 lo:  s4-eth1:h7-eth0 s4-eth2:h8-eth0 s4-eth3:h9-eth0 s4-eth4:s1-eth3
 """
+    def getSwitchDPID(name):
+      if name == 's1':
+        return 1
+      elif name == 's2':
+        return 2
+      elif name == 's3':
+        return 3
+      elif name == 's4':
+        return 4
+      else:
+        raise ValueError("No DPID mocked for switch: %s" % name)
 
     mn_driver = mock.Mock(name='TestONMininetDriver')
     mn_driver.net.return_value = mininet_net
     mn_driver.dump.return_value = mininet_dump
     mn_driver.getInterfaces.side_effect = getInterfaces
+    mn_driver.getSwitchDPID.side_effect = getSwitchDPID
     return mn_driver
 
   def test_read(self):
