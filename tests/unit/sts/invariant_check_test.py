@@ -18,7 +18,7 @@ import os.path
 
 sys.path.append(os.path.dirname(__file__) + "/../../..")
 
-from sts.topology import MeshTopology
+from sts.topology.sts_topology import MeshTopology
 from pox.openflow.software_switch import SoftwareSwitch
 from pox.openflow.libopenflow_01 import *
 from config.invariant_checks import check_for_two_loop
@@ -29,19 +29,21 @@ class MockSimulation(object):
 
 class InvariantCheckTest(unittest.TestCase):
   def basic_test(self):
-    topo = MeshTopology(num_switches=2)
+    topo = MeshTopology(create_connection=None, num_switches=2)
     message = ofp_flow_mod(match=ofp_match(in_port=1, nw_src="1.1.1.1"),
                            action=ofp_action_output(port=1))
-    topo.switches[1].table.process_flow_mod(message)
+    switches = list(topo.switches_manager.switches)
+    switches[1].table.process_flow_mod(message)
     simulation = MockSimulation(topo)
     violations = check_for_two_loop(simulation)
     self.assertNotEqual(violations, [])
 
   def test_no_loop(self):
-    topo = MeshTopology(num_switches=2)
+    topo = MeshTopology(create_connection=None, num_switches=2)
     message = ofp_flow_mod(match=ofp_match(in_port=1, nw_src="1.1.1.1"),
                            action=ofp_action_output(port=2))
-    topo.switches[1].table.process_flow_mod(message)
+    switches = list(topo.switches_manager.switches)
+    switches[1].table.process_flow_mod(message)
     simulation = MockSimulation(topo)
     violations = check_for_two_loop(simulation)
     self.assertEqual(violations, [])

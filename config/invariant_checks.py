@@ -50,14 +50,14 @@ def check_for_invalid_ports(simulation):
   ''' Check if any of the switches have been asked to forward packets out
   ports that don't exist '''
   violations = []
-  for sw in simulation.topology.switches:
+  for sw in simulation.topology.switches_manager.switches:
     if sw.port_violations != []:
       violations += [ str(v) for v in sw.port_violations ]
   return violations
 
 def check_for_flow_entry(simulation):
   # Temporary hack for "Overlapping flow entries" bug.
-  for sw in simulation.topology.switches:
+  for sw in simulation.topology.switches_manager.switches:
     for entry in sw.table.entries:
       if entry.priority == 123:
         return ["123Found"]
@@ -70,7 +70,7 @@ def check_for_two_loop(simulation):
       blackhole, but it's sometimes better for us to directly detect 2-loops
       rather than wait to see if the blackhole is transient. '''
   violations = []
-  for sw in simulation.topology.switches:
+  for sw in simulation.topology.switches_manager.switches:
     for entry in sw.table.entries:
       for action in [a for a in entry.actions if a.type == of_01.OFPAT_OUTPUT]:
         out_port = action.port
