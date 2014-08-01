@@ -26,6 +26,8 @@ from sts.entities.hosts import HostInterface
 from sts.entities.controllers import ControllerAbstractClass
 from sts.entities.controllers import ControllerState
 
+from sts.util.parse_ovs_table import parse_table
+
 
 LOG = logging.getLogger("sts.entities.teston_entities")
 
@@ -101,13 +103,24 @@ class TestONHost(HostAbstractClass):
 
 
 class TestONOVSSwitch(object):
-  def __init__(self, dpid, name, ports, can_connect_to_endhosts=False):
+  def __init__(self, dpid, name, ports, can_connect_to_endhosts=False,
+               teston_mn=None):
     self.ports = {}
     self.name = name
     self.dpid = dpid
     self.can_connect_to_endhosts = can_connect_to_endhosts
+    self.teston_mn = teston_mn
     for port in ports:
       self.ports[port.port_no] = port
+
+  @property
+  def table(self):
+    """
+    Returns flow table in the switch.
+    """
+    dump = self.teston_mn.check_flows(self.name, dump_format='openflow10')
+    table = parse_table(dump)
+    return table
 
   def __str__(self):
     return self.name

@@ -89,7 +89,8 @@ class TestONSwitchesManager(SwitchManagerAbstractClass):
         dpid = int(self.teston_mn.getSwitchDPID(name))
         self.log.info("Reading switch %s(%s)" % (name, dpid))
         ports = self._read_ports(name)
-        switch = TestONOVSSwitch(dpid=dpid, name=name, ports=ports)
+        switch = TestONOVSSwitch(dpid=dpid, name=name, ports=ports,
+                                 teston_mn=self.teston_mn)
         # Todo read connected controllers
         self._switches.add(switch)
 
