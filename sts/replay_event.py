@@ -744,7 +744,7 @@ class CheckInvariants(InputEvent):
                        '''invariant check code and define all globals '''
                        '''locally.\n NameError: %s''' % str(e))
     if violations != []:
-      msg.fail("The following correctness violations have occurred: %s" % str(violations))
+      msg.fail("The following correctness violations have occurred: %s, Check name: %s" % (str(violations), self.invariant_check_name))
       if hasattr(simulation, "fail_to_interactive") and simulation.fail_to_interactive:
         raise KeyboardInterrupt("fail to interactive")
     else:
@@ -1083,10 +1083,13 @@ class AddIntent(PolicyChange):
     intent['intentIP'] = self.intent_ip
     intent['intentPort'] = self.intent_port
     intent['intentURL'] = self.intent_url
-    log.info("Adding intent: %s", intent)
-    print "Adding intent: %s" % intent
-
+    log.debug("Adding intent: %s", intent)
     controller.add_intent(intent)
+    if hasattr(simulation.topology, 'add_connected_hosts'):
+      src_host = simulation.topology.hosts_manager.get_host_by_hid(self.src_dpid)
+      dst_host = simulation.topology.hosts_manager.get_host_by_hid(self.dst_dpid)
+      simulation.topology.add_connected_hosts(src_host, src_host.interfaces[0],
+                                              dst_host, dst_host.interfaces[9])
 
   @staticmethod
   def from_json(json_hash):
@@ -1146,6 +1149,11 @@ class RemoveIntent(PolicyChange):
     controller.remove_intent(intent_id=self.intent_id, intent_ip=self.intent_ip,
                              intent_port=self.intent_port,
                              intent_url=self.intent_url)
+    if hasattr(simulation.topology, 'add_connected_hosts'):
+      src_host = simulation.topology.hosts_manager.get_host_by_hid(self.src_dpid)
+      dst_host = simulation.topology.hosts_manager.get_host_by_hid(self.dst_dpid)
+      simulation.topology.remove_connected_hosts(src_host, src_host.interfaces[0],
+                                                 dst_host, dst_host.interfaces[9])
 
   @staticmethod
   def from_json(json_hash):
