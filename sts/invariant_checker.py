@@ -73,9 +73,9 @@ class InvariantChecker(object):
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
     # Warning! depends on python Hassell -- may be really slow!
-    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
-    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
-    loops = hsa.detect_loop(NTF, TTF, simulation.topology.live_switches)
+    NTF = hsa_topo.generate_NTF(simulation.topology.switches_manager.live_switches)
+    TTF = hsa_topo.generate_TTF(simulation.topology.patch_panel.live_network_links)
+    loops = hsa.detect_loop(NTF, TTF, simulation.topology.switches_manager.live_switches)
     violations = [ str(l) for l in loops ]
     violations = list(set(violations))
     return violations
@@ -83,10 +83,10 @@ class InvariantChecker(object):
   @staticmethod
   def check_loops(simulation):
     import headerspace.applications as hsa
-    live_switches = simulation.topology.live_switches
-    live_links = simulation.topology.live_links
+    live_switches = simulation.topology.switches_manager.live_switches
+    live_links = simulation.topology.patch_panel.live_network_links
     (name_tf_pairs, TTF) = InvariantChecker._get_transfer_functions(live_switches, live_links)
-    loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, simulation.topology.access_links)
+    loops = hsa.check_loops_hassel_c(name_tf_pairs, TTF, simulation.topology.patch_panel.access_links)
     violations = [ str(l) for l in loops ]
     violations = list(set(violations))
     return violations
@@ -113,7 +113,7 @@ class InvariantChecker(object):
     # TODO(cs): translate HSA port numbers to ofp_phy_ports in the
     # headerspace/ module instead of computing uniq_port_id here
     from config_parser.openflow_parser import get_uniq_port_id
-    access_links = simulation.topology.access_links
+    access_links = simulation.topology.patch_panel.access_links
     all_pairs = [ (get_uniq_port_id(l1.switch, l1.switch_port), get_uniq_port_id(l2.switch, l2.switch_port))
                   for l1 in access_links
                   for l2 in access_links if l1 != l2 ]
@@ -153,9 +153,10 @@ class InvariantChecker(object):
     unconnected_pairs = all_pairs - connected_pairs
 
     # Ignore partitioned pairs
-    partitioned_pairs = check_partitions(simulation.topology.switches,
-                                         simulation.topology.live_links,
-                                         simulation.topology.access_links)
+    partitioned_pairs = check_partitions(simulation.topology.switches_manager.switches,
+                                         simulation.topology.patch_panel.live_network_links,
+                                         simulation.topology.patch_panel.access_links,
+                                         simulation.topology.switches_manager)
     unconnected_pairs -= partitioned_pairs
 
     # Ignore pairs that have not communicated with each other in a while
@@ -177,9 +178,9 @@ class InvariantChecker(object):
   def _get_connected_pairs(simulation):
     # Effectively, run compute physical omega, ignore concrete values of headers, and
     # check that all pairs can reach each other
-    physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
-                                                             simulation.topology.live_links,
-                                                             simulation.topology.access_links)
+    physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.switches_manager.live_switches,
+                                                             simulation.topology.patch_panel.live_network_links,
+                                                             simulation.topology.patch_panel.access_links)
     connected_pairs = set()
     # Omegas are { original port -> [(final hs1, final port1), (final hs2, final port2)...] }
     for start_port, final_location_list in physical_omega.iteritems():
@@ -190,13 +191,37 @@ class InvariantChecker(object):
   @staticmethod
   def _remove_partitioned_pairs(simulation, pairs):
     # Ignore partitioned pairs
-    partitioned_pairs = check_partitions(simulation.topology.switches,
-                                         simulation.topology.live_links,
-                                         simulation.topology.access_links)
+    partitioned_pairs = check_partitions(simulation.topology.switches_manager.switches,
+                                         simulation.topology.patch_panel.live_network_links,
+                                         simulation.topology.patch_panel.access_links,
+                                         simulation.topology.switches_manager)
     if len(partitioned_pairs) != 0:
       log.info("Partitioned pairs! %s" % str(partitioned_pairs))
     pairs -= partitioned_pairs
     return pairs
+
+  @staticmethod
+  def _check_connected_pairs(simulation, pairs):
+    currently_connected = []
+    for src_host in simulation.topology.connected_pairs:
+      for dst_host in simulation.topology.connected_pairs[src_host]:
+        src_switch, src_port, dst_switch, dst_port = simulation.topology.connected_pairs[src_host][dst_host]
+        uniq_from_port = of.get_uniq_port_id(src_switch, src_port)
+        uniq_to_port = of.get_uniq_port_id(dst_switch, dst_switch)
+        currently_connected.append((uniq_from_port, uniq_to_port))
+    supposed_to_be_connected = []
+    supposed_to_be_disconnected = []
+    for c in currently_connected:
+      if c in pairs:
+        print "Pair is supposed to be connected", c
+        supposed_to_be_connected.append(c)
+    for c in pairs:
+      if c in currently_connected:
+        print "Pair is NOT supposed to be connected", c
+        supposed_to_be_disconnected.append(c)
+    if supposed_to_be_disconnected or supposed_to_be_connected:
+      return ["Pairs supposed to be connected: %s, Pairs are NOT supposed to be connected: %s" % (supposed_to_be_connected, supposed_to_be_disconnected)]
+    return []
 
   @staticmethod
   def check_connectivity(simulation):
@@ -206,6 +231,7 @@ class InvariantChecker(object):
     all_pairs = InvariantChecker._get_all_pairs(simulation)
     remaining_pairs = all_pairs - connected_pairs
     remaining_pairs = InvariantChecker._remove_partitioned_pairs(simulation, remaining_pairs)
+    return InvariantChecker._check_connected_pairs(simulation, remaining_pairs)
     return [ str(p) for p in list(remaining_pairs) ]
 
   @staticmethod
@@ -223,9 +249,9 @@ class InvariantChecker(object):
   def _python_get_connected_pairs(simulation):
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
-    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
-    paths = hsa.find_reachability(NTF, TTF, simulation.topology.access_links)
+    NTF = hsa_topo.generate_NTF(simulation.topology.switches_manager.live_switches)
+    TTF = hsa_topo.generate_TTF(simulation.topology.patch_panel.live_network_links)
+    paths = hsa.find_reachability(NTF, TTF, simulation.topology.patch_panel.access_links)
     # Paths is: in_port -> [p_node1, p_node2]
     # Where p_node is a hash:
     #  "hdr" -> foo
@@ -246,6 +272,7 @@ class InvariantChecker(object):
     all_pairs = InvariantChecker._get_all_pairs(simulation)
     remaining_pairs = all_pairs - connected_pairs
     remaining_pairs = InvariantChecker._remove_partitioned_pairs(simulation, remaining_pairs)
+    return InvariantChecker._check_connected_pairs(simulation, remaining_pairs)
     return [ str(p) for p in list(remaining_pairs) ]
 
   @staticmethod
@@ -285,9 +312,9 @@ class InvariantChecker(object):
     # Warning! depends on python Hassell -- may be really slow!
     import topology_loader.topology_loader as hsa_topo
     import headerspace.applications as hsa
-    NTF = hsa_topo.generate_NTF(simulation.topology.live_switches)
-    TTF = hsa_topo.generate_TTF(simulation.topology.live_links)
-    blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.access_links)
+    NTF = hsa_topo.generate_NTF(simulation.topology.switches_manager.live_switches)
+    TTF = hsa_topo.generate_TTF(simulation.topology.patch_panel.live_network_links)
+    blackholes = hsa.find_blackholes(NTF, TTF, simulation.topology.patch_panel.access_links)
     violations = [ str(b) for b in blackholes ]
     violations = list(set(violations))
     return violations
@@ -300,17 +327,17 @@ class InvariantChecker(object):
     for controller in simulation.controller_manager.live_controllers:
       controller_snapshot = controller.snapshot_service.fetchSnapshot(controller)
       log.debug("Computing physical omega...")
-      physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.live_switches,
-                                                               simulation.topology.live_links,
-                                                               simulation.topology.access_links)
+      physical_omega = InvariantChecker.compute_physical_omega(simulation.topology.switches_manager.live_switches,
+                                                               simulation.topology.patch_panel.live_network_links,
+                                                               simulation.topology.patch_panel.access_links)
       log.debug("Computing controller omega...")
       # note: using all_switches to compute the controller omega. The controller might still
       # reference switches in his omega that are currently dead, which should result in a
       # policy violation, not sts crashing
       controller_omega = InvariantChecker.compute_controller_omega(controller_snapshot,
-                                                                   simulation.topology.switches,
-                                                                   simulation.topology.live_links,
-                                                                   simulation.topology.access_links)
+                                                                   simulation.topology.switches_manager.switches,
+                                                                   simulation.topology.patch_panel.live_network_links,
+                                                                   simulation.topology.patch_panel.access_links)
       violations = InvariantChecker.infer_policy_violations(physical_omega, controller_omega)
       if violations:
         controllers_with_violations.append(controller)
@@ -386,7 +413,7 @@ class InvariantChecker(object):
                                                 controller_omega, physical_omega)
     return missing_routing_entries or missing_acl_entries
 
-def check_partitions(switches, live_links, access_links):
+def check_partitions(switches, live_links, access_links, switches_manager):
   # TODO(cs): lifted directly from pox.forwarding.l2_multi. Highly
   # redundant!
   from config_parser.openflow_parser import get_uniq_port_id
@@ -398,9 +425,15 @@ def check_partitions(switches, live_links, access_links):
     # Make sure to disregard links that are adjacent to down switches
     # (technically those links are still `live', but it's easier to treat it
     #  this way)
-    if not (link.start_software_switch.failed or
-            link.end_software_switch.failed):
-      adjacency[link.start_software_switch][link.end_software_switch] = link
+
+    if hasattr(link, 'start_node'):
+      if not (link.start_node in switches_manager.failed_switches or
+                link.end_node in switches_manager.failed_switches):
+        adjacency[link.start_node][link.end_node] = link
+    else:
+      if not (link.node1 in switches_manager.failed_switches or
+                link.node2 in switches_manager.failed_switches):
+        adjacency[link.node1][link.node2] = link
 
   # Switches we know of.  [dpid] -> Switch
   switches = { sw.dpid : sw for sw in switches }
