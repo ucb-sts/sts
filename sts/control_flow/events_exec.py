@@ -132,8 +132,8 @@ class EventsExec(ControlFlow):
         transient_violations = list(set(violations) - set(persistent_violations))
 
         if violations != []:
-          msg.fail("The following correctness violations have occurred: %s"
-                   % str(violations))
+          msg.fail("The following correctness violations have occurred: %s,"
+                   "Check name: %s" % (str(violations), self.invariant_check_name))
         else:
           msg.success("No correctness violations!")
         if transient_violations != []:
