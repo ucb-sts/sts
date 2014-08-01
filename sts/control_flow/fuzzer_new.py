@@ -103,6 +103,9 @@ class IntentsGenerator():
     controllers = [c for c in
                    fuzzer.topology.controllers_manager.live_controllers
                    if not c.config.intent_ip is None]
+    if not controllers:
+      # no controller is alive
+      return None
     controller = fuzzer.random.choice(controllers)
     intent = {}
     intent['cid'] = controller.cid
@@ -141,6 +144,8 @@ class IntentsGenerator():
     events = []
     if fuzzer.random.random() < self.add_intent_rate:
       intent = self._generate_intent(fuzzer)
+      if intent is None:
+        return events
       event = AddIntent(**intent)
       events.append(event)
       if self.bidir:
