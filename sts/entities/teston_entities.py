@@ -172,6 +172,15 @@ class TestONONOSConfig(object):
     self.intent_port = intent_port
     self.intent_url = intent_url
 
+  def __repr__(self):
+    return ("<TestONONOSConfig: label=%s, address=%s, port=%s, cid=%s "
+            "intent_ip=%s, intend_port=%s, intent_url=%s" % (self.label,
+    self.address, self.port, self.cid, self.intent_ip, self.intent_port,
+    self.intent_url))
+
+  def __str__(self):
+    return self.__repr__()
+
 
 class TestONONOSController(ControllerAbstractClass):
   """
@@ -232,11 +241,11 @@ class TestONONOSController(ControllerAbstractClass):
   def start(self, multiplex_sockets=False):
     """Starts the controller"""
     if self.state != ControllerState.DEAD:
-      self.log.warn("Controller is already started!" % self.label)
+      self.log.warn("Controller '%s' is already started!" % self.label)
       return
     self.log.info("Launching controller: %s" % self.label)
     self.teston_onos.start_all()
-    self.state = ControllerState.ALIVE
+    self.state = ControllerState.STARTING
 
   def kill(self):
     self.log.info("Killing controller: %s" % self.label)
@@ -258,8 +267,16 @@ class TestONONOSController(ControllerAbstractClass):
     self.start()
 
   def check_status(self, simulation):
-    if self.teston_onos.status() == 1:
+    log_filename = "/onos-logs/onos.%s.log" % self.label.lower()
+    ret =  self.teston_onos.detailed_status(log_filename=log_filename)
+    if ret == 'RUNNING':
+      if self.state == ControllerState.STARTING:
+        self.state = ControllerState.ALIVE
       return ControllerState.ALIVE
+    elif ret == 'STARTING':
+      return ControllerState.STARTING
+    elif ret == 'STOPPPED':
+      return ControllerState.DEAD
     else:
       return ControllerState.DEAD
 
@@ -303,6 +320,7 @@ class TestONONOSController(ControllerAbstractClass):
     intent['intentPort'] = intent_port or self.config.intent_port
     intent['intentURL'] = intent_url or self.config.intent_url
     self.teston_onos.delete_intent(**intent)
+
 
   def __repr__(self):
     return "%s (%s:%s)" % (self.label, self.config.address, self.config.port)
