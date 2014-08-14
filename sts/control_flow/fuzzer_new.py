@@ -16,6 +16,8 @@
 # limitations under the License.
 
 
+import logging
+
 from sts.traffic_generator import TrafficGenerator
 
 from sts.replay_event import ControllerFailure
@@ -28,6 +30,7 @@ from sts.replay_event import TrafficInjection
 from sts.replay_event import AddIntent
 from sts.replay_event import RemoveIntent
 from sts.replay_event import PingEvent
+from sts.replay_event import NOPInput
 
 from sts.util.capability import check_capability
 
@@ -54,21 +57,26 @@ class FuzzerParams(object):
     self.dataplane_drop_rate = 0
     self.policy_change_rate = 0
 
+  @staticmethod
+  def get_all_zero():
+    params = FuzzerParams()
+    for field in params.__dict__.keys():
+      if field.endswith('_rate'):
+        setattr(params, field, 0)
+    return params
+
 
 class EventsGenerator(object):
-  def __init__(self, topology):
-    self.topology = topology
-
-  def generate_events(self):
+  def generate_events(self, fuzzer):
     raise NotImplementedError()
 
 
 from itertools import count
 
-
-class IntentsGenerator():
+class IntentsGenerator(EventsGenerator):
   _intent_id = count(1)
   def __init__(self, add_intent_rate, remove_intent_rate, ping_rate, bidir=True):
+    self.log = logging.getLogger(__name__ + '.IntentsGenerator')
     self.add_intent_rate = add_intent_rate
     self.remove_intent_rate = remove_intent_rate
     self.ping_rate = ping_rate
@@ -100,11 +108,13 @@ class IntentsGenerator():
                                                                       src_iface)
     dst_switch, dst_port = fuzzer.topology.patch_panel.get_other_side(dst_host,
                                                                       dst_iface)
+    tmp = fuzzer.topology.controllers_manager.up_controllers
     controllers = [c for c in
                    fuzzer.topology.controllers_manager.live_controllers
                    if not c.config.intent_ip is None]
     if not controllers:
       # no controller is alive
+      self.log.info("No controllers are up to generate intents for")
       return None
     controller = fuzzer.random.choice(controllers)
     intent = {}
@@ -123,11 +133,13 @@ class IntentsGenerator():
     intent['intent_port'] = controller.config.intent_port
     intent['intent_url'] = controller.config.intent_url
     self.intents[intent['intent_id']] = intent
+    self.log.debug("Generated Intent: %s", intent)
     return intent
 
   def generate_remove_intent(self, fuzzer):
-    assert check_capability(fuzzer.topology.controllers_manager,
-                            'can_remove_intent')
+    if self.remove_intent_rate > 0:
+      assert check_capability(fuzzer.topology.controllers_manager,
+                              'can_remove_intent')
     events = []
     for intent_id, intent in self.intents.iteritems():
       if fuzzer.random.random() < self.remove_intent_rate:
@@ -150,13 +162,14 @@ class IntentsGenerator():
       events.append(event)
       if self.bidir:
         reverse_intent = intent.copy()
-        reverse_intent['intent_id'] = IntentsGenerator._intent_id.next()
+        reverse_intent['intent_id'] = str(IntentsGenerator._intent_id.next())
         reverse_intent['dst_dpid'] = intent['src_dpid']
         reverse_intent['src_dpid'] = intent['dst_dpid']
         reverse_intent['dst_port'] = intent['src_port']
         reverse_intent['src_port'] = intent['dst_port']
         reverse_intent['dst_mac'] = intent['src_mac']
         reverse_intent['src_mac'] = intent['dst_mac']
+        self.intents[reverse_intent['intent_id']] = reverse_intent
         events.append(AddIntent(**reverse_intent))
     return events
 
@@ -192,6 +205,7 @@ class Fuzzer(object):
                               let the controller discover the topology before
                               injecting inputs.
     """
+    self.log = logging.getLogger(__name__ + '.Fuzzer')
     if random_seed is None:
       random_seed = random.randint(0, sys.maxint)
 
@@ -221,6 +235,7 @@ class Fuzzer(object):
         else:
           event = LinkFailure(link.start_node.dpid, link.start_port.port_no,
                               link.end_node.dpid, link.end_port.port_no)
+        self.log.debug("Generated LinkFailure event: %s", event)
         events.append(event)
     return events
 
@@ -239,6 +254,7 @@ class Fuzzer(object):
         else:
           event = LinkRecovery(link.start_node.dpid, link.start_port.port_no,
                                link.end_node.dpid, link.end_port.port_no)
+        self.log.debug("Generated RepairLink event: %s", event)
         events.append(event)
     return events
 
@@ -248,7 +264,9 @@ class Fuzzer(object):
     events = []
     for software_switch in self.topology.switches_manager.live_switches:
       if self.random.random() < self.params.switch_failure_rate:
-        events.append(SwitchFailure(software_switch.dpid))
+        event = SwitchFailure(software_switch.dpid)
+        self.log.debug("Generated SwitchFailure event: %s", event)
+        events.append(event)
     return events
 
   def recover_switches(self):
@@ -257,7 +275,9 @@ class Fuzzer(object):
     events = []
     for software_switch in self.topology.switches_manager.failed_switches:
       if self.random.random() < self.params.switch_recovery_rate:
-        events.append(SwitchRecovery(software_switch.dpid))
+        event = SwitchRecovery(software_switch.dpid)
+        self.log.debug("Generated SwitchFailure event: %s", event)
+        events.append(event)
     return events
 
   def crash_controllers(self):
@@ -275,9 +295,10 @@ class Fuzzer(object):
     events = []
     for controller in self.topology.controllers_manager.failed_controllers:
       if self.random.random() < self.params.controller_recovery_rate:
-        events.append(ControllerRecovery(controller.cid))
+        event = ControllerRecovery(controller.cid)
+        self.log.debug("Generated ControllerRecovery event: %s", event)
+        events.append(event)
     return events
-
 
   def fuzz_traffic(self):
     events = []
@@ -286,14 +307,18 @@ class Fuzzer(object):
         if len(host.interfaces) > 0:
           traffic_type = "icmp_ping"
           (dp_event, send) = self.traffic_generator.generate(traffic_type, host, send_to_self=True)
-          events.append(TrafficInjection(dp_event=dp_event))
+          event = TrafficInjection(dp_event=dp_event)
+          self.log.debug("Generated TrafficInjection event: %s", event)
+          events.append(event)
     return events
 
   def next_events(self, logical_time):
     events = []
     self.logical_time = logical_time
     if self.logical_time < self.initialization_rounds:
-      return []
+      self.log.info("Still in initialization round, not generating "
+                    "any event: %s", self.logical_time)
+      return [NOPInput(prunable=False)]
     #events.extend(self.check_dataplane())
     events.extend(self.crash_switches())
     events.extend(self.recover_switches())
