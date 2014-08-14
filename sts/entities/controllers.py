@@ -646,9 +646,12 @@ class POXController(Controller):
     self._check_snapshot_connect()
     self.state = ControllerState.ALIVE
 
-  def __str__(self):
+  def __repr__(self):
     return "POXController: %s (%s, %s)" % (
       self.label, self.config.address, self.config.port)
+
+  def __str__(self):
+    return self.label
 
 
 class VMController(Controller):
