@@ -1,5 +1,6 @@
 # Copyright 2011-2013 Andreas Wundsam
 # Copyright 2011-2013 Colin Scott
+# Copyright 2014      Ahmed El-Hassany
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -97,3 +98,39 @@ def setup_experiment(args, config):
            config.control_flow.simulation_cfg.controller_configs) is not None):
     log.warn('''No get_additional_metadata() defined for config file. See '''
              '''config/nox_routing.py for an example.''')
+
+
+def setup_experiment_teston(exp_name, results_home_dir, timestamp_results=True,
+                            log_config=None):
+  """
+  Setup function specific to experiments run from within TestON
+
+  Args:
+    - exp_name: the name of the experiment
+    - results_home_dir: the home directory to which the results to be saved
+    - timestamp_results: add the current timestamp to the results dir.
+    - log_config: a configuration file for the python logger to override the
+                  default settings
+  """
+  results_dir = "%s/%s" % (results_home_dir, exp_name)
+  if timestamp_results:
+    now = timestamp_string()
+    results_dir += "_" + str(now)
+
+  # Set up results directory
+  create_python_dir(results_home_dir)
+  create_clean_python_dir(results_dir)
+
+  # Copy stdout and stderr to a file "simulator.out"
+  tee = Tee(open(os.path.join(results_dir, "simulator.out"), "w"))
+  tee.tee_stdout()
+  tee.tee_stderr()
+
+  # Load log configuration.
+  # N.B. this must be done after Tee()'ing.
+  if log_config:
+    logging.config.fileConfig(log_config)
+  else:
+    logging.basicConfig(level=logging.DEBUG)
+
+  return results_dir
