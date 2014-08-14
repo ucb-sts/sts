@@ -311,7 +311,8 @@ class TestONONOSController(ControllerAbstractClass):
       intent['intentPort'] = self.config.intent_port
     if 'intentURL' not in intent:
       intent['intentURL'] = self.config.intent_url
-    self.teston_onos.add_intent(**intent)
+    ret_val = self.teston_onos.add_intent(**intent)
+    return ret_val not in (0, -1)
 
   def remove_intent(self, intent_id, intent_ip=None, intent_port=None,
                     intent_url=None):
@@ -319,8 +320,8 @@ class TestONONOSController(ControllerAbstractClass):
     intent['intentIP'] = intent_ip or self.config.intent_ip
     intent['intentPort'] = intent_port or self.config.intent_port
     intent['intentURL'] = intent_url or self.config.intent_url
-    self.teston_onos.delete_intent(**intent)
-
+    ret_val = self.teston_onos.delete_intent(**intent)
+    return ret_val not in (0, -1)
 
   def __repr__(self):
     return "%s (%s:%s)" % (self.label, self.config.address, self.config.port)
