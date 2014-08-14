@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from collections import defaultdict
+import logging
 
 from sts.entities.teston_entities import TestONHost
 from sts.entities.teston_entities import TestONHostInterface
@@ -27,6 +27,7 @@ from sts.entities.teston_entities import TestONONOSController
 from sts.topology.base import Topology
 from sts.topology.base import TopologyCapabilities
 from sts.topology.controllers_manager import ControllersManager
+from sts.topology.connectivity_tracker import ConnectivityTracker
 from sts.topology.dp_buffer import DataPathBuffer
 
 from sts.topology.teston_switches_manager import TestONSwitchesManager
@@ -43,8 +44,9 @@ class TestONTopology(Topology):
   [(main.ONOS1, 'ONOS1', main.params['CTRL']['ip1'], main.params['CTRL']['port1']),
   (main.ONOS2, 'ONOS2', main.params['CTRL']['ip2'], main.params['CTRL']['port2'])])
   """
-  def __init__(self, teston_mn, onos_controllers):
+  def __init__(self, teston_mn, onos_controllers, reactive_controllers=False, ):
     assert onos_controllers is None or isinstance(onos_controllers, list)
+    self.log = logging.getLogger(__name__ + '.TestONTopology')
     switches_manager = TestONSwitchesManager(teston_mn)
     hosts_manager = TestONHostsManager(teston_mn)
     patch_panel = TestONPatchPanel(teston_mn, hosts_manager, switches_manager)
@@ -62,7 +64,6 @@ class TestONTopology(Topology):
       if len(info) > 4:
         controller_manager.capabilities._can_add_intent = True
         controller_manager.capabilities._can_remove_intent = True
-
       controller_manager.add_controller(controller)
     capabilities = TopologyCapabilities()
 
@@ -73,19 +74,12 @@ class TestONTopology(Topology):
     is_host_interface = lambda x: isinstance(x, TestONHostInterface)
     is_port = lambda x: isinstance(x, TestONPort)
 
-    self.connected_pairs = defaultdict(dict)
+
     super(TestONTopology, self).__init__(
       capabilities=capabilities, patch_panel=patch_panel,
       switches_manager=switches_manager, hosts_manager=hosts_manager,
       controllers_manager=controller_manager, dp_buffer=DataPathBuffer(),
       is_host=is_host, is_switch=is_switch, is_network_link=is_network_link,
       is_access_link=is_access_link, is_host_interface=is_host_interface,
-      is_port=is_port)
-
-    def add_connected_hosts(src_host, src_interface, dst_host, dst_interface):
-      src_link = self.patch_panel.interface2access_link[src_interface]
-      dst_link = self.patch_panel.interface2access_link[dst_interface]
-      self.connected_pairs[src_host][dst_host] = (src_link.switch, src_link.switch_port, dst_link.switch, dst_link.switch_port)
-
-    def remove_connected_hosts(src_host, src_interface, dst_host, dst_interface):
-      del self.connected_pairs[src_host][dst_host]
+      is_port=is_port,
+      connectivity_tracker=ConnectivityTracker(reactive_controllers))

@@ -28,6 +28,7 @@ from sts.util.console import msg
 from sts.util.capability import Capabilities
 
 from sts.topology.graph import TopologyGraph
+from sts.topology.connectivity_tracker import ConnectivityTracker
 
 
 class TopologyCapabilities(Capabilities):
@@ -159,7 +160,7 @@ class Topology(object):
   def __init__(self, hosts_manager, switches_manager, patch_panel,
                controllers_manager, dp_buffer, capabilities, is_host, is_switch,
                is_network_link, is_access_link, is_host_interface, is_port,
-               sts_console=msg):
+               sts_console=msg, connectivity_tracker=ConnectivityTracker(True)):
     """
     Args:
       - is_*(x): return True if x is of correct type.
@@ -187,6 +188,7 @@ class Topology(object):
     self._dp_buffer = dp_buffer
     self._dp_buffer.get_connected_port = self._patch_panel.get_other_side
     self._graph = TopologyGraph()
+    self.connectivity_tracker = connectivity_tracker
 
     self.msg = sts_console
     self.log = logging.getLogger("sts.topology.base.Topology")

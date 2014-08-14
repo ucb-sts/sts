@@ -45,6 +45,7 @@ from sts.topology.sts_patch_panel import STSPatchPanel
 from sts.topology.sts_switches_manager import STSSwitchesManager
 from sts.topology.sts_hosts_manager import STSHostsManager
 from sts.topology.controllers_manager import ControllersManager
+from sts.topology.connectivity_tracker import ConnectivityTracker
 from sts.topology.dp_buffer import BufferedPatchPanel
 
 from sts.topology.base import Topology
@@ -60,7 +61,8 @@ class STSTopology(Topology):
   """
   def __init__(self, create_connection, capabilities=TopologyCapabilities(),
                patch_panel=None, switches_manager=None, hosts_manager=None,
-               controllers_manager=None, dp_buffer=None):
+               controllers_manager=None, dp_buffer=None,
+               connectivity_tracker=ConnectivityTracker(True)):
     if not patch_panel:
       patch_panel = STSPatchPanel()
     if not switches_manager:
@@ -83,7 +85,7 @@ class STSTopology(Topology):
       controllers_manager=controllers_manager, dp_buffer=dp_buffer,
       is_host=is_host, is_switch=is_switch, is_network_link=is_network_link,
       is_access_link=is_access_link, is_host_interface=is_host_interface,
-      is_port=is_port)
+      is_port=is_port, connectivity_tracker=connectivity_tracker)
 
 
 class MeshTopology(STSTopology):
@@ -91,9 +93,11 @@ class MeshTopology(STSTopology):
   Mesh Topology composed of STS entities.
   """
   def __init__(self, create_connection, num_switches=3,
-               capabilities=TopologyCapabilities()):
-    super(MeshTopology, self).__init__(create_connection,
-                                       capabilities=capabilities)
+               capabilities=TopologyCapabilities(),
+               connectivity_tracker=ConnectivityTracker(True)):
+    super(MeshTopology, self).__init__(
+      create_connection, capabilities=capabilities,
+      connectivity_tracker=connectivity_tracker)
     from sts.topology.topology_factory import create_mesh_topology
     create_mesh_topology(self, num_switches=num_switches)
 
