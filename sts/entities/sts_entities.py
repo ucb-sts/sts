@@ -266,6 +266,7 @@ class FuzzSoftwareSwitch (NXSoftwareSwitch):
     for connection in self.connections:
       connection.close()
     self.connections = []
+    return self.failed
 
   def recover(self, down_controller_ids=None):
     if not self.failed:
