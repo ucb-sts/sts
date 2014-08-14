@@ -87,9 +87,13 @@ class ConnectivityTracker(object):
     info = self.policies[policy]
     for tmp in self.connected_pairs[info.src_host][info.dst_host]:
       if tmp[0] == policy:
+        self.log.info("Removing %s<->%s from the set of connected hosts",
+                      info.src_host, info.dst_host)
         self.connected_pairs[info.src_host][info.dst_host].remove(tmp)
     for tmp in self.disconnected_pairs[info.src_host][info.dst_host]:
       if tmp[0] == policy:
+        self.log.info("Removing %s<->%s from the set of disconnected hosts",
+                      info.src_host, info.dst_host)
         self.disconnected_pairs[info.src_host][info.dst_host].remove(tmp)
     del self.policies[policy]
 
