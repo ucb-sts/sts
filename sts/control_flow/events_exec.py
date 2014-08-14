@@ -108,7 +108,8 @@ class EventsExec(ControlFlow):
         event.round = self.logical_time
         event.time = SyncTime.now()
         self._log_input_event(event)
-        event.proceed(self.simulation)
+        event_ret = event.proceed(self.simulation)
+        self.log.info("Return result for event '%s': %s", event, event_ret)
       halt = self.maybe_check_invariant()
       if halt and self.halt_on_violation:
         break
