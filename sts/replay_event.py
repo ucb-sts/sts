@@ -54,6 +54,7 @@ from pox.lib.util import TimeoutError
 from pox.openflow.libopenflow_01 import ofp_flow_mod
 log = logging.getLogger("events")
 
+
 def dictify_fingerprint(fingerprint):
   # Hack: convert Fingerprint objects into Fingerprint.to_dict()
   mutable = list(fingerprint)
@@ -61,6 +62,7 @@ def dictify_fingerprint(fingerprint):
     if isinstance(mutable[i], Fingerprint):
       mutable[i] = mutable[i].to_dict()
   return tuple(mutable)
+
 
 class Event(object):
   ''' Superclass for all event types. '''
@@ -143,6 +145,7 @@ class Event(object):
             + ":" + str(self.fingerprint)
     return s
 
+
 # -------------------------------------------------------- #
 # Semi-abstract classes for internal and external events   #
 # -------------------------------------------------------- #
@@ -168,6 +171,7 @@ class InternalEvent(Event):
   def disallow_timeouts(self):
     self.timeout_disallowed = True
 
+
 class InputEvent(Event):
   '''An InputEvents is an event that the simulator injects into the simulation.
 
@@ -182,6 +186,7 @@ class InputEvent(Event):
                                      dependent_labels=dependent_labels,
                                      prunable=prunable)
 
+
 # --------------------------------- #
 #  Concrete classes of InputEvents  #
 # --------------------------------- #
@@ -192,6 +197,7 @@ def assert_fields_exist(json_hash, *args):
   for field in fields:
     if field not in json_hash:
       raise ValueError("Field %s not in json_hash %s" % (field, str(json_hash)))
+
 
 def extract_label_time(json_hash):
   assert_fields_exist(json_hash, 'label', 'time', 'round')
@@ -1083,13 +1089,28 @@ class AddIntent(PolicyChange):
     intent['intentIP'] = self.intent_ip
     intent['intentPort'] = self.intent_port
     intent['intentURL'] = self.intent_url
-    log.debug("Adding intent: %s", intent)
-    controller.add_intent(intent)
-    if hasattr(simulation.topology, 'add_connected_hosts'):
-      src_host = simulation.topology.hosts_manager.get_host_by_hid(self.src_dpid)
-      dst_host = simulation.topology.hosts_manager.get_host_by_hid(self.dst_dpid)
-      simulation.topology.add_connected_hosts(src_host, src_host.interfaces[0],
-                                              dst_host, dst_host.interfaces[9])
+    log.info("Adding intent: %s", intent)
+    ret = controller.add_intent(intent)
+    # Add policy to connectivity tracker
+    print "Adding intent", self.intent_id
+    src_host = None
+    dst_host = None
+    src_iface = None
+    dst_iface = None
+    for host in simulation.topology.hosts_manager.hosts:
+      for iface in host.interfaces:
+        if iface.hw_addr == EthAddr(self.src_mac):
+          src_host = host
+          src_iface = iface
+        if iface.hw_addr == EthAddr(self.dst_mac):
+          dst_host = host
+          dst_iface = iface
+        # Just an early termination
+        if src_host is not None and dst_host is not None:
+          break
+    simulation.topology.connectivity_tracker.add_connected_hosts(
+      src_host, src_iface, dst_host, dst_iface, self.intent_id)
+    return ret
 
   @staticmethod
   def from_json(json_hash):
@@ -1146,14 +1167,15 @@ class RemoveIntent(PolicyChange):
 
   def proceed(self, simulation):
     controller = simulation.topology.controllers_manager.get_controller(self.cid)
-    controller.remove_intent(intent_id=self.intent_id, intent_ip=self.intent_ip,
-                             intent_port=self.intent_port,
-                             intent_url=self.intent_url)
-    if hasattr(simulation.topology, 'add_connected_hosts'):
-      src_host = simulation.topology.hosts_manager.get_host_by_hid(self.src_dpid)
-      dst_host = simulation.topology.hosts_manager.get_host_by_hid(self.dst_dpid)
-      simulation.topology.remove_connected_hosts(src_host, src_host.interfaces[0],
-                                                 dst_host, dst_host.interfaces[9])
+    log.info("Removing intent: %s", self.intent_id)
+    ret = controller.remove_intent(intent_id=self.intent_id,
+                                   intent_ip=self.intent_ip,
+                                   intent_port=self.intent_port,
+                                   intent_url=self.intent_url)
+    print "REMOVING", self.intent_id
+    print "policies", simulation.topology.connectivity_tracker.policies
+    simulation.topology.connectivity_tracker.remove_policy(self.intent_id)
+    return ret
 
   @staticmethod
   def from_json(json_hash):
