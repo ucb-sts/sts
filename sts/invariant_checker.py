@@ -49,7 +49,8 @@ class InvariantChecker(object):
     down_controllers = simulation.topology.controllers_manager.down_controllers
     up_controllers = simulation.topology.controllers_manager.up_controllers
     if len(up_controllers) == 0:
-      return [c.cid for c in down_controllers]
+      return [c.cid for c in down_controllers if c not in
+              simulation.topology.controllers_manager.failed_controllers]
     return []
 
   @staticmethod
