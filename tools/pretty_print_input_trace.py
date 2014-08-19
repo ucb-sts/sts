@@ -25,7 +25,7 @@ def class_with_label_printer(event):
          ' (' + ("prunable" if event.prunable else "unprunable") + ')')
 
 def round_printer(event):
-  print "round: %d" % event.round
+  print "logical_round: %d" % event.logical_round
 
 def fingerprint_printer(event):
   fingerprint = None
@@ -50,7 +50,7 @@ def _timestamp_to_string(timestamp):
   return with_micro
 
 def abs_time_printer(event):
-  print _timestamp_to_string(event.time)
+  print _timestamp_to_string(event.event_time)
 
 def event_delim_printer(_):
   print "--------------------------------------------------------------------"

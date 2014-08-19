@@ -44,7 +44,7 @@ class EventsExec(ControlFlow):
       - events_generator:
       - check_interval: the period for checking invariants, in terms of
                         logical rounds
-      - delay: how long to sleep between each logical round
+      - delay: how long to sleep between each logical logical_round
       - steps: how many logical rounds to execute, None for infinity
       - input_logger: None, or a InputLogger instance
       - invariant_check_name: the name of the invariant check, from
@@ -86,7 +86,7 @@ class EventsExec(ControlFlow):
   def _log_input_event(self, event, **kws):
     self.log.debug("Logging event: %s", event)
     if self._input_logger is not None:
-      event.round = self.logical_time
+      event.logical_round = self.logical_time
       self._input_logger.log_input_event(event, **kws)
 
   def simulate(self):
@@ -100,13 +100,13 @@ class EventsExec(ControlFlow):
 
     while self.logical_time < end_time:
       self.logical_time += 1
-      self.log.info("In round: %d", self.logical_time)
+      self.log.info("In logical_round: %d", self.logical_time)
       events = self.events_generator.next_events(self.logical_time)
       # Treat events as autonomous
       for event in events:
-        # Set the time and round for each event
-        event.round = self.logical_time
-        event.time = SyncTime.now()
+        # Set the time and logical_round for each event
+        event.logical_round = self.logical_time
+        event.event_time = SyncTime.now()
         self._log_input_event(event)
         event_ret = event.proceed(self.simulation)
         self.log.info("Return result for event '%s': %s", event, event_ret)
@@ -124,7 +124,7 @@ class EventsExec(ControlFlow):
       def do_invariant_check():
         self.log.debug("Checking invariant: %s", self.invariant_check_name)
         if self.log_invariant_checks:
-          self._log_input_event(CheckInvariants(round=self.logical_time,
+          self._log_input_event(CheckInvariants(logical_round=self.logical_time,
                                  invariant_check_name=self.invariant_check_name))
 
         violations = self.invariant_check(self.simulation)

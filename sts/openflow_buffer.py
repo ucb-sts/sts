@@ -24,11 +24,12 @@ import logging
 log = logging.getLogger("openflow_buffer")
 
 class PendingMessage(Event):
-  def __init__(self, pending_message, b64_packet, time=None, send_event=False):
+  def __init__(self, pending_message, b64_packet, event_time=None,
+               send_event=False):
     # TODO(cs): boolean flag is ugly. Should use subclasses, but EventMixin
     # doesn't support addListener() on super/subclasses.
     super(PendingMessage, self).__init__()
-    self.time = time if time else SyncTime.now()
+    self.event_time = event_time if event_time else SyncTime.now()
     self.pending_message = pending_message
     self.b64_packet = b64_packet
     self.send_event = send_event
@@ -136,7 +137,7 @@ class OpenFlowBuffer(EventMixin):
                                       controller_id=message_id.controller_id,
                                       fingerprint=message_id.fingerprint,
                                       b64_packet=message_event.b64_packet,
-                                      time=message_event.time)
+                                      event_time=message_event.event_time)
     if self._delegate_input_logger is not None:
       # TODO(cs): set event.round somehow?
       self._delegate_input_logger.log_input_event(replay_event)
