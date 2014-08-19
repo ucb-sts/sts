@@ -14,11 +14,13 @@
 # limitations under the License.
 
 from sts.fingerprints.base import Fingerprint
-from pox.openflow.libopenflow_01 import *
-from pox.lib.packet.ethernet import *
-from pox.lib.packet.lldp import *
-from pox.lib.packet.arp import *
-from pox.lib.packet.ipv4 import *
+from pox.openflow.libopenflow_01 import ofp_action_output
+from pox.openflow.libopenflow_01 import ofp_flow_mod_command_rev_map
+from pox.lib.packet.ethernet import ethernet
+from pox.lib.packet.lldp import lldp
+from pox.lib.packet.arp import arp
+from pox.lib.packet.ipv4 import ipv4
+
 import sys
 try:
   # Import a dummy hsa module to check that the submodule is there.
