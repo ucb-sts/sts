@@ -51,7 +51,7 @@ class FuzzerTest(unittest.TestCase):
   def test_sever_network_links(self):
     # Arrange
     topology = MeshTopology(None, 2)
-    params = FuzzerParams()
+    params = FuzzerParams.get_all_zero()
     fuzzer = Fuzzer(topology, params)
     # Act
     params.link_failure_rate = 1
@@ -59,14 +59,14 @@ class FuzzerTest(unittest.TestCase):
     params.link_failure_rate = 0
     events2 = fuzzer.sever_network_links()
     # Assert
-    self.assertEquals(len(events1), 1)
+    self.assertEquals(len(events1), 2)
     self.assertIsInstance(events1[0], LinkFailure)
     self.assertEquals(len(events2), 0)
 
   def test_repair_network_links(self):
     # Arrange
     topology = MeshTopology(None, 2)
-    params = FuzzerParams()
+    params = FuzzerParams.get_all_zero()
     fuzzer = Fuzzer(topology, params)
     for link in topology.patch_panel.live_network_links:
       topology.patch_panel.sever_network_link(link)
@@ -76,14 +76,14 @@ class FuzzerTest(unittest.TestCase):
     params.link_recovery_rate = 0
     events2 = fuzzer.repair_network_links()
     # Assert
-    self.assertEquals(len(events1), 1)
+    self.assertEquals(len(events1), 2)
     self.assertIsInstance(events1[0], LinkRecovery)
     self.assertEquals(len(events2), 0)
 
   def test_crash_switches(self):
     # Arrange
     topology = MeshTopology(None, 2)
-    params = FuzzerParams()
+    params = FuzzerParams.get_all_zero()
     fuzzer = Fuzzer(topology, params)
     # Act
     params.switch_failure_rate = 1
@@ -98,7 +98,7 @@ class FuzzerTest(unittest.TestCase):
   def test_recover_switches(self):
     # Arrange
     topology = MeshTopology(None, 2)
-    params = FuzzerParams()
+    params = FuzzerParams.get_all_zero()
     fuzzer = Fuzzer(topology, params)
     for switch in list(topology.switches_manager.live_switches):
       topology.switches_manager.crash_switch(switch)
@@ -121,7 +121,7 @@ class FuzzerTest(unittest.TestCase):
     c2 = self.get_controller(port=6644)
     topology.add_controller(c1)
     topology.add_controller(c2)
-    params = FuzzerParams()
+    params = FuzzerParams.get_all_zero()
     fuzzer = Fuzzer(topology, params)
     # Act
     params.controller_crash_rate = 1
@@ -142,7 +142,7 @@ class FuzzerTest(unittest.TestCase):
     c2 = self.get_controller(port=6644)
     topology.add_controller(c1)
     topology.add_controller(c2)
-    params = FuzzerParams()
+    params = FuzzerParams.get_all_zero()
     fuzzer = Fuzzer(topology, params)
     # Act
     params.controller_recovery_rate = 1
@@ -158,7 +158,7 @@ class FuzzerTest(unittest.TestCase):
   def test_fuzz_traffic(self):
     # Arrange
     topology = MeshTopology(None, 2)
-    params = FuzzerParams()
+    params = FuzzerParams.get_all_zero()
     fuzzer = Fuzzer(topology, params)
     # Act
     params.traffic_generation_rate = 1
