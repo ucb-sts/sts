@@ -44,7 +44,7 @@ class TestONTopology(Topology):
   [(main.ONOS1, 'ONOS1', main.params['CTRL']['ip1'], main.params['CTRL']['port1']),
   (main.ONOS2, 'ONOS2', main.params['CTRL']['ip2'], main.params['CTRL']['port2'])])
   """
-  def __init__(self, teston_mn, onos_controllers, reactive_controllers=False, ):
+  def __init__(self, teston_mn, onos_controllers, reactive_controllers=False):
     assert onos_controllers is None or isinstance(onos_controllers, list)
     self.log = logging.getLogger(__name__ + '.TestONTopology')
     switches_manager = TestONSwitchesManager(teston_mn)
