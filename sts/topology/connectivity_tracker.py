@@ -60,11 +60,12 @@ class ConnectivityTracker(object):
     """
     self.log.info("Adding %s<->%s to the set of connected hosts",
                   src_host, dst_host)
-    self.connected_pairs[src_host][dst_host].append(
-      (policy, src_interface, dst_interface))
-    self.policies[policy] = ConnectedHosts(
-      src_host=src_host, src_interface=src_interface, dst_host=dst_host,
-      dst_interface=dst_interface)
+    self.connected_pairs[src_host][dst_host].append((policy, src_interface,
+                                                     dst_interface))
+    self.policies[policy] = ConnectedHosts(src_host=src_host,
+                                           src_interface=src_interface,
+                                           dst_host=dst_host,
+                                           dst_interface=dst_interface)
 
   def add_disconnected_hosts(self, src_host, src_interface, dst_host,
                              dst_interface, policy):
@@ -75,9 +76,10 @@ class ConnectivityTracker(object):
                   src_host, dst_host)
     self.disconnected_pairs[src_host][dst_host].append(
       (policy, src_interface, dst_interface))
-    self.policies[policy] = ConnectedHosts(
-      src_host=src_host, src_interface=src_interface, dst_host=dst_host,
-      dst_interface=dst_interface)
+    self.policies[policy] = ConnectedHosts(src_host=src_host,
+                                           src_interface=src_interface,
+                                           dst_host=dst_host,
+                                           dst_interface=dst_interface)
 
   def remove_policy(self, policy):
     """
