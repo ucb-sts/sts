@@ -132,7 +132,7 @@ class InputLogger(object):
   def _serialize_event(self, event, output):
     if self._disallow_timeouts and hasattr(event, "disallow_timeouts"):
       event.timeout_disallowed = True
-    self.last_time = event.time
+    self.last_time = event.event_time
     json_hash = event.to_json()
     log.debug("logging event %r" % event)
     output.write(json_hash + '\n')
