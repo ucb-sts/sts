@@ -35,16 +35,26 @@ def bail_on_connectivity(simulation):
 check_for_loops_or_connectivity = ComposeChecks(InvariantChecker.check_loops,
                                                 bail_on_connectivity)
 
+#check_for_loops_blackholes_or_connectivity =\
+#  ComposeChecks(
+#    ComposeChecks(InvariantChecker.check_loops, InvariantChecker.python_check_blackholes),
+#    bail_on_connectivity)
+
 check_for_loops_blackholes_or_connectivity =\
   ComposeChecks(
     ComposeChecks(InvariantChecker.check_loops, InvariantChecker.python_check_blackholes),
-    bail_on_connectivity)
+    InvariantChecker.check_connectivity)
+
+check_for_loops_blackholes_or_connectivity_or_liveness =\
+  ComposeChecks(check_for_loops_blackholes_or_connectivity, InvariantChecker.check_liveness)
 
 check_for_loops_blackholes = ComposeChecks(InvariantChecker.check_loops,
                                            InvariantChecker.python_check_blackholes)
 
+#check_for_blackholes_or_connectivity =\
+#  ComposeChecks(InvariantChecker.python_check_blackholes, bail_on_connectivity)
 check_for_blackholes_or_connectivity =\
-  ComposeChecks(InvariantChecker.python_check_blackholes, bail_on_connectivity)
+  ComposeChecks(InvariantChecker.python_check_blackholes, InvariantChecker.check_connectivity)
 
 def check_for_invalid_ports(simulation):
   ''' Check if any of the switches have been asked to forward packets out
@@ -115,6 +125,7 @@ name_to_invariant_check = {
   "check_for_invalid_ports" : check_for_invalid_ports,
   "check_for_flow_entry" : check_for_flow_entry,
   "check_for_two_loop_or_connectivity" : check_for_two_loop_or_connectivity,
+  "check_for_loops_blackholes_or_connectivity_or_liveness" : check_for_loops_blackholes_or_connectivity_or_liveness,
   "time_out_on_connectivity" : TimeOutOnConnectivity(),
   "InvariantChecker.check_liveness" : InvariantChecker.check_liveness,
   "InvariantChecker.check_loops" : InvariantChecker.check_loops,
