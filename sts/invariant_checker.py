@@ -204,9 +204,23 @@ class InvariantChecker(object):
   @staticmethod
   def _check_connected_pairs(simulation, pairs):
     currently_connected = []
-    for src_host in simulation.topology.connected_pairs:
-      for dst_host in simulation.topology.connected_pairs[src_host]:
-        src_switch, src_port, dst_switch, dst_port = simulation.topology.connected_pairs[src_host][dst_host]
+    tracker = simulation.topology.connectivity_tracker
+    panel = simulation.topology.patch_panel
+    h_mgm = simulation.topology.hosts_manager
+    for src_host in h_mgm.hosts:
+      for dst_host in h_mgm.hosts:
+        if src_host == dst_host:
+          continue
+        if tracker.is_connected(src_host, dst_host):
+          continue
+        pairs = tracker.connected_pairs[src_host][dst_host]
+        # Default dict will always return empty list regardless
+        if len(pairs) == 0:
+          continue
+        pairs = pairs[0]
+        _, siface, diface = pairs
+        src_switch, src_port = panel.get_other_side(src_host, siface)
+        dst_switch, dst_port = panel.get_other_side(dst_host, diface)
         uniq_from_port = of.get_uniq_port_id(src_switch, src_port)
         uniq_to_port = of.get_uniq_port_id(dst_switch, dst_switch)
         currently_connected.append((uniq_from_port, uniq_to_port))
@@ -214,11 +228,9 @@ class InvariantChecker(object):
     supposed_to_be_disconnected = []
     for c in currently_connected:
       if c in pairs:
-        print "Pair is supposed to be connected", c
         supposed_to_be_connected.append(c)
     for c in pairs:
       if c in currently_connected:
-        print "Pair is NOT supposed to be connected", c
         supposed_to_be_disconnected.append(c)
     if supposed_to_be_disconnected or supposed_to_be_connected:
       return ["Pairs supposed to be connected: %s, Pairs are NOT supposed to be connected: %s" % (supposed_to_be_connected, supposed_to_be_disconnected)]
