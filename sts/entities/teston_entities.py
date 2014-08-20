@@ -244,7 +244,7 @@ class TestONONOSController(ControllerAbstractClass):
       self.log.warn("Controller '%s' is already started!" % self.label)
       return
     self.log.info("Launching controller: %s" % self.label)
-    self.teston_onos.start_all()
+    self.teston_onos.start()
     self.state = ControllerState.STARTING
 
   def kill(self):
@@ -252,7 +252,7 @@ class TestONONOSController(ControllerAbstractClass):
     if self.state != ControllerState.ALIVE:
       self.log.warn("Controller already killed: %s" % self.label)
       return
-    self.teston_onos.stop_all()
+    self.teston_onos.stop()
     self.state = ControllerState.DEAD
 
   def restart(self):
