@@ -1248,6 +1248,9 @@ class AddIntent(PolicyChange):
     intent['intentURL'] = self.intent_url
     log.info("Adding intent: %s", intent)
     ret = controller.add_intent(intent)
+    # Skip adding the hosts as connected if the add intent failed
+    if not ret:
+      return ret
     # Add policy to connectivity tracker
     src_host = None
     dst_host = None
@@ -1265,6 +1268,8 @@ class AddIntent(PolicyChange):
         if src_host is not None and dst_host is not None:
           break
     track = simulation.topology.connectivity_tracker
+    log.debug("Adding hosts to connected hosts: src=%s, src_iface=%s dst=%s, "
+              "dst_iface=%s", src_host, src_iface, dst_host, dst_iface)
     track.add_connected_hosts(src_host, src_iface, dst_host, dst_iface,
                               self.intent_id)
     return ret
@@ -1331,7 +1336,8 @@ class RemoveIntent(PolicyChange):
                                    intent_ip=self.intent_ip,
                                    intent_port=self.intent_port,
                                    intent_url=self.intent_url)
-    simulation.topology.connectivity_tracker.remove_policy(self.intent_id)
+    if ret:
+      simulation.topology.connectivity_tracker.remove_policy(self.intent_id)
     return ret
 
   @staticmethod
