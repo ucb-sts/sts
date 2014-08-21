@@ -1092,13 +1092,13 @@ class BlockControllerPair(InputEvent):
   def proceed(self, simulation):
     # if there is a controller patch panel configured, us it, otherwise use
     # iptables.
-    if simulation.controller_patch_panel is not None:
-      c_patch_panel = simulation.controller_patch_panel
-      c_patch_panel.block_controller_pair(self.cid1, self.cid2)
-    else:
-      (ctrl1, ctrl2) = [simulation.controller_manager.get_controller(cid)
-                        for cid in [self.cid1, self.cid2]]
-      ctrl1.block_peer(ctrl2)
+    #if simulation.controller_patch_panel is not None:
+    #  c_patch_panel = simulation.controller_patch_panel
+    #  c_patch_panel.block_controller_pair(self.cid1, self.cid2)
+    #else:
+    c_mgm = simulation.topology.controllers_manager
+    ctrl1, ctrl2 = [c_mgm.get_controller(cid) for cid in [self.cid1, self.cid2]]
+    c_mgm.block_peers(ctrl1, ctrl2)
     return True
 
   @property
@@ -1131,13 +1131,13 @@ class UnblockControllerPair(InputEvent):
   def proceed(self, simulation):
     # if there is a controller patch panel configured, us it, otherwise use
     # iptables.
-    if simulation.controller_patch_panel is not None:
-      c_patch_panel = simulation.controller_patch_panel
-      c_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
-    else:
-      (ctrl1, ctrl2) = [simulation.controller_manager.get_controller(cid)
-                        for cid in [self.cid1, self.cid2]]
-      ctrl1.unblock_peer(ctrl2)
+    #if simulation.controller_patch_panel is not None:
+    #  c_patch_panel = simulation.controller_patch_panel
+    #  c_patch_panel.unblock_controller_pair(self.cid1, self.cid2)
+    #else:
+    c_mgm = simulation.topology.controllers_manager
+    ctrl1, ctrl2 = [c_mgm.get_controller(cid) for cid in [self.cid1, self.cid2]]
+    c_mgm.unblock_peers(ctrl1, ctrl2)
     return True
 
   @property
@@ -1172,7 +1172,7 @@ class LinkDiscovery(InputEvent):
     self.link_attrs = link_attrs
 
   def proceed(self, simulation):
-    c_mgm = simulation.controller_manager
+    c_mgm = simulation.controllers_manager
     controller = c_mgm.get_controller(self.controller_id)
     controller.sync_connection.send_link_notification(self.link_attrs)
     return True

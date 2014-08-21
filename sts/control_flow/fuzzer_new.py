@@ -20,6 +20,8 @@ import logging
 
 from sts.traffic_generator import TrafficGenerator
 
+from sts.replay_event import BlockControllerPair
+from sts.replay_event import UnblockControllerPair
 from sts.replay_event import ControllerFailure
 from sts.replay_event import ControllerRecovery
 from sts.replay_event import LinkFailure
@@ -55,6 +57,8 @@ class FuzzerParams(object):
     self.controller_recovery_rate = 0.1
     self.traffic_generation_rate = 0.1
     self.dataplane_drop_rate = 0
+    self.block_controllers_rate = 0
+    self.unblock_controllers_rate = 0
     self.policy_change_rate = 0
 
   @staticmethod
@@ -219,6 +223,19 @@ class Fuzzer(object):
     self.logical_time = 0
     self.initialization_rounds = initialization_rounds
     self.policy_generator = policy_generator
+    self.blocked_controller_pairs = []
+
+  @property
+  def unblocked_controller_pairs(self):
+    c_mgm = self.topology.controllers_manager
+    sorted_controllers = sorted(c_mgm.live_controllers, key=lambda c: c.cid)
+    unblocked_pairs = []
+    for i in xrange(0, len(sorted_controllers)):
+      for j in xrange(i + 1, len(sorted_controllers)):
+        c1 = sorted_controllers[i]
+        c2 = sorted_controllers[j]
+        unblocked_pairs.append((c1.cid, c2.cid))
+    return unblocked_pairs
 
   def sever_network_links(self):
     """
@@ -312,6 +329,34 @@ class Fuzzer(object):
           events.append(event)
     return events
 
+  def block_controllers(self):
+    events = []
+    if self.params.controller_recovery_rate > 0:
+      assert self.topology.controllers_manager.capabilities.can_block_peers
+    if (len(self.unblocked_controller_pairs) > 0 and
+            self.random.random() < self.params.block_controllers_rate):
+      cid1, cid2 = self.random.choice(self.unblocked_controller_pairs)
+      self.unblocked_controller_pairs.remove((cid1, cid2))
+      self.blocked_controller_pairs.append((cid1, cid2))
+      event = BlockControllerPair(cid1, cid2)
+      self.log.debug("Generated BlockControllerPair event: %s", event)
+      events.append(event)
+    return events
+
+  def unblock_controllers(self):
+    events = []
+    if self.params.controller_recovery_rate > 0:
+      assert self.topology.controllers_manager.capabilities.can_unblock_peers
+    if (len(self.blocked_controller_pairs) > 0 and
+            self.random.random() < self.params.unblock_controllers_rate):
+      cid1, cid2 = self.random.choice(self.blocked_controller_pairs)
+      self.blocked_controller_pairs.remove((cid1, cid2))
+      self.unblocked_controller_pairs.append((cid1, cid2))
+      event = UnblockControllerPair(cid1, cid2)
+      self.log.debug("Generated UnblockControllerPair event: %s", event)
+      events.append(event)
+    return events
+
   def next_events(self, logical_time):
     events = []
     self.logical_time = logical_time
@@ -330,6 +375,8 @@ class Fuzzer(object):
     #events.extend(self.fuzz_ping())
     events.extend(self.crash_controllers())
     events.extend(self.recover_controllers())
+    events.extend(self.block_controllers())
+    events.extend(self.unblock_controllers())
     return events
     """
     #self.check_dataplane()
@@ -341,5 +388,5 @@ class Fuzzer(object):
     #self.fuzz_traffic()
     #self.check_controllers()
     self.check_migrations()
-    self.check_intracontroller_blocks()
+    #self.check_intracontroller_blocks()
     """
