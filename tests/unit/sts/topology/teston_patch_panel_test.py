@@ -162,6 +162,20 @@ s2 lo:  s2-eth1:h1-eth0 s2-eth2:h2-eth0 s2-eth3:h3-eth0 s2-eth4:s1-eth1
 s3 lo:  s3-eth1:h4-eth0 s3-eth2:h5-eth0 s3-eth3:h6-eth0 s3-eth4:s1-eth2
 s4 lo:  s4-eth1:h7-eth0 s4-eth2:h8-eth0 s4-eth3:h9-eth0 s4-eth4:s1-eth3
 """
+
+    links_status = [('h8-eth0', 's4-eth2', True), ('h9-eth0', 's4-eth3', True),
+                    ('h2-eth0', 's2-eth2', True), ('h3-eth0', 's2-eth3', True),
+                    ('s1-eth2', 's3-eth4', True), ('s1-eth3', 's4-eth4', True),
+                    ('s1-eth1', 's2-eth4', True), ('h1-eth0', 's2-eth1', True),
+                    ('h6-eth0', 's3-eth3', True), ('h7-eth0', 's4-eth1', True),
+                    ('h4-eth0', 's3-eth1', True), ('h5-eth0', 's3-eth2', True),
+                    ('s3-eth4', 's1-eth2', True), ('s3-eth3', 'h6-eth0', True),
+                    ('s3-eth1', 'h4-eth0', True), ('s3-eth2', 'h5-eth0', True),
+                    ('s4-eth2', 'h8-eth0', True), ('s4-eth3', 'h9-eth0', True),
+                    ('s4-eth4', 's1-eth3', True), ('s4-eth1', 'h7-eth0', True),
+                    ('s2-eth2', 'h2-eth0', True), ('s2-eth3', 'h3-eth0', True),
+                    ('s2-eth4', 's1-eth1', True), ('s2-eth1', 'h1-eth0', True)]
+
     def getSwitchDPID(name):
       if name == 's1':
         return 1
@@ -179,6 +193,7 @@ s4 lo:  s4-eth1:h7-eth0 s4-eth2:h8-eth0 s4-eth3:h9-eth0 s4-eth4:s1-eth3
     mn_driver.dump.return_value = mininet_dump
     mn_driver.getInterfaces.side_effect = getInterfaces
     mn_driver.getSwitchDPID.side_effect = getSwitchDPID
+    mn_driver.links_status.return_value = links_status
     return mn_driver
 
   def test_read(self):
@@ -191,3 +206,29 @@ s4 lo:  s4-eth1:h7-eth0 s4-eth2:h8-eth0 s4-eth3:h9-eth0 s4-eth4:s1-eth3
     # Assert
     self.assertEquals(len(patch_panel.access_links), 9)
     self.assertEquals(len(patch_panel.network_links), 3)
+
+  def test_up_access_links(self):
+    # Arrange
+    mn_driver = self._mock_teston()
+    hosts_mgm = TestONHostsManager(mn_driver)
+    switches_mgm = TestONSwitchesManager(mn_driver)
+    patch_panel = TestONPatchPanel(mn_driver, hosts_mgm, switches_mgm)
+    # Act
+    up_links = set(patch_panel.up_access_links)
+    # Assert
+    self.assertEquals(len(patch_panel.access_links), 9)
+    self.assertEquals(len(patch_panel.network_links), 3)
+    self.assertEquals(up_links, set(patch_panel.access_links))
+
+  def test_up_network_links(self):
+    # Arrange
+    mn_driver = self._mock_teston()
+    hosts_mgm = TestONHostsManager(mn_driver)
+    switches_mgm = TestONSwitchesManager(mn_driver)
+    patch_panel = TestONPatchPanel(mn_driver, hosts_mgm, switches_mgm)
+    # Act
+    up_links = set(patch_panel.up_network_links)
+    # Assert
+    self.assertEquals(len(patch_panel.access_links), 9)
+    self.assertEquals(len(patch_panel.network_links), 3)
+    self.assertEquals(up_links, set(patch_panel.network_links))

@@ -92,6 +92,46 @@ class TestONPatchPanel(PatchPanelBK):
             link = TestONNetworkLink(src_node, src_port, dst_node, dst_port)
             self.add_network_link(link)
 
+  @property
+  def up_network_links(self):
+    links = self.teston_mn.links_status()
+    up_links = []
+    for src, dst, status in links:
+      if not status:
+        continue
+      sname, siface = src.split("-")
+      dname, diface = dst.split("-")
+      src_node = self._switches_manager.get_switch(sname)
+      dst_node = self._switches_manager.get_switch(dname)
+      for link in self.network_links:
+        if set([src_node, dst_node]) != set([link.node1, link.node2]):
+          continue
+        if set([src, dst]) != set([link.port1.name, link.port2.name]):
+          continue
+        up_links.append(link)
+    return up_links
+
+  @property
+  def up_access_links(self):
+    links = self.teston_mn.links_status()
+    up_links = []
+    for src, dst, status in links:
+      if not status:
+        continue
+      sname, siface = src.split("-")
+      dname, diface = dst.split("-")
+      src_node = self._hosts_manager.get_host(sname) or\
+                 self._switches_manager.get_switch(sname)
+      dst_node = self._hosts_manager.get_host(dname) or\
+                 self._switches_manager.get_switch(dname)
+      for link in self.access_links:
+        if set([src_node, dst_node]) != set([link.node1, link.node2]):
+          continue
+        if set([src, dst]) != set([link.port1.name, link.port2.name]):
+          continue
+        up_links.append(link)
+    return up_links
+
   def create_network_link(self, src_switch, src_port, dst_switch, dst_port,
                           bidir=False):
     assert self.capabilities.can_create_network_link
