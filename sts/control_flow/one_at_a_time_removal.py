@@ -1,0 +1,655 @@
+# Copyright 2011-2015 Colin Scott
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at:
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+'''
+Removes events one at a time. Mostly for comparison against MCSFinder (delta
+debugging).
+'''
+
+# NOTE: this code is highly redundant with mcs_finder.py. But we have
+# justification! We are using it to rerun old experiments, where we need to
+# roll back the codebase. We then drop in this code to the rolled back
+# codebase. For that to work, we need to minimize dependencies, since older
+# versions of the code may not have everything we need!
+
+from sts.util.console import msg, color, Tee
+from sts.util.convenience import timestamp_string, ExitCode, create_clean_python_dir
+from sts.util.rpc_forker import LocalForker, test_serialize_response
+from sts.util.precompute_cache import PrecomputeCache
+from sts.replay_event import *
+from sts.event_dag import EventDag, split_list
+import sts.input_traces.log_parser as log_parser
+from sts.input_traces.input_logger import InputLogger
+from sts.control_flow.base import ControlFlow
+from sts.control_flow.replayer import Replayer
+from sts.control_flow.peeker import Peeker
+from config.invariant_checks import name_to_invariant_check
+
+from collections import Counter
+import copy
+import sys
+import time
+import random
+import logging
+import json
+import os
+import re
+
+class OneAtATimeRemoval(ControlFlow):
+  def __init__(self, simulation_cfg, superlog_path_or_dag,
+               invariant_check_name="", bug_signature="", transform_dag=None,
+               mcs_trace_path=None, extra_log=None, runtime_stats_path=None,
+               max_replays_per_subsequence=1,
+               optimized_filtering=False, forker=LocalForker(),
+               replay_final_trace=True, strict_assertion_checking=False,
+               no_violation_verification_runs=None,
+               **kwargs):
+    ''' Note that you may pass in any keyword argument for Replayer to
+    MCSFinder, except 'bug_signature' and 'invariant_check_name' '''
+    super(OneAtATimeRemoval, self).__init__(simulation_cfg)
+    # number of subsequences delta debugging has examined so far, for
+    # distingushing runtime stats from different intermediate runs.
+    self.subsequence_id = 0
+    self.mcs_log_tracker = None
+    self.replay_log_tracker = None
+    self.mcs_trace_path = mcs_trace_path
+    self.sync_callback = None
+    self._log = logging.getLogger("mcs_finder")
+
+    if invariant_check_name == "":
+      raise ValueError("Must specify invariant check")
+    if invariant_check_name not in name_to_invariant_check:
+      raise ValueError('''Unknown invariant check %s.\n'''
+                       '''Invariant check name must be defined in config.invariant_checks''',
+                       invariant_check_name)
+    self.invariant_check_name = invariant_check_name
+    self.invariant_check = name_to_invariant_check[invariant_check_name]
+
+    if type(superlog_path_or_dag) == str:
+      self.superlog_path = superlog_path_or_dag
+      # The dag is codefied as a list, where each element has
+      # a list of its dependents
+      self.dag = EventDag(log_parser.parse_path(self.superlog_path))
+    else:
+      self.dag = superlog_path_or_dag
+
+    if self.simulation_cfg.ignore_interposition:
+      filtered_events = [e for e in self.dag.events if type(e) not in all_internal_events]
+      self.dag = EventDag(filtered_events)
+
+    last_invariant_violation = self.dag.get_last_invariant_violation()
+    if last_invariant_violation is None:
+      raise ValueError("No invariant violation found in dag...")
+    violations = last_invariant_violation.violations
+    self.bug_signature = bug_signature
+    if len(violations) > 1:
+      while self.bug_signature == "":
+        msg.interactive("\n------------------------------------------\n")
+        msg.interactive("Multiple violations detected! Choose one for MCS Finding:")
+        for i, violation in enumerate(violations):
+          msg.interactive("  [%d] %s" % (i+1, violation))
+        violation_index = msg.raw_input("> ")
+        if re.match("^\d+$", violation_index) is None or\
+           int(violation_index) < 1 or\
+           int(violation_index) > len(violations):
+          msg.fail("Must provide an integer between 1 and %d!" % len(violations))
+          continue
+        self.bug_signature = violations[int(violation_index)-1]
+    if self.bug_signature == "":
+      self.bug_signature = violations[0]
+    msg.success("\nBug signature to match is %s. Proceeding with MCS finding!\n" % self.bug_signature)
+
+    self.transform_dag = transform_dag
+    # A second log with just our MCS progress log messages
+    self._extra_log = extra_log
+    self.kwargs = kwargs
+    unknown_kwargs = [ k for k in kwargs.keys() if k not in Replayer.kwargs ]
+    if unknown_kwargs != []:
+      raise ValueError("Unknown kwargs %s" % str(unknown_kwargs))
+    if no_violation_verification_runs is not None:
+      raise ValueError('''no_violation_verification_runs parameter is deprecated. '''
+                       '''Use max_replays_per_subsequence.''')
+    self.max_replays_per_subsequence = max_replays_per_subsequence
+    self._runtime_stats = RuntimeStats(self.subsequence_id, runtime_stats_path=runtime_stats_path)
+    # Whether to try alternate trace splitting techiques besides splitting by time.
+    self.optimized_filtering = optimized_filtering
+    self.forker = forker
+    self.replay_final_trace = replay_final_trace
+    self.strict_assertion_checking = strict_assertion_checking
+
+  def log(self, s):
+    ''' Output a message to both self._log and self._extra_log '''
+    msg.mcs_event(s)
+    if self._extra_log is not None:
+      self._extra_log.write(s + '\n')
+      self._extra_log.flush()
+
+  def log_violation(self, s):
+    ''' Output a message to both self._log and self._extra_log '''
+    msg.mcs_event(color.RED + s)
+    if self._extra_log is not None:
+      self._extra_log.write(s + '\n')
+      self._extra_log.flush()
+
+  def log_no_violation(self, s):
+    ''' Output a message to both self._log and self._extra_log '''
+    msg.mcs_event(color.GREEN + s)
+    if self._extra_log is not None:
+      self._extra_log.write(s + '\n')
+      self._extra_log.flush()
+
+  def init_results(self, results_dir):
+    ''' Precondition: results_dir exists, and is clean (preferably
+    initialized by experiments/setup.py).'''
+    if self._extra_log is None:
+      self._extra_log = open("%s/mcs_finder.log" % results_dir, "w")
+    if self._runtime_stats.get_runtime_stats_path() is None:
+      runtime_stats_path = "%s/runtime_stats.json" % results_dir
+      self._runtime_stats.set_runtime_stats_path(runtime_stats_path)
+    if self.mcs_trace_path is None:
+      self.mcs_trace_path = "%s/mcs.trace" % results_dir
+    # TODO(cs): assumes that transform dag is a peeker, not some other
+    # transformer
+    peeker_exists = self.transform_dag is not None
+    self.mcs_log_tracker = MCSLogTracker(results_dir, self.mcs_trace_path,
+                                         self._runtime_stats,
+                                         self.simulation_cfg, peeker_exists)
+    self.replay_log_tracker = ReplayLogTracker(results_dir)
+
+  # N.B. only called in the parent process.
+  def simulate(self, check_reproducibility=True):
+    self._runtime_stats.set_dag_stats(self.dag)
+
+    # apply domain knowledge: treat failure/recovery pairs atomically, and
+    # filter event types we don't want to include in the MCS
+    # (e.g. CheckInvariants)
+    self.dag.mark_invalid_input_sequences()
+    # TODO(cs): invoke dag.filter_unsupported_input_types()
+
+    if len(self.dag) == 0:
+      raise RuntimeError("No supported input types?")
+
+    # if check_reproducibility:
+    #   # First, run through without pruning to verify that the violation exists
+    #   self._runtime_stats.record_replay_start()
+
+    #   (bug_found, i) = self.replay_max_iterations(self.dag, "reproducibility",
+    #                                               ignore_runtime_stats=True)
+    #   self._runtime_stats.set_initial_verification_runs_needed(i)
+    #   self._runtime_stats.record_replay_end()
+    #   if not bug_found:
+    #     msg.fail("Unable to reproduce correctness violation!")
+    #     sys.exit(5)
+    #   self.log("Violation reproduced successfully! Proceeding with pruning")
+
+    # self._runtime_stats.record_prune_start()
+
+    # Run optimizations.
+    # TODO(cs): Better than a boolean flag: check if
+    # log(len(self.dag)) > number of input types to try
+    if self.optimized_filtering:
+      self._optimize_event_dag()
+
+    # Invoke delta debugging
+    (dag, total_inputs_pruned) = self.minimize(self.dag)
+    # Make sure to track the final iteration size
+    self._track_iteration_size(total_inputs_pruned)
+    self.dag = dag
+
+    self._runtime_stats.record_prune_end()
+    self.mcs_log_tracker.dump_runtime_stats()
+
+    if self.replay_final_trace:
+      #  Replaying the final trace achieves two goals:
+      #  - verifies that the MCS indeed ends in the violation
+      #  - allows us to prune internal events that time out
+      (bug_found, i) = self.replay_max_iterations(self.dag, "final_mcs_trace",
+                                                  ignore_runtime_stats=True)
+      if not bug_found:
+        self.log('''Warning: MCS did not result in violation. Trying replay '''
+                 '''again without timed out events.''')
+        # TODO(cs): always replay the MCS without timeouts, since the console
+        # output will be significantly cleaner?
+        no_timeouts = self.dag.filter_timeouts()
+        (bug_found, i) = self.replay_max_iterations(no_timeouts, "final_mcs_no_timed_out_events",
+                                                    ignore_runtime_stats=True)
+        if not bug_found:
+          self.log('''Warning! Final MCS did not result in violation, even '''
+                   '''after ignoring timed out internal events. Your run ''
+                   '' is probably effected by non-determinism.\n'''
+                   '''Try setting MCSFinder's max_replays_per_subsequence '''
+                   '''parameter in your config file (e.g. max_replays_per_subsequence=10)\n'''
+                   '''If that still doesn't work, see tools/visualization/visualize1D.html '''
+                   '''for debugging''')
+
+    self.log("=== Total replays: %d ===" % self._runtime_stats.total_replays)
+    self.log("Final MCS (%d elements):" % len(self.dag.input_events))
+    for i in self.dag.input_events:
+      self.log(" - %s" % str(i))
+
+    # N.B. dumping the MCS trace must occur after the final replay trace,
+    # since we need to infer which events will time out for events.trace.notimeouts
+    if self.mcs_trace_path is not None:
+      self.mcs_log_tracker.dump_mcs_trace(self.dag, self)
+    return ExitCode(0)
+
+  # N.B. always called by the parent process.
+  def minimize(self, dag):
+    total_inputs_pruned = 0
+
+    for event in list(dag.atomic_input_events()):
+      label = event.label
+      print "Trying removal of", str(event)
+      # Somewhat awkward: there is an atomic_input_subset method but not a
+      # atomic_input_complement method. So we compute the atomic complement ourselves.
+      new_dag = dag.input_complement(dag.atomic_input_subset([event]).input_events)
+      self._track_iteration_size(total_inputs_pruned)
+      violation = self._check_violation(new_dag, i, label)
+      if violation:
+        self.log_violation("Event %s reproduced violation. Subselecting." % label)
+        self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned, new_dag,
+                                                         label, self)
+        total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
+        dag = new_dag
+    return (dag, total_inputs_pruned)
+
+  # N.B. always called by the parent process.
+  def _track_iteration_size(self, total_inputs_pruned):
+    self._runtime_stats.record_iteration_size(len(self.dag.input_events) - total_inputs_pruned)
+
+  # N.B. always called by the parent process.
+  def _check_violation(self, new_dag, subset_index, label):
+    ''' Check if there were violations '''
+    (bug_found, i) = self.replay_max_iterations(new_dag, label)
+    # Violation in the subset
+    if bug_found:
+      self.log_violation("Violation! Considering %d'th" % subset_index)
+      self._runtime_stats.record_violation_found(i)
+      return True
+    else:
+      # No violation!
+      self.log_no_violation("No violation in %d'th..." % subset_index)
+      return False
+
+  def replay_max_iterations(self, new_dag, label, ignore_runtime_stats=False):
+    '''
+    Attempt to reproduce the bug up to self.max_replays_per_subsequence
+    times.
+
+    Returns a tuple (bug found, 0-indexed iteration at which bug was found)
+    '''
+    if self.transform_dag:
+      log.info("Transforming dag")
+      new_dag = self.transform_dag(new_dag)
+      log.info("Proceeding with normal replay")
+
+    for i in range(0, self.max_replays_per_subsequence):
+      bug_found = self.replay(new_dag, label,
+                              ignore_runtime_stats=ignore_runtime_stats)
+      if bug_found:
+        break
+    return (bug_found, i)
+
+  def replay(self, new_dag, label, ignore_runtime_stats=False):
+    # Run the simulation forward
+    self._runtime_stats.record_replay_stats(len(new_dag.input_events))
+
+    # N.B. this function is run as a child process.
+    def play_forward(results_dir, subsequence_id):
+      # TODO(cs): need to serialize the parameters to Replayer rather than
+      # wrapping them in a closure... otherwise, can't use RemoteForker
+      # TODO(aw): MCSFinder needs to configure Simulation to always let DataplaneEvents pass through
+      create_clean_python_dir(results_dir)
+
+      # Copy stdout and stderr to a file "replay.out"
+      tee = Tee(open(os.path.join(results_dir, "replay.out"), "w"))
+      tee.tee_stdout()
+      tee.tee_stderr()
+
+      # Set up replayer.
+      input_logger = InputLogger()
+      replayer = Replayer(self.simulation_cfg, new_dag,
+                          input_logger=input_logger,
+                          bug_signature=self.bug_signature,
+                          invariant_check_name=self.invariant_check_name,
+                          **self.kwargs)
+      replayer.init_results(results_dir)
+      self._runtime_stats = RuntimeStats(subsequence_id)
+      simulation = None
+      try:
+        simulation = replayer.simulate()
+        self._track_new_internal_events(simulation, replayer)
+      except SystemExit:
+        # One of the invariant checks bailed early. Oddly, this is not an
+        # error for us, it just means that there were no violations...
+        # [this logic is arguably broken]
+        # Return no violations, and let Forker handle system exit for us.
+        simulation.violation_found = False
+      finally:
+        input_logger.close(replayer, self.simulation_cfg, skip_mcs_cfg=True)
+        if simulation is not None:
+          simulation.clean_up()
+        tee.close()
+      if self.strict_assertion_checking:
+        test_serialize_response(violations, self._runtime_stats.client_dict())
+      timed_out_internal = [ e.label for e in new_dag.events if e.timed_out ]
+      return (simulation.violation_found, self._runtime_stats.client_dict(), timed_out_internal)
+
+    # TODO(cs): once play_forward() is no longer a closure, register it only once
+    self.forker.register_task("play_forward", play_forward)
+    results_dir = self.replay_log_tracker.get_replay_logger_dir(label)
+    self.subsequence_id += 1
+    (violation_found, client_runtime_stats,
+                 timed_out_internal) = self.forker.fork("play_forward",
+                                                        results_dir,
+                                                        self.subsequence_id)
+    new_dag.set_events_as_timed_out(timed_out_internal)
+
+    if not ignore_runtime_stats:
+      self._runtime_stats.merge_client_dict(client_runtime_stats)
+
+    return violation_found
+
+  def _optimize_event_dag(self):
+    ''' Employs domain knowledge of event classes to reduce the size of event
+    dag. Currently prunes event types.'''
+    # TODO(cs): Another approach for later: split by nodes
+    event_types = [TrafficInjection, DataplaneDrop, SwitchFailure,
+                   SwitchRecovery, LinkFailure, LinkRecovery, HostMigration,
+                   ControllerFailure, ControllerRecovery, PolicyChange, ControlChannelBlock,
+                   ControlChannelUnblock]
+    for event_type in event_types:
+      pruned = [e for e in self.dag.input_events if not isinstance(e, event_type)]
+      if len(pruned)==len(self.dag.input_events):
+        self.log("\t** No events pruned for event type %s. Next!" % event_type)
+        continue
+      pruned_dag = self.dag.input_complement(pruned)
+      (bug_found, i) = self.replay_max_iterations(pruned_dag, "opt_%s" % event_type.__name__)
+      if bug_found:
+        self.log("\t** VIOLATION for pruning event type %s! Resizing original dag" % event_type)
+        self.dag = pruned_dag
+
+  # N.B. always called within a child process.
+  def _track_new_internal_events(self, simulation, replayer):
+    ''' Pre: simulation must have been run through a replay'''
+    # We always check against internal events that were buffered at the end of
+    # the original run (don't want to overcount)
+    prev_buffered_receives = []
+    try:
+      path = self.superlog_path + ".unacked"
+      if not os.path.exists(path):
+        log.warn("unacked internal events file from original run does not exist")
+        return
+      prev_buffered_receives = set([ e.pending_receive for e in
+                                     [ f for f in EventDag(log_parser.parse_path(path)).events
+                                       if type(f) == ControlMessageReceive ] ])
+    except ValueError as e:
+      log.warn("unacked internal events is corrupt? %r" % e)
+      return
+    buffered_message_receipts = []
+    for p in simulation.openflow_buffer.pending_receives:
+      if p not in prev_buffered_receives:
+        buffered_message_receipts.append(repr(p))
+      else:
+        prev_buffered_receives.remove(p)
+
+    self._runtime_stats.record_buffered_message_receipts(buffered_message_receipts)
+    new_internal_events = replayer.unexpected_state_changes + replayer.passed_unexpected_messages
+    self._runtime_stats.record_new_internal_events(new_internal_events)
+    self._runtime_stats.record_early_internal_events(replayer.early_state_changes)
+    self._runtime_stats.record_timed_out_events(replayer.event_scheduler_stats.get_timeouts_dict())
+    self._runtime_stats.record_matched_events(replayer.event_scheduler_stats.get_matches_dict())
+
+class ReplayLogTracker(object):
+  ''' Logs intermediate and final replay traces chosen by delta debugging'''
+  def __init__(self, results_dir):
+    self.results_dir = results_dir
+    self.count = 0
+
+  def get_replay_logger_dir(self, label):
+    dst = os.path.join(self.results_dir, "interreplay_%d_%s" % (self.count, label.replace("/", "_")))
+    self.count += 1
+    return dst
+
+class MCSLogTracker(object):
+  ''' Logs intermedate and final MCS results that are the outcome(s) of delta
+  debugging'''
+  def __init__(self, results_dir, mcs_trace_path, runtime_stats,
+               simulation_cfg, peeker_exists):
+    self.results_dir = results_dir
+    self.mcs_trace_path = mcs_trace_path
+    self.simulation_cfg = simulation_cfg
+    self.peeker_exists = peeker_exists
+    self.max_inputs_pruned = 0
+    self.count = 0
+    self.runtime_stats = runtime_stats
+    self.runtime_stats.set_peeker(self.peeker_exists)
+    self.runtime_stats.set_config(str(self.simulation_cfg))
+
+  def dump_runtime_stats(self, runtime_stats_path=None):
+    # We clone runtime_stats b/c the runtime_stats_path changes in the case
+    # of dumping intermediate MCS runtime stats.
+    runtime_stats = self.runtime_stats.clone(runtime_stats_path)
+    # TODO(cs): assumes that Peeker is the transformer, and that Peeker is run
+    # only in the parent process.
+    runtime_stats.ambiguous_counts = dict(Peeker.ambiguous_counts)
+    runtime_stats.ambiguous_events = dict(Peeker.ambiguous_events)
+    runtime_stats.write_runtime_stats()
+
+  def maybe_dump_intermediate_mcs(self, total_inputs_pruned, dag, label, control_flow):
+    if total_inputs_pruned > self.max_inputs_pruned:
+      # Only dump if MCS decreases in size
+      self.max_inputs_pruned = total_inputs_pruned
+      self.count += 1
+      dst = os.path.join(self.results_dir, "intermcs_%d_%s" % (self.count, label.replace("/", "_")))
+      create_clean_python_dir(dst)
+      self.dump_mcs_trace(dag, control_flow, os.path.join(dst, os.path.basename(self.mcs_trace_path)))
+      self.dump_runtime_stats(os.path.join(dst,
+          os.path.basename(self.runtime_stats.get_runtime_stats_path())))
+
+  def dump_mcs_trace(self, dag, control_flow, mcs_trace_path=None):
+    if mcs_trace_path is None:
+      mcs_trace_path = self.mcs_trace_path
+    for extension in ["", ".notimeouts"]:
+      output_path = mcs_trace_path + extension
+      input_logger = InputLogger()
+      input_logger.open(os.path.dirname(output_path),
+                        output_filename="mcs.trace" + extension)
+      for e in dag.events:
+        if extension == ".notimeouts" and e.timed_out:
+          continue
+        input_logger.log_input_event(e)
+      input_logger.close(control_flow, self.simulation_cfg, skip_mcs_cfg=True)
+
+class RuntimeStats(object):
+  ''' Tracks statistics and configuration information of the delta debugging runs '''
+
+  child_fields = ['new_internal_events',
+                  'early_internal_events', 'timed_out_events',
+                  'matched_events', 'buffered_message_receipts']
+  child_counters = []
+
+  def __init__(self, subsequence_id, runtime_stats_path=None):
+    ''' runtime_stats_path should only be None if the stats of this replay run
+    are only intermediate (to be aggregated into overall stats) and not dumped
+    to disk. '''
+    # subsequence_id will be 0 for the parent process, and non-zero for all
+    # child processes.
+    self.subsequence_id = subsequence_id
+    self._runtime_stats_path = runtime_stats_path
+    # -------------------- Stats set by child processes  -------------------- #
+    # { replay iteration -> [string representations new internal events] }
+    self.new_internal_events = {}
+    # { replay iteration -> [string representations messages buffered at end of run] }
+    self.buffered_message_receipts = {}
+    # { replay iteration -> [string representations internal events that
+    #                        violated causality] }
+    self.early_internal_events = {}
+    # { replay iteration -> { event type -> timeouts } }
+    self.timed_out_events = {}
+    # { replay iteration -> { event type -> successful matches } }
+    self.matched_events = {}
+    # -------------------- Stats set by parent process -------------------- #
+    # { delta debugging subseqence # -> count of remaining events }
+    self.iteration_size = {}
+    # Counter for tracking delta debugging subsequence (assumes
+    # track_iteration_size() is called exactly once per subsequence)
+    self._iteration = 0
+    # { verification attempt # -> count of times violation was found at this # }
+    self.violation_found_in_run = Counter()
+    self.total_inputs = 0
+    self.total_events = 0
+    self.original_duration_seconds = 0
+    self.replay_start_epoch = 0
+    self.replay_end_epoch = 0
+    self.replay_duration_seconds = 0
+    self.prune_start_epoch = 0
+    self.prune_duration_seconds = 0
+    self.initial_verification_runs_needed  = 0
+    self.peeker = ""
+    self.config = ""
+    self.total_replays = 0
+    self.total_inputs_replayed = 0
+    # { % of inferred fingerprints that were ambiguous ->
+    #   # of replays where this % occurred }
+    self.ambiguous_counts = {}
+    # { class of event -> # occurences of ambiguity }
+    self.ambiguous_events = {}
+
+  def write_runtime_stats(self):
+    # Now write contents to a file
+    now = timestamp_string()
+
+    if self._runtime_stats_path is None:
+      # TODO(cs): race condition if multiple MCS processes are running
+      self._runtime_stats_path = "runtime_stats/" + now + ".json"
+
+    if os.path.exists(self._runtime_stats_path):
+      raise RuntimeError("Runtime stats file %s already exists.." %
+              self._runtime_stats_path)
+
+    with file(self._runtime_stats_path, "w") as output:
+      json_string = json.dumps(self.__dict__, sort_keys=True, indent=2,
+                               separators=(',', ': '))
+      output.write(json_string)
+
+  def set_runtime_stats_path(self, runtime_stats_path):
+    self._runtime_stats_path = runtime_stats_path
+
+  def get_runtime_stats_path(self):
+    return self._runtime_stats_path
+
+  # N.B. always invoked within a child process.
+  def clone(self, runtime_stats_path):
+    clone = copy.deepcopy(self)
+    # If runtime_stats_path is None, this is the main MCS run. Otherwise
+    # we are dumping intermediate MCS results.
+    if runtime_stats_path is not None:
+      clone.set_runtime_stats_path(runtime_stats_path)
+    return clone
+
+  # -------------------- Stats set by parent process -------------------- #
+
+  def set_dag_stats(self, dag):
+    self.total_inputs = len(dag.input_events)
+    self.total_events = len(dag)
+    self.original_duration_seconds = \
+      (dag.events[-1].time.as_float() -
+       dag.events[0].time.as_float())
+
+  def record_replay_start(self):
+    self.replay_start_epoch = time.time()
+
+  def record_replay_end(self):
+    self.replay_end_epoch = time.time()
+    self.replay_duration_seconds = self.replay_end_epoch - self.replay_start_epoch
+
+  def record_prune_start(self):
+    self.prune_start_epoch = time.time()
+
+  def record_prune_end(self):
+    self.prune_end_epoch = time.time()
+    self.prune_duration_seconds = self.prune_end_epoch - self.prune_start_epoch
+
+  def set_initial_verification_runs_needed(self, verification_runs):
+    self.initial_verification_runs_needed = verification_runs
+
+  def set_peeker(self, peeker):
+    self.peeker = peeker
+
+  def set_config(self, config):
+    self.config = config
+
+  def record_replay_stats(self, number_inputs_replayed):
+    ''' Should be invoked once for every replay '''
+    self.total_replays += 1
+    self.total_inputs_replayed += number_inputs_replayed
+
+  def record_iteration_size(self, iteration_size):
+    self.iteration_size[self._iteration] = iteration_size
+    self._iteration += 1
+
+  def record_violation_found(self, verification_iteration):
+    if type(self.violation_found_in_run) != Counter:
+      self.violation_found_in_run = Counter(self.violation_found_in_run)
+    self.violation_found_in_run[verification_iteration] += 1
+
+  # -------------------- Stats set by child processes  -------------------- #
+
+  def record_buffered_message_receipts(self, buffered_message_receipts):
+    self.buffered_message_receipts[self.subsequence_id] = buffered_message_receipts
+
+  def record_new_internal_events(self, new_internal_events):
+    self.new_internal_events[self.subsequence_id] = new_internal_events
+
+  def record_early_internal_events(self, early_internal_events):
+    self.early_internal_events[self.subsequence_id] = early_internal_events
+
+  def record_timed_out_events(self, timed_out_events):
+    self.timed_out_events[self.subsequence_id] = timed_out_events
+
+  def record_matched_events(self, matched_events):
+    self.matched_events[self.subsequence_id] = matched_events
+
+  # -------------------- RPC helper methods -------------------- #
+
+  def client_dict(self):
+    ''' Return a serializable dict '''
+    # Only include relevent fields for parent
+    d = {}
+    for field in RuntimeStats.child_fields:
+      v = getattr(self, field)
+      # xmlrpclib doesn't allow non-string keys
+      if type(v) == Counter:
+        v = dict(v)
+      if type(v) == dict:
+        v = dict((str(key), value) for key, value in v.items())
+      d[field] = v
+    return d
+
+  def merge_client_dict(self, client_dict):
+    for field, value in client_dict.iteritems():
+      try:
+        field = int(field)
+      except:
+        pass
+      if field in RuntimeStats.child_counters:
+        for k, count in value.iteritems():
+          getattr(self, field)[k] += count
+      if type(value) == dict:
+        setattr(self, field, dict(getattr(self, field).items() + value.items()))
+      elif type(value) == int:
+        setattr(self, field, getattr(self, field) + value)
+      else:
+        raise ValueError("Unknown field %s: %s" % (str(field),str(value)))
