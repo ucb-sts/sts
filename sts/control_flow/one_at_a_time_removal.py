@@ -123,8 +123,13 @@ class OneAtATimeRemoval(MCSFinder):
       violation = self._check_violation(new_dag, i, label)
       if violation:
         self.log_violation("Event %s reproduced violation. Subselecting." % label)
-        self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned, new_dag,
-                                                         label, self)
+        try:
+          self.mcs_log_tracker.maybe_dump_intermediate_mcs(total_inputs_pruned, new_dag,
+                                                           label, self)
+        except:
+          # earlier versions had arity=3
+          self.mcs_log_tracker.maybe_dump_intermediate_mcs(new_dag, label, self)
+
         total_inputs_pruned += len(dag.input_events) - len(new_dag.input_events)
         dag = new_dag
     return (dag, total_inputs_pruned)
